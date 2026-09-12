@@ -1,14 +1,16 @@
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
+
+import { FoundationSession } from '@/features/foundation/FoundationSession';
 
 /**
- * Phase 1 walking-skeleton route.
- * Replaced in Plan 01-05 by the local-SQLite-backed screen; this placeholder
- * proves the router mounts and nothing more. No durable logic here.
+ * Phase 1 walking-skeleton route: auth stub → owner-partitioned local SQLite
+ * → repository → outbox → sync RPCs. Development-only surface, replaced by
+ * product navigation in Phase 3.
  */
 export default function Index() {
   return (
-    <View className="flex-1 items-center justify-center bg-surface-light dark:bg-surface-dark">
-      <Text className="text-ink-light dark:text-ink-dark">CoachCal</Text>
+    <View className="flex-1 bg-surface-light dark:bg-surface-dark">
+      <FoundationSession />
     </View>
   );
 }

@@ -1,8 +1,6 @@
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseSync } from 'expo-sqlite';
 
-import * as schema from './schema';
-
 /**
  * The single Expo SQLite handle for the app. `enableChangeListener` powers
  * Drizzle's useLiveQuery so screens re-render from local writes. The database
@@ -12,6 +10,6 @@ export const sqlite = openDatabaseSync('coachcal.db', {
   enableChangeListener: true,
 });
 
-export const db = drizzle(sqlite, { schema });
+export const db = drizzle(sqlite);
 
 export type AppDatabase = typeof db;
