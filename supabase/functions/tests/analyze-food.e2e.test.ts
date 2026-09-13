@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { handler } from '../analyze-food/index.ts';
 import { stackEnv } from './_env.ts';
 import { ScanResponseSchema } from '../_shared/contracts/scan.ts';
+import { fdcFetch } from '../_shared/grounding/fdc.ts';
 import { resolveBarcode, resolveFood, resolveSearch, type CascadeTiers } from '../_shared/grounding/cascade.ts';
 
 // Direct handler invocation (RESEARCH A7): the suite imports handler from
@@ -180,6 +181,30 @@ Deno.test('analyze-food: malformed VLM output is a typed 422, never a 500', asyn
   } finally {
     if (savedMode === undefined) Deno.env.delete('VLM_FIXTURE_MODE');
     else Deno.env.set('VLM_FIXTURE_MODE', savedMode);
+    await deleteScan(scanId, userId);
+  }
+});
+
+Deno.test('analyze-food: an upstream provider outage is a retryable 502, never a bare 500', async () => {
+  const { userId, token } = await authedUser();
+  const scanId = crypto.randomUUID();
+  const originalFdc = fdcFetch.impl;
+  fdcFetch.impl = () => Promise.resolve(new Response('service unavailable', { status: 503 }));
+  try {
+    // Clear the fixture label's cache row (earlier tests in this file seed
+    // it): the lookup must reach the FDC tier and hit the outage there,
+    // after the quota claim has already run.
+    await service().from('food_cache').delete().eq('cache_key', CACHE_KEY);
+    const res = await handler(scanRequest(photoBody(scanId), token));
+    assertEquals(res.status, 502);
+    const body = await res.json();
+    assertEquals(body.error.code, 'UPSTREAM_ERROR');
+    const scans = await service().from('scans')
+      .select('*', { count: 'exact', head: true })
+      .eq('id', scanId);
+    assertEquals(scans.count, 0, 'a 502 must not persist a scan');
+  } finally {
+    fdcFetch.impl = originalFdc;
     await deleteScan(scanId, userId);
   }
 });

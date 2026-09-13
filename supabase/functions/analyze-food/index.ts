@@ -8,6 +8,7 @@ import { resolveBarcode, resolveFood } from '../_shared/grounding/cascade.ts';
 import { chooseTier } from '../_shared/routing.ts';
 import { flagHiddenFat } from '../_shared/hiddenFat.ts';
 import { getVlmProvider } from '../_shared/vlm/provider.ts';
+import { UpstreamError } from '../_shared/contracts/food.ts';
 import {
   ScanRequestSchema,
   ScanResponseSchema,
@@ -215,7 +216,10 @@ export async function handler(req: Request): Promise<Response> {
       note,
     });
     return json(200, response);
-  } catch {
+  } catch (error) {
+    if (error instanceof UpstreamError) {
+      return errorJson(502, 'UPSTREAM_ERROR');
+    }
     return errorJson(500, 'INTERNAL');
   }
 }
