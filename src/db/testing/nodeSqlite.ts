@@ -13,6 +13,10 @@ import { DatabaseSync, type StatementSync } from 'node:sqlite';
  * NOT for production use — never import from app code.
  */
 
+// CAVEAT: this adapter executes writes eagerly inside executeSync() and
+// re-executes for getAllSync()/getFirstSync(). Never chain drizzle
+// `.returning()` on writes through it (double execution) — repositories
+// re-read rows after commit instead (see diaryEntries.ts).
 interface DrizzleStatementResult {
   changes: number;
   lastInsertRowId: number | bigint | undefined;
