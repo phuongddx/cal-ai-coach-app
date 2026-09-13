@@ -51,3 +51,5 @@ yarn-error.*
 # Local env files with real credentials
 .env
 .env.*
+# Secrets manifest template — names and placeholders only
+!.env.example
