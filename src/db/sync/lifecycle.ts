@@ -14,8 +14,10 @@ import type { SyncLifecycleDeps as Deps } from './lifecycleTypes';
  *   post-mutation signals;
  * - single-flight: triggers never create concurrent dispatch runs;
  * - a failed dispatch schedules an exponential-backoff retry;
- * - stop() detaches everything and clears the bound owner — a later event can
- *   never dispatch under the previous owner's identity.
+ * - stop() detaches everything synchronously, clears the bound owner, and
+ *   returns the owner-handoff barrier: a promise that resolves only after the
+ *   single active dispatch has settled — a later event can never dispatch
+ *   under the previous owner's identity.
  */
 
 export type {
@@ -124,7 +126,9 @@ export function startSyncLifecycle(
       if (stopped || mutatingOwner !== ownerId) return;
       scheduleDebounced();
     },
-    stop(): void {
+    async stop(): Promise<void> {
+      // Detach synchronously on entry: no event source, timer, or trailing
+      // rerun can schedule another dispatch once stop() has been called.
       stopped = true;
       for (const unsubscribe of unsubscribers) unsubscribe();
       unsubscribers.length = 0;
@@ -139,9 +143,12 @@ export function startSyncLifecycle(
       rerunQueued = false;
       const pending = inFlight;
       inFlight = null;
-      // Best-effort drain: a run in progress finishes against the old owner's
-      // state, but no new run can ever start for it after stop().
-      void pending?.catch(() => undefined);
+      // Awaitable owner barrier (Plan 01-07): the single active run finishes
+      // against the old owner's already-detached state — never cancelled and
+      // never rebound onto another transport context — and its failure is
+      // consumed here for drainage only (runOnce owns retry policy and
+      // schedules nothing once stopped).
+      if (pending) await pending.catch(() => undefined);
     },
   };
 }

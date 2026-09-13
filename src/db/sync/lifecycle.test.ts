@@ -195,3 +195,79 @@ describe('sync lifecycle (Plan 01-04 Task 3)', () => {
     second.stop();
   });
 });
+
+describe('sync lifecycle shutdown drain (Plan 01-07 Task 1)', () => {
+  function makeGatedHarness(): {
+    harness: Harness;
+    gate: PromiseWithResolvers<void>;
+    runs: () => number;
+  } {
+    const gate = Promise.withResolvers<void>();
+    let runs = 0;
+    const harness = makeHarness();
+    harness.deps.dispatch = async () => {
+      runs += 1;
+      // The initial run is held pending until the test releases the gate.
+      if (runs === 1) return gate.promise;
+      return undefined;
+    };
+    return { harness, gate, runs: () => runs };
+  }
+
+  it('stop detaches event sources immediately but stays pending until the active dispatch settles', async () => {
+    const { harness, gate, runs } = makeGatedHarness();
+    const handle: SyncLifecycleHandle = startSyncLifecycle(USER_A, harness.deps);
+    await drain();
+    expect(runs()).toBe(1);
+
+    let stopSettled = false;
+    const stopPromise = Promise.resolve(handle.stop()).then(() => {
+      stopSettled = true;
+    });
+    await drain();
+    expect(stopSettled).toBe(false);
+
+    // While shutdown waits, every old-owner source is already incapable of
+    // scheduling another User A dispatch.
+    handle.notifyLocalMutation(USER_A);
+    harness.emitAppState('active');
+    harness.emitNet(false);
+    harness.emitNet(true);
+    harness.clock.advance(60_000);
+    await drain();
+    expect(runs()).toBe(1);
+
+    gate.resolve();
+    await stopPromise;
+    await drain();
+    expect(stopSettled).toBe(true);
+    expect(runs()).toBe(1);
+  });
+
+  it('drains a rejected pending dispatch without surfacing an unhandled rejection and still resolves shutdown', async () => {
+    const { harness, gate, runs } = makeGatedHarness();
+    const handle: SyncLifecycleHandle = startSyncLifecycle(USER_A, harness.deps);
+    await drain();
+
+    let stopSettled = false;
+    const stopPromise = Promise.resolve(handle.stop()).then(() => {
+      stopSettled = true;
+    });
+    await drain();
+    expect(stopSettled).toBe(false);
+
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => {
+      unhandled.push(reason);
+    };
+    process.on('unhandledRejection', onUnhandled);
+    gate.reject(new Error('dispatch exploded'));
+    await stopPromise;
+    await drain();
+    process.off('unhandledRejection', onUnhandled);
+
+    expect(stopSettled).toBe(true);
+    expect(unhandled).toStrictEqual([]);
+    expect(runs()).toBe(1);
+  });
+});

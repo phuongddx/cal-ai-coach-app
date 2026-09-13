@@ -40,6 +40,11 @@ export interface SyncLifecycleHandle {
    * transaction committed. Signals from a non-bound owner are ignored.
    */
   notifyLocalMutation(ownerId: string): void;
-  /** Detaches all events, cancels timers, and clears the bound owner. */
-  stop(): void;
+  /**
+   * Detaches all events, cancels timers, and clears the bound owner. The
+   * returned promise is the owner-handoff barrier: it resolves only after
+   * the single active dispatch (if any) has settled, while every event
+   * source is already incapable of scheduling another dispatch.
+   */
+  stop(): Promise<void>;
 }
