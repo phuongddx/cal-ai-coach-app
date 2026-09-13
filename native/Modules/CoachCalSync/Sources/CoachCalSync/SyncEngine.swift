@@ -21,6 +21,9 @@ public struct DispatchResult: Equatable, Sendable {
 
 public enum SyncEngineError: Error, Equatable, Sendable {
   case notBound
+  /// Reported through the error sink when a dispatch finished but left
+  /// undecodable ops behind (see `maxOpAttempts`).
+  case poisonedOperations(count: Int)
 }
 
 /// Owner-bound reconciliation actor.
@@ -51,6 +54,7 @@ public actor SyncEngine {
   private var isDraining = false
   private var debounceTask: Task<Void, Never>?
   private var debounceGeneration = 0
+  private var errorSink: (@Sendable (any Error) -> Void)?
 
   public init(
     debounceInterval: Duration = SyncEngine.defaultDebounceInterval,
@@ -114,9 +118,27 @@ public actor SyncEngine {
     }
   }
 
+  /// Observability seam for background-triggered dispatches (debounced local
+  /// mutations, foreground, network, BGTask), whose results are not thrown to
+  /// any caller.
+  public func setOnError(_ handler: (@Sendable (any Error) -> Void)?) {
+    errorSink = handler
+  }
+
+  private func reportError(_ error: any Error) {
+    errorSink?(error)
+  }
+
   private func fireDebounce(generation: Int, owner: UUID) async {
     guard generation == debounceGeneration, !stopped, owner == self.owner else { return }
-    _ = try? await dispatch()
+    do {
+      let result = try await dispatch()
+      if result.poisoned > 0 {
+        reportError(SyncEngineError.poisonedOperations(count: result.poisoned))
+      }
+    } catch {
+      reportError(error)
+    }
   }
 
   public func dispatch() async throws -> DispatchResult {

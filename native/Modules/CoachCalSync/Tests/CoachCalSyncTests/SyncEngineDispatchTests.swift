@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import Synchronization
 import Testing
 
 import CoachCalCore
@@ -142,6 +143,43 @@ struct SyncEngineDispatchTests {
   }
 
   @Test
+  func debouncedDispatchSurfacesThrownErrorsThroughSink() async throws {
+    let harness = try makeHarness(debounceInterval: .milliseconds(20))
+    _ = try await harness.seedOutbox(count: 1)
+    await harness.transport.configure(failure: SyncTransportFailure())
+    let capture = ErrorCapture()
+    await harness.engine.setOnError { capture.append($0) }
+    await harness.engine.bind(UUID())
+    await harness.engine.notifyLocalMutation()
+    try await Task.sleep(for: .milliseconds(300))
+
+    #expect(capture.descriptions.count == 1)
+    #expect(capture.descriptions.first?.hasPrefix("SyncTransportFailure") == true)
+  }
+
+  @Test
+  func debouncedDispatchSurfacesPoisonedOperationsThroughSink() async throws {
+    let harness = try makeHarness(debounceInterval: .milliseconds(20))
+    let poisoned = PendingOp(
+      opId: UUID(),
+      tableName: "diary_entries",
+      recordId: UUID(),
+      kind: "upsert",
+      snapshot: "not-json",
+      clientTimestamp: harness.now,
+      createdAt: harness.now
+    )
+    try await harness.write { try poisoned.insert($0) }
+    let capture = ErrorCapture()
+    await harness.engine.setOnError { capture.append($0) }
+    await harness.engine.bind(UUID())
+    await harness.engine.notifyLocalMutation()
+    try await Task.sleep(for: .milliseconds(300))
+
+    #expect(capture.descriptions == ["SyncEngineError: poisonedOperations(count: 1)"])
+  }
+
+  @Test
   func pullSkipsNewerPendingIntentButAppliesOtherRowsAndAdvancesCursor() async throws {
     let harness = try makeHarness()
     let protectedRecord = UUID()
@@ -210,6 +248,18 @@ struct SyncEngineDispatchTests {
 }
 
 struct SyncTransportFailure: Error, Equatable {}
+
+final class ErrorCapture: Sendable {
+  private let entries = Mutex<[String]>([])
+
+  func append(_ error: any Error) {
+    entries.withLock { $0.append("\(type(of: error)): \(error)") }
+  }
+
+  var descriptions: [String] {
+    entries.withLock { $0 }
+  }
+}
 
 actor MockTransport: SyncTransport {
   var pushCalls: [[SyncOperation]] = []
