@@ -3,7 +3,17 @@ import Supabase
 import Testing
 @testable import CoachCalNetworking
 
-@Suite(.serialized)
+private let liveCredentialsConfigured = {
+  let environment = ProcessInfo.processInfo.environment
+  return environment["SUPABASE_ANON_KEY"] != nil
+    && (environment["TEST_EMAIL"] ?? environment["COACHCAL_TEST_EMAIL"]) != nil
+    && (environment["TEST_PASSWORD"] ?? environment["COACHCAL_TEST_PASSWORD"]) != nil
+}()
+
+@Suite(
+  .serialized,
+  .disabled(if: !liveCredentialsConfigured, Comment("requires a seeded local Supabase and credential env vars"))
+)
 struct AuthSessionTests {
   @Test
   func liveSignInPersistsAndSecondClientRestoresSession() async throws {

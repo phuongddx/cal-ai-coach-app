@@ -44,7 +44,7 @@ xcodebuild test -project CoachCal.xcodeproj -scheme CoachCal \
   -only-testing:CoachCalTests/WalkingSmokeUITests
 ```
 
-Run each package’s macOS-compatible tests with `swift test` from its module directory.
+Run each package’s macOS-compatible tests with `swift test` from its module directory. `AuthSessionTests` in `CoachCalNetworking` hit a seeded local Supabase (`supabase start`) and are skipped unless `TEST_EMAIL`, `TEST_PASSWORD`, and `SUPABASE_ANON_KEY` are set.
 
 ## Xcode Cloud
 
