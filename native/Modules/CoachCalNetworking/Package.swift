@@ -25,7 +25,8 @@ let package = Package(
     ),
     .testTarget(
       name: "CoachCalNetworkingTests",
-      dependencies: ["CoachCalNetworking"]
+      dependencies: ["CoachCalNetworking"],
+      resources: [.copy("Fixtures")]
     )
   ]
 )
