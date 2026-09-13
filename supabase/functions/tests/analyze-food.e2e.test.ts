@@ -123,6 +123,103 @@ Deno.test('analyze-food: photo scan returns computed kcal end-to-end', async () 
   }
 });
 
+Deno.test('analyze-food: replaying the same scanId stays 200 with one scan_usage row', async () => {
+  await seedChickenRiceCache();
+  const { userId, token } = await authedUser();
+  const scanId = crypto.randomUUID();
+  try {
+    const first = await handler(scanRequest(photoBody(scanId), token));
+    assertEquals(first.status, 200);
+    assertEquals(ScanResponseSchema.parse(await first.json()).items[0].kcal, 464);
+
+    // Retry-storm guard (Pitfall 7) proven at the handler layer, not just SQL.
+    const replay = await handler(scanRequest(photoBody(scanId), token));
+    assertEquals(replay.status, 200);
+    assertEquals(ScanResponseSchema.parse(await replay.json()).items[0].kcal, 464);
+
+    const db = service();
+    const usage = await db.from('scan_usage')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('scan_id', scanId);
+    assertEquals(usage.count, 1);
+    const scans = await db.from('scans')
+      .select('*', { count: 'exact', head: true })
+      .eq('id', scanId);
+    assertEquals(scans.count, 1);
+    const items = await db.from('scan_items')
+      .select('*', { count: 'exact', head: true })
+      .eq('scan_id', scanId);
+    assertEquals(items.count, 1);
+  } finally {
+    await deleteScan(scanId, userId);
+  }
+});
+
+Deno.test('analyze-food: malformed VLM output is a typed 422, never a 500', async () => {
+  const { userId, token } = await authedUser();
+  const scanId = crypto.randomUUID();
+  const savedMode = Deno.env.get('VLM_FIXTURE_MODE');
+  Deno.env.set('VLM_FIXTURE_MODE', 'malformed');
+  try {
+    const res = await handler(scanRequest(photoBody(scanId), token));
+    assertEquals(res.status, 422);
+    const body = await res.json();
+    assertEquals(body.error.code, 'VLM_SCHEMA_ERROR');
+    // zod 4 reports an unrecognized key at the object's path (items.0); the
+    // no-kcal rejection itself is pinned in contracts.test.ts.
+    assert(
+      body.error.details.includes('items.0'),
+      `issue paths must point at the offending item, got: ${JSON.stringify(body.error.details)}`,
+    );
+    const scans = await service().from('scans')
+      .select('*', { count: 'exact', head: true })
+      .eq('id', scanId);
+    assertEquals(scans.count, 0, 'nothing may persist past a 422');
+  } finally {
+    if (savedMode === undefined) Deno.env.delete('VLM_FIXTURE_MODE');
+    else Deno.env.set('VLM_FIXTURE_MODE', savedMode);
+    await deleteScan(scanId, userId);
+  }
+});
+
+Deno.test('analyze-food: malformed request shapes are 400 VALIDATION_ERROR before auth', async () => {
+  const badUuid = await handler(scanRequest(photoBody('not-a-uuid')));
+  assertEquals(badUuid.status, 400);
+  const badUuidBody = await badUuid.json();
+  assertEquals(badUuidBody.error.code, 'VALIDATION_ERROR');
+  assert(badUuidBody.error.details.some((detail: string) => detail.includes('scanId')));
+
+  const kindMismatch = await handler(scanRequest({
+    scanId: crypto.randomUUID(),
+    kind: 'label',
+    mealType: 'lunch',
+  }));
+  assertEquals(kindMismatch.status, 400);
+  assertEquals((await kindMismatch.json()).error.code, 'VALIDATION_ERROR');
+
+  const unknownKey = await handler(scanRequest(photoBody(crypto.randomUUID(), { mode: 'malformed' })));
+  assertEquals(unknownKey.status, 400);
+  assertEquals((await unknownKey.json()).error.code, 'VALIDATION_ERROR');
+});
+
+Deno.test('analyze-food: an unimplemented kind returns the honest typed 400 naming it', async () => {
+  const { userId, token } = await authedUser();
+  const scanId = crypto.randomUUID();
+  try {
+    const res = await handler(scanRequest(photoBody(scanId, { kind: 'label' }), token));
+    assertEquals(res.status, 400);
+    const body = await res.json();
+    assertEquals(body.error.code, 'VALIDATION_ERROR');
+    assert(
+      body.error.details.some((detail: string) => detail.includes('label')),
+      `the 400 must name the unimplemented kind, got: ${JSON.stringify(body.error.details)}`,
+    );
+  } finally {
+    await deleteScan(scanId, userId);
+  }
+});
+
 Deno.test('analyze-food: a missing Authorization header is a 401 envelope', async () => {
   const res = await handler(scanRequest(photoBody(crypto.randomUUID())));
   assertEquals(res.status, 401);
