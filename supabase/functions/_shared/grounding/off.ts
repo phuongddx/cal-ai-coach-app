@@ -41,9 +41,11 @@ export async function resolveBarcode(barcode: string): Promise<GroundingResult> 
   const params = new URLSearchParams({ fields: 'code,product_name,nutriments' });
   let response: Response;
   try {
+    // A hung provider must not hold the request (and an already-claimed
+    // scan credit) until the platform wall clock kills the function.
     response = await offFetch.impl(
       `${OFF_PRODUCT_URL}/${encodeURIComponent(ean13)}.json?${params}`,
-      { headers: { 'User-Agent': offUserAgent() } },
+      { headers: { 'User-Agent': offUserAgent() }, signal: AbortSignal.timeout(5_000) },
     );
   } catch {
     throw new UpstreamError('open food facts request failed');

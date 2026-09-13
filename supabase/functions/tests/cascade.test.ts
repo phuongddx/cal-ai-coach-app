@@ -207,6 +207,34 @@ Deno.test('fdc/off: a 200 non-JSON body is the typed UpstreamError, never a 500'
   }
 });
 
+Deno.test('fdc/off: upstream fetches carry an abort timeout', async () => {
+  const seenFdc: { signal?: AbortSignal } = {};
+  const originalFdc = fdcFetch.impl;
+  fdcFetch.impl = (_url, init) => {
+    seenFdc.signal = init?.signal ?? undefined;
+    return Promise.resolve(jsonResponse({ totalHits: 0, foods: [] }));
+  };
+  try {
+    await resolveSearch('butter');
+  } finally {
+    fdcFetch.impl = originalFdc;
+  }
+  assert(seenFdc.signal instanceof AbortSignal, 'the FDC fetch must receive an abort signal');
+
+  const seenOff: { signal?: AbortSignal } = {};
+  const originalOff = off.offFetch.impl;
+  off.offFetch.impl = (_url, init) => {
+    seenOff.signal = init?.signal ?? undefined;
+    return Promise.resolve(jsonResponse({ status: 0 }));
+  };
+  try {
+    await off.resolveBarcode('3017620422003');
+  } finally {
+    off.offFetch.impl = originalOff;
+  }
+  assert(seenOff.signal instanceof AbortSignal, 'the OFF fetch must receive an abort signal');
+});
+
 Deno.test('off: resolves the captured nutella fixture through GroundedFoodSchema', async () => {
   const savedUserAgent = Deno.env.get('OFF_USER_AGENT');
   Deno.env.set('OFF_USER_AGENT', 'CoachCal/0.1 (test-agent)');

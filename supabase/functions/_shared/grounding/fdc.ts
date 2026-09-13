@@ -107,7 +107,11 @@ async function fdcSearch(params: Record<string, string>): Promise<FdcSearchRespo
   });
   let response: Response;
   try {
-    response = await fdcFetch.impl(`${FDC_SEARCH_URL}?${search}`);
+    // A hung provider must not hold the request (and an already-claimed
+    // scan credit) until the platform wall clock kills the function.
+    response = await fdcFetch.impl(`${FDC_SEARCH_URL}?${search}`, {
+      signal: AbortSignal.timeout(5_000),
+    });
   } catch {
     throw new UpstreamError('fdc search request failed');
   }
