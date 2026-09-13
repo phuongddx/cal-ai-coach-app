@@ -1,0 +1,14 @@
+{
+  "status": 1,
+  "code": "3017620422003",
+  "product": {
+    "product_name": "Nutella",
+    "nutriments": {
+      "energy-kcal_100g": 539,
+      "proteins_100g": 6.3,
+      "carbohydrates_100g": 57.5,
+      "fat_100g": 30.9,
+      "fiber_100g": 3.4
+    }
+  }
+}
