@@ -38,11 +38,25 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.nextlabs.coachcal
         TARGETED_DEVICE_FAMILY: "1"
   CoachCalTests:
-    type: bundle.ui-testing
+    type: bundle.unit-test
     platform: iOS
     sources:
       - path: App/CoachCalTests
-        optional: true
+        excludes:
+          - WalkingSmokeUITests.swift
+    dependencies:
+      - target: CoachCal
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nextlabs.coachcal.unit-tests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/CoachCal.app/CoachCal"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        GENERATE_INFOPLIST_FILE: "YES"
+  CoachCalUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - App/CoachCalTests/WalkingSmokeUITests.swift
     dependencies:
       - target: CoachCal
     settings:
@@ -63,3 +77,4 @@ schemes:
       config: Debug
       targets:
         - CoachCalTests
+        - CoachCalUITests

@@ -2,7 +2,7 @@ import XCTest
 
 @testable import CoachCal
 
-final class AppLaunchMigrationTests: XCTestCase {
+nonisolated final class AppLaunchMigrationTests: XCTestCase {
   @MainActor
   func testLaunchBootstrapsMigratedDatabase() async throws {
     let database = PersistenceBootstrap.shared.database
@@ -15,7 +15,7 @@ final class AppLaunchMigrationTests: XCTestCase {
           WHERE identifier = '1__foundation_sync'
           """
       )
-      try Int.fetchOne(database, sql: "SELECT COUNT(*) FROM diary_entries")
+      _ = try Int.fetchOne(database, sql: "SELECT COUNT(*) FROM diary_entries")
       return migrationCount
     }
 

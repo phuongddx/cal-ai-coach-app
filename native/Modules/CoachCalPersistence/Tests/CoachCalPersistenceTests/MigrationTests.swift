@@ -19,19 +19,22 @@ struct MigrationTests {
     try Migrations.foundationSync.migrate(pool)
 
     try pool.read { database in
+      let diaryColumns = try columns("diary_entries", database)
+      let pendingColumns = try columns("pending_ops", database)
+      let stateColumns = try columns("sync_state", database)
       #expect(
-        try columns("diary_entries", database) == [
+        diaryColumns == [
           "id", "user_id", "display_text", "created_at", "updated_at",
           "deleted_at", "server_version", "accepted_op_id", "server_updated_at",
         ]
       )
       #expect(
-        try columns("pending_ops", database) == [
+        pendingColumns == [
           "op_id", "table_name", "record_id", "kind", "snapshot",
           "client_timestamp", "created_at", "dispatch_attempts", "next_retry_at",
         ]
       )
-      #expect(try columns("sync_state", database) == ["id", "pull_cursor"])
+      #expect(stateColumns == ["id", "pull_cursor"])
     }
   }
 
@@ -44,12 +47,13 @@ struct MigrationTests {
     try migrator.migrate(pool)
 
     try pool.read { database in
+      let migrationCount = try Int.fetchOne(
+        database,
+        sql: "SELECT COUNT(*) FROM grdb_migrations WHERE identifier = ?",
+        arguments: ["1__foundation_sync"]
+      )
       #expect(
-        try Int.fetchOne(
-          database,
-          sql: "SELECT COUNT(*) FROM grdb_migrations WHERE identifier = ?",
-          arguments: ["1__foundation_sync"]
-        ) == 1
+        migrationCount == 1
       )
     }
   }
@@ -77,18 +81,14 @@ struct MigrationTests {
       try entry.insert(database)
     }
     let stored = try pool.read { database in
-      try DiaryEntry.fetchOne(
-        database,
-        sql: "SELECT * FROM diary_entries WHERE id = ?",
-        arguments: [entry.id.uuidString]
-      )
+      try DiaryEntry.fetchOne(database, key: entry.id)
     }
 
     #expect(stored == entry)
   }
 
-  private func columns(_ table: String, _ database: Database) throws -> [String] {
-    try String.fetchAll(database, sql: "PRAGMA table_info(\(table))")
-      .compactMap { $0 }
+  private func columns(_ table: String, _ database: GRDB.Database) throws -> [String] {
+    try Row.fetchAll(database, sql: "PRAGMA table_info(\(table))")
+      .map { $0["name"] }
   }
 }
