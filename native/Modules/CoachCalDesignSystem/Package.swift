@@ -15,6 +15,10 @@ let package = Package(
     .target(
       name: "CoachCalDesignSystem",
       dependencies: ["CoachCalCore"]
+    ),
+    .testTarget(
+      name: "CoachCalDesignSystemTests",
+      dependencies: ["CoachCalDesignSystem"]
     )
   ]
 )

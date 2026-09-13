@@ -22,6 +22,10 @@ let package = Package(
         "CoachCalCore",
         .product(name: "GRDB", package: "GRDB.swift"),
       ]
+    ),
+    .testTarget(
+      name: "CoachCalPersistenceTests",
+      dependencies: ["CoachCalPersistence"]
     )
   ]
 )

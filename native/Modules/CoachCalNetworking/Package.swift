@@ -22,6 +22,10 @@ let package = Package(
         "CoachCalCore",
         .product(name: "Supabase", package: "supabase-swift"),
       ]
+    ),
+    .testTarget(
+      name: "CoachCalNetworkingTests",
+      dependencies: ["CoachCalNetworking"]
     )
   ]
 )

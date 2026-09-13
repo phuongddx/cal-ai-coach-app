@@ -15,6 +15,10 @@ let package = Package(
     .target(
       name: "CoachCalSync",
       dependencies: ["CoachCalCore"]
+    ),
+    .testTarget(
+      name: "CoachCalSyncTests",
+      dependencies: ["CoachCalSync"]
     )
   ]
 )
