@@ -7,7 +7,7 @@
 -- assertions run as `postgres` (clients have no table privileges).
 
 begin;
-select plan(32);
+select plan(37);
 
 -- 1-2: no direct table privileges for clients on the scan-pipeline tables ----
 select ok(
@@ -227,6 +227,57 @@ select is(
   (select count(*) from public.webhook_events),
   2::bigint,
   'ledger keeps one row per distinct event id'
+);
+
+-- 28-32: events that state no period end preserve the stored expiry (WR-02) ---
+-- A ledger-only event (e.g. BILLING_ISSUE) arrives active=true with no
+-- expiresAt; the upsert must keep the prior expiry instead of nulling it.
+set local role service_role;
+select is(
+  (public.apply_webhook_event(jsonb_build_object(
+    'eventId', 'evt-0003',
+    'appUserId', 'rc-user-alpha',
+    'entitlementId', 'premium',
+    'active', true
+  )))->>'applied',
+  'true',
+  'event without expiresAt is applied'
+);
+
+reset role;
+set local role postgres;
+select ok(
+  (select expires_at = '2026-12-01T00:00:00Z'::timestamptz from public.entitlements
+    where app_user_id = 'rc-user-alpha' and entitlement_id = 'premium'),
+  'event without expiresAt preserves the prior expiry'
+);
+select ok(
+  (select active from public.entitlements
+    where app_user_id = 'rc-user-alpha' and entitlement_id = 'premium'),
+  'event without expiresAt keeps access active'
+);
+
+-- Revocation is untouched by the coalesce: active=false lands even when the
+-- event carries no expiry of its own.
+set local role service_role;
+select is(
+  (public.apply_webhook_event(jsonb_build_object(
+    'eventId', 'evt-0004',
+    'appUserId', 'rc-user-alpha',
+    'entitlementId', 'premium',
+    'active', false
+  )))->>'applied',
+  'true',
+  'revocation without expiresAt is applied'
+);
+
+reset role;
+set local role postgres;
+select is(
+  (select active from public.entitlements
+    where app_user_id = 'rc-user-alpha' and entitlement_id = 'premium'),
+  'f',
+  'revocation without expiresAt deactivates access'
 );
 
 -- 28: malformed envelope refused with the typed errcode ------------------------

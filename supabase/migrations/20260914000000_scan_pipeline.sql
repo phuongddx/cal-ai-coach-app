@@ -246,7 +246,11 @@ begin
      v_supabase_user_id, now())
   on conflict (app_user_id, entitlement_id) do update
     set active           = excluded.active,
-        expires_at       = excluded.expires_at,
+        -- Events that state no period end (e.g. a BILLING_ISSUE ledger row)
+        -- must not erase the stored expiry — that would convert a time-boxed
+        -- entitlement into a never-expiring one. Revocation still lands
+        -- because active = excluded.active; the coalesce cannot resurrect it.
+        expires_at       = coalesce(excluded.expires_at, public.entitlements.expires_at),
         product_id       = excluded.product_id,
         supabase_user_id = coalesce(excluded.supabase_user_id,
                                     public.entitlements.supabase_user_id),
