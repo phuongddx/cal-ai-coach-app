@@ -22,10 +22,14 @@ export async function getEntitlementState(
     .select('entitlement_id, expires_at')
     .or(`supabase_user_id.eq.${userId},app_user_id.eq.${userId}`)
     .eq('active', true)
-    .order('expires_at', { ascending: false, nullsFirst: false })
-    .limit(1)
-    .maybeSingle();
+    .order('expires_at', { ascending: false, nullsFirst: false });
   if (error) throw error;
-  if (!data) return { tier: 'free', active: false, expiresAt: null };
-  return { tier: 'premium', active: true, expiresAt: data.expires_at };
+  // active=true alone is not access: an expires_at in the past is expired
+  // (e.g. a lagging EXPIRATION webhook), so unexpired rows are filtered here.
+  const now = Date.now();
+  const current = (data ?? []).find(
+    (row) => row.expires_at === null || new Date(row.expires_at).getTime() > now,
+  );
+  if (!current) return { tier: 'free', active: false, expiresAt: null };
+  return { tier: 'premium', active: true, expiresAt: current.expires_at };
 }
