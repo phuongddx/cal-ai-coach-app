@@ -47,3 +47,4 @@ cat > "$TEST_ACCOUNT_ENV" <<EOF
 TEST_EMAIL=$email
 TEST_PASSWORD=$password
 EOF
+chmod 600 "$TEST_ACCOUNT_ENV"
