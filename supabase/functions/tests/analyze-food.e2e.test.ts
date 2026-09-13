@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { handler } from '../analyze-food/index.ts';
 import { stackEnv } from './_env.ts';
 import { ScanResponseSchema } from '../_shared/contracts/scan.ts';
+import { resolveBarcode, resolveFood, resolveSearch } from '../_shared/grounding/cascade.ts';
 
 // Direct handler invocation (RESEARCH A7): the suite imports handler from
 // index.ts and drives it with real Requests against the local stack.
@@ -224,6 +225,26 @@ Deno.test('analyze-food: a missing Authorization header is a 401 envelope', asyn
   const res = await handler(scanRequest(photoBody(crypto.randomUUID())));
   assertEquals(res.status, 401);
   assertEquals((await res.json()).error.code, 'UNAUTHORIZED');
+});
+
+Deno.test('cascade skeleton: delegates return cache hits and typed misses', async () => {
+  await seedChickenRiceCache();
+  try {
+    const db = service();
+    const hit = await resolveSearch(db, '  Chicken-Rice  ');
+    assert('per100g' in hit, 'a live cache row must ground the search');
+    assertEquals(hit.source, 'cache');
+    assertEquals(hit.cacheKey, 'search:chicken-rice');
+    assertEquals(hit.per100g.kcal, 145);
+
+    const foodHit = await resolveFood(db, 'chicken-rice');
+    assert('per100g' in foodHit);
+
+    assertEquals(await resolveBarcode(db, '3017620422003'), { kind: 'not_found' });
+    assertEquals(await resolveSearch(db, 'never-cached-item'), { kind: 'not_found' });
+  } finally {
+    await service().from('food_cache').delete().eq('cache_key', CACHE_KEY);
+  }
 });
 
 Deno.test('analyze-food: suite cleanup removes the test user and cache seed', async () => {
