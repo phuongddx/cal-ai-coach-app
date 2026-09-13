@@ -32,6 +32,7 @@ struct MigrationTests {
         pendingColumns == [
           "op_id", "table_name", "record_id", "kind", "snapshot",
           "client_timestamp", "created_at", "dispatch_attempts", "next_retry_at",
+          "quarantined",
         ]
       )
       #expect(stateColumns == ["id", "pull_cursor"])
