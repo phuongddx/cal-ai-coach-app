@@ -24,6 +24,10 @@ if [ -n "${CI_DESTINATION:-}" ]; then
   destination="$CI_DESTINATION"
 else
   destination="platform=iOS Simulator,name=iPhone 16,OS=26.5"
+  resolved_name="$(xcrun simctl list devices available 2>/dev/null | grep -m1 -o 'iPhone [^(]*' | tail -n 1 || true)"
+  if [ -n "$resolved_name" ]; then
+    destination="platform=iOS Simulator,name=$(printf '%s' "$resolved_name" | sed 's/ *$//')"
+  fi
 fi
 
 xcodebuild test \

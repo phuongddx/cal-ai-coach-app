@@ -48,4 +48,4 @@ Run each package’s macOS-compatible tests with `swift test` from its module di
 
 ## Xcode Cloud
 
-The PR-triggered workflow and its test action are configured once in App Store Connect. Xcode Cloud invokes the repository hook at `ci_scripts/ci_post_clone.sh`; that hook verifies XcodeGen, regenerates the project from `project.yml`, runs local package tests, and executes the `CoachCal` test scheme using Xcode Cloud’s provided destination (with a local iPhone 16 / iOS 26.5 fallback).
+The PR-triggered workflow and its test action are configured once in App Store Connect. Xcode Cloud invokes the repository hook at `ci_scripts/ci_post_clone.sh`; that hook verifies XcodeGen, regenerates the project from `project.yml`, runs local package tests, and executes the `CoachCal` test scheme against `$CI_DESTINATION` when set, or the first available iPhone simulator otherwise (pinned to iPhone 16 / iOS 26.5 only if none is found).
