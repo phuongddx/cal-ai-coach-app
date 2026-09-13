@@ -1,0 +1,65 @@
+name: CoachCal
+options:
+  bundleIdPrefix: com.nextlabs
+  deploymentTarget:
+    iOS: "18.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_APPROACHABLE_CONCURRENCY: "YES"
+packages:
+  CoachCalCore:
+    path: Modules/CoachCalCore
+  CoachCalDesignSystem:
+    path: Modules/CoachCalDesignSystem
+  CoachCalPersistence:
+    path: Modules/CoachCalPersistence
+  CoachCalNetworking:
+    path: Modules/CoachCalNetworking
+  CoachCalSync:
+    path: Modules/CoachCalSync
+targets:
+  CoachCal:
+    type: application
+    platform: iOS
+    sources:
+      - App/CoachCal
+    info:
+      path: App/CoachCal/Info.plist
+    dependencies:
+      - package: CoachCalCore
+      - package: CoachCalDesignSystem
+      - package: CoachCalPersistence
+      - package: CoachCalNetworking
+      - package: CoachCalSync
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nextlabs.coachcal
+        TARGETED_DEVICE_FAMILY: "1"
+  CoachCalTests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: App/CoachCalTests
+        optional: true
+    dependencies:
+      - target: CoachCal
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nextlabs.coachcal.tests
+        TEST_TARGET_NAME: CoachCal
+        GENERATE_INFOPLIST_FILE: "YES"
+        UI_TESTING: "YES"
+schemes:
+  CoachCal:
+    build:
+      targets:
+        CoachCal: all
+        CoachCalTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - CoachCalTests
