@@ -7,7 +7,7 @@ import process from 'node:process';
 
 const environment = process['env'];
 const supabaseURL = (environment.SUPABASE_URL ?? 'http://127.0.0.1:54321').replace(/\/$/, '');
-const anonKey = requireEnv('ANON_KEY');
+const anonKey = environment.SUPABASE_ANON_KEY ?? requireEnv('ANON_KEY');
 const email = requireEnv('TEST_EMAIL');
 const password = requireEnv('TEST_PASSWORD');
 const outputDirectory = environment.FIXTURE_OUTPUT_DIR

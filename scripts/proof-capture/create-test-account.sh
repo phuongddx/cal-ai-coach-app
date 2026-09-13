@@ -9,8 +9,10 @@ if [[ -z "${SUPABASE_SERVICE_KEY:-}" && -n "${PROOF_ENV_FILE:-}" ]]; then
 fi
 
 : "${SUPABASE_URL:=http://127.0.0.1:54321}"
-: "${SERVICE_ROLE_KEY:?SERVICE_ROLE_KEY must be set}"
-: "${ANON_KEY:?ANON_KEY must be set}"
+: "${SUPABASE_SERVICE_KEY:=$SERVICE_ROLE_KEY}"
+: "${SUPABASE_ANON_KEY:=$ANON_KEY}"
+: "${SUPABASE_SERVICE_KEY:?SUPABASE_SERVICE_KEY must be set}"
+: "${SUPABASE_ANON_KEY:?SUPABASE_ANON_KEY must be set}"
 : "${TEST_ACCOUNT_ENV:?TEST_ACCOUNT_ENV must be set}"
 
 email="golden-$(date +%s)-$RANDOM$RANDOM@inbox.test"
@@ -20,8 +22,8 @@ payload="$(printf '{"email":"%s","password":"%s","email_confirm":true}' "$email"
 http_status="$(
   curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
     --request POST "$SUPABASE_URL/auth/v1/admin/users" \
-    --header "Authorization: Bearer $SERVICE_ROLE_KEY" \
-    --header "apikey: $SERVICE_ROLE_KEY" \
+    --header "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+    --header "apikey: $SUPABASE_SERVICE_KEY" \
     --header 'Content-Type: application/json' \
     --data "$payload"
 )"
