@@ -197,6 +197,41 @@ Deno.test('barcode-resolve: lookups never consume scan quota', async () => {
   }
 });
 
+Deno.test('barcode-resolve: a miss caches negatively for 24h and the second lookup performs zero provider fetches', async () => {
+  await deleteCacheKey(UNKNOWN_BARCODE_KEY);
+  const { token } = await authedUser();
+  const log: SeamLog = { fdc: [], off: [] };
+  try {
+    const first = await withMissSeams(log, () => handler(lookupRequest(UNKNOWN_BARCODE, token)));
+    assertEquals(first.status, 404);
+    await first.body?.cancel();
+    const firstPassFetches = log.fdc.length + log.off.length;
+    assertEquals(firstPassFetches > 0, true, 'the first miss must reach the providers');
+
+    const second = await withMissSeams(log, () => handler(lookupRequest(UNKNOWN_BARCODE, token)));
+    assertEquals(second.status, 404);
+    await second.body?.cancel();
+
+    assertEquals(
+      log.fdc.length + log.off.length,
+      firstPassFetches,
+      'the second lookup must be served by the 24h negative row, zero fetches',
+    );
+    const negative = await service().from('food_cache')
+      .select('source, expires_at')
+      .eq('cache_key', UNKNOWN_BARCODE_KEY)
+      .maybeSingle();
+    assertEquals(negative.data?.source, 'negative');
+    const expiresAt = new Date(negative.data!.expires_at as string).getTime();
+    assert(
+      Math.abs(expiresAt - (Date.now() + 24 * 60 * 60 * 1000)) < 60 * 1000,
+      'negative rows must expire within a minute of +24h',
+    );
+  } finally {
+    await deleteCacheKey(UNKNOWN_BARCODE_KEY);
+  }
+});
+
 Deno.test('barcode-resolve: suite cleanup removes the test user and cache seeds', async () => {
   if (!testUserId) return;
   await service().from('scan_usage').delete().eq('user_id', testUserId);
