@@ -27,6 +27,9 @@ targets:
       - App/CoachCal
     info:
       path: App/CoachCal/Info.plist
+      properties:
+        SUPABASE_URL: $(SUPABASE_URL)
+        SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
     dependencies:
       - package: CoachCalCore
       - package: CoachCalDesignSystem
@@ -37,6 +40,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.nextlabs.coachcal
         TARGETED_DEVICE_FAMILY: "1"
+        SUPABASE_URL: "$(COACHCAL_SUPABASE_URL:http://127.0.0.1:54321)"
+        SUPABASE_ANON_KEY: "$(COACHCAL_SUPABASE_ANON_KEY)"
   CoachCalTests:
     type: bundle.unit-test
     platform: iOS
