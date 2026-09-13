@@ -7,7 +7,7 @@
 -- assertions run as `postgres` (clients have no table privileges).
 
 begin;
-select plan(41);
+select plan(43);
 
 -- 1-2: no direct table privileges for clients on the scan-pipeline tables ----
 select ok(
@@ -355,6 +355,24 @@ select throws_ok(
   'insert into public.food_cache (cache_key, source, payload, expires_at) values (''x:1'', ''wikipedia'', jsonb_build_object(''kcal'', 10), now())',
   'new row for relation "food_cache" violates check constraint "food_cache_source_check"',
   'food_cache refuses unknown sources'
+);
+
+-- 41-42: scan identity is user-scoped (WR-06) --------------------------------
+select ok(
+  (select i.indisprimary and i.indnatts = 2 from pg_index i
+    where i.indrelid = 'public.scans'::regclass and i.indisprimary),
+  'scans primary key is the composite (user_id, id)'
+);
+select ok(
+  exists (
+    select 1
+      from pg_constraint c
+      join pg_attribute a on a.attrelid = c.conrelid and a.attnum = any (c.conkey)
+     where c.conrelid = 'public.scan_items'::regclass
+       and c.contype = 'f'
+       and a.attname = 'user_id'
+  ),
+  'scan_items foreign key is user-scoped to scans'
 );
 
 select * from finish();

@@ -176,17 +176,23 @@ export async function handler(req: Request): Promise<Response> {
 
     // Replay idempotency: the same scanId must be able to flow through again
     // (quota already collapses on (user_id, scan_id)), so persistence replaces.
+    // The conflict target is user-scoped: a scanId is an idempotency key per
+    // user, never a global identity another user could overwrite.
     const { error: scanError } = await serviceClient
       .from('scans')
       .upsert(
         { id: request.scanId, user_id: userId, kind: request.kind, meal_type: request.mealType ?? null },
-        { onConflict: 'id' },
+        { onConflict: 'user_id,id' },
       );
     if (scanError) throw scanError;
-    await serviceClient.from('scan_items').delete().eq('scan_id', request.scanId);
+    await serviceClient.from('scan_items')
+      .delete()
+      .eq('user_id', userId)
+      .eq('scan_id', request.scanId);
     const { error: itemsError } = await serviceClient.from('scan_items').insert(
       items.map((item) => ({
         id: crypto.randomUUID(),
+        user_id: userId,
         scan_id: request.scanId,
         label: item.label,
         grams: item.grams,

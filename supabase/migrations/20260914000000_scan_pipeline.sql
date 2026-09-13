@@ -62,17 +62,22 @@ create table if not exists public.webhook_events (
 -- scans / scan_items: server-originated scan results reaching the client in
 -- the HTTP response (response-mirror pattern; never client-synced)
 -- ---------------------------------------------------------------------------
+-- scan identity is user-scoped (user_id, id): a client-supplied scanId is an
+-- idempotency key per user only — one user's scanId can never overwrite or
+-- repoint another user's persisted scan.
 create table if not exists public.scans (
-  id         uuid primary key,
+  id         uuid not null,
   user_id    uuid not null,
   kind       text check (kind in ('photo','label','text','barcode')),
   meal_type  text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  primary key (user_id, id)
 );
 
 create table if not exists public.scan_items (
   id                uuid primary key,
-  scan_id           uuid references public.scans (id),
+  user_id           uuid not null,
+  scan_id           uuid not null,
   label             text not null,
   grams             numeric not null,
   per100g           jsonb not null,
@@ -80,7 +85,8 @@ create table if not exists public.scan_items (
   macros            jsonb not null,
   confidence        numeric,
   hidden_fat_likely boolean default false,
-  source            text
+  source            text,
+  foreign key (user_id, scan_id) references public.scans (user_id, id)
 );
 
 -- ---------------------------------------------------------------------------
