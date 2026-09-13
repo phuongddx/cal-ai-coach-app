@@ -1,0 +1,14 @@
+{
+  // The suites share mutable process state (fetch seams, VLM provider
+  // override, VLM_FIXTURE_MODE) and DB rows keyed by fixture-coupled cache
+  // keys (search:chicken-rice, seeded per suite for the fixture VLM labels).
+  // That is only safe strictly sequentially — never add --parallel here, and
+  // keep every suite's non-fixture cache keys unique to that suite.
+  // Locking stays with the canonical root invocation (repo-root deno.lock);
+  // this config must not read or rewrite that lock — this subgraph would
+  // prune the native app's entries from it.
+  "lock": false,
+  "tasks": {
+    "test": "deno test --allow-all tests/"
+  }
+}

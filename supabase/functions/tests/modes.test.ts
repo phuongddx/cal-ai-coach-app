@@ -23,7 +23,8 @@ const { url, anonKey, serviceRoleKey } = stackEnv();
 const PROTEIN_BAR_KEY = 'search:protein bar';
 const ALMONDS_KEY = 'search:roasted almonds';
 const CHICKEN_RICE_KEY = 'search:chicken-rice';
-const BARCODE_KEY = 'barcode:0036000291452';
+// Suite-scoped barcode key: scan-gates.test.ts owns 0036000291452.
+const BARCODE_KEY = 'barcode:0036000291459';
 const TEXT_KEYS = [
   'search:grilled chicken',
   'search:greek salad',
@@ -278,7 +279,7 @@ Deno.test('barcode scan performs zero VLM calls and grounds exact cache data', a
   overrideVlmProvider(counted.provider);
   try {
     const res = await handler(
-      scanRequest(scanBody(scanId, 'barcode', { barcode: '0036000291452' }), token),
+      scanRequest(scanBody(scanId, 'barcode', { barcode: '0036000291459' }), token),
     );
     assertEquals(res.status, 200);
     const parsed = ScanResponseSchema.parse(await res.json());

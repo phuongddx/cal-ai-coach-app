@@ -269,12 +269,13 @@ Deno.test('cascade skeleton: delegates return cache hits and typed misses', asyn
     const foodHit = await resolveFood(db, 'chicken-rice');
     assert('per100g' in foodHit);
 
-    assertEquals(await resolveBarcode(db, '3017620422003', missTiers), { kind: 'not_found' });
+    // Suite-scoped barcode key: barcode-resolve.test.ts owns 3017620422003.
+    assertEquals(await resolveBarcode(db, '3000000000004', missTiers), { kind: 'not_found' });
     assertEquals(await resolveSearch(db, 'never-cached-item', missTiers), { kind: 'not_found' });
   } finally {
     const db = service();
     await db.from('food_cache').delete().eq('cache_key', CACHE_KEY);
-    await db.from('food_cache').delete().eq('cache_key', 'barcode:3017620422003');
+    await db.from('food_cache').delete().eq('cache_key', 'barcode:3000000000004');
     await db.from('food_cache').delete().eq('cache_key', 'search:never-cached-item');
   }
 });

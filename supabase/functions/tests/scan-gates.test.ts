@@ -14,7 +14,9 @@ const CHICKEN_RICE_KEY = 'search:chicken-rice';
 const CHICKEN_RICE_PAYLOAD = { kcal: 145, proteinG: 27, carbsG: 40, fatG: 4, fiberG: 2 };
 const BARCODE = '0036000291452';
 const BARCODE_KEY = `barcode:${BARCODE}`;
-const UNKNOWN_BARCODE = '9999999999999';
+// Suite-scoped barcode keys: barcode-resolve.test.ts owns 9999999999999, so
+// a shared one would race that suite's negative-caching assertions.
+const UNKNOWN_BARCODE = '8888888888888';
 const UNKNOWN_BARCODE_KEY = `barcode:${UNKNOWN_BARCODE}`;
 
 let serviceClient: SupabaseClient | null = null;
