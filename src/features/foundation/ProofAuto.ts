@@ -52,7 +52,7 @@ function logProof(scenario: string, payload: Record<string, unknown>): void {
 export async function runProofAuto(controller: FoundationController): Promise<void> {
   const runId = Math.random().toString(36).slice(2, 10);
 
-  await controller.signIn('a@proof.local', 'phase1-proof-2026');
+  await controller.signIn('a@proof.invalid', 'redacted-proof-credential');
 
   await sleep(8000);
   const existing = controller.getState().rows[0];

@@ -149,7 +149,7 @@ export function FoundationSession() {
       if (proofUserB) {
         // User B isolation: fresh install signs in as B — no A rows visible,
         // no local row to edit (repository refuses).
-        await controller.signIn('b@proof.local', 'phase1-proof-2026');
+        await controller.signIn('b@proof.invalid', 'redacted-proof-credential');
         await sleep(2000);
         const rows = controller.getState().rows;
         let editDenied = false;

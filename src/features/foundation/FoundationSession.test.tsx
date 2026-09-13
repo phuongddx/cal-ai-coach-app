@@ -282,7 +282,7 @@ describe('FoundationSession owner-handoff barrier (Plan 01-07 Task 2)', () => {
 
     const controller = await renderSession();
     await act(async () => {
-      await controller.signIn('a@proof.local', 'pw');
+      await controller.signIn('a@proof.invalid', 'pw');
     });
     const heldPush = fake.heldCalls('sync_push')[0];
     expect(heldPush).toBeDefined();
@@ -290,12 +290,12 @@ describe('FoundationSession owner-handoff barrier (Plan 01-07 Task 2)', () => {
 
     let toB!: Promise<void>;
     await act(async () => {
-      toB = controller.signIn('b@proof.local', 'pw');
+      toB = controller.signIn('b@proof.invalid', 'pw');
     });
     await drainMicrotasks();
     // RED target: B's authenticator must not run and B must stay unbound
     // while A's dispatch is still pending under A's JWT.
-    expect(fake.authEmails).not.toContain('b@proof.local');
+    expect(fake.authEmails).not.toContain('b@proof.invalid');
     expect(controller.getState().owner).not.toBe(OWNER_B);
     expect(fake.rpcCalls.some((call) => call.identity === OWNER_B)).toBe(false);
 
@@ -306,7 +306,7 @@ describe('FoundationSession owner-handoff barrier (Plan 01-07 Task 2)', () => {
       await toB;
     });
 
-    expect(fake.authEmails).toStrictEqual(['a@proof.local', 'b@proof.local']);
+    expect(fake.authEmails).toStrictEqual(['a@proof.invalid', 'b@proof.invalid']);
     expect(controller.getState().owner).toBe(OWNER_B);
 
     // A's acknowledgement merged ONLY into A's local partition, A's outbox
@@ -327,7 +327,7 @@ describe('FoundationSession owner-handoff barrier (Plan 01-07 Task 2)', () => {
 
     const controller = await renderSession();
     await act(async () => {
-      await controller.signIn('a@proof.local', 'pw');
+      await controller.signIn('a@proof.invalid', 'pw');
     });
     const heldPull = fake.heldCalls('sync_pull')[0];
     expect(heldPull).toBeDefined();
@@ -335,10 +335,10 @@ describe('FoundationSession owner-handoff barrier (Plan 01-07 Task 2)', () => {
 
     let toB!: Promise<void>;
     await act(async () => {
-      toB = controller.signIn('b@proof.local', 'pw');
+      toB = controller.signIn('b@proof.invalid', 'pw');
     });
     await drainMicrotasks();
-    expect(fake.authEmails).not.toContain('b@proof.local');
+    expect(fake.authEmails).not.toContain('b@proof.invalid');
     expect(controller.getState().owner).not.toBe(OWNER_B);
 
     await act(async () => {
@@ -363,7 +363,7 @@ describe('FoundationSession owner-handoff barrier (Plan 01-07 Task 2)', () => {
       await toB;
     });
 
-    expect(fake.authEmails).toStrictEqual(['a@proof.local', 'b@proof.local']);
+    expect(fake.authEmails).toStrictEqual(['a@proof.invalid', 'b@proof.invalid']);
     expect(controller.getState().owner).toBe(OWNER_B);
 
     // The A pull merged only into A's partition; B stays empty and B's next
@@ -383,7 +383,7 @@ describe('FoundationSession owner-handoff barrier (Plan 01-07 Task 2)', () => {
 
     const controller = await renderSession();
     await act(async () => {
-      await controller.signIn('a@proof.local', 'pw');
+      await controller.signIn('a@proof.invalid', 'pw');
     });
 
     let signOutPromise!: Promise<void>;
@@ -407,14 +407,14 @@ describe('FoundationSession owner-handoff barrier (Plan 01-07 Task 2)', () => {
   it('a failed B authentication leaves no bound owner or running A lifecycle, and later sign-ins still work', async () => {
     const controller = await renderSession();
     await act(async () => {
-      await controller.signIn('a@proof.local', 'pw');
+      await controller.signIn('a@proof.invalid', 'pw');
     });
     const rpcCountAfterA = fake.rpcCalls.length;
 
-    fake.failAuthFor = 'b@proof.local';
+    fake.failAuthFor = 'b@proof.invalid';
     await act(async () => {
       await expect(
-        controller.signIn('b@proof.local', 'pw')
+        controller.signIn('b@proof.invalid', 'pw')
       ).rejects.toThrow('proof sign-in failed');
     });
 
@@ -426,7 +426,7 @@ describe('FoundationSession owner-handoff barrier (Plan 01-07 Task 2)', () => {
     ).toBe(true);
 
     await act(async () => {
-      await controller.signIn('a@proof.local', 'pw');
+      await controller.signIn('a@proof.invalid', 'pw');
     });
     expect(controller.getState().owner).toBe(OWNER_A);
     expect(fake.rpcCalls.some((call) => call.identity === OWNER_A)).toBe(true);
@@ -434,26 +434,26 @@ describe('FoundationSession owner-handoff barrier (Plan 01-07 Task 2)', () => {
 
   it('serializes concurrent sign-ins so the second authenticates only after the first transition completes', async () => {
     const controller = await renderSession();
-    fake.holdAuth('a@proof.local');
+    fake.holdAuth('a@proof.invalid');
 
     let first!: Promise<void>;
     let second!: Promise<void>;
     await act(async () => {
-      first = controller.signIn('a@proof.local', 'pw');
-      second = controller.signIn('b@proof.local', 'pw');
+      first = controller.signIn('a@proof.invalid', 'pw');
+      second = controller.signIn('b@proof.invalid', 'pw');
     });
     await drainMicrotasks();
-    expect(fake.authEmails).toStrictEqual(['a@proof.local']);
+    expect(fake.authEmails).toStrictEqual(['a@proof.invalid']);
 
     await act(async () => {
-      fake.releaseAuth('a@proof.local');
+      fake.releaseAuth('a@proof.invalid');
     });
     await act(async () => {
       await first;
       await second;
     });
 
-    expect(fake.authEmails).toStrictEqual(['a@proof.local', 'b@proof.local']);
+    expect(fake.authEmails).toStrictEqual(['a@proof.invalid', 'b@proof.invalid']);
     expect(controller.getState().owner).toBe(OWNER_B);
     // A's lifecycle ran and was stopped before B bound; every push stayed
     // under its own owner's identity.
