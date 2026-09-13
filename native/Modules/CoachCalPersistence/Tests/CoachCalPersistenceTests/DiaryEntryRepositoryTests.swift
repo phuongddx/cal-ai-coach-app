@@ -45,13 +45,14 @@ struct DiaryEntryRepositoryTests {
   func recordUpsertWritesDiaryAndOutboxAtomically() async throws {
     let (repository, pool, _) = try makeRepository()
     let entry = makeEntry()
+    let now = Date(timeIntervalSince1970: 1_768_300_050)
 
-    let operation = try await repository.recordUpsert(entry)
+    let operation = try await repository.recordUpsert(entry, now: now)
 
     #expect(operation.kind == "upsert")
     #expect(operation.recordId == entry.id)
-    let storedEntry = try pool.read { try DiaryEntry.fetchOne($0, key: entry.id) }
-    let storedOperation = try pool.read { try PendingOp.fetchOne($0, key: operation.opId) }
+    let storedEntry = try await pool.read { try DiaryEntry.fetchOne($0, key: entry.id) }
+    let storedOperation = try await pool.read { try PendingOp.fetchOne($0, key: operation.opId) }
     #expect(storedEntry == entry)
     #expect(storedOperation == operation)
   }
@@ -62,16 +63,16 @@ struct DiaryEntryRepositoryTests {
     let entry = makeEntry()
 
     do {
-      try await repository.recordUpsert(entry) { _ in
+      _ = try await repository.recordUpsert(entry, now: Date(), transactionHook: { _ in
         throw TestFailure()
-      }
+      })
       #expect(Bool(false), "Expected the injected failure to propagate")
     } catch {
       #expect(error is TestFailure)
     }
 
-    let entryCount = try pool.read { try DiaryEntry.fetchCount($0) }
-    let operationCount = try pool.read { try PendingOp.fetchCount($0) }
+    let entryCount = try await pool.read { try DiaryEntry.fetchCount($0) }
+    let operationCount = try await pool.read { try PendingOp.fetchCount($0) }
     #expect(entryCount == 0)
     #expect(operationCount == 0)
   }
@@ -80,13 +81,16 @@ struct DiaryEntryRepositoryTests {
   func committedWritesSurvivePoolCloseAndReopen() async throws {
     let (repository, pool, path) = try makeRepository()
     let entry = makeEntry()
-    let operation = try await repository.recordUpsert(entry)
+    let operation = try await repository.recordUpsert(
+      entry,
+      now: Date(timeIntervalSince1970: 1_768_300_050)
+    )
     try pool.close()
 
     let reopenedPool = try Database.makePool(at: path)
     try Migrations.foundationSync.migrate(reopenedPool)
-    let storedEntry = try reopenedPool.read { try DiaryEntry.fetchOne($0, key: entry.id) }
-    let storedOperation = try reopenedPool.read { try PendingOp.fetchOne($0, key: operation.opId) }
+    let storedEntry = try await reopenedPool.read { try DiaryEntry.fetchOne($0, key: entry.id) }
+    let storedOperation = try await reopenedPool.read { try PendingOp.fetchOne($0, key: operation.opId) }
     #expect(storedEntry == entry)
     #expect(storedOperation == operation)
   }
@@ -104,12 +108,14 @@ struct DiaryEntryRepositoryTests {
     let operation = try await repository.recordTombstone(tombstoned)
 
     #expect(operation.kind == "tombstone")
-    let storedEntry = try pool.read { try DiaryEntry.fetchOne($0, key: entry.id) }
-    let storedOperation = try pool.read { try PendingOp.fetchOne($0, key: operation.opId) }
+    let storedEntry = try await pool.read { try DiaryEntry.fetchOne($0, key: entry.id) }
+    let storedOperation = try await pool.read { try PendingOp.fetchOne($0, key: operation.opId) }
     #expect(storedEntry?.deletedAt == deletedAt)
     #expect(storedOperation?.kind == "tombstone")
 
-    let snapshot = try JSONDecoder().decode(OutboxSnapshot.self, from: Data(operation.snapshot.utf8))
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    let snapshot = try decoder.decode(OutboxSnapshot.self, from: Data(operation.snapshot.utf8))
     #expect(
       snapshot == OutboxSnapshot(
         id: entry.id,
