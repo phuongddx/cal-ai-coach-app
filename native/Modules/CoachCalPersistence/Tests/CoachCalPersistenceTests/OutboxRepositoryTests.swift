@@ -41,7 +41,7 @@ struct OutboxRepositoryTests {
     let futureOperation = makeOperation(
       opId: UUID(),
       createdAt: base,
-      nextRetryAt: base.addingTimeInterval(60)
+      nextRetryAt: base.addingTimeInterval(3_155_695_200)
     )
     let operations = (1...55).map { index in
       makeOperation(opId: UUID(), createdAt: base.addingTimeInterval(TimeInterval(index)))
@@ -78,17 +78,15 @@ struct OutboxRepositoryTests {
     let retryAt = base.addingTimeInterval(31)
     try await repository.markFailed(opIds: [failed.opId], retryAt: retryAt)
 
-    let ackedCount = try await pool.read {
-      try PendingOp.fetchCount($0, key: acked.opId)
-    }
+    let ackedCount = try await pool.read { try PendingOp.fetchOne($0, key: acked.opId) }
     let storedFailed = try await pool.read { try PendingOp.fetchOne($0, key: failed.opId) }
-    let untouchedCount = try await pool.read {
-      try PendingOp.fetchCount($0, key: untouched.opId)
+    let untouchedOperation = try await pool.read {
+      try PendingOp.fetchOne($0, key: untouched.opId)
     }
-    #expect(ackedCount == 0)
+    #expect(ackedCount == nil)
     #expect(storedFailed?.dispatchAttempts == 1)
     #expect(storedFailed?.nextRetryAt == retryAt)
-    #expect(untouchedCount == 1)
+    #expect(untouchedOperation == untouched)
   }
 
   @Test
