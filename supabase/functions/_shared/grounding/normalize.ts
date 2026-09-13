@@ -13,7 +13,7 @@ export function toUpca(barcode: string): string {
   if (barcode.length === 11) return `0${barcode}`;
   if (barcode.length === 12) return barcode;
   if (barcode.length === 13 && barcode[0] === '0') return barcode.slice(1);
-  if (barcode.length === 14 && barcode[0] === '0') return barcode.slice(1, 13);
+  if (barcode.length === 14 && barcode[0] === '0') return toUpca(barcode.slice(1));
   throw new Error(`no UPC-A form for a ${barcode.length}-digit barcode`);
 }
 

@@ -75,8 +75,12 @@ Deno.test('fdc: mapFdcNutrients returns null without a KCAL energy id — never 
 Deno.test('fdc: barcode normalization applies the GTIN-correct rules', () => {
   assertEquals(toUpca('0123456789012'), '123456789012');
   assertEquals(toUpca('01234567890'), '001234567890');
+  // GTIN-14 with indicator 0: the UPC-A body is the inner EAN-13 minus its
+  // leading 0, check digit re-derived by the 13-digit rule.
+  assertEquals(toUpca('00036000291452'), '036000291452');
   assertThrows(() => toUpca('0123456789'));
   assertThrows(() => toUpca('3017620422003'));
+  assertThrows(() => toUpca('10000000000000'));
 
   assertEquals(toEan13('3017620422003'), '3017620422003');
   assertEquals(toEan13('0123456789012'), '0123456789012');
