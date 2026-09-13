@@ -3,7 +3,7 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { handler } from '../analyze-food/index.ts';
 import { stackEnv } from './_env.ts';
 import { ScanResponseSchema } from '../_shared/contracts/scan.ts';
-import { resolveBarcode, resolveFood, resolveSearch } from '../_shared/grounding/cascade.ts';
+import { resolveBarcode, resolveFood, resolveSearch, type CascadeTiers } from '../_shared/grounding/cascade.ts';
 
 // Direct handler invocation (RESEARCH A7): the suite imports handler from
 // index.ts and drives it with real Requests against the local stack.
@@ -227,6 +227,17 @@ Deno.test('analyze-food: a missing Authorization header is a 401 envelope', asyn
   assertEquals((await res.json()).error.code, 'UNAUTHORIZED');
 });
 
+// Miss-tier stub keeps the live-DB pin hermetic — provider reachability is
+// cascade.test.ts's job; these calls would otherwise hit FDC/OFF for real.
+const missTiers: CascadeTiers = {
+  fdc: {
+    resolveBarcode: () => Promise.resolve({ kind: 'not_found' }),
+    resolveSearch: () => Promise.resolve({ kind: 'not_found' }),
+  },
+  off: { resolveBarcode: () => Promise.resolve({ kind: 'not_found' }) },
+  fatsecret: { resolveBarcode: () => Promise.resolve({ kind: 'not_found' }) },
+};
+
 Deno.test('cascade skeleton: delegates return cache hits and typed misses', async () => {
   await seedChickenRiceCache();
   try {
@@ -240,10 +251,13 @@ Deno.test('cascade skeleton: delegates return cache hits and typed misses', asyn
     const foodHit = await resolveFood(db, 'chicken-rice');
     assert('per100g' in foodHit);
 
-    assertEquals(await resolveBarcode(db, '3017620422003'), { kind: 'not_found' });
-    assertEquals(await resolveSearch(db, 'never-cached-item'), { kind: 'not_found' });
+    assertEquals(await resolveBarcode(db, '3017620422003', missTiers), { kind: 'not_found' });
+    assertEquals(await resolveSearch(db, 'never-cached-item', missTiers), { kind: 'not_found' });
   } finally {
-    await service().from('food_cache').delete().eq('cache_key', CACHE_KEY);
+    const db = service();
+    await db.from('food_cache').delete().eq('cache_key', CACHE_KEY);
+    await db.from('food_cache').delete().eq('cache_key', 'barcode:3017620422003');
+    await db.from('food_cache').delete().eq('cache_key', 'search:never-cached-item');
   }
 });
 

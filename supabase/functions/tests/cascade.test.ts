@@ -1,5 +1,11 @@
 import { assert, assertRejects, assertEquals, assertThrows } from 'jsr:@std/assert';
-import { UpstreamError } from '../_shared/contracts/food.ts';
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
+import { UpstreamError, type GroundedFood, type GroundingResult } from '../_shared/contracts/food.ts';
+import {
+  resolveBarcode as cascadeResolveBarcode,
+  resolveSearch as cascadeResolveSearch,
+  type CascadeTiers,
+} from '../_shared/grounding/cascade.ts';
 import {
   fdcFetch,
   mapFdcNutrients,
@@ -268,4 +274,237 @@ Deno.test('off/fatsecret: with credentials present the stub fails closed with Up
     if (savedSecret === undefined) Deno.env.delete('FATSECRET_CLIENT_SECRET');
     else Deno.env.set('FATSECRET_CLIENT_SECRET', savedSecret);
   }
+});
+
+interface FakeCacheRow {
+  cache_key: string;
+  source: string;
+  payload: unknown;
+  expires_at: string;
+}
+
+function fakeServiceClient(seed: FakeCacheRow[] = []): {
+  client: SupabaseClient;
+  writes: FakeCacheRow[];
+} {
+  const rows = new Map(seed.map((row) => [row.cache_key, row]));
+  const writes: FakeCacheRow[] = [];
+  const client = {
+    from(table: string) {
+      assertEquals(table, 'food_cache');
+      return {
+        select() {
+          return {
+            eq: (_column: string, key: string) => ({
+              gt: (_column2: string, nowIso: string) => ({
+                limit: (_count: number) => ({
+                  maybeSingle: async () => {
+                    const row = rows.get(key);
+                    return { data: row && row.expires_at > nowIso ? row : null, error: null };
+                  },
+                }),
+              }),
+            }),
+          };
+        },
+        upsert: async (row: FakeCacheRow) => {
+          writes.push(row);
+          rows.set(row.cache_key, row);
+          return { error: null };
+        },
+      };
+    },
+  };
+  return { client: client as unknown as SupabaseClient, writes };
+}
+
+function stubTiers(config: {
+  fdcBarcode?: GroundingResult;
+  fdcSearch?: GroundingResult;
+  off?: GroundingResult;
+  fatsecret?: GroundingResult;
+  fdcBarcodeThrows?: Error;
+}): { tiers: CascadeTiers; calls: string[] } {
+  const calls: string[] = [];
+  return {
+    calls,
+    tiers: {
+      fdc: {
+        resolveBarcode: async () => {
+          calls.push('fdc');
+          if (config.fdcBarcodeThrows) throw config.fdcBarcodeThrows;
+          return config.fdcBarcode ?? { kind: 'not_found' };
+        },
+        resolveSearch: async () => {
+          calls.push('fdcSearch');
+          return config.fdcSearch ?? { kind: 'not_found' };
+        },
+      },
+      off: {
+        resolveBarcode: async () => {
+          calls.push('off');
+          return config.off ?? { kind: 'not_found' };
+        },
+      },
+      fatsecret: {
+        resolveBarcode: async () => {
+          calls.push('fatsecret');
+          return config.fatsecret ?? { kind: 'not_found' };
+        },
+      },
+    },
+  };
+}
+
+function grounded(source: 'fdc' | 'off' | 'fatsecret', kcal: number): GroundedFood {
+  return {
+    source,
+    cacheKey: 'overwritten-by-cascade',
+    per100g: { kcal, proteinG: 1, carbsG: 2, fatG: 3, fiberG: 4 },
+  };
+}
+
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
+
+function withinTolerance(actualIso: string, expectedMs: number): void {
+  const actual = new Date(actualIso).getTime();
+  assert(
+    Math.abs(actual - expectedMs) < 60_000,
+    `expires_at ${actualIso} must be within a minute of ${new Date(expectedMs).toISOString()}`,
+  );
+}
+
+Deno.test('cascade: barcode precedence is fdc then off then fatsecret', async () => {
+  const { client, writes } = fakeServiceClient();
+  const { tiers, calls } = stubTiers({ fatsecret: grounded('fatsecret', 250) });
+  const result = await cascadeResolveBarcode(client, '3017620422003', tiers);
+  assert('per100g' in result);
+  assertEquals(result.source, 'fatsecret');
+  assertEquals(result.cacheKey, 'barcode:3017620422003');
+  assertEquals(calls, ['fdc', 'off', 'fatsecret']);
+  assertEquals(writes.length, 1);
+  assertEquals(writes[0].source, 'fatsecret');
+});
+
+Deno.test('cascade: an fdc hit stops the tier chain', async () => {
+  const { client } = fakeServiceClient();
+  const { tiers, calls } = stubTiers({ fdcBarcode: grounded('fdc', 645) });
+  const result = await cascadeResolveBarcode(client, '0123456789012', tiers);
+  assert('per100g' in result);
+  assertEquals(result.source, 'fdc');
+  assertEquals(calls, ['fdc']);
+});
+
+Deno.test('cascade: a positive cache hit short-circuits with zero tier calls', async () => {
+  const { client, writes } = fakeServiceClient([{
+    cache_key: 'barcode:3017620422003',
+    source: 'off',
+    payload: { kcal: 539, proteinG: 6.3, carbsG: 57.5, fatG: 30.9, fiberG: 3.4 },
+    expires_at: new Date(Date.now() + HOUR).toISOString(),
+  }]);
+  const { tiers, calls } = stubTiers({});
+  const result = await cascadeResolveBarcode(client, '3017620422003', tiers);
+  assert('per100g' in result);
+  assertEquals(result.source, 'cache');
+  assertEquals(result.per100g.kcal, 539);
+  assertEquals(calls, []);
+  assertEquals(writes, []);
+});
+
+Deno.test('cascade: an expired positive row is a miss that re-grounds and rewrites', async () => {
+  const { client, writes } = fakeServiceClient([{
+    cache_key: 'barcode:3017620422003',
+    source: 'fdc',
+    payload: { kcal: 1, proteinG: 0, carbsG: 0, fatG: 0, fiberG: 0 },
+    expires_at: new Date(Date.now() - 1000).toISOString(),
+  }]);
+  const { tiers, calls } = stubTiers({ fdcBarcode: grounded('fdc', 645) });
+  const result = await cascadeResolveBarcode(client, '3017620422003', tiers);
+  assert('per100g' in result);
+  assertEquals(result.per100g.kcal, 645);
+  assertEquals(calls, ['fdc']);
+  assertEquals(writes.length, 1);
+});
+
+Deno.test('cascade: a negative cache row short-circuits within TTL with zero tier calls', async () => {
+  const { client, writes } = fakeServiceClient([{
+    cache_key: 'search:ghost food',
+    source: 'negative',
+    payload: { notFound: true },
+    expires_at: new Date(Date.now() + HOUR).toISOString(),
+  }]);
+  const { tiers, calls } = stubTiers({ fdcSearch: grounded('fdc', 100) });
+  const result = await cascadeResolveSearch(client, 'Ghost Food', tiers);
+  assertEquals(result, { kind: 'not_found' });
+  assertEquals(calls, []);
+  assertEquals(writes, []);
+});
+
+Deno.test('cascade: an upstream provider failure raises UpstreamError and writes nothing', async () => {
+  const { client, writes } = fakeServiceClient();
+  const { tiers } = stubTiers({
+    fdcBarcodeThrows: new UpstreamError('fdc search returned a non-OK status'),
+  });
+  await assertRejects(() => cascadeResolveBarcode(client, '3017620422003', tiers), UpstreamError);
+  assertEquals(writes, []);
+});
+
+Deno.test('cascade: a positive barcode resolution writes one 30-day per-100g row', async () => {
+  const { client, writes } = fakeServiceClient();
+  const { tiers } = stubTiers({ fdcBarcode: grounded('fdc', 645) });
+  const before = Date.now();
+  const result = await cascadeResolveBarcode(client, '0123456789012', tiers);
+  assert('per100g' in result);
+  assertEquals(result.cacheKey, 'barcode:0123456789012');
+  assertEquals(writes.length, 1);
+  assertEquals(writes[0].cache_key, 'barcode:0123456789012');
+  assertEquals(writes[0].source, 'fdc');
+  assertEquals(writes[0].payload, { kcal: 645, proteinG: 1, carbsG: 2, fatG: 3, fiberG: 4 });
+  withinTolerance(writes[0].expires_at, before + 30 * DAY);
+});
+
+Deno.test('cascade: an unknown barcode after all tiers writes one 24h negative row', async () => {
+  const { client, writes } = fakeServiceClient();
+  const { tiers } = stubTiers({});
+  const before = Date.now();
+  const result = await cascadeResolveBarcode(client, '9999999999999', tiers);
+  assertEquals(result, { kind: 'not_found' });
+  assertEquals(writes.length, 1);
+  assertEquals(writes[0].source, 'negative');
+  assertEquals(writes[0].payload, { notFound: true });
+  withinTolerance(writes[0].expires_at, before + DAY);
+});
+
+Deno.test('cascade: a second lookup of the same unknown barcode performs zero tier calls', async () => {
+  const { client } = fakeServiceClient();
+  const first = stubTiers({});
+  await cascadeResolveBarcode(client, '9999999999999', first.tiers);
+  assertEquals(first.calls, ['fdc', 'off', 'fatsecret']);
+  const second = stubTiers({ fdcBarcode: grounded('fdc', 5) });
+  const result = await cascadeResolveBarcode(client, '9999999999999', second.tiers);
+  assertEquals(result, { kind: 'not_found' });
+  assertEquals(second.calls, [], 'the negative row must suppress all provider calls');
+});
+
+Deno.test('cascade: search grounds from fdc only and caches for 7 days', async () => {
+  const { client, writes } = fakeServiceClient();
+  const { tiers, calls } = stubTiers({ fdcSearch: grounded('fdc', 145) });
+  const before = Date.now();
+  const result = await cascadeResolveSearch(client, '  Chicken   Rice ', tiers);
+  assert('per100g' in result);
+  assertEquals(result.cacheKey, 'search:chicken rice');
+  assertEquals(calls, ['fdcSearch'], 'off/fatsecret must never be consulted for search');
+  assertEquals(writes.length, 1);
+  assertEquals(writes[0].cache_key, 'search:chicken rice');
+  withinTolerance(writes[0].expires_at, before + 7 * DAY);
+});
+
+Deno.test('cascade: a search miss writes a negative row and the repeat short-circuits', async () => {
+  const { client } = fakeServiceClient();
+  const first = stubTiers({});
+  assertEquals(await cascadeResolveSearch(client, 'ghost-food', first.tiers), { kind: 'not_found' });
+  const second = stubTiers({ fdcSearch: grounded('fdc', 42) });
+  assertEquals(await cascadeResolveSearch(client, 'ghost-food', second.tiers), { kind: 'not_found' });
+  assertEquals(second.calls, []);
 });
