@@ -1,0 +1,280 @@
+import Foundation
+
+import CoachCalCore
+import CoachCalPersistence
+
+public struct DispatchResult: Equatable, Sendable {
+  public let pushed: Int
+  public let acked: Int
+  public let pulled: Int
+  public let poisoned: Int
+  public let cursorAdvanced: Bool
+
+  public static let empty = DispatchResult(
+    pushed: 0,
+    acked: 0,
+    pulled: 0,
+    poisoned: 0,
+    cursorAdvanced: false
+  )
+}
+
+public enum SyncEngineError: Error, Equatable, Sendable {
+  case notBound
+}
+
+/// Owner-bound reconciliation actor.
+///
+/// A dispatch exposes actor suspension points, so its generation token is
+/// re-checked after every awaited repository/transport call. While one run is
+/// active, later calls request exactly one trailing rerun instead of pushing a
+/// second copy of the same batch.
+public actor SyncEngine {
+  public static let batchSize = 50
+
+  private let transport: any SyncTransport
+  private let outbox: OutboxRepository
+  private let merge: SyncMergeRepository
+  private let now: @Sendable () -> Date
+
+  private var owner: UUID?
+  private var stopped = false
+  private var dispatchGeneration = 0
+  private var isDispatching = false
+  private var trailingDispatchRequested = false
+  private var drainWaiters: [CheckedContinuation<Void, Never>] = []
+  private var isDraining = false
+
+  public init(
+    owner: UUID?,
+    transport: any SyncTransport,
+    outbox: OutboxRepository,
+    merge: SyncMergeRepository,
+    now: @escaping @Sendable () -> Date = { Date() }
+  ) {
+    self.owner = owner
+    self.transport = transport
+    self.outbox = outbox
+    self.merge = merge
+    self.now = now
+  }
+
+  /// Stops scheduling and drains any in-flight dispatch before resolving.
+  /// A bind attempted while draining waits for that barrier.
+  public func stop() async {
+    stopped = true
+    owner = nil
+    dispatchGeneration += 1
+    trailingDispatchRequested = false
+
+    if isDispatching {
+      isDraining = true
+      await waitForDispatch()
+      isDraining = false
+      resumeBindWaiters()
+    }
+  }
+
+  /// Rebinds only after the previous owner's active dispatch has drained.
+  public func bind(_ newOwner: UUID) async {
+    await waitForDispatchIfActive()
+    stopped = false
+    owner = newOwner
+    dispatchGeneration += 1
+    trailingDispatchRequested = false
+  }
+
+  public func dispatch() async throws -> DispatchResult {
+    if isDispatching {
+      trailingDispatchRequested = true
+      return .empty
+    }
+
+    guard !stopped, let owner else {
+      throw SyncEngineError.notBound
+    }
+
+    dispatchGeneration += 1
+    let generation = dispatchGeneration
+    isDispatching = true
+
+    let result: DispatchResult
+    do {
+      result = try await runDispatch(owner: owner, generation: generation)
+    } catch {
+      finishDispatch()
+      throw error
+    }
+    finishDispatch()
+
+    if trailingDispatchRequested, !stopped, generation == dispatchGeneration {
+      trailingDispatchRequested = false
+      let trailing = try await dispatch()
+      return result.pushed == 0 ? trailing : result
+    }
+
+    return result
+  }
+
+  private func runDispatch(
+    owner: UUID,
+    generation: Int
+  ) async throws -> DispatchResult {
+    let storedOperations = try await outbox.dueOps(limit: Self.batchSize)
+    guard generation == dispatchGeneration else { return .empty }
+
+    var operations: [SyncOperation] = []
+    var poisonedCount = 0
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+
+    for stored in storedOperations {
+      do {
+        let snapshot = try decoder.decode(DiaryEntrySnapshot.self, from: Data(stored.snapshot.utf8))
+        guard let table = SyncedTable(rawValue: stored.tableName),
+              let kind = MutationKind(rawValue: stored.kind)
+        else {
+          throw DecodingError.dataCorrupted(
+            DecodingError.Context(
+              codingPath: [],
+              debugDescription: "unsupported sync table or mutation kind"
+            )
+          )
+        }
+        let operation = SyncOperation(
+          opId: stored.opId,
+          table: table,
+          recordId: stored.recordId,
+          kind: kind,
+          snapshot: snapshot,
+          clientTimestamp: stored.clientTimestamp
+        )
+        operations.append(operation)
+      } catch {
+        poisonedCount += 1
+        try await outbox.markFailed(
+          opIds: [stored.opId],
+          retryAt: now().addingTimeInterval(
+            TimeInterval(Backoff.delay(forDispatchAttempts: stored.dispatchAttempts + 1).components.seconds)
+          )
+        )
+        guard generation == dispatchGeneration else { return .empty }
+      }
+    }
+
+    var ackedCount = 0
+    if !operations.isEmpty {
+      let request: PushRequest
+      let response: PushResponse
+      do {
+        request = try PushRequest(operations: operations)
+        response = try await transport.push(request)
+        guard generation == dispatchGeneration else { return .empty }
+
+        // No response mutation is allowed until the complete submitted/acknowledged
+        // identity set matches. Core owns this exact-set integrity check.
+        try response.validateAcknowledgementSet(against: request.operations)
+      } catch {
+        try await markBatchFailed(
+          operations,
+          attempts: storedOperations.map(\.dispatchAttempts),
+          error: error,
+          generation: generation
+        )
+        throw error
+      }
+
+      do {
+        let oldCursor = try await readCursor()
+        let outcome = try await merge.apply(
+          acknowledgements: response.accepted,
+          pull: .init(rows: [], cursor: oldCursor),
+          owner: owner,
+          now: now()
+        )
+        _ = outcome
+        ackedCount = response.accepted.count
+        guard generation == dispatchGeneration else { return .empty }
+        try await outbox.markDispatched(opIds: response.accepted.map(\.opId))
+        guard generation == dispatchGeneration else { return .empty }
+      } catch {
+        try await markBatchFailed(
+          operations,
+          attempts: storedOperations.map(\.dispatchAttempts),
+          error: error,
+          generation: generation
+        )
+        throw error
+      }
+    }
+
+    let cursor = try await readCursor()
+    guard generation == dispatchGeneration else { return .empty }
+    let pullResponse = try await transport.pull(cursor: cursor)
+    guard generation == dispatchGeneration else { return .empty }
+
+    do {
+      let outcome = try await merge.apply(
+        acknowledgements: [],
+        pull: pullResponse,
+        owner: owner,
+        now: now()
+      )
+      guard generation == dispatchGeneration else { return .empty }
+      return DispatchResult(
+        pushed: operations.count,
+        acked: ackedCount,
+        pulled: pullResponse.rows.count,
+        poisoned: poisonedCount,
+        cursorAdvanced: outcome.cursor != cursor || !pullResponse.rows.isEmpty
+      )
+    } catch {
+      throw error
+    }
+  }
+
+  private func markBatchFailed(
+    _ operations: [SyncOperation],
+    attempts: [Int],
+    error: any Error,
+    generation: Int
+  ) async throws {
+    let attempt = (attempts.max() ?? 0) + 1
+    let retryAt = now().addingTimeInterval(
+      TimeInterval(Backoff.delay(forDispatchAttempts: attempt).components.seconds)
+    )
+    try await outbox.markFailed(
+      opIds: operations.map(\.opId),
+      retryAt: retryAt
+    )
+    guard generation == dispatchGeneration else { return }
+  }
+
+  private func readCursor() async throws -> Int {
+    try await merge.readCursor()
+  }
+
+  private func finishDispatch() {
+    isDispatching = false
+    resumeDrainWaiters()
+  }
+
+  private func waitForDispatchIfActive() async {
+    guard isDispatching || isDraining else { return }
+    await waitForDispatch()
+  }
+
+  private func waitForDispatch() async {
+    await withCheckedContinuation { continuation in
+      drainWaiters.append(continuation)
+    }
+  }
+
+  private func resumeDrainWaiters() {
+    let waiters = drainWaiters
+    drainWaiters.removeAll()
+    waiters.forEach { $0.resume() }
+  }
+
+  private func resumeBindWaiters() {}
+}
