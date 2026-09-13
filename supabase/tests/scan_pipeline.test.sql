@@ -7,7 +7,7 @@
 -- assertions run as `postgres` (clients have no table privileges).
 
 begin;
-select plan(37);
+select plan(41);
 
 -- 1-2: no direct table privileges for clients on the scan-pipeline tables ----
 select ok(
@@ -278,6 +278,56 @@ select is(
     where app_user_id = 'rc-user-alpha' and entitlement_id = 'premium'),
   'f',
   'revocation without expiresAt deactivates access'
+);
+
+-- 33-36: out-of-order event protection (WR-03) --------------------------------
+-- RevenueCat delivers at-least-once with no ordering guarantee: an older
+-- event (by event timestamp) must not overwrite newer state for the same
+-- (app_user_id, entitlement_id).
+set local role service_role;
+select is(
+  (public.apply_webhook_event(jsonb_build_object(
+    'eventId', 'evt-beta-1',
+    'appUserId', 'rc-user-beta',
+    'entitlementId', 'premium',
+    'active', true,
+    'expiresAt', '2027-01-01T00:00:00Z',
+    'timestampMs', 5000
+  )))->>'applied',
+  'true',
+  'beta grant at event time 5000 applied'
+);
+select is(
+  (public.apply_webhook_event(jsonb_build_object(
+    'eventId', 'evt-beta-2',
+    'appUserId', 'rc-user-beta',
+    'entitlementId', 'premium',
+    'active', false,
+    'timestampMs', 4000
+  )))->>'stale',
+  'true',
+  'older event is reported stale and not applied'
+);
+select is(
+  (public.apply_webhook_event(jsonb_build_object(
+    'eventId', 'evt-beta-3',
+    'appUserId', 'rc-user-beta',
+    'entitlementId', 'premium',
+    'active', false,
+    'timestampMs', 6000
+  )))->>'applied',
+  'true',
+  'genuinely newer event applies'
+);
+
+reset role;
+set local role postgres;
+select ok(
+  (select active = false and expires_at = '2027-01-01T00:00:00Z'::timestamptz
+     and last_event_ms = 6000
+    from public.entitlements
+   where app_user_id = 'rc-user-beta' and entitlement_id = 'premium'),
+  'final state follows the newest event only'
 );
 
 -- 28: malformed envelope refused with the typed errcode ------------------------

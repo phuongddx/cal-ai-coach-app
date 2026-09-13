@@ -184,6 +184,25 @@ Deno.test('toWebhookEvent maps expiration_at_ms to canonical ISO and omits when 
   assertEquals(withoutExpiry[0].expiresAt, undefined);
 });
 
+Deno.test('RcWebhookEnvelopeSchema accepts event.timestamp_ms and toWebhookEvent forwards it', () => {
+  const parsed = RcWebhookEnvelopeSchema.parse({
+    event: {
+      id: 'evt_1',
+      type: 'RENEWAL',
+      timestamp_ms: 1_700_000_000_000,
+      data: { app_user_id: 'user-1', entitlement_ids: ['premium'] },
+    },
+  });
+  assertEquals(parsed.event.timestamp_ms, 1_700_000_000_000);
+  const [input] = toWebhookEvent(parsed);
+  assertEquals(input.timestampMs, 1_700_000_000_000);
+
+  const without = toWebhookEvent({
+    event: { id: 'evt_2', type: 'RENEWAL', data: { app_user_id: 'user-1', entitlement_ids: ['premium'] } },
+  });
+  assertEquals(without[0].timestampMs, undefined);
+});
+
 Deno.test('toWebhookEvent produces one RPC input per entitlement id', () => {
   const inputs = toWebhookEvent({
     event: {
@@ -276,11 +295,13 @@ function eventJson(opts: {
   entitlementIds?: string[];
   expirationAtMs?: number | null;
   productId?: string;
+  timestampMs?: number;
 }): string {
   return JSON.stringify({
     event: {
       id: opts.eventId,
       type: opts.type,
+      ...(opts.timestampMs !== undefined ? { timestamp_ms: opts.timestampMs } : {}),
       data: {
         app_user_id: opts.appUserId ?? TEST_APP_USER_ID,
         entitlement_ids: opts.entitlementIds ?? [TEST_ENTITLEMENT],
@@ -431,6 +452,47 @@ Deno.test('handler: EXPIRATION revokes access', async () => {
     );
     assertEquals(res.status, 200);
     assertEquals((await res.json()).applied, true);
+    assertEquals((await entitlementRow()).active, false);
+  });
+});
+
+Deno.test('handler: an older retried event cannot overwrite newer entitlement state', async () => {
+  await withCleanDb(async () => {
+    await handler(
+      await signedRequest(eventJson({
+        eventId: uniqueEventId(),
+        type: 'INITIAL_PURCHASE',
+        expirationAtMs: Date.now() + DAY_MS,
+        timestampMs: 2_000,
+      })),
+    );
+    const before = await entitlementRow();
+    assertEquals(before.active, true);
+
+    // A delayed EXPIRATION retry (older event, first delivery after the
+    // newer state was applied) must not revoke newer state.
+    const stale = await handler(
+      await signedRequest(eventJson({
+        eventId: uniqueEventId(),
+        type: 'EXPIRATION',
+        timestampMs: 1_000,
+      })),
+    );
+    assertEquals(stale.status, 200);
+    assertEquals((await stale.json()).applied, false);
+    const afterStale = await entitlementRow();
+    assertEquals(afterStale.active, true);
+    assertEquals(afterStale.expires_at, before.expires_at);
+
+    // A genuinely newer event still applies.
+    const newer = await handler(
+      await signedRequest(eventJson({
+        eventId: uniqueEventId(),
+        type: 'EXPIRATION',
+        timestampMs: 3_000,
+      })),
+    );
+    assertEquals((await newer.json()).applied, true);
     assertEquals((await entitlementRow()).active, false);
   });
 });

@@ -25,6 +25,9 @@ export const RcWebhookEnvelopeSchema = z.strictObject({
   event: z.strictObject({
     id: z.string().min(1),
     type: z.enum(RC_EVENT_TYPES),
+    // Event time drives the out-of-order guard in apply_webhook_event;
+    // absent on some payloads, in which case the event is ordered oldest.
+    timestamp_ms: z.number().optional(),
     data: z.strictObject({
       app_user_id: z.string().min(1),
       entitlement_ids: z.array(z.string()).default([]),
@@ -59,12 +62,13 @@ export type WebhookEventInput = {
   expiresAt?: string;
   productId?: string;
   supabaseUserId?: string;
+  timestampMs?: number;
 };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function toWebhookEvent(envelope: RcWebhookEnvelope): WebhookEventInput[] {
-  const { id, type, data } = envelope.event;
+  const { id, type, timestamp_ms, data } = envelope.event;
   const active = eventTypePolicy(type) !== 'revoke';
   const expiresAt = data.expiration_at_ms == null
     ? undefined
@@ -78,5 +82,6 @@ export function toWebhookEvent(envelope: RcWebhookEnvelope): WebhookEventInput[]
     expiresAt,
     productId: data.product_id ?? undefined,
     supabaseUserId,
+    timestampMs: timestamp_ms,
   }));
 }

@@ -45,6 +45,7 @@ create table if not exists public.entitlements (
   active           boolean not null default false,
   expires_at       timestamptz,
   product_id       text,
+  last_event_ms    bigint not null default 0,
   updated_at       timestamptz not null default now(),
   primary key (app_user_id, entitlement_id)
 );
@@ -186,7 +187,7 @@ $$;
 -- apply_webhook_event: exactly-once webhook ingestion — the dedupe-ledger
 -- insert and the entitlement upsert commit in this single call.
 -- p_event: { eventId, appUserId, entitlementId, active?, expiresAt?,
---            productId?, supabaseUserId? }
+--            productId?, supabaseUserId?, timestampMs? }
 -- ---------------------------------------------------------------------------
 create or replace function public.apply_webhook_event(p_event jsonb)
 returns jsonb
@@ -202,6 +203,8 @@ declare
   v_expires_at       timestamptz;
   v_product_id       text;
   v_supabase_user_id uuid;
+  v_last_event_ms    bigint;
+  v_applied_ms       bigint;
   v_inserted         boolean;
 begin
   if p_event is null or jsonb_typeof(p_event) <> 'object' then
@@ -223,6 +226,7 @@ begin
     v_active           := coalesce((p_event ->> 'active')::boolean, false);
     v_expires_at       := (p_event ->> 'expiresAt')::timestamptz;
     v_supabase_user_id := (p_event ->> 'supabaseUserId')::uuid;
+    v_last_event_ms    := (p_event ->> 'timestampMs')::bigint;
   exception
     when invalid_datetime_format or invalid_text_representation then
       raise exception 'webhook event fields must use canonical boolean, timestamp, and UUID text forms'
@@ -238,12 +242,29 @@ begin
     return jsonb_build_object('applied', false);
   end if;
 
+  -- Out-of-order guard: RevenueCat delivers at-least-once with no ordering
+  -- guarantee, so a retried older event must not overwrite newer state for
+  -- the same identity. The per-entitlement advisory lock makes the timestamp
+  -- check race-free against concurrent deliveries.
+  perform pg_advisory_xact_lock(
+    0,
+    hashtext(v_app_user_id || ':' || v_entitlement_id) & 2147483647
+  );
+
+  select last_event_ms into v_applied_ms
+    from public.entitlements
+   where app_user_id = v_app_user_id and entitlement_id = v_entitlement_id;
+
+  if v_applied_ms is not null and coalesce(v_last_event_ms, 0) < v_applied_ms then
+    return jsonb_build_object('applied', false, 'stale', true);
+  end if;
+
   insert into public.entitlements
     (app_user_id, entitlement_id, active, expires_at, product_id,
-     supabase_user_id, updated_at)
+     supabase_user_id, last_event_ms, updated_at)
   values
     (v_app_user_id, v_entitlement_id, v_active, v_expires_at, v_product_id,
-     v_supabase_user_id, now())
+     v_supabase_user_id, coalesce(v_last_event_ms, 0), now())
   on conflict (app_user_id, entitlement_id) do update
     set active           = excluded.active,
         -- Events that state no period end (e.g. a BILLING_ISSUE ledger row)
@@ -254,6 +275,7 @@ begin
         product_id       = excluded.product_id,
         supabase_user_id = coalesce(excluded.supabase_user_id,
                                     public.entitlements.supabase_user_id),
+        last_event_ms    = coalesce(v_last_event_ms, public.entitlements.last_event_ms),
         updated_at       = now();
 
   return jsonb_build_object('applied', true);
