@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
 if [[ -z "${SUPABASE_SERVICE_KEY:-}" && -n "${PROOF_ENV_FILE:-}" ]]; then
   set -a
@@ -14,6 +15,15 @@ fi
 : "${SUPABASE_SERVICE_KEY:?SUPABASE_SERVICE_KEY must be set}"
 : "${SUPABASE_ANON_KEY:?SUPABASE_ANON_KEY must be set}"
 : "${TEST_ACCOUNT_ENV:?TEST_ACCOUNT_ENV must be set}"
+
+env_file_name="$(basename "$TEST_ACCOUNT_ENV")"
+case "$env_file_name" in
+  .env|.env.*) ;;
+  *)
+    echo "TEST_ACCOUNT_ENV must be named .env or .env.* so git ignores it (got: $env_file_name)" >&2
+    exit 1
+    ;;
+esac
 
 email="golden-$(date +%s)-$RANDOM$RANDOM@inbox.test"
 password="$(openssl rand -base64 32)"
