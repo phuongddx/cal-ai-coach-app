@@ -1,6 +1,6 @@
 -- Plan 02-01: scan pipeline foundation — food cache, scan quota, entitlements,
--- webhook ledger, scan results, eval cases, and the quota/webhook SECURITY
--- DEFINER RPCs.
+-- webhook ledger, scan results, eval cases, and the quota/webhook/persist
+-- SECURITY DEFINER RPCs.
 --
 -- Boundary: these are server tables. Clients hold NO table privileges and get
 -- no policies (service role bypasses RLS; revocation is the real boundary,
@@ -289,6 +289,67 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
+-- persist_scan: atomic scan-result write — the scans upsert and the
+-- replace-items delete+insert commit in this single statement, so a failed
+-- write can never leave a scan with its previous items deleted and nothing
+-- written. Granted to service_role only: the caller is the analyze-food
+-- function, and items are written only after the response self-check.
+-- p_scan:  { id, user_id, kind, meal_type? }
+-- p_items: [{ id, label, grams, per100g, kcal, macros, confidence,
+--             hidden_fat_likely, source }]
+-- ---------------------------------------------------------------------------
+create or replace function public.persist_scan(p_scan jsonb, p_items jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_scan_id uuid;
+  v_user_id uuid;
+begin
+  if p_scan is null or jsonb_typeof(p_scan) <> 'object' then
+    raise exception 'persist_scan expects a jsonb scan object' using errcode = 'P0001';
+  end if;
+  if p_items is null or jsonb_typeof(p_items) <> 'array' then
+    raise exception 'persist_scan expects a jsonb items array' using errcode = 'P0001';
+  end if;
+
+  v_scan_id := p_scan ->> 'id';
+  v_user_id := p_scan ->> 'user_id';
+  if v_scan_id is null or v_user_id is null then
+    raise exception 'persist_scan scan envelope is missing required fields' using errcode = 'P0001';
+  end if;
+
+  insert into public.scans (id, user_id, kind, meal_type)
+  values (v_scan_id, v_user_id, p_scan ->> 'kind', p_scan ->> 'meal_type')
+  on conflict (user_id, id) do update
+    set kind      = excluded.kind,
+        meal_type = excluded.meal_type;
+
+  delete from public.scan_items
+   where user_id = v_user_id and scan_id = v_scan_id;
+
+  insert into public.scan_items
+    (id, user_id, scan_id, label, grams, per100g, kcal, macros, confidence,
+     hidden_fat_likely, source)
+  select
+    (x ->> 'id')::uuid,
+    v_user_id,
+    v_scan_id,
+    x ->> 'label',
+    (x ->> 'grams')::numeric,
+    x -> 'per100g',
+    (x ->> 'kcal')::integer,
+    x -> 'macros',
+    (x ->> 'confidence')::numeric,
+    coalesce((x ->> 'hidden_fat_likely')::boolean, false),
+    x ->> 'source'
+  from jsonb_array_elements(p_items) as x;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
 -- Privileges: EXECUTE only where the boundary says so
 -- ---------------------------------------------------------------------------
 revoke all on function public.claim_scan_credit(uuid) from public, anon, authenticated;
@@ -296,3 +357,6 @@ grant execute on function public.claim_scan_credit(uuid) to authenticated;
 
 revoke all on function public.apply_webhook_event(jsonb) from public, anon, authenticated;
 grant execute on function public.apply_webhook_event(jsonb) to service_role;
+
+revoke all on function public.persist_scan(jsonb, jsonb) from public, anon, authenticated;
+grant execute on function public.persist_scan(jsonb, jsonb) to service_role;

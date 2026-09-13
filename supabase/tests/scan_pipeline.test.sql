@@ -7,7 +7,7 @@
 -- assertions run as `postgres` (clients have no table privileges).
 
 begin;
-select plan(43);
+select plan(49);
 
 -- 1-2: no direct table privileges for clients on the scan-pipeline tables ----
 select ok(
@@ -373,6 +373,58 @@ select ok(
        and a.attname = 'user_id'
   ),
   'scan_items foreign key is user-scoped to scans'
+);
+
+-- 43-48: persist_scan is atomic and replay replaces in place (WR-07) ----------
+set local role service_role;
+select lives_ok(
+  'select public.persist_scan(
+     $p${"id":"cccccccc-0004-4ccc-8ccc-000000000004","user_id":"11111111-1111-4111-8111-111111111111","kind":"photo","meal_type":"lunch"}$p$::jsonb,
+     $p$[
+       {"id":"dddddddd-0004-4ddd-8ddd-00000000000a","label":"rice","grams":200,"per100g":{"kcal":130,"proteinG":2.7,"carbsG":28,"fatG":0.3,"fiberG":0.4},"kcal":260,"macros":{"proteinG":5.4,"carbsG":56,"fatG":0.6,"fiberG":0.8},"confidence":0.9,"hidden_fat_likely":false,"source":"cache"},
+       {"id":"dddddddd-0004-4ddd-8ddd-00000000000b","label":"chicken","grams":150,"per100g":{"kcal":165,"proteinG":31,"carbsG":0,"fatG":3.6,"fiberG":0},"kcal":248,"macros":{"proteinG":46.5,"carbsG":0,"fatG":5.4,"fiberG":0},"confidence":0.9,"hidden_fat_likely":true,"source":"fdc"}
+     ]$p$::jsonb)',
+  'persist_scan writes a scan with two items'
+);
+
+reset role;
+set local role postgres;
+select is(
+  (select count(*) from public.scan_items
+    where user_id = '11111111-1111-4111-8111-111111111111'::uuid
+      and scan_id = 'cccccccc-0004-4ccc-8ccc-000000000004'::uuid),
+  2::bigint,
+  'persist_scan wrote both items'
+);
+select ok(
+  (select count(*) = 1 from public.scans
+    where user_id = '11111111-1111-4111-8111-111111111111'::uuid
+      and id = 'cccccccc-0004-4ccc-8ccc-000000000004'::uuid),
+  'persist_scan wrote the scan row'
+);
+
+set local role service_role;
+select lives_ok(
+  'select public.persist_scan(
+     $p${"id":"cccccccc-0004-4ccc-8ccc-000000000004","user_id":"11111111-1111-4111-8111-111111111111","kind":"photo","meal_type":"dinner"}$p$::jsonb,
+     $p$[
+       {"id":"dddddddd-0004-4ddd-8ddd-00000000000c","label":"salad","grams":250,"per100g":{"kcal":90,"proteinG":3,"carbsG":6,"fatG":6,"fiberG":2},"kcal":225,"macros":{"proteinG":7.5,"carbsG":15,"fatG":15,"fiberG":5},"confidence":0.8,"hidden_fat_likely":false,"source":"cache"}
+     ]$p$::jsonb)',
+  'persist_scan replay is accepted'
+);
+
+reset role;
+set local role postgres;
+select is(
+  (select count(*) from public.scan_items
+    where user_id = '11111111-1111-4111-8111-111111111111'::uuid
+      and scan_id = 'cccccccc-0004-4ccc-8ccc-000000000004'::uuid),
+  1::bigint,
+  'replay replaced the items instead of appending'
+);
+select ok(
+  not has_function_privilege('authenticated', 'public.persist_scan(jsonb, jsonb)', 'EXECUTE'),
+  'authenticated cannot execute persist_scan(jsonb, jsonb)'
 );
 
 select * from finish();

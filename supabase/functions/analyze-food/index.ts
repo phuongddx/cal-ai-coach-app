@@ -174,26 +174,32 @@ export async function handler(req: Request): Promise<Response> {
       note = vlmParsed.note;
     }
 
-    // Replay idempotency: the same scanId must be able to flow through again
-    // (quota already collapses on (user_id, scan_id)), so persistence replaces.
-    // The conflict target is user-scoped: a scanId is an idempotency key per
-    // user, never a global identity another user could overwrite.
-    const { error: scanError } = await serviceClient
-      .from('scans')
-      .upsert(
-        { id: request.scanId, user_id: userId, kind: request.kind, meal_type: request.mealType ?? null },
-        { onConflict: 'user_id,id' },
-      );
-    if (scanError) throw scanError;
-    await serviceClient.from('scan_items')
-      .delete()
-      .eq('user_id', userId)
-      .eq('scan_id', request.scanId);
-    const { error: itemsError } = await serviceClient.from('scan_items').insert(
-      items.map((item) => ({
-        id: crypto.randomUUID(),
+    // Self-check BEFORE persistence: an internally inconsistent response must
+    // surface as a bug (500) here, never persist half-validated state or an
+    // invalid contract shipped to the client.
+    const response = ScanResponseSchema.parse({
+      scanId: request.scanId,
+      kind: request.kind,
+      items,
+      mealKcal: sumItemKcal(items),
+      scanConfidence,
+      note,
+    });
+
+    // Atomic persistence: the scans upsert and the replace-items
+    // delete+insert commit in one RPC, so a failed write can never leave a
+    // scan with its previous items deleted and nothing written. The conflict
+    // target is user-scoped: a scanId is an idempotency key per user, never
+    // a global identity another user could overwrite.
+    const { error: persistError } = await serviceClient.rpc('persist_scan', {
+      p_scan: {
+        id: request.scanId,
         user_id: userId,
-        scan_id: request.scanId,
+        kind: request.kind,
+        meal_type: request.mealType ?? null,
+      },
+      p_items: items.map((item) => ({
+        id: crypto.randomUUID(),
         label: item.label,
         grams: item.grams,
         per100g: item.per100g,
@@ -208,19 +214,8 @@ export async function handler(req: Request): Promise<Response> {
         hidden_fat_likely: item.hiddenFatLikely,
         source: item.source,
       })),
-    );
-    if (itemsError) throw itemsError;
-
-    // Self-check: an internally inconsistent response must surface as a bug
-    // (500) here, never as an invalid contract shipped to the client.
-    const response = ScanResponseSchema.parse({
-      scanId: request.scanId,
-      kind: request.kind,
-      items,
-      mealKcal: sumItemKcal(items),
-      scanConfidence,
-      note,
     });
+    if (persistError) throw persistError;
     return json(200, response);
   } catch (error) {
     if (error instanceof UpstreamError) {
