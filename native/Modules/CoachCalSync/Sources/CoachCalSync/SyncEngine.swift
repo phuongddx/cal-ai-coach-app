@@ -31,11 +31,13 @@ public enum SyncEngineError: Error, Equatable, Sendable {
 /// second copy of the same batch.
 public actor SyncEngine {
   public static let batchSize = 50
+  public static let defaultDebounceInterval: Duration = .milliseconds(500)
 
   private let transport: any SyncTransport
   private let outbox: OutboxRepository
   private let merge: SyncMergeRepository
   private let now: @Sendable () -> Date
+  private let debounceInterval: Duration
 
   private var owner: UUID?
   private var stopped = false
@@ -44,15 +46,17 @@ public actor SyncEngine {
   private var trailingDispatchRequested = false
   private var drainWaiters: [CheckedContinuation<Void, Never>] = []
   private var isDraining = false
+  private var debounceTask: Task<Void, Never>?
+  private var debounceGeneration = 0
 
   public init(
-    owner: UUID?,
+    debounceInterval: Duration = SyncEngine.defaultDebounceInterval,
     transport: any SyncTransport,
     outbox: OutboxRepository,
     merge: SyncMergeRepository,
     now: @escaping @Sendable () -> Date = { Date() }
   ) {
-    self.owner = owner
+    self.debounceInterval = debounceInterval
     self.transport = transport
     self.outbox = outbox
     self.merge = merge
@@ -66,22 +70,50 @@ public actor SyncEngine {
     owner = nil
     dispatchGeneration += 1
     trailingDispatchRequested = false
+    debounceTask?.cancel()
+    debounceTask = nil
 
     if isDispatching {
       isDraining = true
       await waitForDispatch()
       isDraining = false
-      resumeBindWaiters()
     }
   }
 
   /// Rebinds only after the previous owner's active dispatch has drained.
   public func bind(_ newOwner: UUID) async {
     await waitForDispatchIfActive()
+    debounceTask?.cancel()
+    debounceTask = nil
+    debounceGeneration += 1
     stopped = false
     owner = newOwner
     dispatchGeneration += 1
     trailingDispatchRequested = false
+  }
+
+  public func currentOwner() -> UUID? {
+    owner
+  }
+
+  /// Trailing-edge mutation debounce. A burst resets the interval, and only
+  /// the final scheduled task reaches dispatch.
+  public func notifyLocalMutation() {
+    guard !stopped, let owner else { return }
+    debounceTask?.cancel()
+    debounceGeneration += 1
+    let generation = debounceGeneration
+    let interval = debounceInterval
+
+    debounceTask = Task { [interval] in
+      try? await Task.sleep(for: interval)
+      await self.fireDebounce(generation: generation, owner: owner)
+    }
+  }
+
+  private func fireDebounce(generation: Int, owner: UUID) async {
+    guard generation == debounceGeneration, !stopped, owner == self.owner else { return }
+    _ = try? await dispatch()
   }
 
   public func dispatch() async throws -> DispatchResult {
@@ -276,5 +308,4 @@ public actor SyncEngine {
     waiters.forEach { $0.resume() }
   }
 
-  private func resumeBindWaiters() {}
 }

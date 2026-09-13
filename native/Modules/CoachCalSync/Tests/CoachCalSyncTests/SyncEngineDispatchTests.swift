@@ -187,13 +187,15 @@ actor MockTransport: SyncTransport {
   var pushResponse = PushResponse(accepted: [])
   var pullResponse = try! PullResponse(rows: [], cursor: 0)
   var pushDelay: Duration = .zero
+  var pushWait: (@Sendable () async -> Void)?
   var failure: Error?
 
   func configure(
     pushResponse: PushResponse? = nil,
     pullResponse: PullResponse? = nil,
     failure: (any Error)? = nil,
-    pushDelay: Duration? = nil
+    pushDelay: Duration? = nil,
+    pushWait: (@Sendable () async -> Void)? = nil
   ) {
     if let pushResponse {
       self.pushResponse = pushResponse
@@ -205,10 +207,12 @@ actor MockTransport: SyncTransport {
     if let pushDelay {
       self.pushDelay = pushDelay
     }
+    self.pushWait = pushWait
   }
 
   func push(_ request: PushRequest) async throws -> PushResponse {
     pushCalls.append(request.operations)
+    await pushWait?()
     if pushDelay > .zero {
       try await Task.sleep(for: pushDelay)
     }
@@ -324,7 +328,9 @@ func validAckResponse(for operations: [PendingOp]) -> PushResponse {
   )
 }
 
-func makeHarness() throws -> EngineHarness {
+func makeHarness(
+  debounceInterval: Duration = SyncEngine.defaultDebounceInterval
+) throws -> EngineHarness {
   let directory = FileManager.default.temporaryDirectory
     .appending(component: "sync-engine-\(UUID().uuidString)")
   try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -338,7 +344,7 @@ func makeHarness() throws -> EngineHarness {
   let outbox = OutboxRepository(database: database)
   let merge = SyncMergeRepository(database: database)
   let engine = SyncEngine(
-    owner: nil,
+    debounceInterval: debounceInterval,
     transport: transport,
     outbox: outbox,
     merge: merge,
