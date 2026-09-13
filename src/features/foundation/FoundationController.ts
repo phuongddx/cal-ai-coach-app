@@ -15,8 +15,11 @@ export interface FoundationState {
 /**
  * Walking-skeleton controller (Plan 01-05 Task 1). Owns the auth-stub →
  * owner-partition → repository → lifecycle flow. Framework-free: the screen
- * subscribes to state changes; tests inject every dependency. An owner
- * transition always stops the previous lifecycle before binding the new one.
+ * subscribes to state changes; tests inject every dependency. Owner
+ * transitions are serialized through one FIFO queue (Plan 01-07): the
+ * previous owner's lifecycle fully drains — including its in-flight
+ * dispatch — before any authentication changes the shared session, and only
+ * a successful authentication binds and starts the next owner's lifecycle.
  */
 export function createFoundationController(deps: FoundationDeps) {
   let owner: string | null = null;
@@ -24,10 +27,27 @@ export function createFoundationController(deps: FoundationDeps) {
   // useSyncExternalStore requires a referentially stable snapshot between
   // changes — a fresh object per call would loop React forever.
   let cachedState: FoundationState | null = null;
+  // FIFO chain serializing owner transitions (Plan 01-07): every signIn and
+  // signOut — including the first, before any owner binds — runs only after
+  // the previous transition fully settles, so overlapping submissions can
+  // never bypass the old-owner barrier or interleave authentications.
+  let transition: Promise<void> = Promise.resolve();
 
   function emit(): void {
     cachedState = null;
     for (const listener of stateListeners) listener();
+  }
+
+  function runTransition(
+    operation: (previousOwner: string | null) => Promise<void>
+  ): Promise<void> {
+    const settled = transition.then(() => operation(owner));
+    // A rejected transition must not poison the queue for later ones.
+    transition = settled.then(
+      () => undefined,
+      () => undefined
+    );
+    return settled;
   }
 
   return {
@@ -48,17 +68,36 @@ export function createFoundationController(deps: FoundationDeps) {
       };
     },
     async signIn(email: string, password: string): Promise<void> {
-      // An owner transition always stops the previous lifecycle first.
-      if (owner) deps.stopLifecycle(owner);
-      owner = await deps.signIn(email, password);
-      deps.startLifecycle(owner);
-      emit();
+      return runTransition(async (previousOwner) => {
+        if (previousOwner) {
+          // Hide the visible owner/rows for the whole transition, then hold
+          // the barrier: the old owner's lifecycle — including its ACTIVE
+          // dispatch — fully drains before authentication is allowed to
+          // change the shared session's identity.
+          owner = null;
+          emit();
+          await deps.stopLifecycle(previousOwner);
+        }
+        const nextOwner = await deps.signIn(email, password);
+        // Bind and start ONLY the successful new owner; a rejected auth
+        // leaves no bound owner and no running old lifecycle.
+        owner = nextOwner;
+        deps.startLifecycle(nextOwner);
+        emit();
+      });
     },
     async signOut(): Promise<void> {
-      if (owner) deps.stopLifecycle(owner);
-      owner = null;
-      await deps.signOut();
-      emit();
+      return runTransition(async (previousOwner) => {
+        if (previousOwner) {
+          owner = null;
+          emit();
+          // Same ordering as sign-in: active lifecycle work settles before
+          // supabase.auth.signOut clears the shared session.
+          await deps.stopLifecycle(previousOwner);
+        }
+        await deps.signOut();
+        emit();
+      });
     },
     /** Seeds exactly one owned row through the repository when none exist. */
     async seedIfEmpty(displayText: string): Promise<void> {

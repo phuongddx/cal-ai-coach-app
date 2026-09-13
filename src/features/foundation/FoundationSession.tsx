@@ -97,8 +97,13 @@ function makeFoundationDeps(onSettled: () => void): FoundationDeps {
         })
       );
     },
-    stopLifecycle(ownerId: string) {
-      lifecycleByOwner.get(ownerId)?.stop();
+    async stopLifecycle(ownerId: string): Promise<void> {
+      const handle = lifecycleByOwner.get(ownerId);
+      if (!handle) return;
+      // Await the map-held handle BEFORE deleting it: the controller's
+      // owner-transition barrier depends on this promise covering the full
+      // drain of the old owner's active dispatch.
+      await handle.stop();
       lifecycleByOwner.delete(ownerId);
     },
     notifyLocalMutation(ownerId: string) {

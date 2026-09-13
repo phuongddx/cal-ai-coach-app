@@ -49,6 +49,11 @@ export interface FoundationDeps {
 
   /** Lifecycle bridge (Plan 01-04). */
   startLifecycle(ownerId: string): void;
-  stopLifecycle(ownerId: string): void;
+  /**
+   * Owner-handoff barrier (Plan 01-07): stops the owner's lifecycle and
+   * resolves only after its active dispatch has settled. The controller
+   * awaits this before any authentication changes the shared session.
+   */
+  stopLifecycle(ownerId: string): Promise<void>;
   notifyLocalMutation(ownerId: string): void;
 }

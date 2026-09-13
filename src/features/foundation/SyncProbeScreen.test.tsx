@@ -22,6 +22,15 @@ interface HarnessDeps extends FoundationDeps {
   notifyCount(): number;
   lifecycleOwner(): string | null;
   stoppedOwners(): string[];
+  startedOwners(): string[];
+  signInEmails(): string[];
+  /** Makes the NEXT stopLifecycle call wait on a gate the test releases. */
+  holdNextStop(): void;
+  releaseStop(): void;
+  /** Gates the authenticator for one email until releaseAuth. */
+  holdNextAuth(email: string): void;
+  releaseAuth(): void;
+  failAuthFor(email: string): void;
 }
 
 function makeDeps(): HarnessDeps {
@@ -31,9 +40,23 @@ function makeDeps(): HarnessDeps {
   let notifyCount = 0;
   let lifecycleOwner: string | null = null;
   const stopped: string[] = [];
+  const started: string[] = [];
+  const signInEmails: string[] = [];
+  let stopGate: PromiseWithResolvers<void> | null = null;
+  let authGateEmail: string | null = null;
+  let authGate: PromiseWithResolvers<void> | null = null;
+  let failEmail: string | null = null;
 
   const deps: HarnessDeps = {
-    signIn: async (email: string) => (email.startsWith('a@') ? USER_A : USER_B),
+    signIn: async (email: string) => {
+      signInEmails.push(email);
+      if (authGate && authGateEmail === email) await authGate.promise;
+      if (failEmail === email) {
+        failEmail = null;
+        throw new Error('proof sign-in failed');
+      }
+      return email.startsWith('a@') ? USER_A : USER_B;
+    },
     signOut: async () => undefined,
     listRows: (ownerId: string) => rows.filter((r) => r.ownerId === ownerId),
     createRow: async (ownerId: string, text: string) => {
@@ -72,18 +95,16 @@ function makeDeps(): HarnessDeps {
     },
     getQueueStatus: () => queueStatus,
     startLifecycle: (ownerId: string) => {
+      started.push(ownerId);
       lifecycleOwner = ownerId;
     },
-    stopLifecycle: (ownerId: string) => {
+    stopLifecycle: async (ownerId: string) => {
       stopped.push(ownerId);
       if (lifecycleOwner === ownerId) lifecycleOwner = null;
+      if (stopGate) await stopGate.promise;
     },
     notifyLocalMutation: (ownerId: string) => {
       if (lifecycleOwner === ownerId) notifyCount += 1;
-    },
-    setRows(next: Row[]) {
-      rows = next;
-      listeners.forEach((l) => l());
     },
     setQueueStatus(status: QueueStatus) {
       queueStatus = status;
@@ -96,6 +117,28 @@ function makeDeps(): HarnessDeps {
     },
     stoppedOwners() {
       return stopped;
+    },
+    startedOwners() {
+      return started;
+    },
+    signInEmails() {
+      return signInEmails;
+    },
+    holdNextStop() {
+      stopGate = Promise.withResolvers<void>();
+    },
+    releaseStop() {
+      stopGate?.resolve();
+    },
+    holdNextAuth(email: string) {
+      authGateEmail = email;
+      authGate = Promise.withResolvers<void>();
+    },
+    releaseAuth() {
+      authGate?.resolve();
+    },
+    failAuthFor(email: string) {
+      failEmail = email;
     },
   };
   return deps;
@@ -179,5 +222,65 @@ describe('foundation controller (Plan 01-05 Task 1)', () => {
     const serialized = JSON.stringify(proof);
     expect(serialized).not.toMatch(/password|token|secret|@proof\.local|publishable/i);
     expect(proof.scenario).toBe('offline-reconnect');
+  });
+});
+
+describe('foundation controller session-handoff barrier (Plan 01-07 Task 2)', () => {
+  it('holds the next sign-in behind the previous owner draining lifecycle stop', async () => {
+    const deps = makeDeps();
+    const controller = createFoundationController(deps);
+    await controller.signIn('a@proof.local', 'pw');
+
+    deps.holdNextStop();
+    const toB = controller.signIn('b@proof.local', 'pw');
+    await drain();
+    // While User A's lifecycle stop is still draining, User B's
+    // authenticator must not have been called, B must not be bound, and no
+    // B lifecycle work may have started.
+    expect(deps.signInEmails()).not.toContain('b@proof.local');
+    expect(controller.getState().owner).not.toBe(USER_B);
+    expect(deps.startedOwners()).not.toContain(USER_B);
+
+    deps.releaseStop();
+    await toB;
+    expect(deps.signInEmails()).toContain('b@proof.local');
+    expect(controller.getState().owner).toBe(USER_B);
+    expect(deps.startedOwners().filter((owner) => owner === USER_B)).toHaveLength(1);
+  });
+
+  it('serializes overlapping sign-ins through one transition queue even before any owner binds', async () => {
+    const deps = makeDeps();
+    const controller = createFoundationController(deps);
+    deps.holdNextAuth('a@proof.local');
+
+    const first = controller.signIn('a@proof.local', 'pw');
+    const second = controller.signIn('b@proof.local', 'pw');
+    await drain();
+    expect(deps.signInEmails()).toStrictEqual(['a@proof.local']);
+
+    deps.releaseAuth();
+    await Promise.all([first, second]);
+    expect(deps.signInEmails()).toStrictEqual(['a@proof.local', 'b@proof.local']);
+    expect(deps.stoppedOwners()).toContain(USER_A);
+    expect(controller.getState().owner).toBe(USER_B);
+  });
+
+  it('a failed next-owner authentication leaves no bound owner or running lifecycle and the queue stays usable', async () => {
+    const deps = makeDeps();
+    const controller = createFoundationController(deps);
+    await controller.signIn('a@proof.local', 'pw');
+
+    deps.failAuthFor('b@proof.local');
+    await expect(controller.signIn('b@proof.local', 'pw')).rejects.toThrow(
+      'proof sign-in failed'
+    );
+
+    expect(controller.getState().owner).toBeNull();
+    expect(deps.lifecycleOwner()).toBeNull();
+
+    // Queued transitions remain usable after the failure.
+    await controller.signIn('a@proof.local', 'pw');
+    expect(controller.getState().owner).toBe(USER_A);
+    expect(deps.lifecycleOwner()).toBe(USER_A);
   });
 });
