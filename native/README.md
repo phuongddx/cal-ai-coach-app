@@ -14,11 +14,11 @@ The native SwiftUI iOS app is generated with [XcodeGen](https://github.com/yonas
 native/
 ├── project.yml                  # XcodeGen manifest
 ├── App/CoachCal/                # @main app shell and walking smoke screen
-├── App/CoachCalTests/           # XCUITest smoke target
+├── App/CoachCalTests/           # unit tests + XCUITest smoke sources
 └── Modules/                     # local Swift packages
 ```
 
-The app target is `CoachCal` and its UI-test target is `CoachCalTests`. It uses bundle ID `com.nextlabs.coachcal`, Swift 6 language mode, `MainActor` default isolation, and approachable concurrency.
+The app target is `CoachCal`; `CoachCalTests` is its unit-test target and `CoachCalUITests` its UI-test target. It uses bundle ID `com.nextlabs.coachcal`, Swift 6 language mode, `MainActor` default isolation, and approachable concurrency.
 
 ## Module graph
 
@@ -41,7 +41,7 @@ xcodebuild build -project CoachCal.xcodeproj -scheme CoachCal \
   -destination 'platform=iOS Simulator,name=iPhone 16,OS=26.5'
 xcodebuild test -project CoachCal.xcodeproj -scheme CoachCal \
   -destination 'platform=iOS Simulator,name=iPhone 16,OS=26.5' \
-  -only-testing:CoachCalTests/WalkingSmokeUITests
+  -only-testing:CoachCalUITests/WalkingSmokeUITests
 ```
 
 Run each package’s macOS-compatible tests with `swift test` from its module directory. `AuthSessionTests` in `CoachCalNetworking` hit a seeded local Supabase (`supabase start`) and are skipped unless `TEST_EMAIL`, `TEST_PASSWORD`, and `SUPABASE_ANON_KEY` are set.
