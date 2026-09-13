@@ -7,7 +7,7 @@
 -- assertions run as `postgres` (clients have no table privileges).
 
 begin;
-select plan(30);
+select plan(32);
 
 -- 1-2: no direct table privileges for clients on the scan-pipeline tables ----
 select ok(
@@ -116,6 +116,31 @@ select is(
   3::bigint,
   'exactly 3 usage rows after refusal and replay'
 );
+
+-- 17: per-user serialization inside claim_scan_credit (review CR-03) ----------
+-- Concurrent claims with distinct scan_ids are only safe if each claimant
+-- holds a per-user advisory xact lock before the window count. pgTAP is a
+-- single session, so a live two-session race is not deterministic here; the
+-- lock itself is proven from pg_locks: while the RPC runs inside this
+-- transaction, the advisory lock keyed on the claimant's uid is held by it.
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"22222222-2222-4222-8222-222222222222","role":"authenticated"}';
+select is(
+  (public.claim_scan_credit('aaaaaaaa-0000-4000-8000-000000000021'::uuid))->>'claimed',
+  'true',
+  'a second user claims independently of the first user window'
+);
+select ok(
+  exists (
+    select 1 from pg_locks
+     where locktype = 'advisory'
+       and classid = 0
+       and objid = (hashtext('22222222-2222-4222-8222-222222222222') & 2147483647)::oid
+  ),
+  'claim_scan_credit holds the per-user advisory xact lock while claiming'
+);
+reset role;
+set local role postgres;
 
 -- 18-19: webhook exactly-once — first apply wins, duplicate is a no-op --------
 set local role service_role;

@@ -140,6 +140,13 @@ begin
     raise exception 'claim_scan_credit requires an authenticated user' using errcode = '42501';
   end if;
 
+  -- Serialize claims per user before the window count: concurrent requests
+  -- with distinct scan_ids run in separate READ COMMITTED snapshots, so
+  -- without this lock both counts miss each other's insert and both pass
+  -- the limit check (TOCTOU past the 3-per-window cap). The two-int key form
+  -- keeps classid=0 and a non-negative objid, so pg_locks can prove the lock.
+  perform pg_advisory_xact_lock(0, hashtext(v_owner::text) & 2147483647);
+
   insert into public.scan_usage (user_id, scan_id)
   values (v_owner, p_scan_id)
   on conflict (user_id, scan_id) do nothing;
