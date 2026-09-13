@@ -251,6 +251,57 @@ describe('dispatcher (Plan 01-04 Task 2)', () => {
     expect(pushed).toHaveLength(1);
   });
 
+  it('rejects a duplicate acknowledgement for a submitted operation', async () => {
+    // Both operations are submitted; the response names only submitted IDs
+    // but repeats one, so no one-to-one correspondence exists.
+    seedPending(handle.db, USER_A, OP_X, REC, 1);
+    seedPending(handle.db, USER_A, OP_Y, REC, 2);
+
+    const { transport, pulled } = makeTransport({
+      push: async () => ({
+        accepted: [
+          { opId: OP_X, serverVersion: 10, acceptedOpId: OP_X, duplicate: false },
+          { opId: OP_X, serverVersion: 11, acceptedOpId: OP_X, duplicate: false },
+        ],
+      }),
+    });
+
+    await expect(runDispatch(handle.db, USER_A, { transport })).rejects.toThrow(
+      /more than once/
+    );
+
+    // Rejected whole: identities unchanged, no partial acknowledgement, no
+    // pull.
+    const ops = handle.db.select().from(pendingOps).all();
+    expect(ops.map((op) => op.opId).sort()).toStrictEqual([OP_X, OP_Y]);
+    expect(ops.every((op) => op.attempts === 1 && op.lastError)).toBe(true);
+    expect(pulled).toHaveLength(0);
+  });
+
+  it('rejects a response that omits a submitted operation', async () => {
+    seedPending(handle.db, USER_A, OP_X, REC, 1);
+    seedPending(handle.db, USER_A, OP_Y, REC, 2);
+
+    const { transport, pulled } = makeTransport({
+      push: async () => ({
+        accepted: [
+          { opId: OP_X, serverVersion: 10, acceptedOpId: OP_X, duplicate: false },
+        ],
+      }),
+    });
+
+    await expect(runDispatch(handle.db, USER_A, { transport })).rejects.toThrow(
+      /partial acknowledgement/
+    );
+
+    // Rejected whole: the omitted operation was not partially acked and the
+    // pull path never ran.
+    const ops = handle.db.select().from(pendingOps).all();
+    expect(ops.map((op) => op.opId).sort()).toStrictEqual([OP_X, OP_Y]);
+    expect(ops.every((op) => op.attempts === 1 && op.lastError)).toBe(true);
+    expect(pulled).toHaveLength(0);
+  });
+
   it('isolates a poison operation instead of blocking the queue', async () => {
     seedPending(handle.db, USER_A, OP_X, REC, 1);
     handle.db

@@ -80,23 +80,34 @@ export type PushResponse = z.infer<typeof PushResponseSchema>;
  * Request-bound acknowledgement validation (Plan 01-06, threat T-01-27).
  *
  * A push response may only acknowledge operations submitted in the request
- * that produced it. A shape-valid response naming an opId outside the frozen
- * submitted batch is hostile or defective — rejecting it whole keeps every
- * pending operation durable for retry. Envelope shape remains
- * PushResponseSchema's job; this is the request-correlation gate the
- * dispatcher runs before any acknowledgement transaction.
+ * that produced it. Successful validation means the unique response
+ * acknowledgement set is identical to the submitted operation ID set: no
+ * foreign IDs, no duplicates, none missing. A mismatching response is
+ * rejected whole, keeping every pending operation durable for retry.
  */
 export function assertAcknowledgementSet(
   operations: PushRequest['operations'],
   accepted: PushResponse['accepted']
 ): void {
   const submitted = new Set(operations.map((operation) => operation.opId));
+  const acknowledged = new Set<string>();
   for (const ack of accepted) {
     if (!submitted.has(ack.opId)) {
       throw new Error(
         `Push response acknowledges unsent operation ${ack.opId}`
       );
     }
+    if (acknowledged.has(ack.opId)) {
+      throw new Error(
+        `Push response acknowledges operation ${ack.opId} more than once`
+      );
+    }
+    acknowledged.add(ack.opId);
+  }
+  if (acknowledged.size !== submitted.size) {
+    throw new Error(
+      `Push response acknowledges ${acknowledged.size} of ${submitted.size} submitted operations; refusing a partial acknowledgement set`
+    );
   }
 }
 

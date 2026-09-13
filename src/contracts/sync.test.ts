@@ -203,4 +203,36 @@ describe('assertAcknowledgementSet', () => {
       )
     ).toThrow(/unsent operation/);
   });
+
+  it('rejects duplicate acknowledgements even when every ID appears in the request', () => {
+    const submitted = '5b1f6a1e-9c2d-4a7b-8e3f-1d2c3b4a5f6e';
+    expect(() =>
+      assertAcknowledgementSet(
+        [operation(submitted)],
+        [acknowledgement(submitted), acknowledgement(submitted, 8)]
+      )
+    ).toThrow(/more than once/);
+  });
+
+  it('rejects a response that omits one submitted operation', () => {
+    const first = '5b1f6a1e-9c2d-4a7b-8e3f-1d2c3b4a5f6e';
+    const second = '6b1f6a1e-9c2d-4a7b-8e3f-1d2c3b4a5f6e';
+    expect(() =>
+      assertAcknowledgementSet(
+        [operation(first), operation(second)],
+        [acknowledgement(first)]
+      )
+    ).toThrow(/partial acknowledgement/);
+  });
+
+  it('accepts acknowledgements exactly matching the submitted batch one-to-one', () => {
+    const first = '5b1f6a1e-9c2d-4a7b-8e3f-1d2c3b4a5f6e';
+    const second = '6b1f6a1e-9c2d-4a7b-8e3f-1d2c3b4a5f6e';
+    expect(() =>
+      assertAcknowledgementSet(
+        [operation(first), operation(second)],
+        [acknowledgement(second, 11), acknowledgement(first, 10)]
+      )
+    ).not.toThrow();
+  });
 });
