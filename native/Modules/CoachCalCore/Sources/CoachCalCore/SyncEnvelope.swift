@@ -223,7 +223,6 @@ public struct PushResponse: Codable, Equatable, Sendable {
           "Push response acknowledges operation \(acknowledgement.opId.uuidString) more than once"
         )
       }
-      acknowledged.insert(acknowledgement.opId)
     }
 
     guard acknowledged.count == submitted.count else {

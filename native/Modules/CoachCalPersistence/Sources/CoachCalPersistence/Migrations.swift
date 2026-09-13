@@ -1,4 +1,3 @@
-import Foundation
 import GRDB
 
 public enum Migrations {
@@ -10,12 +9,12 @@ public enum Migrations {
         table.column("id", .text).primaryKey()
         table.column("user_id", .text).notNull()
         table.column("display_text", .text).notNull()
-        table.column("created_at", .datetime).notNull().defaults(to: Date.now)
-        table.column("updated_at", .datetime).notNull().defaults(to: Date.now)
+        table.column("created_at", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
+        table.column("updated_at", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
         table.column("deleted_at", .datetime)
         table.column("server_version", .integer).notNull().defaults(to: 0)
         table.column("accepted_op_id", .text)
-        table.column("server_updated_at", .datetime).notNull().defaults(to: Date.now)
+        table.column("server_updated_at", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
       }
       try database.create(
         index: "diary_entries_user_version_idx",
@@ -30,7 +29,7 @@ public enum Migrations {
         table.column("kind", .text).notNull()
         table.column("snapshot", .text).notNull()
         table.column("client_timestamp", .datetime).notNull()
-        table.column("created_at", .datetime).notNull().defaults(to: Date.now)
+        table.column("created_at", .datetime).notNull().defaults(sql: "CURRENT_TIMESTAMP")
         table.column("dispatch_attempts", .integer).notNull().defaults(to: 0)
         table.column("next_retry_at", .datetime)
       }
