@@ -112,6 +112,36 @@ struct SyncEngineDispatchTests {
   }
 
   @Test
+  func permanentlyUndecodableOperationIsDeadLetteredWithoutLosingTheRow() async throws {
+    let harness = try makeHarness()
+    let poisoned = PendingOp(
+      opId: UUID(),
+      tableName: "diary_entries",
+      recordId: UUID(),
+      kind: "upsert",
+      snapshot: "not-json",
+      clientTimestamp: harness.now,
+      createdAt: harness.now
+    )
+    try await harness.write { try poisoned.insert($0) }
+    await harness.engine.bind(UUID())
+
+    for _ in 0..<(SyncEngine.maxOpAttempts - 1) {
+      let result = try await harness.engine.dispatch()
+      #expect(result.poisoned == 1)
+      let retrying = try await harness.readPending(opId: poisoned.opId)
+      #expect(retrying?.quarantined == false)
+    }
+
+    let final = try await harness.engine.dispatch()
+    #expect(final.poisoned == 1)
+
+    let stored = try await harness.readPending(opId: poisoned.opId)
+    #expect(stored?.quarantined == true)
+    #expect(try await harness.outbox.dueOps(limit: SyncEngine.batchSize).isEmpty)
+  }
+
+  @Test
   func pullSkipsNewerPendingIntentButAppliesOtherRowsAndAdvancesCursor() async throws {
     let harness = try makeHarness()
     let protectedRecord = UUID()

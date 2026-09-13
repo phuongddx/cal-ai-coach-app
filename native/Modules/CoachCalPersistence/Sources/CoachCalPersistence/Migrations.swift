@@ -47,6 +47,12 @@ public enum Migrations {
       try database.execute(sql: "INSERT INTO sync_state (id, pull_cursor) VALUES (1, 0)")
     }
 
+    migrator.registerMigration("2__outbox_dead_letter") { database in
+      try database.alter(table: "pending_ops") { table in
+        table.add(column: "quarantined", .boolean).notNull().defaults(to: false)
+      }
+    }
+
     return migrator
   }
 }

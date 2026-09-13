@@ -26,7 +26,8 @@ public struct OutboxRepository: Sendable {
         database,
         sql: """
           SELECT * FROM pending_ops
-          WHERE next_retry_at IS NULL OR next_retry_at <= ?
+          WHERE quarantined = 0
+            AND (next_retry_at IS NULL OR next_retry_at <= ?)
           ORDER BY created_at ASC, op_id ASC
           LIMIT ?
           """,
@@ -58,6 +59,24 @@ public struct OutboxRepository: Sendable {
           WHERE op_id IN (\(placeholders))
           """,
         arguments: StatementArguments([retryAt] + opIds)
+      )
+    }
+  }
+
+  /// Permanently failing ops stay in `pending_ops` (the local mutation is
+  /// never dropped) but are excluded from `dueOps` so they cannot starve the
+  /// batch quota.
+  public func quarantine(opId: UUID) async throws {
+    try await database.write { database in
+      try database.execute(
+        sql: """
+          UPDATE pending_ops
+          SET quarantined = 1,
+              dispatch_attempts = dispatch_attempts + 1,
+              next_retry_at = NULL
+          WHERE op_id = ?
+          """,
+        arguments: StatementArguments([opId])
       )
     }
   }

@@ -32,6 +32,9 @@ public enum SyncEngineError: Error, Equatable, Sendable {
 public actor SyncEngine {
   public static let batchSize = 50
   public static let defaultDebounceInterval: Duration = .milliseconds(500)
+  /// Decode failures are deterministic; after this many attempts the op is
+  /// dead-lettered instead of occupying a batch slot forever.
+  public static let maxOpAttempts = 5
 
   private let transport: any SyncTransport
   private let outbox: OutboxRepository
@@ -184,12 +187,16 @@ public actor SyncEngine {
         operations.append(operation)
       } catch {
         poisonedCount += 1
-        try await outbox.markFailed(
-          opIds: [stored.opId],
-          retryAt: now().addingTimeInterval(
-            TimeInterval(Backoff.delay(forDispatchAttempts: stored.dispatchAttempts + 1).components.seconds)
+        if stored.dispatchAttempts + 1 >= Self.maxOpAttempts {
+          try await outbox.quarantine(opId: stored.opId)
+        } else {
+          try await outbox.markFailed(
+            opIds: [stored.opId],
+            retryAt: now().addingTimeInterval(
+              TimeInterval(Backoff.delay(forDispatchAttempts: stored.dispatchAttempts + 1).components.seconds)
+            )
           )
-        )
+        }
         guard generation == dispatchGeneration else { return .empty }
       }
     }

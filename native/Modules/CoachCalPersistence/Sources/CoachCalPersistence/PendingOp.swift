@@ -13,6 +13,7 @@ public struct PendingOp: Codable, Equatable, FetchableRecord, PersistableRecord,
   public let createdAt: Date
   public var dispatchAttempts: Int
   public var nextRetryAt: Date?
+  public var quarantined: Bool
 
   public init(
     opId: UUID,
@@ -23,7 +24,8 @@ public struct PendingOp: Codable, Equatable, FetchableRecord, PersistableRecord,
     clientTimestamp: Date,
     createdAt: Date,
     dispatchAttempts: Int = 0,
-    nextRetryAt: Date? = nil
+    nextRetryAt: Date? = nil,
+    quarantined: Bool = false
   ) {
     self.opId = opId
     self.tableName = tableName
@@ -34,6 +36,7 @@ public struct PendingOp: Codable, Equatable, FetchableRecord, PersistableRecord,
     self.createdAt = createdAt
     self.dispatchAttempts = dispatchAttempts
     self.nextRetryAt = nextRetryAt
+    self.quarantined = quarantined
   }
 
   private enum CodingKeys: String, CodingKey {
@@ -41,5 +44,6 @@ public struct PendingOp: Codable, Equatable, FetchableRecord, PersistableRecord,
     case snapshot
     case clientTimestamp = "client_timestamp", createdAt = "created_at"
     case dispatchAttempts = "dispatch_attempts", nextRetryAt = "next_retry_at"
+    case quarantined
   }
 }

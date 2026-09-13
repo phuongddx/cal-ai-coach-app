@@ -90,6 +90,29 @@ struct OutboxRepositoryTests {
   }
 
   @Test
+  func quarantineKeepsRowButExcludesItFromDueOps() async throws {
+    let (repository, pool) = try makeDatabase()
+    let base = Date(timeIntervalSince1970: 1_768_300_000)
+    let quarantined = makeOperation(opId: UUID(), createdAt: base)
+    let live = makeOperation(opId: UUID(), createdAt: base.addingTimeInterval(1))
+    try await pool.write { database in
+      try quarantined.insert(database)
+      try live.insert(database)
+    }
+
+    try await repository.quarantine(opId: quarantined.opId)
+
+    let due = try await repository.dueOps(limit: 100)
+    #expect(due.map(\.opId) == [live.opId])
+    let storedQuarantined = try await pool.read {
+      try PendingOp.fetchOne($0, key: quarantined.opId)
+    }
+    #expect(storedQuarantined?.quarantined == true)
+    #expect(storedQuarantined?.dispatchAttempts == 1)
+    #expect(storedQuarantined?.nextRetryAt == nil)
+  }
+
+  @Test
   func statusSnapshotReturnsPendingCountAndOldestCreation() async throws {
     let (repository, pool) = try makeDatabase()
     let base = Date(timeIntervalSince1970: 1_768_300_000)
