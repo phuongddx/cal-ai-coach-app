@@ -22,7 +22,15 @@ export interface VlmProvider {
 // VlmOutputSchema before use, so the interface deliberately carries unknown.
 export type VlmOutputLike = unknown;
 
+let providerOverride: VlmProvider | null = null;
+
+/** Test-only seam: suites install a counting/stub provider; null restores env selection. */
+export function overrideVlmProvider(provider: VlmProvider | null): void {
+  providerOverride = provider;
+}
+
 export function getVlmProvider(): VlmProvider {
+  if (providerOverride) return providerOverride;
   const name = Deno.env.get('VLM_PROVIDER') ?? 'fixture';
   if (name === 'gemini') {
     throw new Error('VLM_PROVIDER=gemini is not implemented until Phase 4');

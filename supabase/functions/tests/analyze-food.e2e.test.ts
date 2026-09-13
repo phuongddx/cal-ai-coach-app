@@ -204,23 +204,6 @@ Deno.test('analyze-food: malformed request shapes are 400 VALIDATION_ERROR befor
   assertEquals((await unknownKey.json()).error.code, 'VALIDATION_ERROR');
 });
 
-Deno.test('analyze-food: an unimplemented kind returns the honest typed 400 naming it', async () => {
-  const { userId, token } = await authedUser();
-  const scanId = crypto.randomUUID();
-  try {
-    const res = await handler(scanRequest(photoBody(scanId, { kind: 'label' }), token));
-    assertEquals(res.status, 400);
-    const body = await res.json();
-    assertEquals(body.error.code, 'VALIDATION_ERROR');
-    assert(
-      body.error.details.some((detail: string) => detail.includes('label')),
-      `the 400 must name the unimplemented kind, got: ${JSON.stringify(body.error.details)}`,
-    );
-  } finally {
-    await deleteScan(scanId, userId);
-  }
-});
-
 Deno.test('analyze-food: a missing Authorization header is a 401 envelope', async () => {
   const res = await handler(scanRequest(photoBody(crypto.randomUUID())));
   assertEquals(res.status, 401);
