@@ -22,7 +22,10 @@ export const ScanRequestSchema = z
     mealType: mealTypeSchema.optional(),
     imageBase64: z.string().max(4_500_000).optional(),
     textDescription: z.string().min(1).max(500).optional(),
-    barcode: z.string().regex(/^\d{8,14}$/).optional(),
+    // Only lengths the GTIN normalizer can key: 9-11 digits and GTIN-14 with
+    // a non-zero indicator have no EAN-13 form, so they are 400s, never
+    // normalizer crashes downstream.
+    barcode: z.string().regex(/^(?:\d{8}|\d{12}|\d{13}|0\d{13})$/).optional(),
   })
   .refine(
     (request) =>

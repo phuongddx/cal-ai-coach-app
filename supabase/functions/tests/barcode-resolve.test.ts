@@ -156,6 +156,12 @@ Deno.test('barcode-resolve: malformed request shapes are 400 VALIDATION_ERROR', 
   assertEquals(nonDigitBody.error.code, 'VALIDATION_ERROR');
   assert(nonDigitBody.error.details.some((detail: string) => detail.includes('barcode')));
 
+  // 10 digits is contract-invalid: the normalizer has no EAN-13 form for it,
+  // so it must be refused at the boundary, never reach the cascade.
+  const wrongLength = await handler(lookupRequest('1234567890'));
+  assertEquals(wrongLength.status, 400);
+  assertEquals((await wrongLength.json()).error.code, 'VALIDATION_ERROR');
+
   const unknownKey = await handler(lookupRequest('123456789', undefined, { kind: 'barcode' }));
   assertEquals(unknownKey.status, 400);
   assertEquals((await unknownKey.json()).error.code, 'VALIDATION_ERROR');

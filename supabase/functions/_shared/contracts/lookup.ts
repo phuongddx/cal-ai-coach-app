@@ -9,7 +9,10 @@ import { z } from 'npm:zod';
  */
 
 export const LookupBarcodeRequestSchema = z.strictObject({
-  barcode: z.string().regex(/^\d{8,14}$/),
+  // Only lengths the GTIN normalizer can key: 9-11 digits and GTIN-14 with
+  // a non-zero indicator have no EAN-13 form, so they are 400s, never
+  // normalizer crashes downstream.
+  barcode: z.string().regex(/^(?:\d{8}|\d{12}|\d{13}|0\d{13})$/),
 });
 export type LookupBarcodeRequest = z.infer<typeof LookupBarcodeRequestSchema>;
 

@@ -99,6 +99,27 @@ Deno.test('ScanRequestSchema rejects a barcode failing the digit regex', () => {
   assertThrows(() => ScanRequestSchema.parse(malformed));
 });
 
+Deno.test('ScanRequestSchema only accepts barcodes with a GTIN-normalizable length', () => {
+  for (const good of ['12345678', '036000291452', '3017620422003', '00036000291452']) {
+    ScanRequestSchema.parse({
+      ...validScanRequest,
+      kind: 'barcode',
+      imageBase64: undefined,
+      barcode: good,
+    });
+  }
+  for (const bad of ['123456789', '1234567890', '12345678901', '10000000000000', '12345678901234']) {
+    assertThrows(() =>
+      ScanRequestSchema.parse({
+        ...validScanRequest,
+        kind: 'barcode',
+        imageBase64: undefined,
+        barcode: bad,
+      })
+    );
+  }
+});
+
 Deno.test('VlmItemSchema rejects an object carrying a kcal key', () => {
   const poisoned = { ...validVlmItem, kcal: 248 };
   const result = VlmItemSchema.safeParse(poisoned);

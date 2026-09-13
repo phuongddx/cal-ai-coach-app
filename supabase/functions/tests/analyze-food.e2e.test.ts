@@ -227,6 +227,16 @@ Deno.test('analyze-food: malformed request shapes are 400 VALIDATION_ERROR befor
   const unknownKey = await handler(scanRequest(photoBody(crypto.randomUUID(), { mode: 'malformed' })));
   assertEquals(unknownKey.status, 400);
   assertEquals((await unknownKey.json()).error.code, 'VALIDATION_ERROR');
+
+  // A 10-digit barcode is contract-invalid (no EAN-13 form) — refused before
+  // auth and before the quota claim, never a downstream normalizer crash.
+  const badBarcode = await handler(scanRequest({
+    scanId: crypto.randomUUID(),
+    kind: 'barcode',
+    barcode: '1234567890',
+  }));
+  assertEquals(badBarcode.status, 400);
+  assertEquals((await badBarcode.json()).error.code, 'VALIDATION_ERROR');
 });
 
 Deno.test('analyze-food: a missing Authorization header is a 401 envelope', async () => {
