@@ -4,7 +4,7 @@ import SwiftUI
 struct CoachCalApp: App {
   var body: some Scene {
     WindowGroup {
-      Text("CoachCal")
+      WalkingScreen()
     }
   }
 }
