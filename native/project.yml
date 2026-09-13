@@ -8,6 +8,9 @@ settings:
     SWIFT_VERSION: "6.0"
     SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
     SWIFT_APPROACHABLE_CONCURRENCY: "YES"
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: K2TYLYAWMK
+    CODE_SIGN_IDENTITY: "iPhone Distribution: Doan Duy Phuong (K2TYLYAWMK)"
 packages:
   CoachCalCore:
     path: Modules/CoachCalCore
@@ -43,7 +46,9 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.nextlabs.coachcal
         TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_IDENTITY: "iPhone Distribution: Doan Duy Phuong (K2TYLYAWMK)"
         CODE_SIGN_ENTITLEMENTS: App/CoachCal/SupportingFiles/CoachCal.entitlements
+        PROVISIONING_PROFILE_SPECIFIER: "CoachCal AppStore"
         SUPABASE_URL: "$(COACHCAL_SUPABASE_URL:http://127.0.0.1:54321)"
         SUPABASE_ANON_KEY: "$(COACHCAL_SUPABASE_ANON_KEY)"
   CoachCalTests:
