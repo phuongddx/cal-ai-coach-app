@@ -43,6 +43,7 @@ yarn-error.*
 # Generated native SwiftUI project
 /native/*.xcodeproj
 /native/DerivedData/
+/native/artifacts/
 
 # GSD planning docs (commit_docs=false — local only)
 .planning/

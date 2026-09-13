@@ -30,6 +30,9 @@ targets:
       properties:
         SUPABASE_URL: $(SUPABASE_URL)
         SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
+        CFBundleDisplayName: CoachCal
+        NSCameraUsageDescription: CoachCal uses the camera to photograph your meals so CoachCal can estimate calories and macros.
+        ITSAppUsesNonExemptEncryption: false
     dependencies:
       - package: CoachCalCore
       - package: CoachCalDesignSystem
@@ -40,6 +43,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.nextlabs.coachcal
         TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_ENTITLEMENTS: App/CoachCal/SupportingFiles/CoachCal.entitlements
         SUPABASE_URL: "$(COACHCAL_SUPABASE_URL:http://127.0.0.1:54321)"
         SUPABASE_ANON_KEY: "$(COACHCAL_SUPABASE_ANON_KEY)"
   CoachCalTests:
