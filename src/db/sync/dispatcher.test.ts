@@ -186,6 +186,71 @@ describe('dispatcher (Plan 01-04 Task 2)', () => {
     expect(handle.db.select().from(pendingOps).all()).toHaveLength(1);
   });
 
+  it('rejects an acknowledgement for an operation queued after submission', async () => {
+    // Only OP_X is loaded into the submitted batch; OP_Y joins the queue
+    // while the push is in flight, so a response acknowledging Y names an
+    // operation that was never submitted.
+    seedPending(handle.db, USER_A, OP_X, REC, 1);
+
+    const { transport, pushed, pulled } = makeTransport({
+      push: async () => {
+        seedPending(handle.db, USER_A, OP_Y, REC, 2, 'queued during push');
+        return {
+          accepted: [
+            { opId: OP_X, serverVersion: 10, acceptedOpId: OP_X, duplicate: false },
+            { opId: OP_Y, serverVersion: 11, acceptedOpId: OP_Y, duplicate: false },
+          ],
+        };
+      },
+    });
+
+    await expect(runDispatch(handle.db, USER_A, { transport })).rejects.toThrow(
+      /unsent operation/
+    );
+
+    // Both the submitted and the unsent operation stay durable, byte-exact.
+    const ops = handle.db.select().from(pendingOps).all();
+    expect(ops).toHaveLength(2);
+    const submittedRow = ops.find((op) => op.opId === OP_X);
+    const unsentRow = ops.find((op) => op.opId === OP_Y);
+    expect(submittedRow).toBeDefined();
+    expect(unsentRow).toBeDefined();
+
+    // Retry metadata lands only on the operation actually submitted.
+    expect(submittedRow!.attempts).toBe(1);
+    expect(submittedRow!.lastError).toMatch(/unsent operation/);
+    expect(unsentRow!.attempts).toBe(0);
+    expect(unsentRow!.lastError).toBeNull();
+
+    expect(JSON.parse(submittedRow!.snapshotJson)).toStrictEqual({
+      id: REC,
+      displayText: 'offline edit',
+      deletedAt: null,
+      serverVersion: 0,
+      acceptedOpId: null,
+    });
+    expect(JSON.parse(unsentRow!.snapshotJson)).toStrictEqual({
+      id: REC,
+      displayText: 'queued during push',
+      deletedAt: null,
+      serverVersion: 0,
+      acceptedOpId: null,
+    });
+
+    // No acknowledgement side effects: mirror untouched, cursor unmoved,
+    // pull never reached.
+    expect(handle.db.select().from(diaryEntries).all()).toHaveLength(0);
+    expect(
+      handle.db
+        .select()
+        .from(syncState)
+        .all()
+        .find((c) => c.ownerId === USER_A)?.pullCursor ?? 0
+    ).toBe(0);
+    expect(pulled).toHaveLength(0);
+    expect(pushed).toHaveLength(1);
+  });
+
   it('isolates a poison operation instead of blocking the queue', async () => {
     seedPending(handle.db, USER_A, OP_X, REC, 1);
     handle.db

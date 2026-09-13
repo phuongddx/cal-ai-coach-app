@@ -76,6 +76,30 @@ export const PushResponseSchema = z.strictObject({
 });
 export type PushResponse = z.infer<typeof PushResponseSchema>;
 
+/**
+ * Request-bound acknowledgement validation (Plan 01-06, threat T-01-27).
+ *
+ * A push response may only acknowledge operations submitted in the request
+ * that produced it. A shape-valid response naming an opId outside the frozen
+ * submitted batch is hostile or defective — rejecting it whole keeps every
+ * pending operation durable for retry. Envelope shape remains
+ * PushResponseSchema's job; this is the request-correlation gate the
+ * dispatcher runs before any acknowledgement transaction.
+ */
+export function assertAcknowledgementSet(
+  operations: PushRequest['operations'],
+  accepted: PushResponse['accepted']
+): void {
+  const submitted = new Set(operations.map((operation) => operation.opId));
+  for (const ack of accepted) {
+    if (!submitted.has(ack.opId)) {
+      throw new Error(
+        `Push response acknowledges unsent operation ${ack.opId}`
+      );
+    }
+  }
+}
+
 export const PullRequestSchema = z.strictObject({
   /** Durable server cursor; the client pulls everything strictly newer. */
   cursor: z.number().int().nonnegative(),

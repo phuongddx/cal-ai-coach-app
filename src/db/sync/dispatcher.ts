@@ -6,6 +6,7 @@ import type {
 } from 'drizzle-orm/expo-sqlite';
 
 import {
+  assertAcknowledgementSet,
   PullResponseSchema,
   PushResponseSchema,
   type PushRequest,
@@ -112,6 +113,11 @@ export async function runDispatch(
       // Defense in depth: re-validate the server response against the shared
       // contract even if the transport already parsed it.
       response = PushResponseSchema.parse(await transport.push({ operations }));
+      // Request-bound correlation (Plan 01-06, T-01-27): a shape-valid
+      // response naming an operation that was not submitted in this batch is
+      // rejected before any acknowledgement transaction, so every pending
+      // operation survives for retry and pull is skipped.
+      assertAcknowledgementSet(operations, response.accepted);
     } catch (error) {
       // Observable failure: every pending operation stays intact; only retry
       // metadata moves. Never fabricate a new operation from committed rows.

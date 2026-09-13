@@ -4,6 +4,7 @@ import {
   PushResponseSchema,
   PullRequestSchema,
   PullResponseSchema,
+  assertAcknowledgementSet,
   compareCanonicalVersions,
   type CanonicalRowVersion,
 } from './sync';
@@ -168,5 +169,38 @@ describe('Push and Pull envelopes', () => {
       cursor: 4,
     };
     expect(() => PullResponseSchema.parse(inconsistent)).toThrow();
+  });
+});
+
+describe('assertAcknowledgementSet', () => {
+  const operation = (opId: string) => ({
+    opId,
+    table: 'diary_entries',
+    recordId: 'a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d',
+    kind: 'upsert',
+    snapshot: {
+      id: 'a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d',
+      displayText: 'Chicken rice bowl',
+      deletedAt: null,
+      serverVersion: 0,
+      acceptedOpId: null,
+    },
+    clientTimestamp: '2026-09-12T00:00:00.000Z',
+  });
+
+  const acknowledgement = (opId: string, serverVersion = 7) => ({
+    opId,
+    serverVersion,
+    acceptedOpId: opId,
+    duplicate: false,
+  });
+
+  it('rejects an acknowledgement naming an operation outside the submitted batch', () => {
+    expect(() =>
+      assertAcknowledgementSet(
+        [operation('5b1f6a1e-9c2d-4a7b-8e3f-1d2c3b4a5f6e')],
+        [acknowledgement('6b1f6a1e-9c2d-4a7b-8e3f-1d2c3b4a5f6e')]
+      )
+    ).toThrow(/unsent operation/);
   });
 });
