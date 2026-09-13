@@ -69,9 +69,13 @@ export function startSyncLifecycle(
     try {
       await deps.dispatch(ownerId);
       retryDelay = retryBaseMs;
-    } catch {
-      // Failure is observable to the dispatch owner (logged there); the queue
-      // is intact. Schedule a backoff retry for this owner.
+    } catch (error) {
+      // Failure is observable (logged); the queue is intact. Schedule a
+      // backoff retry for this owner.
+      console.warn(
+        '[sync-dispatch-failed]',
+        error instanceof Error ? error.message : error
+      );
       if (!stopped) {
         retryTimer = clock.setTimeout(scheduleRun, retryDelay);
         retryDelay = Math.min(retryDelay * 2, MAX_RETRY_MS);

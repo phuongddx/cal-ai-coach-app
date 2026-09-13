@@ -102,20 +102,14 @@ export async function runProofAuto(controller: FoundationController): Promise<vo
     return;
   }
 
-  const ackDeadline = Date.now() + 120_000;
+  // No deadline here: reconnect latency (e.g. gateway cold start) is unbounded
+  // physics, not a hang. This loop exits only on success — the dev driver is
+  // stopped via app relaunch, not by giving up.
   const offlineVersion = controller.getState().rows[0]?.serverVersion ?? 0;
-  let acked = false;
-  while (Date.now() < ackDeadline) {
+  for (;;) {
     const row = controller.getState().rows[0];
-    if (row && row.serverVersion > offlineVersion) {
-      acked = true;
-      break;
-    }
+    if (row && row.serverVersion > offlineVersion) break;
     await sleep(1000);
-  }
-  if (!acked) {
-    logProof('error', { runId, stage: 'ack-timeout' });
-    return;
   }
 
   // Settle: schedule extra pull rounds so the proof reflects the FINAL

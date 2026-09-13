@@ -29,7 +29,7 @@ import { SyncProbeScreen } from './SyncProbeScreen';
  * on the Metro console for machine validation. Gated off in normal runs.
  */
 
-function makeFoundationDeps(): FoundationDeps {
+function makeFoundationDeps(onSettled: () => void): FoundationDeps {
   const supabase = getSupabaseClient();
   const lifecycleByOwner = new Map<string, SyncLifecycleHandle>();
 
@@ -72,9 +72,19 @@ function makeFoundationDeps(): FoundationDeps {
         ownerId,
         startSyncLifecycle(ownerId, {
           dispatch: async (boundOwner) => {
-            await runDispatch(db, boundOwner, {
-              transport: createSupabaseTransport(supabase),
-            });
+            console.log('[sync-dispatch] start', boundOwner);
+            try {
+              const result = await runDispatch(db, boundOwner, {
+                transport: createSupabaseTransport(supabase),
+              });
+              console.log('[sync-dispatch] done', JSON.stringify(result));
+            } catch (error) {
+              console.log(
+                '[sync-dispatch] error',
+                error instanceof Error ? error.message : String(error)
+              );
+              throw error;
+            }
           },
           netInfo: {
             addEventListener(listener) {
@@ -103,10 +113,14 @@ function sleep(ms: number): Promise<void> {
 }
 
 export function FoundationSession() {
-  const controller: FoundationController = useMemo(
-    () => createFoundationController(makeFoundationDeps()),
-    []
-  );
+  const controller: FoundationController = useMemo(() => {
+    const hooks: { onSettled: () => void } = { onSettled: () => undefined };
+    const created = createFoundationController(
+      makeFoundationDeps(() => hooks.onSettled())
+    );
+    hooks.onSettled = () => created.refresh();
+    return created;
+  }, []);
   const [state, setState] = useState(controller.getState());
   useEffect(
     () => controller.subscribe(() => setState(controller.getState())),

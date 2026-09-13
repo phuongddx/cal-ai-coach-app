@@ -21,22 +21,31 @@ export interface FoundationState {
 export function createFoundationController(deps: FoundationDeps) {
   let owner: string | null = null;
   const stateListeners = new Set<() => void>();
+  // useSyncExternalStore requires a referentially stable snapshot between
+  // changes — a fresh object per call would loop React forever.
+  let cachedState: FoundationState | null = null;
 
   function emit(): void {
+    cachedState = null;
     for (const listener of stateListeners) listener();
   }
 
   return {
     getState(): FoundationState {
-      return {
-        owner,
-        rows: owner ? deps.listRows(owner) : [],
-        queueStatus: deps.getQueueStatus(),
-      };
+      if (!cachedState) {
+        cachedState = Object.freeze({
+          owner,
+          rows: owner ? deps.listRows(owner) : [],
+          queueStatus: deps.getQueueStatus(),
+        });
+      }
+      return cachedState;
     },
     subscribe(listener: () => void): () => void {
       stateListeners.add(listener);
-      return () => stateListeners.delete(listener);
+      return () => {
+        stateListeners.delete(listener);
+      };
     },
     async signIn(email: string, password: string): Promise<void> {
       // An owner transition always stops the previous lifecycle first.
@@ -66,6 +75,14 @@ export function createFoundationController(deps: FoundationDeps) {
       if (!row) throw new Error('no row to edit');
       await deps.updateRow(owner, row.id, displayText);
       deps.notifyLocalMutation(owner);
+      emit();
+    },
+    /**
+     * Invalidates the cached snapshot after an out-of-band local mutation
+     * (background dispatch acks/pulls) so useSyncExternalStore sees fresh data.
+     */
+    refresh(): void {
+      cachedState = null;
       emit();
     },
     /** Triggers a debounced reconciliation dispatch for the bound owner. */
