@@ -78,6 +78,7 @@ function makeFoundationDeps(onSettled: () => void): FoundationDeps {
                 transport: createSupabaseTransport(supabase),
               });
               console.log('[sync-dispatch] done', JSON.stringify(result));
+              onSettled();
             } catch (error) {
               console.log(
                 '[sync-dispatch] error',

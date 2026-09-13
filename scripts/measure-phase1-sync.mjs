@@ -64,6 +64,8 @@ function parseProof(raw, source) {
     fail(`${source}: proof must be a JSON object`);
   }
   for (const field of REQUIRED_STRING_FIELDS) {
+    // user-b-denial legitimately carries no rowId — B owns no rows.
+    if (parsed.scenario === 'user-b-denial' && field === 'rowId') continue;
     if (parsed[field] === undefined || parsed[field] === null) {
       fail(`${source}: missing required field "${field}"`);
     }
