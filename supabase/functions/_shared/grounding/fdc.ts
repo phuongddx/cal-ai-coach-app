@@ -112,7 +112,13 @@ async function fdcSearch(params: Record<string, string>): Promise<FdcSearchRespo
     throw new UpstreamError('fdc search request failed');
   }
   if (!response.ok) throw new UpstreamError('fdc search returned a non-OK status');
-  return await response.json() as FdcSearchResponse;
+  let body: FdcSearchResponse;
+  try {
+    body = await response.json() as FdcSearchResponse;
+  } catch {
+    throw new UpstreamError('fdc search returned a non-JSON body');
+  }
+  return body;
 }
 
 function barcodeVariants(barcode: string): string[] {

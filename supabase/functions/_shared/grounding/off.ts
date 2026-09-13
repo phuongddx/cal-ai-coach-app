@@ -49,7 +49,12 @@ export async function resolveBarcode(barcode: string): Promise<GroundingResult> 
     throw new UpstreamError('open food facts request failed');
   }
   if (!response.ok) throw new UpstreamError('open food facts returned a non-OK status');
-  const body = await response.json() as OffProductBody;
+  let body: OffProductBody;
+  try {
+    body = await response.json() as OffProductBody;
+  } catch {
+    throw new UpstreamError('open food facts returned a non-JSON body');
+  }
   const nutriments = body.status === 1 ? body.product?.nutriments : undefined;
   const kcal = nutriments?.['energy-kcal_100g'];
   if (!nutriments || typeof kcal !== 'number' || !Number.isFinite(kcal)) {

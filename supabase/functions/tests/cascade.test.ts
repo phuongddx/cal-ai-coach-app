@@ -188,6 +188,25 @@ Deno.test('fdc: provider failure raises the typed UpstreamError', async () => {
   }
 });
 
+Deno.test('fdc/off: a 200 non-JSON body is the typed UpstreamError, never a 500', async () => {
+  const html = stubFdcFetch(() =>
+    new Response('<html>gateway error</html>', { status: 200, headers: { 'content-type': 'text/html' } })
+  );
+  try {
+    await assertRejects(() => resolveSearch('butter'), UpstreamError);
+  } finally {
+    html.restore();
+  }
+
+  const originalOff = off.offFetch.impl;
+  off.offFetch.impl = () => Promise.resolve(new Response('{"status":1,"pro', { status: 200 }));
+  try {
+    await assertRejects(() => off.resolveBarcode('3017620422003'), UpstreamError);
+  } finally {
+    off.offFetch.impl = originalOff;
+  }
+});
+
 Deno.test('off: resolves the captured nutella fixture through GroundedFoodSchema', async () => {
   const savedUserAgent = Deno.env.get('OFF_USER_AGENT');
   Deno.env.set('OFF_USER_AGENT', 'CoachCal/0.1 (test-agent)');
