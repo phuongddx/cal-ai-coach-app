@@ -26,17 +26,13 @@ export function createFoundationController(deps: FoundationDeps) {
     for (const listener of stateListeners) listener();
   }
 
-  function snapshot(): FoundationState {
-    return {
-      owner,
-      rows: owner ? deps.listRows(owner) : [],
-      queueStatus: deps.getQueueStatus(),
-    };
-  }
-
   return {
     getState(): FoundationState {
-      return snapshot();
+      return {
+        owner,
+        rows: owner ? deps.listRows(owner) : [],
+        queueStatus: deps.getQueueStatus(),
+      };
     },
     subscribe(listener: () => void): () => void {
       stateListeners.add(listener);
@@ -71,6 +67,11 @@ export function createFoundationController(deps: FoundationDeps) {
       await deps.updateRow(owner, row.id, displayText);
       deps.notifyLocalMutation(owner);
       emit();
+    },
+    /** Triggers a debounced reconciliation dispatch for the bound owner. */
+    notify(): void {
+      if (!owner) throw new Error('sign in before notifying');
+      deps.notifyLocalMutation(owner);
     },
     /** Builds the strictly-redacted proof object for the device checkpoint. */
     buildRedactedProof(

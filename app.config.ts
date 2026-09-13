@@ -16,6 +16,8 @@ import type { ExpoConfig } from 'expo/config';
  * - SDK 57 removed the typed `newArchEnabled` property — New Architecture is
  *   the mandatory default on React Native 0.86; nothing to opt into.
  * - Splash configuration lives in the expo-splash-screen plugin (SDK 57).
+ * - HealthKit: @kingstinct/react-native-healthkit plugin — approved fallback
+ *   after react-native-health@1.19.0 failed to compile against RN 0.86.
  */
 
 const config: ExpoConfig = {
@@ -82,13 +84,14 @@ const config: ExpoConfig = {
       },
     ],
     [
-      'react-native-health',
+      '@kingstinct/react-native-healthkit',
       {
-        healthSharePermission:
+        // Least privilege: no background delivery in Phase 1.
+        background: false,
+        NSHealthShareUsageDescription:
           'CoachCal reads your steps and energy data to give you more accurate daily insights. You control what is shared.',
-        healthUpdatePermission:
+        NSHealthUpdateUsageDescription:
           'CoachCal saves logged meals and nutrition to Apple Health when you ask it to. You control what is saved.',
-        isClinicalDataRecordsEnabled: false,
       },
     ],
     [

@@ -49,6 +49,8 @@ export function SyncProbeScreen({
       tombstone: row.deletedAt !== null,
     });
     const json = JSON.stringify(proof, null, 2);
+    // Dev-only capture channel: Metro console → autonomous proof collection.
+    console.log('[phase1-proof]', JSON.stringify(proof));
     if (onExportProof) {
       onExportProof(json);
     } else {

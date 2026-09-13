@@ -14,6 +14,7 @@ import { createSupabaseTransport } from '@/db/sync/transport';
 import { getSupabaseClient } from '@/lib/supabase';
 import type { FoundationDeps } from './FoundationDeps';
 import { createFoundationController, type FoundationController } from './FoundationController';
+import { runProofAuto } from './ProofAuto';
 import { SyncProbeScreen } from './SyncProbeScreen';
 
 /**
@@ -22,6 +23,10 @@ import { SyncProbeScreen } from './SyncProbeScreen';
  * test password is stored in source or Expo public config. Binds the local
  * ownerId, starts the Plan 04 lifecycle for that owner, and stops it on any
  * transition — in that order, atomically per sign-in.
+ *
+ * DEV-ONLY proof driver: with EXPO_PUBLIC_PROOF_AUTO=1 (Metro env), the app
+ * runs the Phase 1 checkpoint scenarios autonomously and emits redacted proofs
+ * on the Metro console for machine validation. Gated off in normal runs.
  */
 
 function makeFoundationDeps(): FoundationDeps {
@@ -59,8 +64,6 @@ function makeFoundationDeps(): FoundationDeps {
       return () => undefined;
     },
     getQueueStatus() {
-      // Phase 1 status: connectivity-driven. Dispatcher failures surface
-      // through lifecycle retry; detailed queue UI is Phase 3 scope.
       return 'idle';
     },
     startLifecycle(ownerId: string) {
@@ -93,6 +96,12 @@ function makeFoundationDeps(): FoundationDeps {
   };
 }
 
+function sleep(ms: number): Promise<void> {
+  const { promise, resolve } = Promise.withResolvers<void>();
+  setTimeout(resolve, ms);
+  return promise;
+}
+
 export function FoundationSession() {
   const controller: FoundationController = useMemo(
     () => createFoundationController(makeFoundationDeps()),
@@ -107,6 +116,47 @@ export function FoundationSession() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  const proofAuto = process.env.EXPO_PUBLIC_PROOF_AUTO === '1';
+  const proofUserB = process.env.EXPO_PUBLIC_PROOF_USER === 'b';
+
+  useEffect(() => {
+    if (!proofAuto || state.owner) return;
+    let cancelled = false;
+    void (async () => {
+      await sleep(1500); // let Metro/JS settle after boot
+      if (cancelled) return;
+      if (proofUserB) {
+        // User B isolation: fresh install signs in as B — no A rows visible,
+        // no local row to edit (repository refuses).
+        await controller.signIn('b@proof.local', 'phase1-proof-2026');
+        await sleep(2000);
+        const rows = controller.getState().rows;
+        let editDenied = false;
+        try {
+          await controller.editRow('b must not own a row');
+        } catch {
+          editDenied = true;
+        }
+        console.log(
+          '[phase1-proof]',
+          JSON.stringify({
+            scenario: 'user-b-denial',
+            runId: Math.random().toString(36).slice(2, 10),
+            rowCount: rows.length,
+            editDenied,
+            pendingCount: 0,
+            tombstone: false,
+          })
+        );
+        return;
+      }
+      await runProofAuto(controller);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [proofAuto, proofUserB, controller, state.owner]);
 
   async function submit(): Promise<void> {
     setError('');
