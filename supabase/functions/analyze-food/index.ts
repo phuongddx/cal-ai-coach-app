@@ -6,6 +6,7 @@ import { claimScanCredit, freeLimitEnvelope } from '../_shared/quota.ts';
 import { roundKcal, roundMacro, sumItemKcal } from '../_shared/arithmetic.ts';
 import { resolveBarcode, resolveFood } from '../_shared/grounding/cascade.ts';
 import { chooseTier } from '../_shared/routing.ts';
+import { flagHiddenFat } from '../_shared/hiddenFat.ts';
 import { getVlmProvider } from '../_shared/vlm/provider.ts';
 import {
   ScanRequestSchema,
@@ -77,7 +78,7 @@ export async function handler(req: Request): Promise<Response> {
           grams: 100,
           gramsBasis: 'packaged-serving',
           confidence: 1,
-          hiddenFatLikely: false,
+          hiddenFatLikely: flagHiddenFat([`barcode:${barcode}`]),
           source: grounded.source,
           per100g: grounded.per100g,
           kcal: roundKcal(grounded.per100g.kcal, 100),
@@ -121,6 +122,13 @@ export async function handler(req: Request): Promise<Response> {
 
       items = [];
       for (const vlmItem of vlmParsed.items) {
+        // Belt-and-braces LOG-09: the fixture/VLM flag OR the independent
+        // heuristic — on the item label, plus the whole description for text.
+        const hiddenFatLikely = vlmItem.hiddenFatLikely ||
+          flagHiddenFat([vlmItem.label]) ||
+          (request.kind === 'text'
+            ? flagHiddenFat([request.textDescription ?? ''])
+            : false);
         const grounded = await resolveFood(serviceClient, vlmItem.label);
         if (!('per100g' in grounded)) {
           items.push({
@@ -128,7 +136,7 @@ export async function handler(req: Request): Promise<Response> {
             grams: vlmItem.grams,
             gramsBasis: vlmItem.gramsBasis,
             confidence: vlmItem.confidence,
-            hiddenFatLikely: vlmItem.hiddenFatLikely,
+            hiddenFatLikely,
             source: 'none',
             per100g: EMPTY_PER100G,
             kcal: 0,
@@ -145,7 +153,7 @@ export async function handler(req: Request): Promise<Response> {
           grams: vlmItem.grams,
           gramsBasis: vlmItem.gramsBasis,
           confidence: vlmItem.confidence,
-          hiddenFatLikely: vlmItem.hiddenFatLikely,
+          hiddenFatLikely,
           source: grounded.source,
           per100g: grounded.per100g,
           kcal: roundKcal(grounded.per100g.kcal, vlmItem.grams),
