@@ -138,6 +138,8 @@ final class OnboardingModel {
     Calendar.current.component(.year, from: now()) - birthYear
   }
 
+  func currentDate() -> Date { now() }
+
   var isDobGateBlocked: Bool { computedAge < 18 }
 
   var dobYears: [Int] {

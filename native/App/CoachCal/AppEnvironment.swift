@@ -123,6 +123,12 @@ final class AppEnvironment {
     scanRoute = ScanRoute(mode: mode, mealSlot: mealSlot)
   }
 
+  // Onboarding saveTarget handoff: flips RootView routing to MainShell.
+  func completeOnboarding() {
+    hasTargets = true
+    onboardingPending = false
+  }
+
   private func seedAndRoute(seedTargets: Bool) async {
     #if DEBUG
     try? await seedDataManager.ensureSeeded(seedTargets: seedTargets)

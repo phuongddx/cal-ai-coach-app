@@ -31,8 +31,8 @@ nonisolated final class MainShellSmokeTests: XCTestCase {
     app.launch()
 
     XCTAssertTrue(
-      app.staticTexts["Set up your plan"].waitForExistence(timeout: 15),
-      "--ccFreshStart must skip seeding and route to onboarding"
+      app.buttons["onboarding.getStarted"].waitForExistence(timeout: 15),
+      "--ccFreshStart must skip seeding and route to the onboarding Value Hero"
     )
   }
 }

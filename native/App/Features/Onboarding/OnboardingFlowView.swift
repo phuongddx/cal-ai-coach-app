@@ -25,24 +25,12 @@ struct OnboardingFlowView: View {
     case .goal: GoalPickerView(model: model)
     case .bodyMetrics: BodyMetricsView(model: model)
     case .goalWeightPace: GoalWeightPaceView(model: model)
-    case .activityDiet: OnboardingPlaceholderStepView(title: "Lifestyle")
-    case .projection: OnboardingPlaceholderStepView(title: "Your projection")
-    case .privacyHealth: OnboardingPlaceholderStepView(title: "Privacy & Health")
-    case .generating: OnboardingPlaceholderStepView(title: "Creating your plan")
-    case .planReveal: OnboardingPlaceholderStepView(title: "Your daily target")
+    case .activityDiet: ActivityDietView(model: model)
+    case .projection: ProjectionView(model: model)
+    case .privacyHealth: PrivacyHealthView(model: model)
+    case .generating: GeneratingPlanView(model: model)
+    case .planReveal: PlanRevealView(model: model)
     }
-  }
-}
-
-// Temporary route target for the screens Task 3 wires in — replaced before this
-// plan's final verification.
-struct OnboardingPlaceholderStepView: View {
-  let title: String
-
-  var body: some View {
-    Text(title)
-      .ccFont(.title)
-      .foregroundStyle(Color.ccTextPrimary)
   }
 }
 
