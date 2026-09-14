@@ -170,4 +170,98 @@ nonisolated final class DiaryWaterExerciseTests: XCTestCase {
     XCTAssertEqual(model.sectionKcal(dinnerSection), dinner.kcal)
     XCTAssertEqual(model.eatenKcal, dinner.kcal, "today carries exactly one seeded meal")
   }
+
+  // Manual-log kcal must equal round(per100g × grams / 100) at every stepper
+  // value — never a user-typed or stored display value (T-P04-01).
+  @MainActor
+  func testManualLogKcalMatchesKcalArithmeticAtEveryStepperValue() async throws {
+    try await seeder.ensureSeeded()
+    for grams in stride(from: 0, through: 500, by: 50) {
+      XCTAssertEqual(
+        DiaryMath.manualKcal(per100gKcal: 165, grams: grams),
+        KcalArithmetic.mealKcal(per100gKcal: 165, grams: grams),
+        "grams=\(grams)"
+      )
+    }
+    // Chicken Breast row: default grams 150 → 165 × 150 / 100 → 248.
+    XCTAssertEqual(DiaryMath.manualKcal(per100gKcal: 165, grams: 150), 248)
+
+    // Integration: the manual-log write stores exactly the computed kcal.
+    let clock = Date()
+    let detail = DiaryEntryDetail(
+      entryId: UUID(),
+      mealSlot: "lunch",
+      title: "Chicken Breast",
+      grams: 150,
+      kcal: DiaryMath.manualKcal(per100gKcal: 165, grams: 150),
+      proteinG: nil,
+      carbsG: nil,
+      fatG: nil,
+      fiberG: nil,
+      confidence: nil,
+      hiddenFatLikely: false,
+      source: "manual",
+      unresolved: false,
+      scanId: nil
+    )
+    let entry = DiaryEntry(
+      id: detail.entryId,
+      userId: AppEnvironment.demoUserId,
+      displayText: detail.title,
+      createdAt: clock,
+      updatedAt: clock,
+      deletedAt: nil,
+      serverVersion: 0,
+      acceptedOpId: nil,
+      serverUpdatedAt: clock
+    )
+    let diary = DiaryEntryRepository(database: pool)
+    _ = try await diary.recordUpsert(entry, now: clock)
+    try await DiaryDetailRepository(database: pool).upsert(detail)
+
+    let stored = try await pool.read { [detailId = detail.entryId] database in
+      try DiaryEntryDetail.fetchOne(database, key: detailId)
+    }
+    XCTAssertEqual(stored?.kcal, 248)
+    let pendingOps = try await pool.read { database in
+      try PendingOp.fetchCount(database)
+    }
+    XCTAssertEqual(pendingOps, 1, "manual log enqueues exactly one diary outbox op")
+  }
+
+  @MainActor
+  func testServingKcalScalesByServings() {
+    XCTAssertEqual(DiaryMath.servingKcal(perServingKcal: 240, servings: 1), 240)
+    XCTAssertEqual(DiaryMath.servingKcal(perServingKcal: 240, servings: 2), 480)
+  }
+
+  @MainActor
+  func testCustomFoodSaveThenSearchFindsIt() async throws {
+    try await seeder.ensureSeeded()
+    let catalog = CatalogRepository(database: pool)
+    let custom = CustomFood(
+      id: UUID(),
+      userId: AppEnvironment.demoUserId,
+      name: "Mila Punch",
+      basis: "per100g",
+      kcal: 120,
+      proteinG: 0,
+      carbsG: 0,
+      fatG: 0,
+      fiberG: 0,
+      servingGrams: nil,
+      createdAt: Date()
+    )
+    try await catalog.saveCustomFood(custom)
+
+    let stored = try await catalog.customFoods()
+    XCTAssertTrue(stored.contains { $0.name == "Mila Punch" }, "saveCustomFood must persist")
+
+    let model = FoodSearchModel(catalog: catalog)
+    await model.applySearch("punch")
+    XCTAssertTrue(
+      model.results.contains { $0.name == "Mila Punch" },
+      "search must surface saved custom foods, got: \(model.results.map(\.name))"
+    )
+  }
 }

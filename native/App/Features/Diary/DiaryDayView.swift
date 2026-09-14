@@ -3,11 +3,11 @@ import SwiftUI
 
 struct DiaryDayView: View {
   let model: DiaryDayModel
-  // Task 3 attaches the Add Food sheet here; the buttons stay live through the seam.
-  var onAddFood: (String) -> Void = { _ in }
 
   @State private var pendingDelete: DiaryDayModel.FoodItem?
   @State private var isExerciseSheetPresented = false
+  @State private var addFoodSlot: MealSlot?
+  @State private var savedToast: SavedReceipt?
 
   var body: some View {
     List {
@@ -48,6 +48,18 @@ struct DiaryDayView: View {
     .scrollContentBackground(.hidden)
     .background(Color.ccBackground)
     .listRowBackground(Color.clear)
+    .overlay(alignment: .top) {
+      if let savedToast {
+        CCToast(
+          title: "Saved to \(savedToast.mealName)",
+          kcalText: savedToast.kcalText,
+          onUndo: { undo(savedToast) },
+          onDismiss: { self.savedToast = nil }
+        )
+        .padding(.horizontal, CCSpace.lg)
+        .accessibilityIdentifier("diary.toast")
+      }
+    }
     .confirmationDialog(
       "Delete \(pendingDelete?.title ?? "")?",
       isPresented: Binding(
@@ -73,6 +85,25 @@ struct DiaryDayView: View {
         onDismiss: { isExerciseSheetPresented = false }
       )
       .presentationDetents([.medium, .large])
+    }
+    .sheet(item: $addFoodSlot) { slot in
+      AddFoodSheetRoute(
+        mealSlot: slot,
+        onSaved: { receipt in
+          addFoodSlot = nil
+          savedToast = receipt
+        },
+        onDismiss: { addFoodSlot = nil }
+      )
+    }
+  }
+
+  private func undo(_ receipt: SavedReceipt) {
+    savedToast = nil
+    Task {
+      for entryId in receipt.entryIds {
+        try? await model.deleteEntry(id: entryId)
+      }
     }
   }
 
@@ -187,7 +218,7 @@ struct DiaryDayView: View {
 
   private func dashedAddButton(_ slot: String) -> some View {
     CCDashedAddButton(slot == DiaryDayModel.slotOrder.last ? "Add snack" : "Add food") {
-      onAddFood(slot)
+      addFoodSlot = MealSlot(rawValue: slot)
     }
     .accessibilityIdentifier("diary.addFood.\(slot)")
   }

@@ -108,6 +108,16 @@ final class DiaryDayModel {
     try await DiaryDetailRepository(database: pool).delete(entryId: item.id)
   }
 
+  // Undo path: tombstone by id without needing the observed FoodItem.
+  func deleteEntry(id: UUID) async throws {
+    let entryId = id
+    guard let entry = try await pool.read({ database in
+      try DiaryEntry.fetchOne(database, key: entryId)
+    }) else { return }
+    _ = try await DiaryEntryRepository(database: pool).recordTombstone(entry, now: now())
+    try await DiaryDetailRepository(database: pool).delete(entryId: id)
+  }
+
   func addExercise(type: String, durationMin: Int, kcalBurned: Int?) async throws {
     let log = ExerciseLog(
       id: UUID(),

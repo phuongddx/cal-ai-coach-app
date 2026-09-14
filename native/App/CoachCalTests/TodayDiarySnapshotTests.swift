@@ -72,22 +72,22 @@ struct TodayDiarySnapshotTests {
     let model = try await makeSeededModel()
 
     assertSnapshot(
-      of: renderedImage(model, edSafe: false, dark: false),
+      of: renderedImage(TodayView(model: model), edSafe: false, dark: false),
       as: .image,
       named: "today-light"
     )
     assertSnapshot(
-      of: renderedImage(model, edSafe: false, dark: true),
+      of: renderedImage(TodayView(model: model), edSafe: false, dark: true),
       as: .image,
       named: "today-dark"
     )
     assertSnapshot(
-      of: renderedImage(model, edSafe: true, dark: false),
+      of: renderedImage(TodayView(model: model), edSafe: true, dark: false),
       as: .image,
       named: "today-edsafe-light"
     )
     assertSnapshot(
-      of: renderedImage(model, edSafe: true, dark: true),
+      of: renderedImage(TodayView(model: model), edSafe: true, dark: true),
       as: .image,
       named: "today-edsafe-dark"
     )
@@ -97,22 +97,22 @@ struct TodayDiarySnapshotTests {
     let model = try await makeSeededDiaryModel()
 
     assertSnapshot(
-      of: renderedImage(model, edSafe: false, dark: false),
+      of: renderedImage(DiaryDayView(model: model), edSafe: false, dark: false),
       as: .image,
       named: "diary-light"
     )
     assertSnapshot(
-      of: renderedImage(model, edSafe: false, dark: true),
+      of: renderedImage(DiaryDayView(model: model), edSafe: false, dark: true),
       as: .image,
       named: "diary-dark"
     )
     assertSnapshot(
-      of: renderedImage(model, edSafe: true, dark: false),
+      of: renderedImage(DiaryDayView(model: model), edSafe: true, dark: false),
       as: .image,
       named: "diary-edsafe-light"
     )
     assertSnapshot(
-      of: renderedImage(model, edSafe: true, dark: true),
+      of: renderedImage(DiaryDayView(model: model), edSafe: true, dark: true),
       as: .image,
       named: "diary-edsafe-dark"
     )
@@ -147,15 +147,99 @@ struct TodayDiarySnapshotTests {
     return model
   }
 
-  private func renderedImage(_ model: DiaryDayModel, edSafe: Bool, dark: Bool) -> UIImage {
-    let view = DiaryDayView(model: model)
+  @Test func addFoodSheetSnapshotMatrices() async throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appending(component: "today-diary-snapshots-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let pool = try Database.makePool(
+      at: directory.appending(component: "coach-cal.sqlite").path(percentEncoded: false)
+    )
+    try Migrations.foundationSync.migrate(pool)
+    let savedMeals = [
+      SavedMeal(
+        id: UUID(),
+        userId: AppEnvironment.demoUserId,
+        name: "Chicken Rice Bowl",
+        symbol: "fork.knife",
+        kcal: 464,
+        itemsJson: "[{\"name\":\"Chicken Rice Bowl\",\"grams\":320}]",
+        createdAt: Self.fixedClock
+      ),
+      SavedMeal(
+        id: UUID(),
+        userId: AppEnvironment.demoUserId,
+        name: "Protein Oats",
+        symbol: nil,
+        kcal: 380,
+        itemsJson: "[{\"name\":\"Protein Oats\",\"grams\":250}]",
+        createdAt: Self.fixedClock
+      ),
+    ]
+
+    for (label, meals) in [("addfood", savedMeals), ("addfood-empty", [])] {
+      let view = AddFoodSheet(
+        mealSlot: .lunch,
+        savedMeals: meals,
+        onCapture: { _ in },
+        onSearch: {},
+        onRelog: { _ in },
+        onDismiss: {}
+      )
+      for (mode, dark) in [("light", false), ("dark", true)] {
+        assertSnapshot(
+          of: renderedImage(view, edSafe: false, dark: dark),
+          as: .image,
+          named: "\(label)-\(mode)"
+        )
+      }
+    }
+  }
+
+  @Test func foodSearchEmptySnapshotMatrix() async throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appending(component: "today-diary-snapshots-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let pool = try Database.makePool(
+      at: directory.appending(component: "coach-cal.sqlite").path(percentEncoded: false)
+    )
+    try Migrations.foundationSync.migrate(pool)
+    let catalog = CatalogRepository(database: pool)
+    let model = FoodSearchModel(catalog: catalog)
+    model.query = "zzz nothing"
+
+    let view = FoodSearchView(
+      model: model,
+      mealSlot: .lunch,
+      catalog: catalog,
+      userId: AppEnvironment.demoUserId,
+      diaryEntryRepository: DiaryEntryRepository(database: pool),
+      diaryDetailRepository: DiaryDetailRepository(database: pool),
+      now: { Self.fixedClock },
+      onSaved: { _ in },
+      onDismiss: {}
+    )
+
+    assertSnapshot(
+      of: renderedImage(view, edSafe: false, dark: false),
+      as: .image,
+      named: "search-empty-light"
+    )
+    assertSnapshot(
+      of: renderedImage(view, edSafe: false, dark: true),
+      as: .image,
+      named: "search-empty-dark"
+    )
+  }
+
+  private func renderedImage(_ view: some View, edSafe: Bool, dark: Bool) -> UIImage {
+    let wrapped = view
       .environment(\.edSafeMode, edSafe)
       .environment(\.colorScheme, dark ? .dark : .light)
       .frame(width: 390, height: 844)
       .ccAnimationDisabled(true)
 
     let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
-    window.rootViewController = UIHostingController(rootView: view)
+    window.rootViewController = UIHostingController(rootView: wrapped)
     window.overrideUserInterfaceStyle = dark ? .dark : .light
     window.makeKeyAndVisible()
     window.layoutIfNeeded()
