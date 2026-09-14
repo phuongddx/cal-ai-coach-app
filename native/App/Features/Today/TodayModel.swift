@@ -38,7 +38,7 @@ final class TodayModel {
   init(
     pool: DatabasePool,
     userId: UUID,
-    now: @escaping @Sendable () -> Date = { Date() }
+    now: @escaping @Sendable () -> Date
   ) {
     self.pool = pool
     self.userId = userId
@@ -52,6 +52,14 @@ final class TodayModel {
 
   var consumedKcal: Int {
     snapshot.meals.compactMap(\.kcal).reduce(0, +)
+  }
+
+  var today: Date { now() }
+
+  var dayProgress: Double {
+    let calendar = Calendar.current
+    let startOfDay = calendar.startOfDay(for: now())
+    return now().timeIntervalSince(startOfDay) / 86_400
   }
 
   var goalKcal: Int? {

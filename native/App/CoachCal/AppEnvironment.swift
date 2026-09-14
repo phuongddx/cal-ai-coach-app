@@ -2,6 +2,7 @@ import CoachCalNetworking
 import CoachCalPersistence
 import Foundation
 import GRDB
+import Network
 import Observation
 import SwiftUI
 
@@ -71,10 +72,13 @@ final class AppEnvironment {
   var edSafeMode: Bool {
     didSet { UserDefaults.standard.set(edSafeMode, forKey: Self.edSafeDefaultsKey) }
   }
-  var isOffline = false
+  private(set) var isOffline = false
   var scanRoute: ScanRoute?
   let animationsDisabled: Bool
   var now: @Sendable () -> Date
+
+  // NWPathMonitor.cancel() is thread-safe; deinit runs nonisolated.
+  nonisolated(unsafe) private var offlineMonitor: NWPathMonitor?
 
   private static let edSafeDefaultsKey = "edSafeMode"
   // Mirrors SeedDataManager's demo persona (module keeps the constant internal).
@@ -108,16 +112,15 @@ final class AppEnvironment {
     } else {
       isReady = true
     }
+    if arguments.forceOffline {
+      isOffline = true
+    } else {
+      startOfflineMonitor()
+    }
   }
 
   func openScan(_ mode: ScanMode, mealSlot: MealSlot?) {
     scanRoute = ScanRoute(mode: mode, mealSlot: mealSlot)
-  }
-
-  var dayProgress: Double {
-    let calendar = Calendar.current
-    let startOfDay = calendar.startOfDay(for: now())
-    return now().timeIntervalSince(startOfDay) / 86_400
   }
 
   private func seedAndRoute(seedTargets: Bool) async {
@@ -129,5 +132,17 @@ final class AppEnvironment {
     #endif
     hasTargets = (try? await targetRepository.activeTarget(user: Self.demoUserId)) != nil
     isReady = true
+  }
+
+  private func startOfflineMonitor() {
+    let monitor = NWPathMonitor()
+    monitor.pathUpdateHandler = { [weak self] path in
+      let offline = path.status != .satisfied
+      Task { @MainActor in
+        self?.isOffline = offline
+      }
+    }
+    monitor.start(queue: DispatchQueue(label: "com.nextlabs.coachcal.pathmonitor"))
+    offlineMonitor = monitor
   }
 }

@@ -2,42 +2,27 @@ import CoachCalDesignSystem
 import SwiftUI
 
 struct TodayView: View {
-  @Environment(AppEnvironment.self) private var environment
-  @State private var model: TodayModel?
+  let model: TodayModel?
+  var isOffline: Bool = false
 
   var body: some View {
-    Group {
-      if let model {
-        content(model)
-      } else {
-        Color.ccBackground
-          .overlay(ProgressView())
-      }
-    }
-    .background(Color.ccBackground)
-    .task {
-      if model == nil {
-        model = TodayModel(
-          pool: environment.database,
-          userId: AppEnvironment.demoUserId,
-          now: environment.now
-        )
-      }
-    }
-  }
-
-  private func content(_ model: TodayModel) -> some View {
     ScrollView {
       VStack(alignment: .leading, spacing: CCSpace.lg) {
-        header(model)
-        heroCard(model)
-        macroSection(model)
-        recentMeals(model)
+        if let model {
+          header(model)
+          if isOffline {
+            offlineBanner
+          }
+          heroCard(model)
+          macroSection(model)
+          recentMeals(model)
+        }
       }
       .padding(.horizontal, CCSpace.lg)
       .padding(.top, CCSpace.sm)
       .padding(.bottom, CCSpace.xl5)
     }
+    .background(Color.ccBackground)
   }
 
   private func header(_ model: TodayModel) -> some View {
@@ -46,10 +31,21 @@ struct TodayView: View {
         .ccFont(.title)
         .foregroundStyle(Color.ccTextPrimary)
       Spacer()
-      Text(environment.now().formatted(.dateTime.month(.abbreviated).day()))
+      if isOffline {
+        CCOfflineBadge()
+          .accessibilityIdentifier("offline.badge")
+      }
+      Text(model.today.formatted(.dateTime.month(.abbreviated).day()))
         .ccFont(.footnote)
         .foregroundStyle(Color.ccTextSecondary)
     }
+  }
+
+  private var offlineBanner: some View {
+    CCBannerNote(
+      "You're offline — logging still works. Changes sync when you're back online.",
+      variant: .info
+    )
   }
 
   @ViewBuilder private func heroCard(_ model: TodayModel) -> some View {
@@ -73,7 +69,7 @@ struct TodayView: View {
           consumed: model.consumedKcal,
           goal: model.goalKcal,
           variant: .hero,
-          dayProgress: environment.dayProgress
+          dayProgress: model.dayProgress
         )
         .accessibilityIdentifier("today.ring")
       }
@@ -137,7 +133,7 @@ struct TodayView: View {
             title: meal.title,
             meta: "\(meal.mealSlot.capitalized) · \(meal.loggedAt.formatted(date: .omitted, time: .shortened))",
             kcal: meal.kcal,
-            compactBadge: nil,
+            compactBadge: meal.confidence.map { CCConfidenceBadge(confidence: $0, compact: true) },
             syncPending: !meal.isSynced
           )
           .accessibilityElement(children: .combine)
