@@ -187,7 +187,7 @@ public struct CCStepper: View {
       stepButton("minus", delta: -step)
         .accessibilityIdentifier("ccstepper.decrement")
       Text("\(value) g")
-        .font(.system(size: 15, weight: .semibold))
+        .font(.subheadline.weight(.semibold))
         .monospacedDigit()
         .foregroundStyle(Color.ccTextPrimary)
         .frame(minWidth: 48)

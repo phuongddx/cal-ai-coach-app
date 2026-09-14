@@ -2,6 +2,8 @@ import CoachCalDesignSystem
 import SwiftUI
 
 struct DiaryDayView: View {
+  // 14pt has no text style; scale the fixed default (DT-200% audit).
+  @ScaledMetric(relativeTo: .subheadline) private var labelSize14 = 14
   let model: DiaryDayModel
 
   @State private var pendingDelete: DiaryDayModel.FoodItem?
@@ -132,7 +134,7 @@ struct DiaryDayView: View {
   ) -> some View {
     Button(action: action) {
       Image(systemName: symbol)
-        .font(.system(size: 16, weight: .semibold))
+        .font(.callout.weight(.semibold))
         .foregroundStyle(Color.ccTextSecondary)
         .frame(width: 44, height: 44)
         .background(Color.ccCard, in: Circle())
@@ -174,7 +176,7 @@ struct DiaryDayView: View {
         .ccFont(.caption)
         .foregroundStyle(Color.ccTextSecondary)
       Text(kcal.formatted(.number.locale(Locale(identifier: "en_US"))))
-        .font(.system(size: 20, weight: .semibold))
+        .font(.title3.weight(.semibold))
         .monospacedDigit()
         .foregroundStyle(color)
     }
@@ -230,7 +232,7 @@ struct DiaryDayView: View {
         .frame(width: 40, height: 40)
         .overlay(
           Image(systemName: "figure.run")
-            .font(.system(size: 15))
+            .font(.subheadline)
             .foregroundStyle(Color.ccTextTertiary)
         )
         .accessibilityHidden(true)
@@ -247,7 +249,7 @@ struct DiaryDayView: View {
       Spacer(minLength: CCSpace.sm)
       if let burned = exercise.kcalBurned {
         Text("\(burned) kcal")
-          .font(.system(size: 14, weight: .medium))
+          .font(.system(size: labelSize14, weight: .medium))
           .monospacedDigit()
           .foregroundStyle(Color.ccTextPrimary)
           .edSafeHidden()
@@ -266,7 +268,7 @@ struct DiaryDayView: View {
         Image(systemName: "figure.run")
         Text("Add exercise")
       }
-      .font(.system(size: 14, weight: .medium))
+      .font(.system(size: labelSize14, weight: .medium))
       .foregroundStyle(Color.ccTextSecondary)
       .frame(maxWidth: .infinity)
       .padding(.vertical, CCSpace.md)

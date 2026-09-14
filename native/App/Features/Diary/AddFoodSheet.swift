@@ -138,7 +138,7 @@ struct AddFoodSheet: View {
           )
           .accessibilityHidden(true)
         Text(meal.name)
-          .font(.system(size: 12, weight: .semibold))
+          .font(.caption.weight(.semibold))
           .foregroundStyle(Color.ccTextPrimary)
           .lineLimit(1)
         Text("\(meal.kcal) kcal")

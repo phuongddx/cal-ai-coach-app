@@ -66,7 +66,7 @@ struct WeightTrendView: View {
           VStack(alignment: .leading, spacing: 2) {
             CCSectionHeader("Current")
             Text(currentWeightText)
-              .font(.system(size: 20, weight: .semibold))
+              .font(.title3.weight(.semibold))
               .monospacedDigit()
               .foregroundStyle(Color.ccTextPrimary)
           }
@@ -74,7 +74,7 @@ struct WeightTrendView: View {
           VStack(alignment: .trailing, spacing: 2) {
             CCSectionHeader("Goal")
             Text(goalWeightText)
-              .font(.system(size: 20, weight: .semibold))
+              .font(.title3.weight(.semibold))
               .monospacedDigit()
               .foregroundStyle(Color.ccAccentInk)
           }

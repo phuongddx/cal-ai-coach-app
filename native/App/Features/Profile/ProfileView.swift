@@ -13,6 +13,8 @@ struct ProfileView: View {
 
   // Test seam: ViewInspector cannot re-render @State after a tap on a
   // manually-constructed view, so hosted tests inject the revealed state.
+  // 24pt initial has no text style; scale it (DT-200% audit).
+  @ScaledMetric(relativeTo: .title2) private var avatarInitialSize = 24
   @State private var showsHealthNote: Bool
 
   init(
@@ -84,7 +86,7 @@ struct ProfileView: View {
   private var userCard: some View {
     HStack(spacing: CCSpace.md) {
       Text("A")
-        .font(.system(size: 24, weight: .bold))
+        .font(.system(size: avatarInitialSize, weight: .bold))
         .foregroundStyle(Color.black)
         .frame(width: 56, height: 56)
         .background(
@@ -143,7 +145,7 @@ struct ProfileView: View {
   private func statCard(identifier: String, value: String, caption: String) -> some View {
     VStack(alignment: .leading, spacing: CCSpace.xs) {
       Text(value)
-        .font(.system(size: 20, weight: .semibold))
+        .font(.title3.weight(.semibold))
         .monospacedDigit()
         .foregroundStyle(Color.ccAccentInk)
       Text(caption)

@@ -7,6 +7,8 @@ import SwiftUI
 // KcalArithmetic from the CURRENT grams (T-P05-02); ED-Safe hides the kcal
 // framing through edSafeHidden() and the DS components' own policy.
 struct ReviewSheetView: View {
+  // UI-SPEC DT contract: review kcal scales via @ScaledMetric.
+  @ScaledMetric(relativeTo: .title2) private var totalKcalSize = 24
   @Bindable var model: ScanModel
   let onClose: () -> Void
 
@@ -100,7 +102,7 @@ struct ReviewSheetView: View {
       VStack(alignment: .trailing, spacing: 2) {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
           Text("\(model.mealKcal)")
-            .font(.system(size: 24, weight: .semibold))
+            .font(.system(size: totalKcalSize, weight: .semibold))
             .monospacedDigit()
             .foregroundStyle(Color.ccAccentInk)
             .accessibilityIdentifier("scan.totalKcal")

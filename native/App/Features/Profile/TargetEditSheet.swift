@@ -127,7 +127,7 @@ struct TargetEditSheet: View {
             identifier: "settings.targetEdit.kcalDown"
           ) { dailyKcal = max(dailyKcal - 50, 0) }
           Text("\(grouped(dailyKcal)) kcal")
-            .font(.system(size: 20, weight: .semibold))
+            .font(.title3.weight(.semibold))
             .monospacedDigit()
             .foregroundStyle(Color.ccAccentInk)
             .frame(minWidth: 96)

@@ -51,7 +51,7 @@ public struct CCMacroMiniCard: View {
           .foregroundStyle(labelColor)
         Spacer()
         Text("\(Int(value.rounded()))/\(Int(goal.rounded()))g")
-          .font(.system(size: 15, weight: .semibold))
+          .font(.subheadline.weight(.semibold))
           .monospacedDigit()
           .foregroundStyle(Color.ccTextPrimary)
       }

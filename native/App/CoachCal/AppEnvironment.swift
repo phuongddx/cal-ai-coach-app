@@ -26,6 +26,12 @@ struct ScanRoute: Identifiable, Equatable {
   let mealSlot: MealSlot?
 }
 
+// coachcal:// deep-link destinations (scheme registered in project.yml).
+enum DeepLink: Equatable {
+  case today
+  case diary(Date?)
+}
+
 struct DebugLaunchArguments: Equatable {
   var freshStart = false
   var seedNoTargets = false
@@ -74,6 +80,7 @@ final class AppEnvironment {
   }
   private(set) var isOffline = false
   var scanRoute: ScanRoute?
+  var pendingDeepLink: DeepLink?
   let animationsDisabled: Bool
   var now: @Sendable () -> Date
 
@@ -127,6 +134,31 @@ final class AppEnvironment {
 
   func openScan(_ mode: ScanMode, mealSlot: MealSlot?) {
     scanRoute = ScanRoute(mode: mode, mealSlot: mealSlot)
+  }
+
+  // coachcal://today → Today tab; coachcal://diary (+ optional ?date=YYYY-MM-DD)
+  // → Today tab + DiaryDayView; unknown hosts and foreign schemes no-op.
+  func open(url: URL) {
+    guard url.scheme?.lowercased() == "coachcal" else { return }
+    switch url.host?.lowercased() {
+    case "today":
+      pendingDeepLink = .today
+    case "diary":
+      pendingDeepLink = .diary(Self.linkDate(from: url))
+    default:
+      break
+    }
+  }
+
+  private static func linkDate(from url: URL) -> Date? {
+    guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+      let raw = components.queryItems?.first(where: { $0.name == "date" })?.value
+    else { return nil }
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(identifier: "UTC")
+    formatter.dateFormat = "yyyy-MM-dd"
+    return formatter.date(from: raw)
   }
 
   // The Settings toggle's only write path. Feature files must never spell the

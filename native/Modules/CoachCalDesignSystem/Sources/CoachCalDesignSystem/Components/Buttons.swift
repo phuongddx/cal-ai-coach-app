@@ -7,7 +7,7 @@ public struct CCPrimaryButtonStyle: ButtonStyle {
 
   public func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .font(.system(size: 17, weight: .semibold))
+      .font(.headline)
       .foregroundStyle(Color.black)
       .frame(maxWidth: .infinity)
       .padding(.vertical, CCSpace.lg)
@@ -45,7 +45,7 @@ public struct CCSecondaryButtonStyle: ButtonStyle {
 
   public func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .font(.system(size: 15, weight: .medium))
+      .font(.subheadline.weight(.medium))
       .foregroundStyle(Color.ccTextSecondary)
       .padding(.vertical, CCSpace.md)
       .padding(.horizontal, CCSpace.xl)
@@ -77,6 +77,8 @@ public struct CCSecondaryButton: View {
 }
 
 public struct CCDashedAddButton: View {
+  // 14pt has no text style; scale the fixed default (DT-200% audit).
+  @ScaledMetric(relativeTo: .subheadline) private var titleSize = 14
   private let title: String
   private let action: () -> Void
 
@@ -91,7 +93,7 @@ public struct CCDashedAddButton: View {
         Image(systemName: "plus")
         Text(title)
       }
-      .font(.system(size: 14, weight: .medium))
+      .font(.system(size: titleSize, weight: .medium))
       .foregroundStyle(Color.ccTextSecondary)
       .frame(maxWidth: .infinity)
       .padding(.vertical, CCSpace.md)

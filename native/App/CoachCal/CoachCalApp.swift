@@ -15,6 +15,7 @@ struct CoachCalApp: App {
         .environment(environment)
         .environment(\.edSafeMode, environment.edSafeMode)
         .ccAnimationDisabled(environment.animationsDisabled)
+        .onOpenURL { environment.open(url: $0) }
     }
   }
 }

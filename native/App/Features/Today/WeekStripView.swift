@@ -31,7 +31,7 @@ struct WeekStripView: View {
           .ccFont(.caption)
           .foregroundStyle(isSelected ? Color.black.opacity(0.7) : Color.ccTextTertiary)
         Text(Self.dayNumber(day))
-          .font(.system(size: 15, weight: .semibold))
+          .font(.subheadline.weight(.semibold))
           .monospacedDigit()
           .foregroundStyle(isSelected ? Color.black : Color.ccTextSecondary)
       }

@@ -47,7 +47,7 @@ public struct CCWeeklyReviewStats: View {
       )) { stat in
         VStack(alignment: .leading, spacing: 2) {
           Text(stat.value)
-            .font(.system(size: 20, weight: .semibold))
+            .font(.title3.weight(.semibold))
             .monospacedDigit()
             .foregroundStyle(Color.ccAccentInk)
           Text(stat.label)

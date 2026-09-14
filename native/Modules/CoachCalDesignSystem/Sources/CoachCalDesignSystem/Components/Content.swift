@@ -3,6 +3,8 @@ import Charts
 import SwiftUI
 
 public struct CCFoodRow: View {
+  // 14pt has no text style; scale the fixed default (DT-200% audit).
+  @ScaledMetric(relativeTo: .subheadline) private var kcalSize = 14
   public let title: String
   public var meta: String?
   public var kcal: Int?
@@ -32,7 +34,7 @@ public struct CCFoodRow: View {
         .frame(width: 40, height: 40)
         .overlay(
           Image(systemName: "fork.knife")
-            .font(.system(size: 15))
+            .font(.subheadline)
             .foregroundStyle(Color.ccTextTertiary)
         )
         .accessibilityHidden(true)
@@ -58,7 +60,7 @@ public struct CCFoodRow: View {
       if syncPending {
         HStack(spacing: CCSpace.xs) {
           Image(systemName: "clock")
-            .font(.system(size: 11))
+            .font(.caption2)
           Text("Syncs later")
             .ccFont(.caption)
         }
@@ -67,7 +69,7 @@ public struct CCFoodRow: View {
 
       if !edSafeMode, let kcal {
         Text("\(kcal) kcal")
-          .font(.system(size: 14, weight: .medium))
+          .font(.system(size: kcalSize, weight: .medium))
           .monospacedDigit()
           .foregroundStyle(Color.ccTextPrimary)
       }
@@ -104,6 +106,9 @@ public struct CCSectionHeader: View {
 }
 
 public struct CCConfidenceBadge: View {
+  // 10/12pt have exact matches only via scaled metrics (DT-200% audit).
+  @ScaledMetric(relativeTo: .caption2) private var compactLabelSize = 10
+  @ScaledMetric(relativeTo: .caption) private var labelSize = 12
   public enum Tier: Sendable {
     case high
     case medium
@@ -143,7 +148,7 @@ public struct CCConfidenceBadge: View {
         .frame(width: 6, height: 6)
         .accessibilityHidden(true)
       Text(Self.label(for: tier))
-        .font(.system(size: compact ? 10 : 12, weight: .medium))
+        .font(.system(size: compact ? compactLabelSize : labelSize, weight: .medium))
         .foregroundStyle(textColor)
         .lineLimit(1)
     }
@@ -194,7 +199,7 @@ public struct CCWarningChip: View {
         .font(.system(size: 14))
         .accessibilityHidden(true)
       Text(Self.text(reason: reason, addedKcal: addedKcal, edSafeMode: edSafeMode))
-        .font(.system(size: 13, weight: .medium))
+        .font(.footnote.weight(.medium))
         .lineLimit(2)
     }
     .foregroundStyle(Color.ccWarningInk)
@@ -266,7 +271,7 @@ public struct CCToast: View {
       if let onUndo {
         Button(action: onUndo) {
           Text(undoTitle)
-            .font(.system(size: 15, weight: .medium))
+            .font(.subheadline.weight(.medium))
             .foregroundStyle(Color.ccAccentInk)
         }
         .buttonStyle(.plain)
