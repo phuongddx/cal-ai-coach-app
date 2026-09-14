@@ -1,0 +1,409 @@
+import CoachCalCore
+import CoachCalNetworking
+import CoachCalPersistence
+import Foundation
+import GRDB
+import Observation
+import SwiftUI
+import UIKit
+
+// Scan flow state machine (RESEARCH Pattern 1): capture → analyzing →
+// review/saved/quota/failed. Zero live network — `api` is any CoachCalAPI
+// (FixtureApiClient in Phase 3, edge functions behind the same protocol in
+// Phase 4). Displayed kcal is ALWAYS recomputed via KcalArithmetic from the
+// current grams (T-P05-02); the response's kcal fields are never the display
+// source after an edit.
+@MainActor
+@Observable
+final class ScanModel {
+  enum AnalyzingStep: String, CaseIterable, Sendable {
+    case detecting
+    case reading
+    case checking
+
+    var title: String {
+      switch self {
+      case .detecting: "Detecting food"
+      case .reading: "Reading nutrition"
+      case .checking: "Checking accuracy"
+      }
+    }
+  }
+
+  enum ScanFailure: Equatable, Sendable {
+    case barcodeNotFound
+    case analysisFailure
+  }
+
+  enum Phase: Equatable {
+    case capture
+    case analyzing(AnalyzingStep)
+    case review
+    case saved
+    case quotaReached(EntitlementState)
+    case failed(ScanFailure)
+  }
+
+  struct Correction: Equatable, Sendable {
+    enum Kind: String, CaseIterable, Sendable {
+      case wrongFood
+      case portionOff
+      case missingItem
+      case other
+
+      var title: String {
+        switch self {
+        case .wrongFood: "Wrong food"
+        case .portionOff: "Portion way off"
+        case .missingItem: "Missing item"
+        case .other: "Something else"
+        }
+      }
+    }
+
+    let kind: Kind
+    let note: String
+  }
+
+  struct ResultItem: Identifiable {
+    let id: Int
+    let source: ScanItem
+    var grams: Int
+    var isUnresolved: Bool
+    var correction: Correction?
+  }
+
+  struct ScanResult {
+    let scanId: UUID
+    var items: [ResultItem]
+    let scanConfidence: Double
+  }
+
+  struct Persistence {
+    let pool: DatabasePool
+    let entries: DiaryEntryRepository
+    let details: DiaryDetailRepository
+    let targets: TargetRepository
+    let engagement: EngagementRepository
+  }
+
+  private(set) var phase: Phase = .capture
+  private(set) var result: ScanResult?
+  private(set) var isAnalyzing = false
+  private(set) var captureThumb: UIImage?
+  var mealTitle = "Scanned meal"
+  var mealSlot: MealSlot
+  var describeText = ""
+  private(set) var savedEntryIds: [UUID] = []
+  private(set) var savedKcal: Int?
+  private(set) var todayKcal: Int?
+  private(set) var goalKcal: Int?
+  private(set) var streakCount: Int?
+  private(set) var freezesLeft: Int = 0
+
+  private let api: any CoachCalAPI
+  private let persistence: Persistence?
+  private let userId: UUID
+  private let now: @Sendable () -> Date
+  // Unstructured tasks owned by an in-flight analyze; cancelAnalyzing tears
+  // both down. Handles stay MainActor-only; cancel is safe from any context.
+  private var analyzeTask: Task<Void, Never>?
+  private var workTask: Task<ScanResponse, Error>?
+  private static let stepInterval: Double = 0.5
+
+  init(
+    api: any CoachCalAPI,
+    persistence: Persistence?,
+    userId: UUID,
+    now: @escaping @Sendable () -> Date,
+    mealSlot: MealSlot
+  ) {
+    self.api = api
+    self.persistence = persistence
+    self.userId = userId
+    self.now = now
+    self.mealSlot = mealSlot
+  }
+
+  // MARK: - Analyze
+
+  func analyze(with capture: ScanCapture) {
+    captureThumb = capture.image
+    startAnalyzing(request: capture.request)
+  }
+
+  func analyze(description: String) {
+    startAnalyzing(request: ScanRequest(kind: .text, text: description))
+  }
+
+  func analyze(pickedImage image: UIImage, mode: ScanMode) {
+    captureThumb = image
+    Task {
+      let request: ScanRequest
+      switch mode {
+      case .barcode:
+        let barcode = await ScanImageAnalysis.detectBarcode(in: image)
+        request = ScanRequest(kind: .barcode, barcode: barcode)
+      case .label:
+        let text = await ScanImageAnalysis.recognizeText(in: image)
+        request = ScanRequest(kind: .label, text: text)
+      default:
+        request = ScanRequest(kind: .photo)
+      }
+      startAnalyzing(request: request)
+    }
+  }
+
+  private func startAnalyzing(request: ScanRequest) {
+    guard !isAnalyzing else { return }
+    isAnalyzing = true
+    phase = .analyzing(.detecting)
+    let startedAt = Date()
+    let work = Task { [api] in try await api.analyzeFood(request) }
+    workTask = work
+    analyzeTask = Task { [weak self] in
+      await self?.finishAnalyzing(work, startedAt: startedAt)
+    }
+  }
+
+  private func finishAnalyzing(_ work: Task<ScanResponse, Error>, startedAt: Date) async {
+    do {
+      let response = try await work.value
+      // Failure states surface immediately (quota/error never behind the
+      // checklist); only the success path plays the three-step checklist out
+      // to the minimum dwell so the analyzing state is real and observable.
+      for (index, step) in AnalyzingStep.allCases.enumerated() {
+        phase = .analyzing(step)
+        let remaining = Double(index + 1) * Self.stepInterval - Date().timeIntervalSince(startedAt)
+        if remaining > 0 {
+          try await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+        }
+      }
+      receive(response)
+    } catch is CancellationError {
+      phase = .capture
+    } catch let error as ScanAPIError {
+      route(error)
+    } catch {
+      phase = .failed(.analysisFailure)
+    }
+    isAnalyzing = false
+  }
+
+  func cancelAnalyzing() {
+    guard isAnalyzing else { return }
+    workTask?.cancel()
+    analyzeTask?.cancel()
+    workTask = nil
+    analyzeTask = nil
+    phase = .capture
+    isAnalyzing = false
+  }
+
+  // MARK: - Result state
+
+  func receive(_ response: ScanResponse) {
+    let items = response.items.enumerated().map { index, item in
+      ResultItem(
+        id: index,
+        source: item,
+        grams: item.grams,
+        isUnresolved: item.unresolved,
+        correction: nil
+      )
+    }
+    result = ScanResult(scanId: response.scanId, items: items, scanConfidence: response.scanConfidence)
+    mealTitle = "Scanned meal"
+    phase = .review
+  }
+
+  private func route(_ error: ScanAPIError) {
+    if error.isQuotaReached, case .envelope(_, _, let entitlement) = error {
+      phase = .quotaReached(
+        entitlement ?? EntitlementState(tier: "free", scansUsed: 0, scanLimit: 3, windowResetAt: now())
+      )
+    } else if error.isBarcodeNotFound {
+      phase = .failed(.barcodeNotFound)
+    } else {
+      phase = .failed(.analysisFailure)
+    }
+  }
+
+  func reportCaptureFailure() {
+    guard !isAnalyzing else { return }
+    phase = .failed(.analysisFailure)
+  }
+
+  func retry() {
+    phase = .capture
+  }
+
+  func retake() {
+    result = nil
+    captureThumb = nil
+    phase = .capture
+  }
+
+  func startNewScan() {
+    result = nil
+    captureThumb = nil
+    savedEntryIds = []
+    savedKcal = nil
+    phase = .capture
+  }
+
+  // MARK: - Review edits (kcal invariant lives here)
+
+  func setGrams(_ grams: Int, at itemId: Int) {
+    guard let index = result?.items.firstIndex(where: { $0.id == itemId }) else { return }
+    result?.items[index].grams = max(0, grams)
+  }
+
+  func itemGramsBinding(for itemId: Int) -> Binding<Int> {
+    Binding(
+      get: { [weak self] in self?.result?.items.first { $0.id == itemId }?.grams ?? 0 },
+      set: { [weak self] in self?.setGrams($0, at: itemId) }
+    )
+  }
+
+  // Deterministic recompute from CURRENT grams — never the fixture's kcal.
+  func itemKcal(at itemId: Int) -> Int {
+    guard let item = result?.items.first(where: { $0.id == itemId }) else { return 0 }
+    return KcalArithmetic.mealKcal(per100gKcal: item.source.per100g.kcal, grams: item.grams)
+  }
+
+  var mealKcal: Int {
+    guard let items = result?.items else { return 0 }
+    return items.reduce(0) { $0 + itemKcal(at: $1.id) }
+  }
+
+  var hasHiddenFat: Bool {
+    result?.items.contains { $0.source.hiddenFatLikely } ?? false
+  }
+
+  // The chip's "+{kcal} added" is the recomputed contribution of the
+  // not-fully-visible item(s) already inside the total — never an invented
+  // number.
+  var hiddenFatAddedKcal: Int {
+    guard let items = result?.items else { return 0 }
+    return items
+      .filter { $0.source.hiddenFatLikely }
+      .reduce(0) { $0 + itemKcal(at: $1.id) }
+  }
+
+  var hasUnresolved: Bool {
+    result?.items.contains { $0.isUnresolved } ?? false
+  }
+
+  var isSaveEnabled: Bool {
+    result != nil && !hasUnresolved && !isAnalyzing && savedEntryIds.isEmpty
+  }
+
+  func captureCorrection(kind: Correction.Kind, note: String, for itemId: Int) {
+    guard let index = result?.items.firstIndex(where: { $0.id == itemId }) else { return }
+    result?.items[index].correction = Correction(kind: kind, note: note)
+    // Resolving the flagged concern is the only path off "Review needed".
+    if result?.items[index].isUnresolved == true {
+      result?.items[index].isUnresolved = false
+    }
+  }
+
+  // MARK: - Save / Undo
+
+  // Mirror + outbox via the diary repositories (one pending op per entry,
+  // detail row per item with recomputed nutrition). Outbox DISPATCH is wired
+  // in Phase 4 — the write path matches 03-03's committed diary idiom.
+  func save() async {
+    guard isSaveEnabled, let result, let persistence else { return }
+    let stamp = now()
+    var entryIds: [UUID] = []
+    do {
+      for item in result.items {
+        let entry = DiaryEntry(
+          id: UUID(),
+          userId: userId,
+          displayText: item.source.label,
+          createdAt: stamp,
+          updatedAt: stamp,
+          deletedAt: nil,
+          serverVersion: 0,
+          acceptedOpId: nil,
+          serverUpdatedAt: stamp
+        )
+        _ = try await persistence.entries.recordUpsert(entry, now: stamp)
+        try await persistence.details.upsert(
+          DiaryEntryDetail(
+            entryId: entry.id,
+            mealSlot: mealSlot.rawValue,
+            title: item.id == 0 ? mealTitle : item.source.label,
+            grams: item.grams,
+            kcal: itemKcal(at: item.id),
+            proteinG: KcalArithmetic.macroGrams(per100g: item.source.per100g.proteinG, grams: item.grams),
+            carbsG: KcalArithmetic.macroGrams(per100g: item.source.per100g.carbsG, grams: item.grams),
+            fatG: KcalArithmetic.macroGrams(per100g: item.source.per100g.fatG, grams: item.grams),
+            fiberG: KcalArithmetic.macroGrams(per100g: item.source.per100g.fiberG, grams: item.grams),
+            confidence: item.source.confidence,
+            hiddenFatLikely: item.source.hiddenFatLikely,
+            source: "scan",
+            unresolved: item.isUnresolved,
+            scanId: result.scanId.uuidString
+          )
+        )
+        entryIds.append(entry.id)
+      }
+      savedEntryIds = entryIds
+      savedKcal = mealKcal
+      phase = .saved
+      await loadSavedContext()
+    } catch {
+      // Local-first write failure keeps the review open so Save can retry.
+    }
+  }
+
+  // Tombstones the just-written entries and deletes their detail rows.
+  func undo() async {
+    guard let persistence else { return }
+    for entryId in savedEntryIds {
+      if let entry = try? await persistence.pool.read({ database in
+        try DiaryEntry.fetchOne(database, key: entryId)
+      }) {
+        _ = try? await persistence.entries.recordTombstone(entry, now: now())
+      }
+      try? await persistence.details.delete(entryId: entryId)
+    }
+    savedEntryIds = []
+    savedKcal = nil
+    phase = .review
+    await loadSavedContext()
+  }
+
+  private func loadSavedContext() async {
+    guard let persistence else { return }
+    let day = Self.dayString(now())
+    var total = 0
+    for slot in MealSlot.allCases {
+      let details = (try? await persistence.details.details(forDay: day, mealSlot: slot.rawValue)) ?? []
+      total += details.reduce(0) { $0 + ($1.kcal ?? 0) }
+    }
+    todayKcal = total
+    goalKcal = (try? await persistence.targets.activeTarget(user: userId))?.dailyKcal
+    let streak = try? await persistence.engagement.streakState()
+    streakCount = streak?.currentStreak
+    freezesLeft = streak?.freezesLeft ?? 0
+  }
+
+  static func dayString(_ date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd"
+    formatter.timeZone = TimeZone(identifier: "UTC")
+    return formatter.string(from: date)
+  }
+
+  #if DEBUG
+  // Snapshot-test seam: deterministic phase placement without driving the
+  // async analyze pipeline.
+  func setPhaseForTesting(_ newPhase: Phase) {
+    phase = newPhase
+  }
+  #endif
+}

@@ -2,113 +2,117 @@ import CoachCalDesignSystem
 import CoachCalNetworking
 import SwiftUI
 
-// Thin routed slice — 03-05 replaces this file's contents with the full scan flow.
-// The seam (route init + api call + shutter) is real now; the visual shell is not final.
+// Routed scan flow (03-02 seam: AppEnvironment.openScan → MainShell
+// fullScreenCover → ScanFlowView(route:)). Phase machine lives in ScanModel;
+// this file only switches surfaces. Capture is fixture-on-simulator,
+// AVFoundation/DataScanner-on-device via the CameraCaptureService seam.
 struct ScanFlowView: View {
   @Environment(AppEnvironment.self) private var environment
   @Environment(\.dismiss) private var dismiss
 
   let route: ScanRoute
 
-  @State private var resultText: String?
-  @State private var isAnalyzing = false
+  @State private var model: ScanModel?
+  @State private var activeMode: ScanMode = .photo
 
   var body: some View {
-    ZStack {
-      Color.black.ignoresSafeArea()
-
-      VStack(spacing: CCSpace.xl) {
-        HStack {
-          Button {
-            dismiss()
-          } label: {
-            Image(systemName: "xmark")
-              .font(.system(size: 16, weight: .semibold))
-              .foregroundStyle(Color.white)
-              .frame(width: CCSize.tapTarget, height: CCSize.tapTarget)
-              .contentShape(Rectangle())
-          }
-          .buttonStyle(.plain)
-          .accessibilityLabel("Close scanner")
-          Spacer()
-        }
-
-        modePills
-
-        Spacer()
-
-        shutterButton
-          .accessibilityIdentifier("scan.shutter")
-
-        if let resultText {
-          Text(resultText)
-            .ccFont(.subhead)
-            .foregroundStyle(Color.white)
-            .accessibilityIdentifier("scan.result")
-        }
-
-        if let mealSlot = route.mealSlot {
-          Text("Logging to \(mealSlot.rawValue.capitalized)")
-            .ccFont(.footnote)
-            .foregroundStyle(Color.white.opacity(0.7))
-        }
-      }
-      .padding(CCSpace.xl2)
-    }
-  }
-
-  private var modePills: some View {
-    HStack(spacing: CCSpace.sm) {
-      modePill("Scan Food", mode: .photo)
-      modePill("Barcode", mode: .barcode)
-      modePill("Label", mode: .label)
-    }
-  }
-
-  private func modePill(_ title: String, mode: ScanMode) -> some View {
-    Text(title)
-      .ccFont(.subhead)
-      .foregroundStyle(route.mode == mode ? Color.black : Color.white)
-      .padding(.vertical, CCSpace.sm)
-      .padding(.horizontal, CCSpace.lg)
-      .background(route.mode == mode ? Color.ccAccentLime : Color.white.opacity(0.15))
-      .clipShape(Capsule())
-  }
-
-  private var shutterButton: some View {
-    Button {
-      Task { await analyze() }
-    } label: {
-      Circle()
-        .fill(Color.ccAccentLime)
-        .frame(width: CCSize.shutter, height: CCSize.shutter)
-        .overlay(
-          Circle()
-            .strokeBorder(Color.white.opacity(0.3), lineWidth: 4)
-        )
-        .contentShape(Circle())
-    }
-    .buttonStyle(.plain)
-    .disabled(isAnalyzing)
-    .accessibilityLabel("Capture photo, button")
-  }
-
-  private func analyze() async {
-    isAnalyzing = true
-    defer { isAnalyzing = false }
-    let kind = ScanRequest.Kind(rawValue: route.mode.rawValue) ?? .photo
-    let request = ScanRequest(kind: kind)
-    do {
-      let response = try await environment.api.analyzeFood(request)
-      resultText = "\(response.items.count) items found"
-    } catch let error as ScanAPIError {
-      if case .envelope(let code, _, _) = error {
-        resultText = "Error: \(code)"
+    Group {
+      if let model {
+        phaseView(model)
       } else {
-        resultText = "Error: analysis failed"
+        Color.black.ignoresSafeArea()
       }
-    } catch {
-      resultText = "Error: analysis failed"
     }
+    .task {
+      buildModelIfNeeded()
+    }
+  }
+
+  @ViewBuilder private func phaseView(_ model: ScanModel) -> some View {
+    switch model.phase {
+    case .capture, .failed:
+      if activeMode == .text {
+        describePlaceholder
+      } else {
+        CaptureViewfinderView(
+          model: model,
+          mode: activeMode,
+          onModeChange: { activeMode = $0 },
+          onLoggedElsewhere: { dismiss() }
+        )
+        .id(activeMode)
+      }
+    case .analyzing:
+      AnalyzingView(model: model, animationsDisabled: environment.animationsDisabled)
+    case .review:
+      reviewPlaceholder
+    case .saved:
+      savedPlaceholder
+    case .quotaReached:
+      quotaPlaceholder
+    }
+  }
+
+  // Task 2 slices replace these minimal phase surfaces.
+  private var reviewPlaceholder: some View {
+    VStack(spacing: CCSpace.md) {
+      Text("Review ready")
+        .ccFont(.heading)
+        .foregroundStyle(Color.white)
+      if let model, model.result != nil {
+        Text("\(model.mealKcal) kcal")
+          .ccFont(.subhead)
+          .foregroundStyle(Color.white.opacity(0.7))
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(Color.black.ignoresSafeArea())
+    .accessibilityIdentifier("scan.review")
+  }
+
+  private var savedPlaceholder: some View {
+    Text("Saved")
+      .ccFont(.heading)
+      .foregroundStyle(Color.white)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .background(Color.black.ignoresSafeArea())
+      .accessibilityIdentifier("scan.saved")
+  }
+
+  private var quotaPlaceholder: some View {
+    Text("Quota reached")
+      .ccFont(.heading)
+      .foregroundStyle(Color.white)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .background(Color.black.ignoresSafeArea())
+      .accessibilityIdentifier("scan.quota")
+  }
+
+  private var describePlaceholder: some View {
+    Text("Describe your meal")
+      .ccFont(.heading)
+      .foregroundStyle(Color.white)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .background(Color.black.ignoresSafeArea())
+      .accessibilityIdentifier("scan.describe")
+  }
+
+  private func buildModelIfNeeded() {
+    guard model == nil else { return }
+    activeMode = route.mode
+    let persistence = ScanModel.Persistence(
+      pool: environment.database,
+      entries: environment.diaryEntryRepository,
+      details: environment.diaryDetailRepository,
+      targets: environment.targetRepository,
+      engagement: environment.engagementRepository
+    )
+    model = ScanModel(
+      api: environment.api,
+      persistence: persistence,
+      userId: AppEnvironment.demoUserId,
+      now: environment.now,
+      mealSlot: route.mealSlot ?? .lunch
+    )
   }
 }
