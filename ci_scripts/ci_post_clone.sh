@@ -16,6 +16,10 @@ cd "$ROOT/native"
 xcodegen generate
 
 for package in Modules/*; do
+  if [ "$(basename "$package")" = "CoachCalDesignSystem" ]; then
+    # iOS-only SwiftUI package (no macOS platform); exercised via the app scheme on the iOS destination.
+    continue
+  fi
   echo "Running package tests in $package"
   (cd "$package" && swift test)
 done

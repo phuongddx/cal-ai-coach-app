@@ -22,15 +22,26 @@ packages:
     path: Modules/CoachCalNetworking
   CoachCalSync:
     path: Modules/CoachCalSync
+  ViewInspector:
+    url: https://github.com/nalexn/ViewInspector
+    exactVersion: 0.10.3
+  SnapshotTesting:
+    url: https://github.com/pointfreeco/swift-snapshot-testing
+    from: "1.19.4"
 targets:
   CoachCal:
     type: application
     platform: iOS
     sources:
       - App/CoachCal
+      - App/Features
     info:
       path: App/CoachCal/Info.plist
       properties:
+        CFBundleURLTypes:
+          - CFBundleURLName: com.nextlabs.coachcal
+            CFBundleURLSchemes:
+              - coachcal
         SUPABASE_URL: $(SUPABASE_URL)
         SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
         CFBundleDisplayName: CoachCal
@@ -55,11 +66,11 @@ targets:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - path: App/CoachCalTests
-        excludes:
-          - WalkingSmokeUITests.swift
+      - App/CoachCalTests
     dependencies:
       - target: CoachCal
+      - package: ViewInspector
+      - package: SnapshotTesting
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.nextlabs.coachcal.unit-tests
@@ -70,7 +81,7 @@ targets:
     type: bundle.ui-testing
     platform: iOS
     sources:
-      - App/CoachCalTests/WalkingSmokeUITests.swift
+      - App/CoachCalUITests
     dependencies:
       - target: CoachCal
     settings:

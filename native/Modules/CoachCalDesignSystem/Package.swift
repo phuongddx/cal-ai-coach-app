@@ -4,7 +4,7 @@ import PackageDescription
 
 let package = Package(
   name: "CoachCalDesignSystem",
-  platforms: [.iOS(.v18), .macOS(.v15)],
+  platforms: [.iOS(.v18)],
   products: [
     .library(name: "CoachCalDesignSystem", targets: ["CoachCalDesignSystem"])
   ],
@@ -14,7 +14,10 @@ let package = Package(
   targets: [
     .target(
       name: "CoachCalDesignSystem",
-      dependencies: ["CoachCalCore"]
+      dependencies: ["CoachCalCore"],
+      resources: [
+        .process("Colors.xcassets")
+      ]
     ),
     .testTarget(
       name: "CoachCalDesignSystemTests",

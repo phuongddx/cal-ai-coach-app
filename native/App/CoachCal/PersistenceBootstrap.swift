@@ -9,11 +9,23 @@ final class PersistenceBootstrap {
   let database: DatabasePool
 
   private init() {
+    #if DEBUG
+    if ProcessInfo.processInfo.arguments.contains("--ccFreshStart") {
+      Self.removeDatabaseFiles()
+    }
+    #endif
     do {
       database = try Database.makePool(at: Self.defaultDatabasePath)
       try Migrations.foundationSync.migrate(database)
     } catch {
       fatalError("CoachCal persistence could not be initialized: \(error)")
+    }
+  }
+
+  private static func removeDatabaseFiles() {
+    let path = defaultDatabasePath
+    for suffix in ["", "-wal", "-shm"] {
+      try? FileManager.default.removeItem(atPath: path + suffix)
     }
   }
 
