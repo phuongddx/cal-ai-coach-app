@@ -45,7 +45,7 @@ struct CorrectionCaptureView: View {
           .accessibilityIdentifier("scan.correction.close")
         }
 
-        VStack(alignment: .leading, spacing: CCSpace.sm) {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: CCSpace.sm) {
           ForEach(ScanModel.Correction.Kind.allCases, id: \.self) { candidate in
             Button {
               kind = candidate
@@ -57,9 +57,8 @@ struct CorrectionCaptureView: View {
           }
         }
 
-        TextField("Add a note (optional)", text: $note, axis: .vertical)
+        TextField("Add a note (optional)", text: $note)
           .ccFont(.body)
-          .lineLimit(3...5)
           .padding(CCSpace.md)
           .background(Color.ccCard)
           .clipShape(RoundedRectangle(cornerRadius: CCRadius.md))

@@ -64,6 +64,17 @@ struct FixtureScenarioTests {
   }
 
   @Test
+  func unresolved200VariantDecodesStrictly() throws {
+    let response = try decode("scan-response-200-unresolved", ScanResponse.self)
+
+    let item = try #require(response.items.first)
+    #expect(item.label == "chicken-rice")
+    #expect(item.unresolved == true, "held-out backstop variant flips only the unresolved flag")
+    #expect(item.kcal == KcalArithmetic.mealKcal(per100gKcal: 145, grams: 320))
+    #expect(response.mealKcal == 464)
+  }
+
+  @Test
   func quota402DecodesEntitlementAndThrowsEnvelope() async throws {
     let envelope = try decode("error-402-free-limit", FixtureErrorEnvelope.self)
     #expect(envelope.error.code == "FREE_LIMIT_REACHED")

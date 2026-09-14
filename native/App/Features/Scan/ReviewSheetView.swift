@@ -30,6 +30,7 @@ struct ReviewSheetView: View {
         Text("Review")
           .ccFont(.headline)
           .foregroundStyle(Color.ccTextPrimary)
+          .accessibilityIdentifier("scan.review")
         Spacer()
         Button {
           onClose()
@@ -61,7 +62,6 @@ struct ReviewSheetView: View {
       saveBar
     }
     .background(Color.ccBackground.ignoresSafeArea())
-    .accessibilityIdentifier("scan.review")
     .sheet(item: Binding(
       get: { model.result?.items.first { $0.id == correctionItemId } },
       set: { correctionItemId = $0?.id }
@@ -288,7 +288,6 @@ struct QuotaReachedView: View {
     }
     .frame(maxWidth: .infinity)
     .background(Color.ccBackground.ignoresSafeArea())
-    .accessibilityIdentifier("scan.quota")
     .sheet(isPresented: $isPlansPresented) {
       NeutralPlansSheet(onLogManually: {
         isPlansPresented = false

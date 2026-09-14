@@ -50,7 +50,6 @@ struct ScanSavedView: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Color.ccBackground.ignoresSafeArea())
-    .accessibilityIdentifier("scan.saved")
   }
 
   // "Today so far" peek — kcal framing collapses entirely in ED-Safe.

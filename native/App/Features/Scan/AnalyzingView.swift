@@ -121,9 +121,18 @@ struct AnalyzingView: View {
           .font(.system(size: 20))
           .foregroundStyle(Color.ccAccentLime)
       } else if index == activeIndex {
-        ProgressView()
-          .tint(Color.ccAccentLime)
-          .frame(width: 20, height: 20)
+        // The live spinner's rotation angle is nondeterministic in window
+        // renders; --ccDisableAnimations (snapshot/ UI-test mode) pins a
+        // static representative of the same "in progress" state.
+        if animationsDisabled {
+          Image(systemName: "circle.dotted")
+            .font(.system(size: 20))
+            .foregroundStyle(Color.ccAccentLime)
+        } else {
+          ProgressView()
+            .tint(Color.ccAccentLime)
+            .frame(width: 20, height: 20)
+        }
       } else {
         Circle()
           .strokeBorder(Color.white.opacity(0.2), lineWidth: 2)

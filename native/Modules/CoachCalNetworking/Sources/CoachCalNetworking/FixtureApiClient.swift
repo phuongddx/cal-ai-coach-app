@@ -7,6 +7,10 @@ import Foundation
 
 public enum FixtureScenario: String, Equatable, Sendable, CaseIterable {
   case response200 = "200"
+  // DEBUG-test-only variant (held-out backstop): the golden 200 with
+  // unresolved: true. Lives outside Resources/Golden so that directory stays
+  // a verbatim copy of the server contract.
+  case response200Unresolved = "200-unresolved"
   case quota402 = "402"
   case notFound404 = "404"
   case schema422 = "422"
@@ -35,8 +39,9 @@ public struct FixtureApiClient: CoachCalAPI, Sendable {
 
   public func analyzeFood(_ request: ScanRequest) async throws -> ScanResponse {
     switch scenario {
-    case .response200:
-      return try decodeFixture("scan-response-200", as: ScanResponse.self)
+    case .response200, .response200Unresolved:
+      let name = scenario == .response200 ? "scan-response-200" : "scan-response-200-unresolved"
+      return try decodeFixture(name, as: ScanResponse.self)
     case .quota402:
       throw try envelopeError(for: "error-402-free-limit")
     case .notFound404:
