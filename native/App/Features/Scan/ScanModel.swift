@@ -85,6 +85,7 @@ final class ScanModel {
     let details: DiaryDetailRepository
     let targets: TargetRepository
     let engagement: EngagementRepository
+    let catalog: CatalogRepository
   }
 
   private(set) var phase: Phase = .capture
@@ -354,6 +355,7 @@ final class ScanModel {
       savedEntryIds = entryIds
       savedKcal = mealKcal
       phase = .saved
+      await persistSavedMeal()
       await loadSavedContext()
     } catch {
       // Local-first write failure keeps the review open so Save can retry.
@@ -375,6 +377,34 @@ final class ScanModel {
     savedKcal = nil
     phase = .review
     await loadSavedContext()
+  }
+
+  // LOG-07: the review's save also feeds the saved-meals rail contract —
+  // itemsJson mirrors SavedMealItem's [{name, grams}] shape that 03-04's
+  // one-tap re-log decodes.
+  struct SavedMealItemPayload: Codable {
+    let name: String
+    let grams: Int
+  }
+
+  private func persistSavedMeal() async {
+    guard let persistence, let result else { return }
+    let items = result.items.map { item in
+      SavedMealItemPayload(name: item.source.label, grams: item.grams)
+    }
+    guard let itemsJson = try? String(data: JSONEncoder().encode(items), encoding: .utf8) else {
+      return
+    }
+    let meal = SavedMeal(
+      id: UUID(),
+      userId: userId,
+      name: mealTitle,
+      symbol: nil,
+      kcal: mealKcal,
+      itemsJson: itemsJson,
+      createdAt: now()
+    )
+    try? await persistence.catalog.saveMeal(meal)
   }
 
   private func loadSavedContext() async {

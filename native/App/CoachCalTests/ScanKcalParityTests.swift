@@ -108,7 +108,8 @@ struct ScanKcalParityTests {
       entries: DiaryEntryRepository(database: pool),
       details: DiaryDetailRepository(database: pool),
       targets: TargetRepository(database: pool),
-      engagement: EngagementRepository(database: pool)
+      engagement: EngagementRepository(database: pool),
+      catalog: CatalogRepository(database: pool)
     )
     let model = Self.makeModel(persistence: persistence)
     let response = Self.twoItemResponse()
@@ -129,6 +130,13 @@ struct ScanKcalParityTests {
     #expect(firstDetail.grams == 200)
     #expect(firstDetail.scanId == response.scanId.uuidString)
     #expect(firstDetail.source == "scan")
+
+    // LOG-07: the save feeds the saved-meals rail contract 03-04 re-logs from.
+    let savedMeals = try await CatalogRepository(database: pool).savedMeals()
+    let railMeal = try #require(savedMeals.first { $0.name == model.mealTitle })
+    #expect(railMeal.kcal == 290 + 86)
+    let railItems = try JSONDecoder().decode([ScanModel.SavedMealItemPayload].self, from: Data(railMeal.itemsJson.utf8))
+    #expect(railItems.map(\.grams) == [200, 20])
 
     await model.undo()
 

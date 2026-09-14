@@ -65,7 +65,8 @@ struct ScanFlowView: View {
       entries: environment.diaryEntryRepository,
       details: environment.diaryDetailRepository,
       targets: environment.targetRepository,
-      engagement: environment.engagementRepository
+      engagement: environment.engagementRepository,
+      catalog: environment.catalogRepository
     )
     model = ScanModel(
       api: environment.api,
