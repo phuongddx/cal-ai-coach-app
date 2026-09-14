@@ -34,6 +34,7 @@ final class TodayModel {
 
   private let pool: DatabasePool
   private let userId: UUID
+  private let tracking: TrackingRepository
   private let now: @Sendable () -> Date
   // Task.cancel() is thread-safe; deinit runs nonisolated (Pitfall 1).
   nonisolated(unsafe) private var observationTask: Task<Void, Never>?
@@ -41,10 +42,12 @@ final class TodayModel {
   init(
     pool: DatabasePool,
     userId: UUID,
+    tracking: TrackingRepository,
     now: @escaping @Sendable () -> Date
   ) {
     self.pool = pool
     self.userId = userId
+    self.tracking = tracking
     self.now = now
     self.selectedDay = now()
     startObservation()
@@ -117,6 +120,24 @@ final class TodayModel {
     guard !Calendar.current.isDate(date, inSameDayAs: selectedDay) else { return }
     selectedDay = date
     startObservation()
+  }
+
+  // Quick-add delta clamped so the day total never goes below 0 ml (T-P04-01);
+  // the applied delta lands as a water_logs row (additive ledger).
+  func logWaterDelta(_ deltaMl: Int) async throws {
+    let current = snapshot.waterMl
+    let applied = max(current + deltaMl, 0) - current
+    guard applied != 0 else { return }
+    try await tracking.addWater(
+      ml: applied,
+      day: Self.dayString(selectedDay),
+      userId: userId,
+      at: now()
+    )
+  }
+
+  func makeDiaryModel(day: Date) -> DiaryDayModel {
+    DiaryDayModel(pool: pool, userId: userId, day: day, now: now)
   }
 
   private func startObservation() {

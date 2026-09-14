@@ -1,4 +1,5 @@
 import CoachCalDesignSystem
+import CoachCalPersistence
 import SwiftUI
 
 struct TodayFlow: View {
@@ -23,6 +24,7 @@ struct TodayFlow: View {
         model = TodayModel(
           pool: environment.database,
           userId: AppEnvironment.demoUserId,
+          tracking: TrackingRepository(database: environment.database),
           now: environment.now
         )
       }

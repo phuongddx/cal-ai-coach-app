@@ -7,6 +7,8 @@ struct TodayView: View {
   var onStartSetup: () -> Void = {}
 
   @State private var isWeekStripVisible = true
+  @State private var isWaterSheetPresented = false
+  @State private var diaryRoute: DiaryRoute?
 
   var body: some View {
     ScrollView {
@@ -25,6 +27,11 @@ struct TodayView: View {
           }
           heroCard(model)
           macroSection(model)
+          WaterCard(
+            waterMl: model.waterMl,
+            glasses: model.waterGlasses,
+            onTap: { isWaterSheetPresented = true }
+          )
           scoreAndStepsCards
           streakCard(model)
           recentMeals(model)
@@ -35,6 +42,29 @@ struct TodayView: View {
       .padding(.bottom, CCSpace.xl5)
     }
     .background(Color.ccBackground)
+    .sheet(isPresented: $isWaterSheetPresented) {
+      if let model {
+        WaterLogSheet(
+          totalMl: model.waterMl,
+          glasses: model.waterGlasses,
+          onQuickAdd: { delta in
+            Task { try? await model.logWaterDelta(delta) }
+          },
+          onDismiss: { isWaterSheetPresented = false }
+        )
+        .presentationDetents([.medium])
+      }
+    }
+    .sheet(item: $diaryRoute) { route in
+      if let model {
+        DiaryDayView(model: model.makeDiaryModel(day: route.date))
+      }
+    }
+  }
+
+  private struct DiaryRoute: Identifiable {
+    let date: Date
+    var id: Date { date }
   }
 
   private func header(_ model: TodayModel) -> some View {
@@ -256,13 +286,18 @@ struct TodayView: View {
       CCSectionHeader("Recent meals")
       VStack(spacing: 0) {
         ForEach(model.snapshot.meals) { meal in
-          CCFoodRow(
-            title: meal.title,
-            meta: "\(meal.mealSlot.capitalized) · \(meal.loggedAt.formatted(date: .omitted, time: .shortened))",
-            kcal: meal.kcal,
-            compactBadge: meal.confidence.map { CCConfidenceBadge(confidence: $0, compact: true) },
-            syncPending: !meal.isSynced
-          )
+          Button {
+            diaryRoute = DiaryRoute(date: meal.loggedAt)
+          } label: {
+            CCFoodRow(
+              title: meal.title,
+              meta: "\(meal.mealSlot.capitalized) · \(meal.loggedAt.formatted(date: .omitted, time: .shortened))",
+              kcal: meal.kcal,
+              compactBadge: meal.confidence.map { CCConfidenceBadge(confidence: $0, compact: true) },
+              syncPending: !meal.isSynced
+            )
+          }
+          .buttonStyle(.plain)
           .accessibilityElement(children: .combine)
           .accessibilityIdentifier("today.foodRow")
         }
