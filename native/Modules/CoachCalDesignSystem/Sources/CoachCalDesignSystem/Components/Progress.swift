@@ -48,9 +48,13 @@ public struct CCCalorieRing: View {
   }
 
   // ED-Safe replaces the consumed fraction with fraction-of-day so the ring carries no kcal meaning.
+  private var edSafeDayProgress: Double {
+    (dayProgress ?? Self.defaultDayProgress()).clampedToUnitInterval
+  }
+
   private var progressFraction: Double {
     if edSafeMode {
-      return (dayProgress ?? Self.defaultDayProgress()).clampedToUnitInterval
+      return edSafeDayProgress
     }
     guard let consumed, let goal, goal > 0 else { return 0 }
     return (Double(consumed) / Double(goal)).clampedToUnitInterval
@@ -61,7 +65,7 @@ public struct CCCalorieRing: View {
     return max(goal - consumed, 0)
   }
 
-  private var a11yLabel: String {
+  var a11yLabel: String {
     if edSafeMode { return "On track" }
     guard let remaining, let goal else { return "Calorie ring" }
     return "\(remaining) calories remaining of \(goal) goal"
@@ -69,9 +73,17 @@ public struct CCCalorieRing: View {
 
   @ViewBuilder private var centerContent: some View {
     if edSafeMode {
-      Text("On track")
-        .ccFont(.subhead)
-        .foregroundStyle(Color.ccTextPrimary)
+      VStack(spacing: 0) {
+        Text("On track")
+          .ccFont(.subhead)
+          .foregroundStyle(Color.ccTextPrimary)
+        Text(Self.dayPercentText(edSafeDayProgress))
+          .ccFont(.footnote)
+          .foregroundStyle(Color.ccTextSecondary)
+          .lineLimit(1)
+          .minimumScaleFactor(0.5)
+      }
+      .padding(.horizontal, stroke + 8)
     } else if variant == .hero, let remaining {
       VStack(spacing: 0) {
         CCScaledNumber("\(remaining)", role: .hero)
@@ -109,6 +121,10 @@ public struct CCCalorieRing: View {
     let startOfDay = calendar.startOfDay(for: Date())
     let elapsed = Date().timeIntervalSince(startOfDay)
     return elapsed / 86_400
+  }
+
+  nonisolated static func dayPercentText(_ dayProgress: Double) -> String {
+    "\(Int((dayProgress.clampedToUnitInterval * 100).rounded()))% of day"
   }
 }
 
