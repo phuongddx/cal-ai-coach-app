@@ -332,14 +332,24 @@ public struct CCBannerNote: View {
 
   public let text: String
   public let variant: Variant
+  private let rendersMarkdown: Bool
 
   public init(_ text: String, variant: Variant = .neutral) {
     self.text = text
     self.variant = variant
+    self.rendersMarkdown = false
+  }
+
+  // Locked banner copy (e.g. the safety-floor note) leads with a bold markdown
+  // clause — plain Text would render the asterisks literally.
+  public init(markdown text: String, variant: Variant = .neutral) {
+    self.text = text
+    self.variant = variant
+    self.rendersMarkdown = true
   }
 
   public var body: some View {
-    Text(text)
+    bannerText
       .ccFont(.footnote)
       .foregroundStyle(Color.ccTextPrimary)
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -350,6 +360,16 @@ public struct CCBannerNote: View {
         RoundedRectangle(cornerRadius: CCRadius.md)
           .strokeBorder(borderColor, lineWidth: 1)
       )
+  }
+
+  private var bannerText: some View {
+    Group {
+      if rendersMarkdown {
+        Text(LocalizedStringKey(text))
+      } else {
+        Text(text)
+      }
+    }
   }
 
   private var backgroundColor: Color {
