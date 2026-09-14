@@ -32,7 +32,7 @@ struct ScanFlowView: View {
     switch model.phase {
     case .capture, .failed:
       if activeMode == .text {
-        describePlaceholder
+        DescribeMealSheet(model: model, onLoggedElsewhere: { dismiss() })
       } else {
         CaptureViewfinderView(
           model: model,
@@ -45,56 +45,16 @@ struct ScanFlowView: View {
     case .analyzing:
       AnalyzingView(model: model, animationsDisabled: environment.animationsDisabled)
     case .review:
-      reviewPlaceholder
+      ReviewSheetView(model: model, onClose: { dismiss() })
     case .saved:
-      savedPlaceholder
+      ScanSavedView(
+        model: model,
+        onViewDiary: { dismiss() },
+        onAddMore: { model.startNewScan() }
+      )
     case .quotaReached:
-      quotaPlaceholder
+      QuotaReachedView(model: model, onLoggedElsewhere: { dismiss() })
     }
-  }
-
-  // Task 2 slices replace these minimal phase surfaces.
-  private var reviewPlaceholder: some View {
-    VStack(spacing: CCSpace.md) {
-      Text("Review ready")
-        .ccFont(.heading)
-        .foregroundStyle(Color.white)
-      if let model, model.result != nil {
-        Text("\(model.mealKcal) kcal")
-          .ccFont(.subhead)
-          .foregroundStyle(Color.white.opacity(0.7))
-      }
-    }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(Color.black.ignoresSafeArea())
-    .accessibilityIdentifier("scan.review")
-  }
-
-  private var savedPlaceholder: some View {
-    Text("Saved")
-      .ccFont(.heading)
-      .foregroundStyle(Color.white)
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .background(Color.black.ignoresSafeArea())
-      .accessibilityIdentifier("scan.saved")
-  }
-
-  private var quotaPlaceholder: some View {
-    Text("Quota reached")
-      .ccFont(.heading)
-      .foregroundStyle(Color.white)
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .background(Color.black.ignoresSafeArea())
-      .accessibilityIdentifier("scan.quota")
-  }
-
-  private var describePlaceholder: some View {
-    Text("Describe your meal")
-      .ccFont(.heading)
-      .foregroundStyle(Color.white)
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .background(Color.black.ignoresSafeArea())
-      .accessibilityIdentifier("scan.describe")
   }
 
   private func buildModelIfNeeded() {
