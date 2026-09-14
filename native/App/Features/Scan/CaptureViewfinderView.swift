@@ -41,7 +41,6 @@ struct CaptureViewfinderView: View {
           onRetry: { model.retry() },
           onSearchManually: { isSearchPresented = true }
         )
-        .accessibilityIdentifier("scan.errorCard")
       }
     }
     .sheet(isPresented: $isSearchPresented) {
