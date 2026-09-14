@@ -17,12 +17,20 @@ public enum FixtureScenario: String, Equatable, Sendable, CaseIterable {
 
   public static let launchArgument = "--ccScanScenario"
 
+  // Release builds must never let launch arguments pick the scan surface
+  // (T-P07-03); they always run the golden 200. DEBUG (incl. UI tests) keeps
+  // the scenario matrix reachable. The client itself is Phase-3-only — the
+  // live edge-function client replaces it in Phase 4.
   public static func resolve(from arguments: [String]) -> FixtureScenario {
+    #if DEBUG
     guard let index = arguments.firstIndex(of: launchArgument),
       index + 1 < arguments.count,
       let scenario = FixtureScenario(rawValue: arguments[index + 1])
     else { return .response200 }
     return scenario
+    #else
+    return .response200
+    #endif
   }
 }
 
