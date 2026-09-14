@@ -4,6 +4,9 @@ import SwiftUI
 struct TodayView: View {
   let model: TodayModel?
   var isOffline: Bool = false
+  var onStartSetup: () -> Void = {}
+
+  @State private var isWeekStripVisible = true
 
   var body: some View {
     ScrollView {
@@ -13,8 +16,17 @@ struct TodayView: View {
           if isOffline {
             offlineBanner
           }
+          if isWeekStripVisible {
+            WeekStripView(
+              days: model.weekStripDays,
+              selectedDay: model.selectedDay,
+              onSelect: model.selectDay
+            )
+          }
           heroCard(model)
           macroSection(model)
+          scoreAndStepsCards
+          streakCard(model)
           recentMeals(model)
         }
       }
@@ -35,10 +47,29 @@ struct TodayView: View {
         CCOfflineBadge()
           .accessibilityIdentifier("offline.badge")
       }
-      Text(model.today.formatted(.dateTime.month(.abbreviated).day()))
-        .ccFont(.footnote)
+      Button {
+        isWeekStripVisible.toggle()
+      } label: {
+        HStack(spacing: CCSpace.xs) {
+          Text(model.selectedDay.formatted(.dateTime.month(.abbreviated).day()))
+            .ccFont(.subhead)
+          Image(systemName: "chevron.down")
+            .font(.system(size: 12, weight: .medium))
+        }
         .foregroundStyle(Color.ccTextSecondary)
+        .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+      .accessibilityIdentifier("today.dateSelector")
+      .accessibilityLabel("Select date")
     }
+  }
+
+  // DS Group B subhead copy ("of 2,150 kcal goal") pins en grouping regardless
+  // of device locale.
+  private var goalSubheadText: String {
+    guard let goal = model?.goalKcal else { return "0" }
+    return goal.formatted(.number.locale(Locale(identifier: "en_US")))
   }
 
   private var offlineBanner: some View {
@@ -60,10 +91,12 @@ struct TodayView: View {
             .ccFont(.subhead)
             .foregroundStyle(Color.ccTextSecondary)
             .multilineTextAlignment(.center)
-          CCPrimaryButton("Start setup")
+          CCPrimaryButton("Start setup", action: onStartSetup)
             .accessibilityIdentifier("today.startSetup")
         }
         .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("today.emptyState")
       } else {
         CCCalorieRing(
           consumed: model.consumedKcal,
@@ -72,6 +105,10 @@ struct TodayView: View {
           dayProgress: model.dayProgress
         )
         .accessibilityIdentifier("today.ring")
+        Text("of \(goalSubheadText) kcal goal")
+          .ccFont(.subhead)
+          .foregroundStyle(Color.ccTextSecondary)
+          .edSafeHidden()
       }
     }
     .frame(maxWidth: .infinity)
@@ -86,10 +123,48 @@ struct TodayView: View {
 
   private func macroSection(_ model: TodayModel) -> some View {
     VStack(spacing: CCSpace.md) {
-      macroRow(.protein, model: model)
-      macroRow(.carbs, model: model)
-      macroRow(.fat, model: model)
-      macroRow(.fiber, model: model)
+      HStack(spacing: CCSpace.sm) {
+        CCMacroMiniCard(
+          macro: .protein,
+          value: model.consumedMacro(.protein),
+          goal: model.goalMacro(.protein)
+        )
+        CCMacroMiniCard(
+          macro: .carbs,
+          value: model.consumedMacro(.carbs),
+          goal: model.goalMacro(.carbs)
+        )
+        CCMacroMiniCard(
+          macro: .fat,
+          value: model.consumedMacro(.fat),
+          goal: model.goalMacro(.fat)
+        )
+      }
+      fiberRow(model)
+    }
+  }
+
+  private func fiberRow(_ model: TodayModel) -> some View {
+    VStack(spacing: CCSpace.xs) {
+      HStack(spacing: CCSpace.xs) {
+        Circle()
+          .fill(Color.ccMacroFiber)
+          .frame(width: 8, height: 8)
+          .accessibilityHidden(true)
+        Text("Fiber")
+          .ccFont(.caption)
+          .foregroundStyle(Color.ccTextSecondary)
+        Spacer()
+        Text("\(Int(model.consumedMacro(.fiber).rounded()))/\(Int(model.goalMacro(.fiber).rounded()))g")
+          .font(.system(size: 15, weight: .semibold))
+          .monospacedDigit()
+          .foregroundStyle(Color.ccTextPrimary)
+      }
+      CCMacroBar(
+        macro: .fiber,
+        value: model.consumedMacro(.fiber),
+        goal: model.goalMacro(.fiber)
+      )
     }
     .padding(CCSpace.md)
     .background(Color.ccCard)
@@ -98,30 +173,82 @@ struct TodayView: View {
       RoundedRectangle(cornerRadius: CCRadius.lg)
         .strokeBorder(Color.ccBorder, lineWidth: 1)
     )
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(
+      "Fiber \(Int(model.consumedMacro(.fiber).rounded())) of \(Int(model.goalMacro(.fiber).rounded())) grams"
+    )
   }
 
-  private func macroRow(_ macro: CCMacroBar.Macro, model: TodayModel) -> some View {
-    VStack(spacing: CCSpace.xs) {
-      HStack(spacing: CCSpace.xs) {
-        Circle()
-          .fill(macroColor(macro))
-          .frame(width: 8, height: 8)
-          .accessibilityHidden(true)
-        Text(macroLabel(macro))
-          .ccFont(.caption)
-          .foregroundStyle(Color.ccTextSecondary)
-        Spacer()
-        Text("\(Int(model.consumedMacro(macro).rounded()))/\(Int(model.goalMacro(macro).rounded()))g")
-          .font(.system(size: 15, weight: .semibold))
-          .monospacedDigit()
-          .foregroundStyle(Color.ccTextPrimary)
-      }
-      CCMacroBar(
-        macro: macro,
-        value: model.consumedMacro(macro),
-        goal: model.goalMacro(macro)
+  // DS Today: Health Score (success tile) + Steps (Apple Health tile) side by side.
+  // Both stay "—" this phase: no score engine; steps data arrives in Phase 4.
+  private var scoreAndStepsCards: some View {
+    HStack(spacing: CCSpace.sm) {
+      statCard(
+        identifier: "today.healthScore",
+        tile: AnyView(
+          Text("—")
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundStyle(Color.ccSuccessInk)
+        ),
+        tileTint: Color.ccSuccess.opacity(0.1),
+        caption: "Health Score"
+      )
+      .edSafeHidden()
+      statCard(
+        identifier: "today.stepsCard",
+        tile: AnyView(
+          Image(systemName: "figure.walk")
+            .font(.system(size: 20))
+            .foregroundStyle(Color.ccAppleHealth)
+        ),
+        tileTint: Color.ccAppleHealth.opacity(0.1),
+        caption: "Steps"
       )
     }
+  }
+
+  private func statCard(
+    identifier: String,
+    tile: AnyView,
+    tileTint: Color,
+    caption: String
+  ) -> some View {
+    HStack(spacing: CCSpace.md) {
+      RoundedRectangle(cornerRadius: CCRadius.md)
+        .fill(tileTint)
+        .frame(width: 44, height: 44)
+        .overlay(tile)
+        .accessibilityHidden(true)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(caption)
+          .ccFont(.footnote)
+          .foregroundStyle(Color.ccTextSecondary)
+        Text("—")
+          .ccFont(.headline)
+          .foregroundStyle(Color.ccTextPrimary)
+      }
+    }
+    .padding(CCSpace.md)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(Color.ccCard)
+    .clipShape(RoundedRectangle(cornerRadius: CCRadius.lg))
+    .overlay(
+      RoundedRectangle(cornerRadius: CCRadius.lg)
+        .strokeBorder(Color.ccBorder, lineWidth: 1)
+    )
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(caption)
+    .accessibilityIdentifier(identifier)
+  }
+
+  private func streakCard(_ model: TodayModel) -> some View {
+    CCStreakCard(
+      emoji: "🔥",
+      streak: model.streakState?.currentStreak ?? 0,
+      title: "Keep it up!",
+      freezesLeft: model.streakState?.freezesLeft ?? 0
+    )
+    .accessibilityIdentifier("today.streakCard")
   }
 
   private func recentMeals(_ model: TodayModel) -> some View {
@@ -142,24 +269,6 @@ struct TodayView: View {
       }
       .accessibilityElement(children: .contain)
       .accessibilityIdentifier("today.recentMeals")
-    }
-  }
-
-  private func macroColor(_ macro: CCMacroBar.Macro) -> Color {
-    switch macro {
-    case .protein: Color.ccMacroProtein
-    case .carbs: Color.ccMacroCarbs
-    case .fat: Color.ccMacroFat
-    case .fiber: Color.ccMacroFiber
-    }
-  }
-
-  private func macroLabel(_ macro: CCMacroBar.Macro) -> String {
-    switch macro {
-    case .protein: "Protein"
-    case .carbs: "Carbs"
-    case .fat: "Fat"
-    case .fiber: "Fiber"
     }
   }
 }

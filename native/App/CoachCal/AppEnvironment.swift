@@ -93,21 +93,27 @@ final class AppEnvironment {
     catalogRepository = CatalogRepository(database: database)
     trackingRepository = TrackingRepository(database: database)
     engagementRepository = EngagementRepository(database: database)
-    seedDataManager = SeedDataManager(database: database)
     api = FixtureApiClient(bundle: .main)
     animationsDisabled = arguments.disableAnimations
     isOffline = arguments.forceOffline
+    let clock: @Sendable () -> Date
     if let fixedClock = arguments.fixedClock {
-      now = { fixedClock }
+      clock = { fixedClock }
     } else {
-      now = { Date() }
+      clock = { Date() }
     }
+    now = clock
+    // Seeding must honor the fixed clock so UI-test seeds align with model "today".
+    seedDataManager = SeedDataManager(database: database, now: clock)
     if arguments.edSafe {
       edSafeMode = true
     } else {
       edSafeMode = UserDefaults.standard.bool(forKey: Self.edSafeDefaultsKey)
     }
-    if !arguments.freshStart {
+    // --ccFreshStart alone skips seeding (onboarding route); combined with
+    // --ccSeedNoTargets it must still seed the targetless persona so the app
+    // lands on Today's empty state even after a prior seeded run.
+    if !arguments.freshStart || arguments.seedNoTargets {
       Task { await seedAndRoute(seedTargets: !arguments.seedNoTargets) }
     } else {
       isReady = true

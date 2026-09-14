@@ -25,9 +25,12 @@ final class TodayModel {
   struct Snapshot: Equatable, Sendable {
     var target: UserTarget?
     var meals: [MealRow] = []
+    var waterMl: Int = 0
+    var streak: StreakState?
   }
 
   private(set) var snapshot = Snapshot()
+  private(set) var selectedDay: Date
 
   private let pool: DatabasePool
   private let userId: UUID
@@ -43,6 +46,7 @@ final class TodayModel {
     self.pool = pool
     self.userId = userId
     self.now = now
+    self.selectedDay = now()
     startObservation()
   }
 
@@ -64,6 +68,26 @@ final class TodayModel {
 
   var goalKcal: Int? {
     snapshot.target?.dailyKcal
+  }
+
+  var waterMl: Int {
+    snapshot.waterMl
+  }
+
+  var waterGlasses: Int {
+    snapshot.target?.waterGlasses ?? 8
+  }
+
+  var streakState: StreakState? {
+    snapshot.streak
+  }
+
+  var weekStripDays: [Date] {
+    let calendar = Calendar.current
+    let anchor = now()
+    return (0..<7).reversed().compactMap {
+      calendar.date(byAdding: .day, value: -$0, to: anchor)
+    }
   }
 
   func consumedMacro(_ macro: CCMacroBar.Macro) -> Double {
@@ -89,9 +113,15 @@ final class TodayModel {
     }
   }
 
+  func selectDay(_ date: Date) {
+    guard !Calendar.current.isDate(date, inSameDayAs: selectedDay) else { return }
+    selectedDay = date
+    startObservation()
+  }
 
   private func startObservation() {
-    let day = Self.dayString(now())
+    observationTask?.cancel()
+    let day = Self.dayString(selectedDay)
     let userId = self.userId
     let observation = ValueObservation.tracking { database -> TodayModel.Snapshot in
       let target = try UserTarget
@@ -129,7 +159,13 @@ final class TodayModel {
           loggedAt: row["created_at"]
         )
       }
-      return Snapshot(target: target, meals: meals)
+      let waterMl = try Int.fetchOne(
+        database,
+        sql: "SELECT COALESCE(SUM(ml), 0) FROM water_logs WHERE day = ?",
+        arguments: [day]
+      ) ?? 0
+      let streak = try StreakState.fetchOne(database)
+      return Snapshot(target: target, meals: meals, waterMl: waterMl, streak: streak)
     }
 
     observationTask = Task { [weak self] in

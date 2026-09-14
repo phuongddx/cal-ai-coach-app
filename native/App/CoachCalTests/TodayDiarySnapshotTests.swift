@@ -8,16 +8,18 @@ import UIKit
 @testable import CoachCal
 @testable import CoachCalDesignSystem
 
+// Shared snapshot suite for this plan's Today + Diary surfaces.
+// Replaces 03-02's thin TodaySnapshotTests baselines with the full build-out.
 @MainActor
 @Suite(.snapshots(record: .failed))
-struct TodaySnapshotTests {
+struct TodayDiarySnapshotTests {
   private nonisolated static let fixedClock = ISO8601DateFormatter().date(
     from: "2026-09-12T09:00:00Z"
   )!
 
   private func makeSeededModel() async throws -> TodayModel {
     let directory = FileManager.default.temporaryDirectory
-      .appending(component: "today-snapshots-\(UUID().uuidString)")
+      .appending(component: "today-diary-snapshots-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     let pool = try Database.makePool(
       at: directory.appending(component: "coach-cal.sqlite").path(percentEncoded: false)
@@ -32,11 +34,14 @@ struct TodaySnapshotTests {
     )
     // Let the GRDB async-sequence observation deliver the first snapshot.
     for _ in 0..<100 {
-      if model.goalKcal != nil, !model.snapshot.meals.isEmpty { break }
+      if model.goalKcal != nil, !model.snapshot.meals.isEmpty, model.streakState != nil {
+        break
+      }
       try await Task.sleep(nanoseconds: 20_000_000)
     }
     #expect(model.goalKcal != nil)
     #expect(!model.snapshot.meals.isEmpty)
+    #expect(model.streakState != nil)
     return model
   }
 

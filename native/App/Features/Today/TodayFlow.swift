@@ -4,11 +4,16 @@ import SwiftUI
 struct TodayFlow: View {
   @Environment(AppEnvironment.self) private var environment
   @State private var model: TodayModel?
+  @State private var isOnboardingPresented = false
 
   var body: some View {
     NavigationStack {
       if let model {
-        TodayView(model: model, isOffline: environment.isOffline)
+        TodayView(
+          model: model,
+          isOffline: environment.isOffline,
+          onStartSetup: { isOnboardingPresented = true }
+        )
       } else {
         Color.ccBackground.overlay(ProgressView())
       }
@@ -20,6 +25,14 @@ struct TodayFlow: View {
           userId: AppEnvironment.demoUserId,
           now: environment.now
         )
+      }
+    }
+    .fullScreenCover(isPresented: $isOnboardingPresented) {
+      OnboardingFlowRoute()
+    }
+    .onChange(of: environment.hasTargets) { _, hasTargets in
+      if hasTargets {
+        isOnboardingPresented = false
       }
     }
   }
