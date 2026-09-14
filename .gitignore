@@ -53,3 +53,6 @@ yarn-error.*
 .env.*
 # Secrets manifest template — names and placeholders only
 !.env.example
+
+# SwiftPM isolated scratch builds (swift test --scratch-path .build-XXXX)
+.build-*/
