@@ -1,0 +1,11 @@
+{
+  "error": {
+    "code": "FREE_LIMIT_REACHED",
+    "entitlement": {
+      "tier": "free",
+      "scansUsed": 3,
+      "scanLimit": 3,
+      "windowResetAt": "2026-09-21T10:00:00Z"
+    }
+  }
+}
