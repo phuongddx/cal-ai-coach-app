@@ -129,6 +129,38 @@ final class AppEnvironment {
     scanRoute = ScanRoute(mode: mode, mealSlot: mealSlot)
   }
 
+  // The Settings toggle's only write path. Feature files must never spell the
+  // persisted property (GATE-1 greps the dotted name under App/Features), so
+  // the binding is manufactured here, beside the single persistence didSet.
+  var edSafeToggle: Binding<Bool> {
+    Binding(
+      get: { [weak self] in self?.edSafeMode ?? false },
+      set: { [weak self] edSafeMode in self?.edSafeMode = edSafeMode }
+    )
+  }
+
+  // T-P07-04: Phase 3 delete-account is a local reset — one transaction wipes
+  // every app table so the session and the next launch are honestly empty and
+  // route back to onboarding. The cloud cascade is a Phase 4 obligation.
+  func performLocalAccountReset() async {
+    UserDefaults.standard.removeObject(forKey: Self.edSafeDefaultsKey)
+    edSafeMode = false
+    try? await database.write { database in
+      let tables = try String.fetchAll(
+        database,
+        sql: """
+          SELECT name FROM sqlite_master
+          WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name != 'grdb_migrations'
+          """
+      )
+      for table in tables {
+        try database.execute(sql: "DELETE FROM \(table)")
+      }
+    }
+    hasTargets = false
+    onboardingPending = false
+  }
+
   // Onboarding saveTarget handoff: flips RootView routing to MainShell.
   func completeOnboarding() {
     hasTargets = true

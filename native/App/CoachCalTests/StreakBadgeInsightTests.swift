@@ -116,10 +116,17 @@ nonisolated final class StreakBadgeInsightTests: XCTestCase {
     XCTAssertEqual(coach.targetKcal, 2150)
 
     // Visible stats (non-ED-Safe): 100% on target, habit encouragement.
-    let visible = WeeklyReviewCard.visibleStats(coach.weekStats, edSafeMode: false)
+    // (Pure core lives in the DS component; the feature holds no policy branch.)
+    let visible = CCWeeklyReviewStats.visibleStats(
+      daysLogged: coach.weekStats.daysLogged,
+      daysOnTarget: coach.weekStats.daysOnTarget,
+      weeksAllLogged: coach.weekStats.weeksAllLogged,
+      kgThisWeek: coach.weekStats.kgThisWeek,
+      edSafeMode: false
+    )
     XCTAssertTrue(visible.contains { $0.label == "% on target" && $0.value == "100%" })
     XCTAssertTrue(
-      visible.contains { $0.label == "kg this week" && $0.value == WeeklyReviewCard.kgValue(expectedKgDelta) }
+      visible.contains { $0.label == "kg this week" && $0.value == CCWeeklyReviewStats.kgValue(expectedKgDelta) }
     )
     XCTAssertEqual(
       WeeklyReviewCard.encouragement(daysLogged: 7),
@@ -132,13 +139,25 @@ nonisolated final class StreakBadgeInsightTests: XCTestCase {
   func testEdSafeSwapsKcalDerivedStatsForWeeksStat() async throws {
     let (coach, _, _) = try await makeCoachedFixtures()
 
-    let normal = WeeklyReviewCard.visibleStats(coach.weekStats, edSafeMode: false)
+    let normal = CCWeeklyReviewStats.visibleStats(
+      daysLogged: coach.weekStats.daysLogged,
+      daysOnTarget: coach.weekStats.daysOnTarget,
+      weeksAllLogged: coach.weekStats.weeksAllLogged,
+      kgThisWeek: coach.weekStats.kgThisWeek,
+      edSafeMode: false
+    )
     XCTAssertTrue(normal.contains { $0.label == "Days logged" })
     XCTAssertTrue(normal.contains { $0.label == "% on target" })
     XCTAssertTrue(normal.contains { $0.label == "kg this week" })
     XCTAssertFalse(normal.contains { $0.label == "Weeks with all meals logged" })
 
-    let edSafe = WeeklyReviewCard.visibleStats(coach.weekStats, edSafeMode: true)
+    let edSafe = CCWeeklyReviewStats.visibleStats(
+      daysLogged: coach.weekStats.daysLogged,
+      daysOnTarget: coach.weekStats.daysOnTarget,
+      weeksAllLogged: coach.weekStats.weeksAllLogged,
+      kgThisWeek: coach.weekStats.kgThisWeek,
+      edSafeMode: true
+    )
     XCTAssertTrue(edSafe.contains { $0.label == "Days logged" })
     XCTAssertTrue(
       edSafe.contains { $0.label == "Weeks with all meals logged" && $0.value == "1" }
