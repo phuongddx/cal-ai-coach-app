@@ -28,6 +28,12 @@ packages:
   SnapshotTesting:
     url: https://github.com/pointfreeco/swift-snapshot-testing
     from: "1.19.4"
+  Sentry:
+    url: https://github.com/getsentry/sentry-cocoa
+    exactVersion: 9.28.0
+  PostHog:
+    url: https://github.com/PostHog/posthog-ios
+    exactVersion: 3.75.2
 targets:
   CoachCal:
     type: application
@@ -44,6 +50,8 @@ targets:
               - coachcal
         SUPABASE_URL: $(SUPABASE_URL)
         SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
+        SENTRY_DSN: $(SENTRY_DSN)
+        POSTHOG_API_KEY: $(POSTHOG_API_KEY)
         CFBundleDisplayName: CoachCal
         NSCameraUsageDescription: CoachCal uses the camera to photograph your meals so CoachCal can estimate calories and macros.
         ITSAppUsesNonExemptEncryption: false
@@ -56,6 +64,8 @@ targets:
       - package: CoachCalPersistence
       - package: CoachCalNetworking
       - package: CoachCalSync
+      - package: Sentry
+      - package: PostHog
       - target: CoachCalWidget
     settings:
       base:
@@ -67,6 +77,8 @@ targets:
         PROVISIONING_PROFILE_SPECIFIER: "CoachCal AppStore"
         SUPABASE_URL: "$(COACHCAL_SUPABASE_URL:http://127.0.0.1:54321)"
         SUPABASE_ANON_KEY: "$(COACHCAL_SUPABASE_ANON_KEY)"
+        SENTRY_DSN: "$(COACHCAL_SENTRY_DSN:)"
+        POSTHOG_API_KEY: "$(COACHCAL_POSTHOG_API_KEY:)"
   CoachCalTests:
     type: bundle.unit-test
     platform: iOS

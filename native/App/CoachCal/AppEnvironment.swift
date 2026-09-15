@@ -4,8 +4,11 @@ import CoachCalPersistence
 import CoachCalSync
 import Foundation
 import GRDB
+import MetricKit
 import Network
 import Observation
+import PostHog
+import Sentry
 import Supabase
 import SwiftUI
 import WidgetKit
@@ -110,6 +113,13 @@ final class AppEnvironment {
   let accountDeletionTransport: AccountDeletionTransport
   let syncEngine: SyncEngine
   let requiresSignIn: Bool
+  // T-P46-01/T-P46-02: Sentry/PostHog/MetricKit composition root. `false`
+  // means "no operator-supplied DSN/API key this session" — every
+  // subsequent call guards on these flags so a fresh checkout without live
+  // credentials never crashes (RESEARCH "Missing dependencies with fallback").
+  private let sentryConfigured: Bool
+  private let postHogConfigured: Bool
+  private var metricKitSubscriber: MetricKitSubscriber?
   // Reactive mirror of authSessionStore's session — @Observable tracks stored
   // properties on THIS class, not values reached through a plain struct, so
   // RootView's sign-in gate reads this instead of authSessionStore.currentSession.
@@ -130,6 +140,13 @@ final class AppEnvironment {
 
   init() {
     let arguments = DebugLaunchArguments.parse()
+    // Started as early as possible so even a startup crash is captured; both
+    // no-op safely (return false) when no operator-supplied credential is
+    // configured this session — never crashes a fresh checkout.
+    let sentryOK = Self.configureSentry()
+    let postHogOK = Self.configurePostHog()
+    sentryConfigured = sentryOK
+    postHogConfigured = postHogOK
     database = PersistenceBootstrap.shared.database
     diaryEntryRepository = DiaryEntryRepository(database: database)
     targetRepository = TargetRepository(database: database)
@@ -201,6 +218,20 @@ final class AppEnvironment {
     } else {
       startOfflineMonitor()
     }
+    let metricKitSubscriber = MetricKitSubscriber(
+      onMetricPayloads: { payloads in
+        AppEnvironment.reportMetricKitMetrics(
+          count: payloads.count, sentryConfigured: sentryOK, postHogConfigured: postHogOK
+        )
+      },
+      onDiagnosticPayloads: { payloads in
+        AppEnvironment.reportMetricKitDiagnostics(
+          payloads, sentryConfigured: sentryOK, postHogConfigured: postHogOK
+        )
+      }
+    )
+    MXMetricManager.shared.add(metricKitSubscriber)
+    self.metricKitSubscriber = metricKitSubscriber
     foregroundTrigger?.start()
     notificationScheduler = NotificationScheduler(
       mealsLoggedToday: { [weak self] in
@@ -396,5 +427,134 @@ final class AppEnvironment {
     }
     monitor.start(queue: DispatchQueue(label: "com.nextlabs.coachcal.pathmonitor"))
     offlineMonitor = monitor
+  }
+
+  // MARK: - Sentry / PostHog / MetricKit (T-P46-01, T-P46-02, T-P46-SC)
+  //
+  // Allow-list: only these event names/properties may ever leave the device —
+  // app lifecycle (PostHog's own captureApplicationLifecycleEvents) and the
+  // metrickit_* counts below. Nothing here is ever a photo, a HealthKit- or
+  // scan-derived value; feature code must never call Sentry/PostHog directly
+  // (grep-gated: git grep -riE "Sentry|PostHog" -- Modules App/Features/Health
+  // App/Features/Scan | grep -v Tests must report nothing outside this file).
+
+  private static func configureSentry() -> Bool {
+    guard let dsn = Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String,
+      !dsn.isEmpty
+    else {
+      return false
+    }
+    SentrySDK.start { options in
+      options.dsn = dsn
+      options.tracesSampleRate = 0.2
+      // T-P46-01: a screenshot or on-screen view hierarchy could show a food
+      // photo or a HealthKit-derived value — never attach either.
+      options.attachScreenshot = false
+      options.attachViewHierarchy = false
+      options.beforeSend = { event in
+        event.breadcrumbs = event.breadcrumbs?.filter {
+          Self.isAllowListedText($0.message) && Self.isAllowListedText($0.category)
+        }
+        event.extra = event.extra?.filter { Self.isAllowListedKey($0.key) }
+        event.tags = event.tags?.filter { Self.isAllowListedKey($0.key) }
+        return event
+      }
+    }
+    return true
+  }
+
+  private static func configurePostHog() -> Bool {
+    guard let apiKey = Bundle.main.object(forInfoDictionaryKey: "POSTHOG_API_KEY") as? String,
+      !apiKey.isEmpty
+    else {
+      return false
+    }
+    let config = PostHogConfig(apiKey: apiKey)
+    // T-P46-01: every autocapture/session-replay surface is off — only the
+    // explicit metrickit_* events below (and PostHog's own app-lifecycle
+    // events) ever leave the device; setBeforeSend is a defense-in-depth
+    // strip of any photo/health-shaped property.
+    config.captureScreenViews = false
+    config.captureElementInteractions = false
+    config.sessionReplay = false
+    config.captureApplicationLifecycleEvents = true
+    config.setBeforeSend { event in
+      event.properties = event.properties.filter { Self.isAllowListedKey($0.key) }
+      return event
+    }
+    PostHogSDK.shared.setup(config)
+    return true
+  }
+
+  private static let disallowedPayloadFragments = [
+    "photo", "image", "scan", "health", "hk", "kcal", "calorie", "weight", "meal", "food", "diary",
+  ]
+
+  private static func isAllowListedKey(_ key: String) -> Bool {
+    let lowered = key.lowercased()
+    return !Self.disallowedPayloadFragments.contains { lowered.contains($0) }
+  }
+
+  private static func isAllowListedText(_ text: String?) -> Bool {
+    guard let text else { return true }
+    return Self.isAllowListedKey(text)
+  }
+
+  // T-P46-02: MetricKit payloads never leave the device raw — only counts,
+  // through the same allow-listed path as every other event. Never
+  // symbolicated, never the payload's own JSON/stack-trace representation.
+  nonisolated private static func reportMetricKitMetrics(
+    count: Int, sentryConfigured: Bool, postHogConfigured: Bool
+  ) {
+    if sentryConfigured {
+      SentrySDK.capture(message: "metrickit_metrics_received count=\(count)")
+    }
+    if postHogConfigured {
+      PostHogSDK.shared.capture("metrickit_metrics_received", properties: ["count": count])
+    }
+  }
+
+  nonisolated private static func reportMetricKitDiagnostics(
+    _ payloads: [MXDiagnosticPayload], sentryConfigured: Bool, postHogConfigured: Bool
+  ) {
+    let crashCount = payloads.reduce(0) { $0 + ($1.crashDiagnostics?.count ?? 0) }
+    let hangCount = payloads.reduce(0) { $0 + ($1.hangDiagnostics?.count ?? 0) }
+    if sentryConfigured {
+      SentrySDK.capture(
+        message:
+          "metrickit_diagnostics_received count=\(payloads.count) crash=\(crashCount) hang=\(hangCount)"
+      )
+    }
+    if postHogConfigured {
+      PostHogSDK.shared.capture(
+        "metrickit_diagnostics_received",
+        properties: ["count": payloads.count, "crash_count": crashCount, "hang_count": hangCount]
+      )
+    }
+  }
+}
+
+// MXMetricManagerSubscriber's ObjC declaration is `<NSObject>` — a plain
+// @Observable class can't satisfy that without inheriting NSObject, so this
+// tiny adapter is the standard bridge rather than retrofitting NSObject onto
+// the whole environment.
+private final class MetricKitSubscriber: NSObject, MXMetricManagerSubscriber {
+  private let onMetricPayloads: @Sendable ([MXMetricPayload]) -> Void
+  private let onDiagnosticPayloads: @Sendable ([MXDiagnosticPayload]) -> Void
+
+  init(
+    onMetricPayloads: @escaping @Sendable ([MXMetricPayload]) -> Void,
+    onDiagnosticPayloads: @escaping @Sendable ([MXDiagnosticPayload]) -> Void
+  ) {
+    self.onMetricPayloads = onMetricPayloads
+    self.onDiagnosticPayloads = onDiagnosticPayloads
+  }
+
+  func didReceive(_ payloads: [MXMetricPayload]) {
+    onMetricPayloads(payloads)
+  }
+
+  func didReceive(_ payloads: [MXDiagnosticPayload]) {
+    onDiagnosticPayloads(payloads)
   }
 }
