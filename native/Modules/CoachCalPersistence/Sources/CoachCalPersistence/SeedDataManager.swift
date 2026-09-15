@@ -100,14 +100,20 @@ public struct SeedDataManager: Sendable {
         try row.insert(database)
       }
 
+      // Rail fixtures in the current payload shape (per-item kcal via
+      // KcalArithmetic) so the demo re-log exercises the same path as
+      // scan-saved meals — legacy-shaped payloads would re-log 0-kcal rows
+      // under a full-kcal toast.
+      let chickenItems = [SeededRailItem(name: "Chicken Rice Bowl", grams: 320, per100gKcal: 145)]
+      let oatsItems = [SeededRailItem(name: "Protein Oats", grams: 250, per100gKcal: 152)]
       let savedMeals: [SavedMeal] = [
         SavedMeal(
           id: UUID(),
           userId: user,
           name: "Chicken Rice Bowl",
           symbol: "fork.knife",
-          kcal: 464,
-          itemsJson: "[{\"name\":\"Chicken Rice Bowl\",\"grams\":320}]",
+          kcal: Self.railKcal(chickenItems),
+          itemsJson: Self.savedMealItemsJson(chickenItems),
           createdAt: current
         ),
         SavedMeal(
@@ -115,8 +121,8 @@ public struct SeedDataManager: Sendable {
           userId: user,
           name: "Protein Oats",
           symbol: nil,
-          kcal: 380,
-          itemsJson: "[{\"name\":\"Protein Oats\",\"grams\":250}]",
+          kcal: Self.railKcal(oatsItems),
+          itemsJson: Self.savedMealItemsJson(oatsItems),
           createdAt: current.addingTimeInterval(-600)
         ),
       ]
@@ -286,6 +292,38 @@ public struct SeedDataManager: Sendable {
   }
 
   static let demoUserId = UUID(uuidString: "DE000000-0000-4000-8000-000000000001")!
+
+  private struct SeededRailItem {
+    let name: String
+    let grams: Int
+    let per100gKcal: Int
+  }
+
+  private static func railKcal(_ items: [SeededRailItem]) -> Int {
+    items.reduce(0) { $0 + KcalArithmetic.mealKcal(per100gKcal: $1.per100gKcal, grams: $1.grams) }
+  }
+
+  // SavedMealItemPayload wire shape: [{name, grams, kcal}] — the per-item
+  // kcal lets 03-04's re-log write real rows instead of unresolved ones.
+  private struct SavedMealItemSeed: Codable {
+    let name: String
+    let grams: Int
+    let kcal: Int
+  }
+
+  private static func savedMealItemsJson(_ items: [SeededRailItem]) -> String {
+    let payload = items.map { item in
+      SavedMealItemSeed(
+        name: item.name,
+        grams: item.grams,
+        kcal: KcalArithmetic.mealKcal(per100gKcal: item.per100gKcal, grams: item.grams)
+      )
+    }
+    guard let data = try? JSONEncoder().encode(payload), let json = String(data: data, encoding: .utf8) else {
+      return "[]"
+    }
+    return json
+  }
 
   private struct SeededMeal {
     let slot: String

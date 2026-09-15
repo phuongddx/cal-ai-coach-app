@@ -122,6 +122,38 @@ struct SeedDataManagerTests {
     )
   }
 
+  // WR-10: seeded rail meals must ship the current payload shape so the
+  // re-log writes real per-item kcal rows, never 0-kcal rows under a
+  // full-kcal toast.
+  @Test
+  func seededSavedMealsEmitPerItemKcalPayload() async throws {
+    let seeded = try makeSeeded()
+    try await seeded.manager.ensureSeeded()
+
+    let meals = try await seeded.pool.read {
+      try SavedMeal.order(Column("created_at").asc).fetchAll($0)
+    }
+    #expect(meals.count == 2)
+
+    struct PayloadItem: Codable {
+      let name: String
+      let grams: Int
+      let kcal: Int
+    }
+
+    let chicken = try #require(meals.first { $0.name == "Chicken Rice Bowl" })
+    let chickenItems = try #require(JSONDecoder().decode([PayloadItem].self, from: Data(chicken.itemsJson.utf8)).first)
+    #expect(chickenItems.grams == 320)
+    #expect(chickenItems.kcal == KcalArithmetic.mealKcal(per100gKcal: 145, grams: 320))
+    #expect(chicken.kcal == chickenItems.kcal)
+
+    let oats = try #require(meals.first { $0.name == "Protein Oats" })
+    let oatsItems = try #require(JSONDecoder().decode([PayloadItem].self, from: Data(oats.itemsJson.utf8)).first)
+    #expect(oatsItems.grams == 250)
+    #expect(oatsItems.kcal == KcalArithmetic.mealKcal(per100gKcal: 152, grams: 250))
+    #expect(oats.kcal == oatsItems.kcal)
+  }
+
   @Test
   func secondEnsureSeededIsIdempotent() async throws {
     let seeded = try makeSeeded()

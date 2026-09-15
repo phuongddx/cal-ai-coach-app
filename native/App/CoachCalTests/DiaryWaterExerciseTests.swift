@@ -425,6 +425,38 @@ nonisolated final class DiaryWaterExerciseTests: XCTestCase {
     XCTAssertEqual(pendingOps, 3)
   }
 
+  // WR-10: re-logging a seeded rail meal must land real per-item kcal rows —
+  // seed → re-log round trip, diary row kcal == the card's advertised figure.
+  @MainActor
+  func testSeededRailRelogWritesKcalArithmeticRows() async throws {
+    try await seeder.ensureSeeded()
+    let catalog = CatalogRepository(database: pool)
+    let meals = try await catalog.savedMeals()
+    let chicken = try XCTUnwrap(meals.first { $0.name == "Chicken Rice Bowl" })
+    XCTAssertEqual(chicken.kcal, KcalArithmetic.mealKcal(per100gKcal: 145, grams: 320))
+
+    let entryIds = try await AddFoodSheetRoute.performRelog(
+      itemsJson: chicken.itemsJson,
+      mealName: chicken.name,
+      mealSlot: .lunch,
+      userId: AppEnvironment.demoUserId,
+      entries: DiaryEntryRepository(database: pool),
+      now: Date()
+    )
+    XCTAssertEqual(entryIds.count, 1)
+
+    let details = try await DiaryDetailRepository(database: pool)
+      .details(forDay: DiaryDayModel.dayString(Date()), mealSlot: "lunch")
+    XCTAssertEqual(details.map(\.title), ["Chicken Rice Bowl"])
+    XCTAssertEqual(
+      details.compactMap(\.kcal),
+      [464],
+      "the seeded rail re-log must write the KcalArithmetic kcal, not a 0-kcal row"
+    )
+    // The receipt and the diary row tell the same story.
+    XCTAssertEqual(details.first?.kcal, chicken.kcal)
+  }
+
   @MainActor
   func testCustomFoodSaveThenSearchFindsIt() async throws {
     try await seeder.ensureSeeded()
