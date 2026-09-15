@@ -122,6 +122,11 @@ struct DomainRepositoryTests {
     return formatter.string(from: date)
   }
 
+  private func localDayString(_ date: Date) -> String {
+    let parts = Calendar.current.dateComponents([.year, .month, .day], from: date)
+    return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+  }
+
   @Test
   func targetSaveReadRoundtrip() async throws {
     let repos = try makeRepositories()
@@ -275,12 +280,18 @@ struct DomainRepositoryTests {
     let liveEntryId = UUID()
     let deletedEntryId = UUID()
 
-    try await insertDiaryEntry(repos.pool, id: liveEntryId, createdAt: timestamp)
+    // Day grouping follows the local calendar; anchoring at local noon keeps
+    // the UTC-vs-local boundary out of the assertion for any host timezone.
+    var noon = Calendar.current.dateComponents([.year, .month, .day], from: timestamp)
+    noon.hour = 12
+    let createdAt = try #require(Calendar.current.date(from: noon))
+
+    try await insertDiaryEntry(repos.pool, id: liveEntryId, createdAt: createdAt)
     try await insertDiaryEntry(
       repos.pool,
       id: deletedEntryId,
-      createdAt: timestamp.addingTimeInterval(3_600),
-      deletedAt: timestamp.addingTimeInterval(3_600)
+      createdAt: createdAt.addingTimeInterval(3_600),
+      deletedAt: createdAt.addingTimeInterval(3_600)
     )
 
     let liveDetail = makeDetail(entryId: liveEntryId, mealSlot: "lunch")
@@ -288,7 +299,7 @@ struct DomainRepositoryTests {
     try await repos.detail.upsert(liveDetail)
     try await repos.detail.upsert(deletedDetail)
 
-    let day = dayString(timestamp)
+    let day = localDayString(createdAt)
     let lunch = try await repos.detail.details(forDay: day, mealSlot: "lunch")
     #expect(lunch == [liveDetail])
 

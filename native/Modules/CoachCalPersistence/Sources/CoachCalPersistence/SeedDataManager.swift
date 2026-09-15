@@ -1,3 +1,4 @@
+import CoachCalCore
 import Foundation
 import GRDB
 
@@ -390,9 +391,6 @@ public struct SeedDataManager: Sendable {
   }
 
   static func dayString(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    formatter.timeZone = TimeZone(identifier: "UTC")
-    return formatter.string(from: date)
+    DayKey.string(for: date)
   }
 }

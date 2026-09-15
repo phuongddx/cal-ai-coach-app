@@ -152,7 +152,7 @@ final class DiaryDayModel {
                  (e.accepted_op_id IS NOT NULL) AS is_synced
           FROM diary_entries e
           JOIN diary_entry_details d ON d.entry_id = e.id
-          WHERE e.deleted_at IS NULL AND e.user_id = ? AND date(e.created_at) = ?
+          WHERE e.deleted_at IS NULL AND e.user_id = ? AND date(e.created_at, 'localtime') = ?
           ORDER BY e.created_at
           """,
         arguments: [userId, dayString]
@@ -212,9 +212,6 @@ final class DiaryDayModel {
   }
 
   static func dayString(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    formatter.timeZone = TimeZone(identifier: "UTC")
-    return formatter.string(from: date)
+    DayKey.string(for: date)
   }
 }

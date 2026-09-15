@@ -21,7 +21,7 @@ public struct DiaryDetailRepository: Sendable {
         sql: """
           SELECT d.* FROM diary_entry_details d
           JOIN diary_entries e ON e.id = d.entry_id
-          WHERE e.deleted_at IS NULL AND date(e.created_at) = ? AND d.meal_slot = ?
+          WHERE e.deleted_at IS NULL AND date(e.created_at, 'localtime') = ? AND d.meal_slot = ?
           ORDER BY e.created_at
           """,
         arguments: [day, mealSlot]

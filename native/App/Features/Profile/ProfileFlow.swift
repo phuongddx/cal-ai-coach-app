@@ -1,3 +1,4 @@
+import CoachCalCore
 import CoachCalDesignSystem
 import CoachCalPersistence
 import GRDB
@@ -65,8 +66,8 @@ final class ProfileModel {
       let daysLogged = try Int.fetchOne(
         database,
         sql: """
-          SELECT COUNT(DISTINCT date(e.created_at)) FROM diary_entries e
-          WHERE e.deleted_at IS NULL AND e.user_id = ? AND date(e.created_at) >= ?
+          SELECT COUNT(DISTINCT date(e.created_at, 'localtime')) FROM diary_entries e
+          WHERE e.deleted_at IS NULL AND e.user_id = ? AND date(e.created_at, 'localtime') >= ?
           """,
         arguments: [userId, monthStart]
       ) ?? 0
@@ -91,8 +92,7 @@ final class ProfileModel {
   }
 
   static func dayString(_ date: Date) -> String {
-    let parts = Calendar.current.dateComponents([.year, .month, .day], from: date)
-    return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    DayKey.string(for: date)
   }
 }
 

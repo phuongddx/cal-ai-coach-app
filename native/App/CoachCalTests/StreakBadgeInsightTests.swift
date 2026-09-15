@@ -78,10 +78,10 @@ nonisolated final class StreakBadgeInsightTests: XCTestCase {
       let rows = try Row.fetchAll(
         database,
         sql: """
-          SELECT date(e.created_at) AS day, COALESCE(SUM(d.kcal), 0) AS kcal
+          SELECT date(e.created_at, 'localtime') AS day, COALESCE(SUM(d.kcal), 0) AS kcal
           FROM diary_entries e
           JOIN diary_entry_details d ON d.entry_id = e.id
-          WHERE e.deleted_at IS NULL AND date(e.created_at) >= ?
+          WHERE e.deleted_at IS NULL AND date(e.created_at, 'localtime') >= ?
           GROUP BY day
           """,
         arguments: [weekStart]

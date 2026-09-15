@@ -252,6 +252,82 @@ nonisolated final class DiaryWaterExerciseTests: XCTestCase {
     XCTAssertEqual(legacyDecoded.map(\.kcal), [nil], "legacy rows must log unresolved, not the aggregate")
   }
 
+  // CR-02: diary grouping follows the user's LOCAL calendar day at every
+  // edge — local midnight and the 19:00-local instant that UTC grouping
+  // flipped to the next day west of UTC — consistently with the Today surface.
+  @MainActor
+  func testDiaryDayBoundaryGroupsByLocalCalendarDay() async throws {
+    let calendar = Calendar.current
+    var noonComponents = calendar.dateComponents([.year, .month, .day], from: Date())
+    noonComponents.hour = 12
+    let noon = try XCTUnwrap(calendar.date(from: noonComponents))
+    let eveningBoundary = try XCTUnwrap(calendar.date(byAdding: .hour, value: 7, to: noon))
+    let lateNight = try XCTUnwrap(
+      calendar.date(byAdding: .minute, value: 11 * 60 + 30, to: noon)
+    )
+    let afterMidnight = try XCTUnwrap(
+      calendar.date(byAdding: .minute, value: 12 * 60 + 30, to: noon)
+    )
+
+    let rows: [(title: String, at: Date, slot: String)] = [
+      ("boundary-noon", noon, "lunch"),
+      ("boundary-evening", eveningBoundary, "lunch"),
+      ("boundary-latenight", lateNight, "lunch"),
+      ("boundary-nextday", afterMidnight, "breakfast"),
+    ]
+    for row in rows {
+      let entry = DiaryEntry(
+        id: UUID(),
+        userId: AppEnvironment.demoUserId,
+        displayText: row.title,
+        createdAt: row.at,
+        updatedAt: row.at,
+        deletedAt: nil,
+        serverVersion: 0,
+        acceptedOpId: nil,
+        serverUpdatedAt: row.at
+      )
+      try await pool.write { try entry.insert($0) }
+      try await DiaryDetailRepository(database: pool).upsert(
+        DiaryEntryDetail(
+          entryId: entry.id,
+          mealSlot: row.slot,
+          title: row.title,
+          grams: 100,
+          kcal: 100,
+          proteinG: nil,
+          carbsG: nil,
+          fatG: nil,
+          fiberG: nil,
+          confidence: nil,
+          hiddenFatLikely: false,
+          source: "manual",
+          unresolved: false,
+          scanId: nil
+        )
+      )
+    }
+
+    let details = DiaryDetailRepository(database: pool)
+    let localDay = DiaryDayModel.dayString(noon)
+    let sameDayRows = try await details.details(forDay: localDay, mealSlot: "lunch")
+    XCTAssertEqual(
+      sameDayRows.map(\.title),
+      ["boundary-noon", "boundary-evening", "boundary-latenight"],
+      "noon, 19:00 and 23:30 local share one local day even when their UTC days differ"
+    )
+    let nextDayRows = try await details.details(
+      forDay: DiaryDayModel.dayString(afterMidnight),
+      mealSlot: "breakfast"
+    )
+    XCTAssertEqual(nextDayRows.map(\.title), ["boundary-nextday"])
+
+    // Today (which selects days on the local calendar) shows the same set.
+    let model = makeTodayModel(now: { noon })
+    try await waitForToday(model) { $0.snapshot.meals.count == 3 }
+    XCTAssertTrue(model.snapshot.meals.contains { $0.title == "boundary-evening" })
+  }
+
   @MainActor
   func testCustomFoodSaveThenSearchFindsIt() async throws {
     try await seeder.ensureSeeded()

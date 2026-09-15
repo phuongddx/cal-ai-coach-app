@@ -131,10 +131,10 @@ final class ProgressModel {
       let kcalRows = try Row.fetchAll(
         database,
         sql: """
-          SELECT date(e.created_at) AS day, COALESCE(SUM(d.kcal), 0) AS kcal
+          SELECT date(e.created_at, 'localtime') AS day, COALESCE(SUM(d.kcal), 0) AS kcal
           FROM diary_entries e
           JOIN diary_entry_details d ON d.entry_id = e.id
-          WHERE e.deleted_at IS NULL AND e.user_id = ? AND date(e.created_at) >= ?
+          WHERE e.deleted_at IS NULL AND e.user_id = ? AND date(e.created_at, 'localtime') >= ?
           GROUP BY day
           """,
         arguments: [userId, weekStart]
@@ -155,8 +155,8 @@ final class ProgressModel {
         try String.fetchAll(
           database,
           sql: """
-            SELECT DISTINCT date(e.created_at) FROM diary_entries e
-            WHERE e.deleted_at IS NULL AND e.user_id = ? AND date(e.created_at) >= ?
+            SELECT DISTINCT date(e.created_at, 'localtime') FROM diary_entries e
+            WHERE e.deleted_at IS NULL AND e.user_id = ? AND date(e.created_at, 'localtime') >= ?
             """,
           arguments: [userId, monthStart]
         )
@@ -221,15 +221,16 @@ final class ProgressModel {
     }
   }
 
+  // Local calendar so day keys agree with the 'localtime' SQL grouping and
+  // the app's Today/week-strip convention.
   static var databaseCalendar: Calendar {
     var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = TimeZone(identifier: "UTC")!
+    calendar.timeZone = TimeZone.current
     return calendar
   }
 
   static func dayString(_ date: Date, calendar: Calendar) -> String {
-    let parts = calendar.dateComponents([.year, .month, .day], from: date)
-    return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    DayKey.string(for: date, calendar: calendar)
   }
 
   static func date(fromDay day: String) -> Date? {

@@ -425,10 +425,7 @@ final class ScanModel {
   }
 
   static func dayString(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    formatter.timeZone = TimeZone(identifier: "UTC")
-    return formatter.string(from: date)
+    DayKey.string(for: date)
   }
 
   #if DEBUG
