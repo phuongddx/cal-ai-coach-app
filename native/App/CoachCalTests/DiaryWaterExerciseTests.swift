@@ -329,6 +329,28 @@ nonisolated final class DiaryWaterExerciseTests: XCTestCase {
     XCTAssertTrue(model.snapshot.meals.contains { $0.title == "boundary-evening" })
   }
 
+  // WR-08: the coachcal://diary?date= deep link resolves to the LOCAL day the
+  // diary queries with — the old UTC-midnight parse opened the sheet on
+  // yesterday's local day for anyone west of UTC. The noon anchor also
+  // discriminates the parse itself in every timezone (UTC midnight never is
+  // local noon).
+  @MainActor
+  func testDiaryDeepLinkDateParsesToLocalCalendarDay() throws {
+    let parsed = try XCTUnwrap(
+      AppEnvironment.linkDate(from: URL(string: "coachcal://diary?date=2026-09-15")!)
+    )
+    XCTAssertEqual(DiaryDayModel.dayString(parsed), "2026-09-15")
+    XCTAssertEqual(DayKey.string(for: parsed), "2026-09-15")
+    XCTAssertEqual(
+      Calendar.current.component(.hour, from: parsed), 12,
+      "the parse must anchor at local noon, never UTC midnight"
+    )
+
+    // Malformed or absent day strings fall back to MainShell's today default.
+    XCTAssertNil(AppEnvironment.linkDate(from: URL(string: "coachcal://diary")!))
+    XCTAssertNil(AppEnvironment.linkDate(from: URL(string: "coachcal://diary?date=not-a-date")!))
+  }
+
   @MainActor
   func testCustomFoodSaveThenSearchFindsIt() async throws {
     try await seeder.ensureSeeded()

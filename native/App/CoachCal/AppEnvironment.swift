@@ -150,15 +150,23 @@ final class AppEnvironment {
     }
   }
 
-  private static func linkDate(from url: URL) -> Date? {
+  // Parsed on the LOCAL calendar (noon-anchored) — the diary consumer groups
+  // by date(e.created_at, 'localtime'), so a UTC-midnight parse opened the
+  // sheet a day back west of UTC. Internal for the hosted contract test.
+  static func linkDate(from url: URL) -> Date? {
     guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
       let raw = components.queryItems?.first(where: { $0.name == "date" })?.value
     else { return nil }
-    let formatter = DateFormatter()
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = TimeZone(identifier: "UTC")
-    formatter.dateFormat = "yyyy-MM-dd"
-    return formatter.date(from: raw)
+    let parts = raw.split(separator: "-")
+    guard parts.count == 3, let year = Int(parts[0]), let month = Int(parts[1]),
+      let day = Int(parts[2])
+    else { return nil }
+    var local = DateComponents()
+    local.year = year
+    local.month = month
+    local.day = day
+    local.hour = 12
+    return Calendar.current.date(from: local)
   }
 
   // The Settings toggle's only write path. Feature files must never spell the
