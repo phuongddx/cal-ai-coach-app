@@ -19,5 +19,6 @@ struct CoachCalCaloriesWidget: Widget {
 struct CoachCalWidgetBundle: WidgetBundle {
   var body: some Widget {
     CoachCalCaloriesWidget()
+    CoachCalLiveActivityWidget()
   }
 }

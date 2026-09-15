@@ -67,7 +67,8 @@ struct ScanFlowView: View {
       targets: environment.targetRepository,
       engagement: environment.engagementRepository,
       catalog: environment.catalogRepository,
-      notifyMutation: { environment.notifyLocalMutation() }
+      notifyMutation: { environment.notifyLocalMutation() },
+      edSafeMode: { environment.edSafeMode }
     )
     model = ScanModel(
       api: environment.api,

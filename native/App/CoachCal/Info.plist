@@ -39,6 +39,8 @@
 	<string>CoachCal reads your step count from Apple Health to show it on the Today screen and keep calorie estimates accurate.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>CoachCal saves burned-energy summaries to Apple Health only when you explicitly confirm them — never automatically from a scan.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>SUPABASE_ANON_KEY</key>
 	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>SUPABASE_URL</key>

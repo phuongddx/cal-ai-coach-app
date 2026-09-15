@@ -1,3 +1,4 @@
+@preconcurrency import ActivityKit
 import CoachCalCore
 import CoachCalNetworking
 import CoachCalPersistence
@@ -95,6 +96,12 @@ final class ScanModel {
     // Phase 4 dispatch seam — nil default keeps every existing test call site
     // unmodified; the real app wires environment.notifyLocalMutation() here.
     var notifyMutation: (@Sendable () -> Void)?
+    // ENG-04: read at save-time only, to carry ED-Safe state into the
+    // bounded Live Activity content — the widget process can't reach
+    // @Environment(\.edSafeMode) any more than the WidgetSnapshot's reader can
+    // (same Pitfall 6 constraint). nil default keeps every existing test call
+    // site unmodified.
+    var edSafeMode: (@Sendable () -> Bool)?
   }
 
   private(set) var phase: Phase = .capture
@@ -120,6 +127,9 @@ final class ScanModel {
   // both down. Handles stay MainActor-only; cancel is safe from any context.
   private var analyzeTask: Task<Void, Never>?
   private var workTask: Task<ScanResponse, Error>?
+  // ENG-04: bounded, app-driven Live Activity around this scan's save
+  // (Pattern 9, 04-RESEARCH.md) — never spans the app's full lifetime.
+  private var liveActivity: Activity<CoachCalLiveActivityAttributes>?
   private static let stepInterval: Double = 0.5
   // Past this, a real analyze-food call is very likely mid a Tier-2
   // escalation re-run rather than merely slow (must_haves: "<5s budget on
@@ -398,6 +408,7 @@ final class ScanModel {
       phase = .saved
       await persistSavedMeal()
       await loadSavedContext()
+      await startBoundedLiveActivity()
     } catch {
       // Local-first write failure keeps the review open so Save can retry
       // from a clean slate — the rolled-back transaction left nothing behind.
@@ -419,6 +430,7 @@ final class ScanModel {
     savedEntryIds = []
     savedKcal = nil
     phase = .review
+    await endLiveActivityImmediately()
     await loadSavedContext()
   }
 
@@ -465,6 +477,39 @@ final class ScanModel {
     let streak = try? await persistence.engagement.streakState()
     streakCount = streak?.currentStreak
     freezesLeft = streak?.freezesLeft ?? 0
+  }
+
+  // ENG-04: starts a bounded Live Activity right after a successful save,
+  // then schedules its own dismissal ~60s later — "bounded logging events"
+  // per ROADMAP, never a persistent all-day activity. undo() can still
+  // shorten that window via endLiveActivityImmediately(). The dismissal is
+  // a local timer (not ActivityKit's own dismissalPolicy: .after(...)) so
+  // end() is only ever called once, from endLiveActivityImmediately() —
+  // calling it inline here while self.liveActivity still aliases the same
+  // value is rejected by Swift 6's sending checks (two live MainActor
+  // references to a value being sent to @concurrent end()).
+  // try?: Live Activities can be disabled system-wide/per-app; a refusal
+  // here is silent, matching this feature's "optional" scope.
+  private func startBoundedLiveActivity() async {
+    let remaining = todayKcal.map { (goalKcal ?? 0) - $0 } ?? 0
+    let edSafe = persistence?.edSafeMode?() ?? false
+    guard
+      let activity = try? Activity<CoachCalLiveActivityAttributes>.request(
+        attributes: CoachCalLiveActivityAttributes(mealSlot: mealSlot.rawValue),
+        content: .init(state: .init(caloriesRemaining: remaining, edSafeMode: edSafe), staleDate: nil)
+      )
+    else { return }
+    liveActivity = activity
+    Task { [weak self] in
+      try? await Task.sleep(for: .seconds(60))
+      await self?.endLiveActivityImmediately()
+    }
+  }
+
+  private func endLiveActivityImmediately() async {
+    guard let activity = liveActivity else { return }
+    liveActivity = nil
+    await activity.end(nil, dismissalPolicy: .immediate)
   }
 
   static func dayString(_ date: Date) -> String {
