@@ -134,12 +134,27 @@ nonisolated final class SettingsTests: XCTestCase {
     }
     XCTAssertTrue(environment.hasTargets, "seeded store must hold targets before the reset")
 
+    // T-P45-03: prove the App Group snapshot is actually gone post-reset,
+    // not merely never written. CoachCalTests runs hosted inside CoachCal.app
+    // (TEST_HOST), so it shares the host app's App Group entitlement.
+    environment.widgetSnapshotStore.write(
+      WidgetSnapshot(caloriesRemaining: 500, edSafeMode: false, updatedAt: fixedNow)
+    )
+    XCTAssertNotNil(
+      environment.widgetSnapshotStore.read(),
+      "sanity: the App Group container must be reachable from this hosted test before asserting its absence"
+    )
+
     environment.edSafeToggle.wrappedValue = true
     await environment.performLocalAccountReset()
 
     XCTAssertFalse(environment.hasTargets)
     XCTAssertFalse(environment.onboardingPending, "RootView must fall through to onboarding")
     XCTAssertFalse(environment.edSafeMode, "the reset clears the policy too")
+    XCTAssertNil(
+      environment.widgetSnapshotStore.read(),
+      "widget snapshot must be gone immediately after account deletion/local reset"
+    )
     let remainingTargets = try await environment.database.read { database in
       try Int.fetchOne(database, sql: "SELECT COUNT(*) FROM user_targets")
     }

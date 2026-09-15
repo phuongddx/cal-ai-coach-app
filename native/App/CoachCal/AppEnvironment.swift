@@ -8,6 +8,7 @@ import Network
 import Observation
 import Supabase
 import SwiftUI
+import WidgetKit
 
 enum ScanMode: String, Equatable, Sendable {
   case photo
@@ -78,6 +79,9 @@ final class AppEnvironment {
   let engagementRepository: EngagementRepository
   let seedDataManager: SeedDataManager
   let healthKitService: HealthKitService
+  // ENG-04: App Group snapshot the widget extension reads; cleared on
+  // account reset (T-P45-03) so widget data never lingers past sign-out.
+  let widgetSnapshotStore = WidgetSnapshotStore()
   var notificationScheduler: NotificationScheduler
   private(set) var isReady = false
   private(set) var hasTargets = false
@@ -305,6 +309,7 @@ final class AppEnvironment {
         try database.execute(sql: "DELETE FROM \(table)")
       }
     }
+    widgetSnapshotStore.clear()
     hasTargets = false
     onboardingPending = false
   }
@@ -321,6 +326,27 @@ final class AppEnvironment {
   func notifyLocalMutation() {
     Task { await syncEngine.notifyLocalMutation() }
     Task { await notificationScheduler.refresh() }
+    Task { await refreshWidgetSnapshot() }
+  }
+
+  // ENG-04, 04-RESEARCH.md Pattern 7: recomputes calories-remaining from the
+  // same diary/target totals ScanModel.loadSavedContext uses, writes the App
+  // Group snapshot (carrying edSafeMode explicitly — Pitfall 6), and reloads
+  // the widget's timeline. Only ever called from notifyLocalMutation()'s
+  // existing foregrounded-write/foreground-trigger seam, never a background
+  // timer (Pitfall 5 — foreground/app-triggered reloads are budget-free).
+  private func refreshWidgetSnapshot() async {
+    let day = DayKey.string(for: now(), calendar: .current)
+    var total = 0
+    for slot in MealSlot.allCases {
+      let details = (try? await diaryDetailRepository.details(forDay: day, mealSlot: slot.rawValue)) ?? []
+      total += details.reduce(0) { $0 + ($1.kcal ?? 0) }
+    }
+    let goal = (try? await targetRepository.activeTarget(user: currentUserId))?.dailyKcal ?? 0
+    widgetSnapshotStore.write(
+      WidgetSnapshot(caloriesRemaining: goal - total, edSafeMode: edSafeMode, updatedAt: now())
+    )
+    WidgetCenter.shared.reloadTimelines(ofKind: "CoachCalCaloriesWidget")
   }
 
   // requiresSignIn's userId source: demoUserId is the single-tenant local

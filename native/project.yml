@@ -55,6 +55,7 @@ targets:
       - package: CoachCalPersistence
       - package: CoachCalNetworking
       - package: CoachCalSync
+      - target: CoachCalWidget
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.nextlabs.coachcal
@@ -93,6 +94,25 @@ targets:
         TEST_TARGET_NAME: CoachCal
         GENERATE_INFOPLIST_FILE: "YES"
         UI_TESTING: "YES"
+  CoachCalWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - CoachCalWidget
+    info:
+      path: CoachCalWidget/Info.plist
+      properties:
+        CFBundleDisplayName: CoachCal Widget
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    dependencies:
+      - package: CoachCalDesignSystem
+      - package: CoachCalCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nextlabs.coachcal.CoachCalWidget
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_ENTITLEMENTS: CoachCalWidget/CoachCalWidget.entitlements
 schemes:
   CoachCal:
     build:
