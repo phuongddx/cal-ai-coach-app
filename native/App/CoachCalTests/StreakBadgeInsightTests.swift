@@ -166,10 +166,14 @@ nonisolated final class StreakBadgeInsightTests: XCTestCase {
     XCTAssertFalse(edSafe.contains { $0.label == "kg this week" })
   }
 
-  // Greeting buckets at 08:00 / 14:00 / 21:00 under fixed clocks.
+  // Greeting buckets at 08:00 / 14:00 / 21:00 under fixed clocks. The
+  // greeting takes any calendar (the UI passes .current); this test pins UTC
+  // as its own fixture — databaseCalendar follows the local day convention
+  // since CR-02 and is not a UTC fixture anymore.
   @MainActor
   func testGreetingBucketsUnderFixedClocks() {
-    let utc = CoachModel.databaseCalendar
+    var utc = Calendar(identifier: .gregorian)
+    utc.timeZone = TimeZone(identifier: "UTC")!
     let formatter = ISO8601DateFormatter()
     XCTAssertEqual(
       CoachModel.greeting(for: formatter.date(from: "2026-09-15T08:00:00Z")!, calendar: utc),
