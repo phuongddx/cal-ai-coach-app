@@ -1,4 +1,5 @@
 import { FixtureProvider } from './fixture.ts';
+import { GeminiProvider } from './gemini.ts';
 
 /**
  * VLM provider seam (RESEARCH Pattern 1). No call site knows which provider is
@@ -33,7 +34,7 @@ export function getVlmProvider(): VlmProvider {
   if (providerOverride) return providerOverride;
   const name = Deno.env.get('VLM_PROVIDER') ?? 'fixture';
   if (name === 'gemini') {
-    throw new Error('VLM_PROVIDER=gemini is not implemented until Phase 4');
+    return new GeminiProvider();
   }
   return new FixtureProvider();
 }
