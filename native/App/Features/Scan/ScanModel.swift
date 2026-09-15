@@ -423,10 +423,10 @@ final class ScanModel {
         try DiaryEntry.fetchOne(database, key: entryId)
       }) {
         _ = try? await persistence.entries.recordTombstone(entry, now: now())
-        persistence.notifyMutation?()
       }
       try? await persistence.details.delete(entryId: entryId)
     }
+    persistence.notifyMutation?()
     savedEntryIds = []
     savedKcal = nil
     phase = .review
