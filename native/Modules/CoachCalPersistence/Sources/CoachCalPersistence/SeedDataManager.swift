@@ -68,11 +68,11 @@ public struct SeedDataManager: Sendable {
           mealSlot: meal.slot,
           title: meal.title,
           grams: meal.grams,
-          kcal: Self.kcal(per100gKcal: meal.per100gKcal, grams: meal.grams),
-          proteinG: Self.macro(meal.proteinPer100g, meal.grams),
-          carbsG: Self.macro(meal.carbsPer100g, meal.grams),
-          fatG: Self.macro(meal.fatPer100g, meal.grams),
-          fiberG: Self.macro(meal.fiberPer100g, meal.grams),
+          kcal: KcalArithmetic.mealKcal(per100gKcal: meal.per100gKcal, grams: meal.grams),
+          proteinG: KcalArithmetic.macroGrams(per100g: meal.proteinPer100g, grams: meal.grams),
+          carbsG: KcalArithmetic.macroGrams(per100g: meal.carbsPer100g, grams: meal.grams),
+          fatG: KcalArithmetic.macroGrams(per100g: meal.fatPer100g, grams: meal.grams),
+          fiberG: KcalArithmetic.macroGrams(per100g: meal.fiberPer100g, grams: meal.grams),
           confidence: meal.confidence,
           hiddenFatLikely: meal.hiddenFatLikely,
           source: "cache",
@@ -381,14 +381,6 @@ public struct SeedDataManager: Sendable {
     SeededFood(name: "Cappuccino, Whole Milk", brand: nil, per100gKcal: 45, proteinPer100g: 2.4, carbsPer100g: 3.6, fatPer100g: 2.4, fiberPer100g: 0, servingGrams: 240),
     SeededFood(name: "Dark Chocolate, 70%", brand: nil, per100gKcal: 598, proteinPer100g: 7.8, carbsPer100g: 46, fatPer100g: 43, fiberPer100g: 11, servingGrams: 25),
   ]
-
-  private static func kcal(per100gKcal: Int, grams: Int) -> Int {
-    Int((Double(per100gKcal) * Double(grams) / 100).rounded())
-  }
-
-  private static func macro(_ per100g: Double, _ grams: Int) -> Double {
-    (per100g * Double(grams) / 100 * 10).rounded() / 10
-  }
 
   static func dayString(_ date: Date) -> String {
     DayKey.string(for: date)

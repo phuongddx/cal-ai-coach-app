@@ -1,3 +1,4 @@
+import CoachCalCore
 import Foundation
 import GRDB
 import Testing
@@ -100,6 +101,25 @@ struct SeedDataManagerTests {
     }
     #expect(earned == 3)
     #expect(locked == 2)
+  }
+
+  @Test
+  func seededNutritionComesFromKcalArithmetic() async throws {
+    let seeded = try makeSeeded()
+    try await seeded.manager.ensureSeeded()
+
+    // WR-07: seed rows must derive nutrition through KcalArithmetic (the
+    // single formula source), not a private copy that can drift.
+    let details = try await seeded.pool.read { try DiaryEntryDetail.fetchAll($0) }
+    let byTitle = Dictionary(uniqueKeysWithValues: details.map { ($0.title, $0) })
+    #expect(byTitle["Oatmeal with Blueberries"]?.kcal == KcalArithmetic.mealKcal(per100gKcal: 150, grams: 250))
+    #expect(byTitle["Chicken Rice Bowl"]?.kcal == KcalArithmetic.mealKcal(per100gKcal: 145, grams: 320))
+    #expect(
+      byTitle["Chicken Rice Bowl"]?.proteinG == KcalArithmetic.macroGrams(per100g: 27, grams: 320)
+    )
+    #expect(
+      byTitle["Caesar Salad with Dressing"]?.fatG == KcalArithmetic.macroGrams(per100g: 12, grams: 280)
+    )
   }
 
   @Test
