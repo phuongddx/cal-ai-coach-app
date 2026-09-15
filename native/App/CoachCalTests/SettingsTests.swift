@@ -70,12 +70,44 @@ nonisolated final class SettingsTests: XCTestCase {
     XCTAssertEqual(SettingsCopy.edSafeAnnouncement(isOn: true), "ED-Safe Mode, on")
     XCTAssertEqual(SettingsCopy.edSafeAnnouncement(isOn: false), "ED-Safe Mode, off")
 
-    let view = SettingsDetailView(edSafeToggle: .constant(false), onDeleteAccount: {})
+    let view = SettingsDetailView(
+      edSafeToggle: .constant(false),
+      burnAddBackToggle: .constant(false),
+      onDeleteAccount: {}
+    )
     let toggle = try view.inspect().find(ViewType.Toggle.self)
     XCTAssertEqual(
       try toggle.accessibilityIdentifier(),
       "settings.edSafeToggle",
       "the announcement-bearing toggle must be the settings.edSafeToggle element"
+    )
+  }
+
+  // TRK-03: burn add-back defaults off and its Settings toggle flips the exact stored flag
+  // HealthKitService reads (single source of truth, no independently-drifting copy).
+  @MainActor
+  func testBurnAddBackTogglePersistsAndDefaultsOff() throws {
+    UserDefaults.standard.removeObject(forKey: HealthKitSettingsKey.burnAddBackEnabled)
+    defer { UserDefaults.standard.removeObject(forKey: HealthKitSettingsKey.burnAddBackEnabled) }
+
+    let environment = AppEnvironment()
+    XCTAssertFalse(environment.burnAddBackEnabled, "burn add-back must default off (ROADMAP TRK-03)")
+
+    let view = SettingsDetailView(
+      edSafeToggle: .constant(false),
+      burnAddBackToggle: .constant(false),
+      onDeleteAccount: {}
+    )
+    let toggle = try view.inspect().find(ViewType.Toggle.self) { toggle in
+      (try? toggle.accessibilityIdentifier()) == "settings.burnAddBackToggle"
+    }
+    XCTAssertEqual(try toggle.accessibilityIdentifier(), "settings.burnAddBackToggle")
+
+    environment.burnAddBackToggle.wrappedValue = true
+    XCTAssertTrue(environment.burnAddBackEnabled)
+    XCTAssertTrue(
+      environment.healthKitService.burnAddBackEnabled,
+      "HealthKitService must read the same stored flag the Settings toggle just flipped"
     )
   }
 
@@ -117,7 +149,11 @@ nonisolated final class SettingsTests: XCTestCase {
 
   @MainActor
   func testSubscriptionCardRendersDisplayOnly() throws {
-    let view = SettingsDetailView(edSafeToggle: .constant(true), onDeleteAccount: {})
+    let view = SettingsDetailView(
+      edSafeToggle: .constant(true),
+      burnAddBackToggle: .constant(false),
+      onDeleteAccount: {}
+    )
     let texts = try view.inspect().findAll(ViewType.Text.self).map { try $0.string() }
     XCTAssertTrue(texts.contains("Subscription"), "texts: \(texts)")
     XCTAssertTrue(texts.contains("Free"), "display-only plan state must be Free: \(texts)")

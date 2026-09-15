@@ -252,7 +252,11 @@ struct EdSafeSweepSnapshotTests {
   @Test func settingsMatrix() async throws {
     func settingsImage(edSafe: Bool, dark: Bool) -> UIImage {
       renderedImage(
-        SettingsDetailView(edSafeToggle: .constant(edSafe), onDeleteAccount: {}),
+        SettingsDetailView(
+          edSafeToggle: .constant(edSafe),
+          burnAddBackToggle: .constant(false),
+          onDeleteAccount: {}
+        ),
         edSafe: edSafe,
         dark: dark
       )

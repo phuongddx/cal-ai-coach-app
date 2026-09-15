@@ -15,6 +15,8 @@ enum SettingsCopy {
   static let exportNote = "Available soon"
   static let billingNote = "Billing arrives in a later update."
   static let versionCaption = "CoachCal v1.0.0 · Made with 💚"
+  static let burnAddBackTitle = "Add exercise calories back"
+  static let burnAddBackDescription = "Adds Apple Health workouts to today's calorie budget."
 
   // VoiceOver contract: the toggle announces its state, never a raw boolean.
   static func edSafeAnnouncement(isOn: Bool) -> String {
@@ -26,6 +28,7 @@ enum SettingsCopy {
 // environment; ProfileFlow injects the environment's single write path.
 struct SettingsDetailView: View {
   let edSafeToggle: Binding<Bool>
+  let burnAddBackToggle: Binding<Bool>
   let onDeleteAccount: () -> Void
 
   @State private var showsExportNote = false
@@ -36,6 +39,8 @@ struct SettingsDetailView: View {
       VStack(alignment: .leading, spacing: CCSpace.lg) {
         CCSectionHeader("Wellness")
         edSafeCard
+        CCSectionHeader("Health")
+        healthCard
         CCSectionHeader("Data & privacy")
         dataPrivacyGroup
         subscriptionCard
@@ -122,6 +127,30 @@ struct SettingsDetailView: View {
     )
     .accessibilityElement(children: .contain)
     .accessibilityIdentifier("settings.wellnessCard")
+  }
+
+  // TRK-03 burn add-back toggle: defaults off (HealthKitSettingsKey.burnAddBackEnabled);
+  // reuses CCSettingsRow's icon/label rhythm with a trailing Toggle in place of the chevron.
+  private var healthCard: some View {
+    CCSettingsGroup {
+      HStack(spacing: CCSpace.md) {
+        Image(systemName: "flame")
+          .font(.system(size: 20))
+          .foregroundStyle(Color.ccTextSecondary)
+          .frame(width: 24)
+          .accessibilityHidden(true)
+        Text(SettingsCopy.burnAddBackTitle)
+          .ccFont(.subhead)
+          .foregroundStyle(Color.ccTextPrimary)
+        Spacer()
+        Toggle("", isOn: burnAddBackToggle)
+          .labelsHidden()
+          .accessibilityIdentifier("settings.burnAddBackToggle")
+      }
+      .padding(.vertical, 14)
+      .padding(.horizontal, CCSpace.lg)
+    }
+    .accessibilityElement(children: .contain)
   }
 
   private var dataPrivacyGroup: some View {

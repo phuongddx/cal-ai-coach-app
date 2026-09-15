@@ -83,6 +83,11 @@ final class AppEnvironment {
   var edSafeMode: Bool {
     didSet { UserDefaults.standard.set(edSafeMode, forKey: Self.edSafeDefaultsKey) }
   }
+  var burnAddBackEnabled: Bool {
+    didSet {
+      UserDefaults.standard.set(burnAddBackEnabled, forKey: HealthKitSettingsKey.burnAddBackEnabled)
+    }
+  }
   private(set) var isOffline = false
   var scanRoute: ScanRoute?
   var pendingDeepLink: DeepLink?
@@ -165,6 +170,7 @@ final class AppEnvironment {
     } else {
       edSafeMode = UserDefaults.standard.bool(forKey: Self.edSafeDefaultsKey)
     }
+    burnAddBackEnabled = UserDefaults.standard.bool(forKey: HealthKitSettingsKey.burnAddBackEnabled)
     foregroundTrigger = ForegroundTrigger { [weak self] in
       Task { @MainActor in self?.notifyLocalMutation() }
     }
@@ -231,6 +237,14 @@ final class AppEnvironment {
     )
   }
 
+  // Same single-write-path convention as edSafeToggle (TRK-03 burn add-back).
+  var burnAddBackToggle: Binding<Bool> {
+    Binding(
+      get: { [weak self] in self?.burnAddBackEnabled ?? false },
+      set: { [weak self] enabled in self?.burnAddBackEnabled = enabled }
+    )
+  }
+
   // T-P07-04: Phase 3 delete-account is a local reset; Phase 4 adds the
   // server-side cascade (explicit table purge + admin.deleteUser) ahead of
   // it. A cascade failure still falls through to the local wipe — the
@@ -247,6 +261,8 @@ final class AppEnvironment {
     authSession = nil
     UserDefaults.standard.removeObject(forKey: Self.edSafeDefaultsKey)
     edSafeMode = false
+    UserDefaults.standard.removeObject(forKey: HealthKitSettingsKey.burnAddBackEnabled)
+    burnAddBackEnabled = false
     try? await database.write { database in
       let tables = try String.fetchAll(
         database,

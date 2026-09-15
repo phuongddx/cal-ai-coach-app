@@ -115,6 +115,7 @@ struct ProfileFlow: View {
         .navigationDestination(isPresented: $showsSettings) {
           SettingsDetailView(
             edSafeToggle: environment.edSafeToggle,
+            burnAddBackToggle: environment.burnAddBackToggle,
             onDeleteAccount: {
               Task { await environment.performLocalAccountReset() }
             }

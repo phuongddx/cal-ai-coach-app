@@ -16,6 +16,13 @@ protocol HealthStoring: AnyObject {
 
 extension HKHealthStore: HealthStoring {}
 
+// The single, project-wide switch for burn add-back's stored preference — both AppEnvironment's
+// Settings-toggle write path and HealthKitService's read path key off this same UserDefaults
+// entry (never two independently-drifting copies of the flag).
+enum HealthKitSettingsKey {
+  static let burnAddBackEnabled = "burnAddBackEnabled"
+}
+
 @MainActor
 protocol HealthKitService: AnyObject {
   /// JIT permission ask — only requests when `.notDetermined`, never throws, returns false on
@@ -29,6 +36,13 @@ protocol HealthKitService: AnyObject {
   /// Today's aggregated step count via a one-shot anchored object query over midnight-to-now; 0
   /// while unauthorized.
   func todayStepCount() async throws -> Int
+  /// The ONE seam that may call HKHealthStore.save for an energy sample — only a
+  /// ConfirmedEnergyEntry (unconstructible from any AI-scan type) type-checks as its argument.
+  func writeBurnedEnergy(_ entry: ConfirmedEnergyEntry) async throws
+  /// Whether the user opted into writing exercise calories back to their daily budget — read from
+  /// the same UserDefaults key the Settings toggle writes; defaults false (ROADMAP: OFF by
+  /// default).
+  var burnAddBackEnabled: Bool { get }
 }
 
 @MainActor
@@ -36,11 +50,16 @@ final class HKHealthKitService: HealthKitService {
   private let store: HealthStoring
   private let now: @Sendable () -> Date
   private let stepType = HKQuantityType(.stepCount)
+  private let energyType = HKQuantityType(.activeEnergyBurned)
   private var anchor: HKQueryAnchor?
 
   init(store: HealthStoring = HKHealthStore(), now: @escaping @Sendable () -> Date = { Date() }) {
     self.store = store
     self.now = now
+  }
+
+  var burnAddBackEnabled: Bool {
+    UserDefaults.standard.bool(forKey: HealthKitSettingsKey.burnAddBackEnabled)
   }
 
   func requestAuthorizationIfNeeded() async -> Bool {
@@ -88,6 +107,14 @@ final class HKHealthKitService: HealthKitService {
     return count
   }
 
+  func writeBurnedEnergy(_ entry: ConfirmedEnergyEntry) async throws {
+    let quantity = HKQuantity(unit: .kilocalorie(), doubleValue: Double(entry.kcal))
+    let sample = HKQuantitySample(
+      type: energyType, quantity: quantity, start: entry.confirmedAt, end: entry.confirmedAt
+    )
+    try await store.save(sample)
+  }
+
   // Pure aggregation, unit-tested directly against stub HKQuantitySample instances — no store, no
   // query execution, no Simulator/hardware dependency. `nonisolated` so it's callable from the
   // anchored query's off-actor results handler above.
@@ -105,4 +132,6 @@ final class NoOpHealthKitService: HealthKitService {
   func requestAuthorizationIfNeeded() async -> Bool { false }
   func enableBackgroundDeliveryIfAuthorized() async {}
   func todayStepCount() async throws -> Int { 0 }
+  func writeBurnedEnergy(_ entry: ConfirmedEnergyEntry) async throws {}
+  var burnAddBackEnabled: Bool { false }
 }
