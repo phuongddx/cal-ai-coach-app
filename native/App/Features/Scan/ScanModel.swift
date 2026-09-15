@@ -502,7 +502,16 @@ final class ScanModel {
     liveActivity = activity
     Task { [weak self] in
       try? await Task.sleep(for: .seconds(60))
-      await self?.endLiveActivityImmediately()
+      // Each activity ends itself on its own 60s timer, independent of
+      // whatever the shared `liveActivity` slot currently holds — a second
+      // scan saved before this timer fires must not orphan this activity
+      // (never ended) nor let this timer end the *newer* one instead. Only
+      // clear the shared slot when it still points at this activity, so an
+      // older activity's timer never clobbers a newer save's tracking.
+      if self?.liveActivity?.id == activity.id {
+        self?.liveActivity = nil
+      }
+      await activity.end(nil, dismissalPolicy: .immediate)
     }
   }
 
