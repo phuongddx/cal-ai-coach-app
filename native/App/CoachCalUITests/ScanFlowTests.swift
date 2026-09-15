@@ -66,17 +66,27 @@ nonisolated final class ScanFlowTests: XCTestCase {
   // toolbar Done dismisses the keyboard, then the CTA drives analyze → review.
   func testDescribeTextScanWalksToReview() {
     let app = XCUIApplication()
+    app.launchArguments = ["--ccDisableAnimations"]
     app.launch()
 
-    let fab = app.buttons["shell.fab"]
-    XCTAssertTrue(fab.waitForExistence(timeout: 15))
-    fab.tap()
+    // Describe enters through the Add Food sheet's tile (LOG-01 text leg),
+    // not the viewfinder mode pills.
+    let mealRow = app.descendants(matching: .any).matching(identifier: "today.foodRow").firstMatch
+    XCTAssertTrue(mealRow.waitForExistence(timeout: 15), "seeded Today row missing")
+    app.swipeUp()
+    mealRow.tap()
 
-    let describePill = app.buttons["scan.modePill.text"]
-    XCTAssertTrue(describePill.waitForExistence(timeout: 10), "Describe pill missing on the scan cover")
-    describePill.tap()
+    let addFood = app.buttons["diary.addFood.breakfast"]
+    XCTAssertTrue(addFood.waitForExistence(timeout: 10), "diary dashed Add food missing")
+    addFood.tap()
 
-    let field = app.textViews["scan.describeField"]
+    let describeTile = app.buttons["addfood.tile.describe"]
+    XCTAssertTrue(describeTile.waitForExistence(timeout: 10), "Describe tile missing on the Add Food sheet")
+    describeTile.tap()
+
+    // The vertical-axis SwiftUI TextField surfaces with a legacy TextField
+    // automation type; match by identifier on any element type.
+    let field = app.descendants(matching: .any).matching(identifier: "scan.describeField").firstMatch
     XCTAssertTrue(field.waitForExistence(timeout: 10), "text-mode sheet did not present the describe field")
     field.tap()
     field.typeText("Grilled chicken salad with olive oil dressing, around 300 grams")
