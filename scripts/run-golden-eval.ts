@@ -7,13 +7,30 @@
  *   P95_LATENCY_MAX_MS      = 1200  (fixture latency budget feeding the
  *                                   Phase 3 <5s UX math)
  *
+ * Both bounds are calibrated against the deterministic FIXTURE's fixed
+ * sentinel latencies (400-900ms) and fixed sentinel outputs (Pitfall 8) —
+ * they say nothing about the real Gemini model. getVlmProvider() (the
+ * existing seam) already routes to GeminiProvider when VLM_PROVIDER=gemini,
+ * so LIVE_MODE below only changes what this harness asserts/prints, never
+ * which provider drives a case:
+ *
+ *   - Fixture mode (default, or GEMINI_API_KEY absent): unchanged —
+ *     per-case exact-match assertions against golden JSON, both bounds
+ *     enforced as a hard CI gate.
+ *   - Live mode (VLM_PROVIDER=gemini AND GEMINI_API_KEY present): per-case
+ *     exact-match assertions are skipped (a real model never reproduces the
+ *     fixture's sentinel items/kcal byte-for-byte); the measured Tier-1 rate
+ *     and p95 are printed as OBSERVED values for manual promotion into the
+ *     two constants above — never silently compared against them. See
+ *     tests/golden/README.md for the promotion procedure.
+ *
  * Cases are upserted into eval_cases (idempotent by case id) so the live
- * Phase 4 flip re-runs this same harness against the real model. Exits 0
- * only when every case passes and both bounds hold. Output is passed
- * through a redaction scan (ported from scripts/measure-phase1-sync.mjs)
+ * Phase 4 flip re-runs this same harness against the real model. Output is
+ * passed through a redaction scan (ported from scripts/measure-phase1-sync.mjs)
  * before printing.
  *
  * Run: supabase status -o env > <envfile> && deno run --env-file=<envfile> --allow-all scripts/run-golden-eval.ts
+ * Live: … VLM_PROVIDER=gemini GEMINI_API_KEY=... deno run --env-file=<envfile> --allow-all scripts/run-golden-eval.ts
  */
 import { assertEquals } from 'jsr:@std/assert';
 import { stackEnv } from '../supabase/functions/tests/_env.ts';
@@ -30,11 +47,25 @@ import { roundKcal, roundMacro, sumItemKcal } from '../supabase/functions/_share
 import { resolveBarcode, resolveFood } from '../supabase/functions/_shared/grounding/cascade.ts';
 import { flagHiddenFat } from '../supabase/functions/_shared/hiddenFat.ts';
 import { chooseTier } from '../supabase/functions/_shared/routing.ts';
-import { getVlmProvider } from '../supabase/functions/_shared/vlm/provider.ts';
+import { getVlmProvider, overrideVlmProvider } from '../supabase/functions/_shared/vlm/provider.ts';
+import { FixtureProvider } from '../supabase/functions/_shared/vlm/fixture.ts';
 import { VlmOutputSchema } from '../supabase/functions/_shared/contracts/vlm.ts';
 
 const TIER1_RESOLUTION_TARGET = 0.85;
 const P95_LATENCY_MAX_MS = 1200;
+// Live mode only changes what this harness asserts/prints (see header
+// comment) — the provider itself is already selected by the existing
+// getVlmProvider() seam.
+const LIVE_MODE = Deno.env.get('VLM_PROVIDER') === 'gemini' &&
+  Boolean(Deno.env.get('GEMINI_API_KEY'));
+// A VLM_PROVIDER=gemini request without a key must never reach GeminiProvider
+// and its guaranteed-to-fail live call (empty key → non-OK → UpstreamError) —
+// degrade gracefully to the deterministic fixture instead of failing closed.
+// Uses the existing test-only override seam; provider.ts's own env-based
+// selection (Pitfall 7's one switch point) is untouched.
+if (Deno.env.get('VLM_PROVIDER') === 'gemini' && !Deno.env.get('GEMINI_API_KEY')) {
+  overrideVlmProvider(new FixtureProvider());
+}
 
 const GOLDEN_DIR = new URL('../supabase/functions/tests/golden/', import.meta.url);
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -425,6 +456,7 @@ function percentile(sorted: readonly number[], q: number): number {
 }
 
 async function main(): Promise<void> {
+  emit(`mode: ${LIVE_MODE ? 'live (VLM_PROVIDER=gemini)' : 'fixture'}`);
   const { url, serviceRoleKey } = stackEnv();
   const service = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
 
@@ -448,14 +480,21 @@ async function main(): Promise<void> {
     for (const evalCase of cases) {
       const outcome = await driveCase(service, evalCase);
       outcomes.push({ evalCase, outcome });
-      try {
-        assertEquals(outcome.tier, evalCase.expectedTier);
-        assertEquals(outcome.response, evalCase.expected);
-      } catch (error) {
-        fail(`case ${evalCase.id}: ${error.message}`);
+      // Fixture mode only: a real model will never reproduce the fixture's
+      // sentinel items/kcal byte-for-byte, so live mode measures tier1
+      // rate/latency (below) without asserting per-case exact match.
+      if (!LIVE_MODE) {
+        try {
+          assertEquals(outcome.tier, evalCase.expectedTier);
+          assertEquals(outcome.response, evalCase.expected);
+        } catch (error) {
+          fail(`case ${evalCase.id}: ${error.message}`);
+        }
       }
       emit(
-        `PASS case=${evalCase.id} tier=${outcome.tier} latencyMs=${Math.round(outcome.latencyMs)}`,
+        `${LIVE_MODE ? 'RAN' : 'PASS'} case=${evalCase.id} tier=${outcome.tier} latencyMs=${
+          Math.round(outcome.latencyMs)
+        }`,
       );
     }
 
@@ -464,6 +503,23 @@ async function main(): Promise<void> {
     const latencies = outcomes.map((entry) => entry.outcome.latencyMs).sort((a, b) => a - b);
     const p50 = percentile(latencies, 0.5);
     const p95 = percentile(latencies, 0.95);
+    emit(`eval_cases: ${upserted.length} cases upserted (idempotent by id)`);
+
+    if (LIVE_MODE) {
+      // Printed for manual promotion (tests/golden/README.md) — never
+      // compared against the fixture-calibrated constants above.
+      emit(
+        `LIVE-MODEL OBSERVED tier1 resolution: ${tier1Rate.toFixed(3)} (${tier1Count}/${outcomes.length})`,
+      );
+      emit(
+        `LIVE-MODEL OBSERVED latency p50=${Math.round(p50)}ms p95=${Math.round(p95)}ms (interpolated)`,
+      );
+      emit(
+        'EVAL RESULT: PASS (live-model — bounds NOT enforced; promote observed values into ' +
+          'TIER1_RESOLUTION_TARGET/P95_LATENCY_MAX_MS by hand, see tests/golden/README.md)',
+      );
+      return;
+    }
 
     emit(
       `tier1 resolution: ${tier1Rate.toFixed(3)} (${tier1Count}/${outcomes.length}) target >= ${TIER1_RESOLUTION_TARGET}`,
@@ -471,8 +527,6 @@ async function main(): Promise<void> {
     emit(
       `latency p50=${Math.round(p50)}ms p95=${Math.round(p95)}ms (interpolated) bound p95 <= ${P95_LATENCY_MAX_MS}ms`,
     );
-    emit(`eval_cases: ${upserted.length} cases upserted (idempotent by id)`);
-
     if (tier1Rate < TIER1_RESOLUTION_TARGET) {
       fail(
         `TIER1_RESOLUTION_TARGET breached: measured ${tier1Rate.toFixed(3)} < required ${TIER1_RESOLUTION_TARGET}`,
