@@ -1,3 +1,4 @@
+import CoachCalCore
 import CoachCalNetworking
 import CoachCalPersistence
 import CoachCalSync
@@ -77,6 +78,7 @@ final class AppEnvironment {
   let engagementRepository: EngagementRepository
   let seedDataManager: SeedDataManager
   let healthKitService: HealthKitService
+  var notificationScheduler: NotificationScheduler
   private(set) var isReady = false
   private(set) var hasTargets = false
   private(set) var onboardingPending = false
@@ -171,6 +173,14 @@ final class AppEnvironment {
       edSafeMode = UserDefaults.standard.bool(forKey: Self.edSafeDefaultsKey)
     }
     burnAddBackEnabled = UserDefaults.standard.bool(forKey: HealthKitSettingsKey.burnAddBackEnabled)
+    // Placeholder: reassigned below with the real self-capturing closures
+    // once every other stored property has a value (two-phase init forbids
+    // escaping `self` into a closure before that point).
+    notificationScheduler = NotificationScheduler(
+      mealsLoggedToday: { [] },
+      edSafeMode: { false },
+      now: clock
+    )
     foregroundTrigger = ForegroundTrigger { [weak self] in
       Task { @MainActor in self?.notifyLocalMutation() }
     }
@@ -188,6 +198,26 @@ final class AppEnvironment {
       startOfflineMonitor()
     }
     foregroundTrigger?.start()
+    notificationScheduler = NotificationScheduler(
+      mealsLoggedToday: { [weak self] in
+        guard let self else { return [] }
+        let day = DayKey.string(for: self.now(), calendar: .current)
+        var logged: Set<NotificationScheduler.MealSlot> = []
+        if let details = try? await self.diaryDetailRepository.details(forDay: day, mealSlot: MealSlot.lunch.rawValue),
+          !details.isEmpty
+        {
+          logged.insert(.lunch)
+        }
+        if let details = try? await self.diaryDetailRepository.details(forDay: day, mealSlot: MealSlot.dinner.rawValue),
+          !details.isEmpty
+        {
+          logged.insert(.dinner)
+        }
+        return logged
+      },
+      edSafeMode: { [weak self] in self?.edSafeMode ?? false },
+      now: clock
+    )
   }
 
   func openScan(_ mode: ScanMode, mealSlot: MealSlot?) {
@@ -290,6 +320,7 @@ final class AppEnvironment {
   // extend this same method instead of re-touching the write call sites.
   func notifyLocalMutation() {
     Task { await syncEngine.notifyLocalMutation() }
+    Task { await notificationScheduler.refresh() }
   }
 
   // requiresSignIn's userId source: demoUserId is the single-tenant local
