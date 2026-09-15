@@ -33,7 +33,8 @@ struct OnboardingFlowRoute: View {
         now: environment.now,
         animationsDisabled: environment.animationsDisabled,
         save: { try await environment.targetRepository.saveTarget($0) },
-        onComplete: { environment.completeOnboarding() }
+        onComplete: { environment.completeOnboarding() },
+        requestHealthAccess: { await environment.healthKitService.requestAuthorizationIfNeeded() }
       )
     )
   }

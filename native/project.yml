@@ -47,8 +47,8 @@ targets:
         CFBundleDisplayName: CoachCal
         NSCameraUsageDescription: CoachCal uses the camera to photograph your meals so CoachCal can estimate calories and macros.
         ITSAppUsesNonExemptEncryption: false
-        NSHealthShareUsageDescription: CoachCal will read your workouts and activity so calorie estimates stay accurate. This version does not read health data yet.
-        NSHealthUpdateUsageDescription: CoachCal will save burned-energy summaries from your logged meals. This version does not write health data yet.
+        NSHealthShareUsageDescription: CoachCal reads your step count from Apple Health to show it on the Today screen and keep calorie estimates accurate.
+        NSHealthUpdateUsageDescription: CoachCal saves burned-energy summaries to Apple Health only when you explicitly confirm them — never automatically from a scan.
     dependencies:
       - package: CoachCalCore
       - package: CoachCalDesignSystem

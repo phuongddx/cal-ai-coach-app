@@ -1,8 +1,9 @@
 import CoachCalDesignSystem
 import SwiftUI
 
-// HealthKit connect is a Phase-3 stub (INT-01 is Phase 4): the button only
-// reveals a footnote — it can never raise a permission prompt or read data.
+// INT-01 (Phase 4): the connect button makes a real JIT HealthKit permission
+// request through OnboardingModel.requestHealthAccess(). Denial reveals the
+// existing footnote below; a granted authorization advances past it silently.
 struct PrivacyHealthView: View {
   let model: OnboardingModel
 
@@ -40,7 +41,10 @@ struct PrivacyHealthView: View {
             .accessibilityIdentifier("onboarding.privacyPromise")
         }
         CCSecondaryButton("Connect Apple Health", bordered: true) {
-          showConnectNote = true
+          Task {
+            let granted = await model.requestHealthAccess()
+            showConnectNote = !granted
+          }
         }
         .accessibilityIdentifier("onboarding.healthConnect")
         if showConnectNote {

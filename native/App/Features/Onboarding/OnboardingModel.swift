@@ -107,6 +107,10 @@ final class OnboardingModel {
   private let animationsDisabled: Bool
   private let save: (UserTarget) async throws -> Void
   private let onComplete: () -> Void
+  // JIT HealthKit permission ask (INT-01): PrivacyHealthView calls this directly via call
+  // syntax on the stored closure. Defaults to a denied no-op so existing test call sites that
+  // don't wire AppEnvironment's real HealthKitService stay inert.
+  let requestHealthAccess: () async -> Bool
   // Task.cancel() is thread-safe; deinit runs nonisolated.
   nonisolated(unsafe) private var generationTask: Task<Void, Never>?
 
@@ -115,13 +119,15 @@ final class OnboardingModel {
     now: @escaping @Sendable () -> Date = { Date() },
     animationsDisabled: Bool = false,
     save: @escaping (UserTarget) async throws -> Void = { _ in },
-    onComplete: @escaping () -> Void = {}
+    onComplete: @escaping () -> Void = {},
+    requestHealthAccess: @escaping () async -> Bool = { false }
   ) {
     self.userId = userId
     self.now = now
     self.animationsDisabled = animationsDisabled
     self.save = save
     self.onComplete = onComplete
+    self.requestHealthAccess = requestHealthAccess
   }
 
   deinit {

@@ -32,7 +32,7 @@ struct TodayView: View {
             glasses: model.waterGlasses,
             onTap: { isWaterSheetPresented = true }
           )
-          scoreAndStepsCards
+          scoreAndStepsCards(model)
           streakCard(model)
           recentMeals(model)
         }
@@ -210,8 +210,10 @@ struct TodayView: View {
   }
 
   // DS Today: Health Score (success tile) + Steps (Apple Health tile) side by side.
-  // Both stay "—" this phase: no score engine; steps data arrives in Phase 4.
-  private var scoreAndStepsCards: some View {
+  // Health Score stays "—" this phase (no score engine). Steps is real HealthKit data behind a
+  // JIT permission ask the first time this card appears (RESEARCH Pattern 6 — never at app
+  // launch); a denied session shows a tap-to-Settings escape instead of a dead "—".
+  private func scoreAndStepsCards(_ model: TodayModel) -> some View {
     HStack(spacing: CCSpace.sm) {
       statCard(
         identifier: "today.healthScore",
@@ -221,27 +223,43 @@ struct TodayView: View {
             .foregroundStyle(Color.ccSuccessInk)
         ),
         tileTint: Color.ccSuccess.opacity(0.1),
-        caption: "Health Score"
+        caption: "Health Score",
+        value: "—"
       )
       .edSafeHidden()
-      statCard(
-        identifier: "today.stepsCard",
-        tile: AnyView(
-          Image(systemName: "figure.walk")
-            .font(.system(size: 20))
-            .foregroundStyle(Color.ccAppleHealth)
-        ),
-        tileTint: Color.ccAppleHealth.opacity(0.1),
-        caption: "Steps"
-      )
+      Button {
+        if model.stepsAccessDenied {
+          openHealthSettings()
+        }
+      } label: {
+        statCard(
+          identifier: "today.stepsCard",
+          tile: AnyView(
+            Image(systemName: "figure.walk")
+              .font(.system(size: 20))
+              .foregroundStyle(Color.ccAppleHealth)
+          ),
+          tileTint: Color.ccAppleHealth.opacity(0.1),
+          caption: "Steps",
+          value: model.stepsDisplayValue
+        )
+      }
+      .buttonStyle(.plain)
+      .task { await model.loadStepsIfNeeded() }
     }
+  }
+
+  private func openHealthSettings() {
+    guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+    UIApplication.shared.open(url)
   }
 
   private func statCard(
     identifier: String,
     tile: AnyView,
     tileTint: Color,
-    caption: String
+    caption: String,
+    value: String
   ) -> some View {
     HStack(spacing: CCSpace.md) {
       RoundedRectangle(cornerRadius: CCRadius.md)
@@ -253,7 +271,7 @@ struct TodayView: View {
         Text(caption)
           .ccFont(.footnote)
           .foregroundStyle(Color.ccTextSecondary)
-        Text("—")
+        Text(value)
           .ccFont(.headline)
           .foregroundStyle(Color.ccTextPrimary)
       }

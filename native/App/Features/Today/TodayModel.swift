@@ -32,10 +32,13 @@ final class TodayModel {
 
   private(set) var snapshot = Snapshot()
   private(set) var selectedDay: Date
+  private(set) var stepCount: Int?
+  private(set) var stepsAccessDenied = false
 
   private let pool: DatabasePool
   private let userId: UUID
   private let tracking: TrackingRepository
+  private let healthKitService: HealthKitService
   private let now: @Sendable () -> Date
   // Task.cancel() is thread-safe; deinit runs nonisolated (Pitfall 1).
   nonisolated(unsafe) private var observationTask: Task<Void, Never>?
@@ -44,12 +47,14 @@ final class TodayModel {
     pool: DatabasePool,
     userId: UUID,
     tracking: TrackingRepository,
-    now: @escaping @Sendable () -> Date
+    now: @escaping @Sendable () -> Date,
+    healthKitService: HealthKitService = NoOpHealthKitService()
   ) {
     self.pool = pool
     self.userId = userId
     self.tracking = tracking
     self.now = now
+    self.healthKitService = healthKitService
     self.selectedDay = now()
     startObservation()
   }
@@ -139,6 +144,23 @@ final class TodayModel {
 
   func makeDiaryModel(day: Date) -> DiaryDayModel {
     DiaryDayModel(pool: pool, userId: userId, day: day, now: now)
+  }
+
+  var stepsDisplayValue: String {
+    if let stepCount { return "\(stepCount)" }
+    return stepsAccessDenied ? "Connect" : "—"
+  }
+
+  // JIT trigger (RESEARCH Pattern 6): called once when the Steps card first appears, never at
+  // app launch. Idempotent — a repeat call once resolved (granted or denied) is a no-op.
+  func loadStepsIfNeeded() async {
+    guard stepCount == nil, !stepsAccessDenied else { return }
+    guard await healthKitService.requestAuthorizationIfNeeded() else {
+      stepsAccessDenied = true
+      return
+    }
+    await healthKitService.enableBackgroundDeliveryIfAuthorized()
+    stepCount = (try? await healthKitService.todayStepCount()) ?? 0
   }
 
   private func startObservation() {

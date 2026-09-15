@@ -76,6 +76,7 @@ final class AppEnvironment {
   let trackingRepository: TrackingRepository
   let engagementRepository: EngagementRepository
   let seedDataManager: SeedDataManager
+  let healthKitService: HealthKitService
   private(set) var isReady = false
   private(set) var hasTargets = false
   private(set) var onboardingPending = false
@@ -146,6 +147,7 @@ final class AppEnvironment {
     )
     authSessionStore = authStore
     accountDeletionTransport = AccountDeletionTransport(client: authStore.client)
+    healthKitService = HKHealthKitService()
     syncEngine = SyncEngine(
       transport: SupabaseSyncTransport(client: authStore.client),
       outbox: OutboxRepository(database: database),

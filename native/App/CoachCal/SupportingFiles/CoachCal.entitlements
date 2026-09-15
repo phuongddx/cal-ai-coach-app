@@ -2,8 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Phase 1.1 placeholder: HealthKit integration lands in Phase 4 (ROADMAP SC5 binary surface). -->
+	<!-- HealthKit: Phase 4 (INT-01/TRK-03) — steps read + background delivery registration. -->
 	<key>com.apple.developer.healthkit</key>
+	<true/>
+	<key>com.apple.developer.healthkit.background-delivery</key>
 	<true/>
 	<key>com.apple.developer.applesignin</key>
 	<array>

@@ -36,9 +36,9 @@
 	<key>NSCameraUsageDescription</key>
 	<string>CoachCal uses the camera to photograph your meals so CoachCal can estimate calories and macros.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>CoachCal will read your workouts and activity so calorie estimates stay accurate. This version does not read health data yet.</string>
+	<string>CoachCal reads your step count from Apple Health to show it on the Today screen and keep calorie estimates accurate.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>CoachCal will save burned-energy summaries from your logged meals. This version does not write health data yet.</string>
+	<string>CoachCal saves burned-energy summaries to Apple Health only when you explicitly confirm them — never automatically from a scan.</string>
 	<key>SUPABASE_ANON_KEY</key>
 	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>SUPABASE_URL</key>

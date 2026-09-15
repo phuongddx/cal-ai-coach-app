@@ -25,7 +25,8 @@ struct TodayFlow: View {
           pool: environment.database,
           userId: environment.currentUserId,
           tracking: TrackingRepository(database: environment.database),
-          now: environment.now
+          now: environment.now,
+          healthKitService: environment.healthKitService
         )
       }
     }
