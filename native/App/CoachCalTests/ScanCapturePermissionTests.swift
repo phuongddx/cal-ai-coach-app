@@ -1,3 +1,4 @@
+import CoachCalNetworking
 import SwiftUI
 import ViewInspector
 import XCTest

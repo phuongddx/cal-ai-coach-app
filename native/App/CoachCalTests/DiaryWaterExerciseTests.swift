@@ -238,6 +238,7 @@ nonisolated final class DiaryWaterExerciseTests: XCTestCase {
   // CR-01 contract: re-log decodes each saved row's own kcal; legacy
   // [{name, grams}] payloads decode with nil kcal (unresolved), never the
   // meal's aggregate on the first row.
+  @MainActor
   func testRelogPayloadDecodesPerItemKcalLeniently() throws {
     let current = #"""
       [{"name":"Chicken Rice Bowl","grams":320,"kcal":464},
