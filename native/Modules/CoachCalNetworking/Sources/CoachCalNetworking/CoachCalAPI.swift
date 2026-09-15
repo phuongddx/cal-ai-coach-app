@@ -31,17 +31,32 @@ public struct ScanRequest: Codable, Equatable, Sendable {
     case text
   }
 
+  // 04-07: the server's ScanRequestSchema requires `scanId: z.uuid()` as a
+  // mandatory field — it's the idempotency key `persist_scan` writes by, and
+  // the server echoes it back verbatim in ScanResponse.scanId. This struct
+  // never carried it at all until this fix: every real scan through
+  // LiveApiClient 400'd with VALIDATION_ERROR ("scanId: Required"), which
+  // ScanModel.route() falls through to the generic .failed(.analysisFailure)
+  // — the exact symptom chased across two sessions before reading the
+  // server schema directly. Defaulting to a fresh UUID means every existing
+  // call site (`ScanRequest(kind: .photo)` etc.) keeps working unchanged —
+  // Swift re-evaluates a default-argument expression at each call, so no
+  // two omitted-scanId requests ever collide. Lowercased to match the
+  // golden fixtures' casing (zod's `z.uuid()` itself is case-insensitive).
+  public let scanId: String
   public let kind: Kind
   public let barcode: String?
   public let text: String?
   public let imageBase64: String?
 
   public init(
+    scanId: String = UUID().uuidString.lowercased(),
     kind: Kind,
     barcode: String? = nil,
     text: String? = nil,
     imageBase64: String? = nil
   ) {
+    self.scanId = scanId
     self.kind = kind
     self.barcode = barcode
     self.text = text
@@ -58,7 +73,7 @@ public struct ScanRequest: Codable, Equatable, Sendable {
   // scan turns into a 400 VALIDATION_ERROR "payload must match kind" every
   // time. Swift property names are unchanged; only the wire keys move.
   private enum CodingKeys: String, CodingKey {
-    case kind, barcode
+    case scanId, kind, barcode
     case text = "textDescription"
     case imageBase64
   }

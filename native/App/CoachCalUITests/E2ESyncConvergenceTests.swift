@@ -146,8 +146,17 @@ nonisolated final class E2ESyncConvergenceTests: XCTestCase {
     XCTAssertTrue(shutter.waitForExistence(timeout: 10), "scan cover did not present the viewfinder")
     shutter.tap()
 
+    // A real analyze-food round trip (auth header attach, local edge
+    // function invocation, RPC quota claim, grounding cascade) runs
+    // noticeably slower than the FixtureApiClient path every other scan
+    // test exercises — measured up to ~20s on a cold local stack even
+    // though the identical request completes in ~1s via direct curl. 15s
+    // was tuned for the fixture path and silently starved this, the one
+    // test that goes through LiveApiClient; the failure looked identical
+    // to analysisFailure (both leave scan.review absent) until an
+    // NSLog-instrumented run proved the request itself succeeds, just late.
     let review = app.descendants(matching: .any)["scan.review"]
-    XCTAssertTrue(review.waitForExistence(timeout: 15), "live scan never reached review")
+    XCTAssertTrue(review.waitForExistence(timeout: 45), "live scan never reached review")
 
     let stepper = app.descendants(matching: .any)["scan.grams.0"].firstMatch
     XCTAssertTrue(stepper.waitForExistence(timeout: 5), "grams stepper missing on review sheet")

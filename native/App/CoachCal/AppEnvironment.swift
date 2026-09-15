@@ -405,26 +405,39 @@ final class AppEnvironment {
     }
     #endif
     hasTargets = (try? await targetRepository.activeTarget(user: Self.demoUserId)) != nil
-    if requiresSignIn, let restored = try? await authSessionStore.restoreSession() {
-      authSession = restored
-      await syncEngine.bind(restored.user.id)
-    } else if requiresSignIn {
+    if requiresSignIn {
       #if DEBUG
       // E2ESyncConvergenceTests-only fallback (04-07): a UI test can't script
       // a real Apple/Google system dialog or retrieve an email OTP code, so
-      // when TEST_EMAIL/TEST_PASSWORD are present in the launch environment
-      // (same idiom as AuthSessionTests/RealAuthConvergenceProof), sign in
-      // directly against the real local Supabase account instead of leaving
-      // SignInView with no scriptable path forward. Silently no-ops when
-      // either var is absent — every other DEBUG launch combination
-      // (SignInFlowTests included) is unaffected.
+      // when TEST_EMAIL/TEST_PASSWORD are present and non-blank in the
+      // launch environment (same non-empty gate the test itself uses —
+      // XcodeGen substitutes an EMPTY string, never a missing key, for an
+      // unset build setting), sign in directly against the real local
+      // Supabase account. This MUST be tried before restoreSession(): the
+      // Simulator's app container — and its Keychain-persisted Supabase
+      // session — survives across unrelated test runs, so restoring first
+      // silently authenticates as whatever stale account happens to be
+      // cached (with its OWN quota state), never touching TEST_EMAIL at
+      // all. Every other DEBUG launch (TEST_EMAIL unset/blank, including
+      // SignInFlowTests) falls through to the original restoreSession path
+      // unchanged.
       let testCredentials = ProcessInfo.processInfo.environment
-      if let email = testCredentials["TEST_EMAIL"] ?? testCredentials["COACHCAL_TEST_EMAIL"],
-        let password = testCredentials["TEST_PASSWORD"] ?? testCredentials["COACHCAL_TEST_PASSWORD"],
-        let session = try? await authSessionStore.signIn(email: email, password: password)
-      {
-        authSession = session
-        await syncEngine.bind(session.user.id)
+      let testEmail = testCredentials["TEST_EMAIL"] ?? testCredentials["COACHCAL_TEST_EMAIL"]
+      let testPassword = testCredentials["TEST_PASSWORD"] ?? testCredentials["COACHCAL_TEST_PASSWORD"]
+      if let email = testEmail, let password = testPassword, !email.isEmpty, !password.isEmpty {
+        try? await authSessionStore.signOut()
+        if let session = try? await authSessionStore.signIn(email: email, password: password) {
+          authSession = session
+          await syncEngine.bind(session.user.id)
+        }
+      } else if let restored = try? await authSessionStore.restoreSession() {
+        authSession = restored
+        await syncEngine.bind(restored.user.id)
+      }
+      #else
+      if let restored = try? await authSessionStore.restoreSession() {
+        authSession = restored
+        await syncEngine.bind(restored.user.id)
       }
       #endif
     }
