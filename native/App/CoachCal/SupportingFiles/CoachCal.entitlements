@@ -5,5 +5,9 @@
 	<!-- Phase 1.1 placeholder: HealthKit integration lands in Phase 4 (ROADMAP SC5 binary surface). -->
 	<key>com.apple.developer.healthkit</key>
 	<true/>
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 </dict>
 </plist>
