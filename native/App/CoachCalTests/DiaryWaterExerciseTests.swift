@@ -416,8 +416,9 @@ nonisolated final class DiaryWaterExerciseTests: XCTestCase {
     XCTAssertEqual(idsB.count, 1)
     let details = try await DiaryDetailRepository(database: pool)
       .details(forDay: DiaryDayModel.dayString(stamp), mealSlot: "lunch")
+    XCTAssertEqual(details.count, 3)
     XCTAssertEqual(
-      details.map(\.kcal).sorted(),
+      details.compactMap(\.kcal).sorted(),
       [86, 380, 464],
       "both batches must land complete — no half-written batch"
     )
