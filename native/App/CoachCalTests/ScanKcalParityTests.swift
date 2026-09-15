@@ -127,6 +127,86 @@ struct ScanKcalParityTests {
     #expect(entryCount == 2, "a double-tap must not write duplicate entries")
   }
 
+  // WR-02: a stale analyze task resumed after cancelAnalyzing must not touch
+  // phase/isAnalyzing — neither resurrecting the cancelled scan nor opening
+  // the re-entrancy gate under a new in-flight analysis.
+  private actor GateAPI: CoachCalAPI {
+    private var continuations: [CheckedContinuation<ScanResponse, Error>] = []
+
+    func analyzeFood(_ request: ScanRequest) async throws -> ScanResponse {
+      try await withCheckedThrowingContinuation { continuation in
+        self.continuations.append(continuation)
+      }
+    }
+
+    func resumeAll(_ response: ScanResponse) {
+      continuations.forEach { $0.resume(returning: response) }
+      continuations.removeAll()
+    }
+  }
+
+  private static func waitUntil(
+    timeout: TimeInterval = 5,
+    _ condition: () -> Bool
+  ) async throws {
+    let deadline = Date().addingTimeInterval(timeout)
+    while Date() < deadline {
+      if condition() { return }
+      try await Task.sleep(nanoseconds: 10_000_000)
+    }
+    Issue.record("condition never became true within \(timeout)s")
+  }
+
+  @Test func cancelledAnalyzingStaysCancelledWhenStaleWorkCompletes() async throws {
+    let api = Self.GateAPI()
+    let model = ScanModel(
+      api: api,
+      persistence: nil,
+      userId: AppEnvironment.demoUserId,
+      now: { Date(timeIntervalSince1970: 1_760_000_000) },
+      mealSlot: .lunch
+    )
+    model.analyze(description: "parked scan")
+    try await Self.waitUntil { model.isAnalyzing }
+
+    model.cancelAnalyzing()
+    #expect(model.phase == .capture)
+
+    // The stale work task completes only after the user cancelled.
+    await api.resumeAll(Self.twoItemResponse())
+    try await Task.sleep(nanoseconds: 100_000_000)
+    #expect(model.phase == .capture, "a stale resume must not resurrect the review phase")
+    #expect(!model.isAnalyzing)
+  }
+
+  @Test func staleResumeCannotClobberANewAnalysis() async throws {
+    let api = Self.GateAPI()
+    let model = ScanModel(
+      api: api,
+      persistence: nil,
+      userId: AppEnvironment.demoUserId,
+      now: { Date(timeIntervalSince1970: 1_760_000_000) },
+      mealSlot: .lunch
+    )
+    model.analyze(description: "first scan")
+    try await Self.waitUntil { model.isAnalyzing }
+    model.cancelAnalyzing()
+
+    model.analyze(description: "second scan")
+    try await Self.waitUntil { model.isAnalyzing }
+
+    // The cancelled scan's work now completes while the new one is parked —
+    // the stale task must not reset phase/isAnalyzing mid-flight.
+    await api.resumeAll(Self.twoItemResponse())
+    try await Task.sleep(nanoseconds: 100_000_000)
+    #expect(model.isAnalyzing, "stale resume must not open the re-entrancy gate")
+    #expect(model.phase != .capture)
+
+    // Cleanup: let the new analysis run to review.
+    await api.resumeAll(Self.twoItemResponse())
+    try await Self.waitUntil { model.phase == .review }
+  }
+
   @Test func saveEnqueuesOnePendingOpPerEntryAndUndoTombstones() async throws {
     let directory = FileManager.default.temporaryDirectory
       .appending(component: "scan-parity-\(UUID().uuidString)")

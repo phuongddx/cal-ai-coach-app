@@ -175,18 +175,26 @@ final class ScanModel {
       // checklist); only the success path plays the three-step checklist out
       // to the minimum dwell so the analyzing state is real and observable.
       for (index, step) in AnalyzingStep.allCases.enumerated() {
+        guard !Task.isCancelled else { return }
         phase = .analyzing(step)
         let remaining = Double(index + 1) * Self.stepInterval - Date().timeIntervalSince(startedAt)
         if remaining > 0 {
           try await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
         }
       }
+      // A cancelled task must never touch state: cancelAnalyzing may already
+      // have started a new analysis whose phase/isAnalyzing a stale resume
+      // would clobber (opening the re-entrancy gate mid-flight).
+      guard !Task.isCancelled else { return }
       receive(response)
     } catch is CancellationError {
+      guard !Task.isCancelled else { return }
       phase = .capture
     } catch let error as ScanAPIError {
+      guard !Task.isCancelled else { return }
       route(error)
     } catch {
+      guard !Task.isCancelled else { return }
       phase = .failed(.analysisFailure)
     }
     isAnalyzing = false
