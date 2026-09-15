@@ -121,7 +121,7 @@ nonisolated final class SettingsTests: XCTestCase {
     XCTAssertEqual(SettingsCopy.deleteAccountTitle, "Delete account?")
     XCTAssertEqual(
       SettingsCopy.deleteAccountMessage,
-      "This permanently deletes your data on this device. Cloud deletion arrives with sync in a later update."
+      "This permanently deletes your data on this device, then deletes your diary, scans, and entitlements on the server and closes your account. This can't be undone."
     )
     XCTAssertEqual(SettingsCopy.deleteAccountConfirm, "Delete account")
     XCTAssertEqual(SettingsCopy.cancel, "Cancel")

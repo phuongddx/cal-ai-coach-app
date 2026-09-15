@@ -10,7 +10,7 @@ enum SettingsCopy {
     "Hides calorie counts, shows weekly averages instead of daily totals. Focus on habits, not numbers."
   static let deleteAccountTitle = "Delete account?"
   static let deleteAccountMessage =
-    "This permanently deletes your data on this device. Cloud deletion arrives with sync in a later update."
+    "This permanently deletes your data on this device, then deletes your diary, scans, and entitlements on the server and closes your account. This can't be undone."
   static let deleteAccountConfirm = "Delete account"
   static let cancel = "Cancel"
   static let billingNote = "Billing arrives in a later update."
