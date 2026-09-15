@@ -2,9 +2,9 @@ import CoachCalDesignSystem
 import SwiftUI
 
 // UI-SPEC Analyzing: 160pt thumb (radius-lg) with a 1.5s shimmer, headings,
-// 3-step checklist (completed check / spinner / idle circle) and a Cancel
-// affordance that returns to capture. The fixture API answers instantly but
-// the state machine stays real for the Phase 4 live flip.
+// 3-step checklist (completed check / spinner / idle circle) plus a 4th
+// escalation-only row (Phase 4: real Tier-2 re-run past the 5s budget) and
+// a Cancel affordance that returns to capture.
 struct AnalyzingView: View {
   let model: ScanModel
   let animationsDisabled: Bool
@@ -90,9 +90,15 @@ struct AnalyzingView: View {
     .allowsHitTesting(false)
   }
 
+  private var visibleSteps: [ScanModel.AnalyzingStep] {
+    activeStep == .confirming
+      ? ScanModel.AnalyzingStep.allCases
+      : Array(ScanModel.AnalyzingStep.allCases.prefix(3))
+  }
+
   private var checklist: some View {
     VStack(alignment: .leading, spacing: CCSpace.md) {
-      ForEach(ScanModel.AnalyzingStep.allCases, id: \.self) { step in
+      ForEach(visibleSteps, id: \.self) { step in
         stepRow(step)
           .accessibilityElement(children: .combine)
           .accessibilityIdentifier("scan.step.\(step.rawValue)")
@@ -112,7 +118,7 @@ struct AnalyzingView: View {
   }
 
   @ViewBuilder private func stepIcon(_ step: ScanModel.AnalyzingStep) -> some View {
-    let order = ScanModel.AnalyzingStep.allCases
+    let order = visibleSteps
     if let active = activeStep, let activeIndex = order.firstIndex(of: active),
       let index = order.firstIndex(of: step)
     {
@@ -147,7 +153,7 @@ struct AnalyzingView: View {
 
   private func stepColor(_ step: ScanModel.AnalyzingStep) -> Color {
     guard let active = activeStep else { return .white.opacity(0.4) }
-    let order = ScanModel.AnalyzingStep.allCases
+    let order = visibleSteps
     guard let activeIndex = order.firstIndex(of: active),
       let index = order.firstIndex(of: step)
     else { return .white.opacity(0.4) }

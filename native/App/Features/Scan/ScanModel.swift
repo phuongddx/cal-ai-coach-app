@@ -20,12 +20,18 @@ final class ScanModel {
     case detecting
     case reading
     case checking
+    // Tier-2 escalation only (RESEARCH: extend AnalyzingStep, not a parallel
+    // loading-state enum) — surfaced by a duration watchdog once a real
+    // analyze-food call runs past the escalation budget, so the analyzing
+    // screen never appears frozen during a real second-pass re-run.
+    case confirming
 
     var title: String {
       switch self {
       case .detecting: "Detecting food"
       case .reading: "Reading nutrition"
       case .checking: "Checking accuracy"
+      case .confirming: "Confirming with a second pass"
       }
     }
   }
@@ -115,6 +121,11 @@ final class ScanModel {
   private var analyzeTask: Task<Void, Never>?
   private var workTask: Task<ScanResponse, Error>?
   private static let stepInterval: Double = 0.5
+  // Past this, a real analyze-food call is very likely mid a Tier-2
+  // escalation re-run rather than merely slow (must_haves: "<5s budget on
+  // Tier-1") — the analyzing screen must show the 4th step, never sit
+  // apparently frozen on step one for the whole wait.
+  private static let escalationBudgetSeconds: Double = 5.0
 
   init(
     api: any CoachCalAPI,
@@ -172,12 +183,27 @@ final class ScanModel {
   }
 
   private func finishAnalyzing(_ work: Task<ScanResponse, Error>, startedAt: Date) async {
+    // Watchdog, not a parallel loading enum (RESEARCH): while work.value is
+    // still in flight past the escalation budget, surface the 4th step so a
+    // real Tier-2 re-run never leaves the screen apparently frozen on step
+    // one. defer cancels it on every exit path (success, cancellation, any
+    // catch) so a stale fire can never clobber a later/cancelled analysis.
+    let watchdog = Task { [weak self] in
+      try? await Task.sleep(nanoseconds: UInt64(Self.escalationBudgetSeconds * 1_000_000_000))
+      guard !Task.isCancelled else { return }
+      self?.phase = .analyzing(.confirming)
+    }
+    defer { watchdog.cancel() }
     do {
       let response = try await work.value
+      let escalated = phase == .analyzing(.confirming)
+      let steps: [AnalyzingStep] = escalated
+        ? AnalyzingStep.allCases
+        : Array(AnalyzingStep.allCases.prefix(3))
       // Failure states surface immediately (quota/error never behind the
-      // checklist); only the success path plays the three-step checklist out
-      // to the minimum dwell so the analyzing state is real and observable.
-      for (index, step) in AnalyzingStep.allCases.enumerated() {
+      // checklist); only the success path plays the checklist out to the
+      // minimum dwell so the analyzing state is real and observable.
+      for (index, step) in steps.enumerated() {
         guard !Task.isCancelled else { return }
         phase = .analyzing(step)
         let remaining = Double(index + 1) * Self.stepInterval - Date().timeIntervalSince(startedAt)

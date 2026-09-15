@@ -76,8 +76,6 @@ final class AppEnvironment {
   let trackingRepository: TrackingRepository
   let engagementRepository: EngagementRepository
   let seedDataManager: SeedDataManager
-  let api: any CoachCalAPI
-
   private(set) var isReady = false
   private(set) var hasTargets = false
   private(set) var onboardingPending = false
@@ -104,6 +102,16 @@ final class AppEnvironment {
   // properties on THIS class, not values reached through a plain struct, so
   // RootView's sign-in gate reads this instead of authSessionStore.currentSession.
   private(set) var authSession: Session?
+  // The single call-site swap (Phase 4): a real signed-in session routes
+  // scans through the live Edge Function; DEBUG demo-seeded tests
+  // (requiresSignIn == false) and a session still restoring keep the
+  // deterministic fixture untouched. Computed, not stored, so it always
+  // reflects authSession as soon as sign-in/restore completes — never a
+  // stale snapshot captured at app-launch init() time.
+  var api: any CoachCalAPI {
+    guard requiresSignIn, authSession != nil else { return FixtureApiClient(bundle: .main) }
+    return LiveApiClient(client: authSessionStore.client)
+  }
   // Keeps the foreground-notification observer alive; NotificationCenter only
   // holds a weak reference to it via its `[weak self]` fire callback.
   private var foregroundTrigger: ForegroundTrigger?
@@ -117,7 +125,6 @@ final class AppEnvironment {
     catalogRepository = CatalogRepository(database: database)
     trackingRepository = TrackingRepository(database: database)
     engagementRepository = EngagementRepository(database: database)
-    api = FixtureApiClient(bundle: .main)
     animationsDisabled = arguments.disableAnimations
     isOffline = arguments.forceOffline
     let clock: @Sendable () -> Date
