@@ -7,14 +7,15 @@ import XCTest
 // WR-03 coverage: the device seam must resolve permission before configuring
 // the session, and a denied session must render the permission card with a
 // Settings escape and library fallback — never a dead reticle with no prompt.
-@MainActor
-final class ScanCapturePermissionTests: XCTestCase {
+nonisolated final class ScanCapturePermissionTests: XCTestCase {
+  @MainActor
   func testFixtureCaptureSeamAlwaysReportsAccessGranted() async {
     let service = FixtureCaptureService(mode: .photo)
     let granted = await service.requestAccessIfNeeded()
     XCTAssertTrue(granted, "the fixture seam never touches AVCapture, so it is always granted")
   }
 
+  @MainActor
   func testDeniedPermissionCardRendersCopyAndSettingsEscape() throws {
     let model = ScanModel(
       api: FixtureApiClient(bundle: .main),
@@ -42,6 +43,7 @@ final class ScanCapturePermissionTests: XCTestCase {
     XCTAssertEqual(try settingsButton.accessibilityIdentifier(), "scan.openSettings")
   }
 
+  @MainActor
   func testGrantedStateHidesPermissionCard() throws {
     let model = ScanModel(
       api: FixtureApiClient(bundle: .main),
