@@ -408,6 +408,25 @@ final class AppEnvironment {
     if requiresSignIn, let restored = try? await authSessionStore.restoreSession() {
       authSession = restored
       await syncEngine.bind(restored.user.id)
+    } else if requiresSignIn {
+      #if DEBUG
+      // E2ESyncConvergenceTests-only fallback (04-07): a UI test can't script
+      // a real Apple/Google system dialog or retrieve an email OTP code, so
+      // when TEST_EMAIL/TEST_PASSWORD are present in the launch environment
+      // (same idiom as AuthSessionTests/RealAuthConvergenceProof), sign in
+      // directly against the real local Supabase account instead of leaving
+      // SignInView with no scriptable path forward. Silently no-ops when
+      // either var is absent — every other DEBUG launch combination
+      // (SignInFlowTests included) is unaffected.
+      let testCredentials = ProcessInfo.processInfo.environment
+      if let email = testCredentials["TEST_EMAIL"] ?? testCredentials["COACHCAL_TEST_EMAIL"],
+        let password = testCredentials["TEST_PASSWORD"] ?? testCredentials["COACHCAL_TEST_PASSWORD"],
+        let session = try? await authSessionStore.signIn(email: email, password: password)
+      {
+        authSession = session
+        await syncEngine.bind(session.user.id)
+      }
+      #endif
     }
     isReady = true
   }
@@ -428,6 +447,17 @@ final class AppEnvironment {
     monitor.start(queue: DispatchQueue(label: "com.nextlabs.coachcal.pathmonitor"))
     offlineMonitor = monitor
   }
+
+  #if DEBUG
+  // E2ESyncConvergenceTests-only seam (T-P47-01): flips the same isOffline
+  // flag --ccForceOffline sets at launch, but mid-test — DebugLaunchArguments
+  // parses once at init() and can't be toggled after a save already
+  // happened. Wired to SettingsDetailView's debug.toggleOffline control.
+  // Never present in a Release build.
+  func setOfflineOverrideForTesting(_ value: Bool) {
+    isOffline = value
+  }
+  #endif
 
   // MARK: - Sentry / PostHog / MetricKit (T-P46-01, T-P46-02, T-P46-SC)
   //

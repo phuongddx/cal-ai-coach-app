@@ -74,7 +74,8 @@ nonisolated final class SettingsTests: XCTestCase {
       edSafeToggle: .constant(false),
       burnAddBackToggle: .constant(false),
       onDeleteAccount: {},
-      csvExportAction: { Data() }
+      csvExportAction: { Data() },
+      onToggleDebugOffline: {}
     )
     let toggle = try view.inspect().find(ViewType.Toggle.self)
     XCTAssertEqual(
@@ -98,7 +99,8 @@ nonisolated final class SettingsTests: XCTestCase {
       edSafeToggle: .constant(false),
       burnAddBackToggle: .constant(false),
       onDeleteAccount: {},
-      csvExportAction: { Data() }
+      csvExportAction: { Data() },
+      onToggleDebugOffline: {}
     )
     let toggle = try view.inspect().find(ViewType.Toggle.self) { toggle in
       (try? toggle.accessibilityIdentifier()) == "settings.burnAddBackToggle"
@@ -170,7 +172,8 @@ nonisolated final class SettingsTests: XCTestCase {
       edSafeToggle: .constant(true),
       burnAddBackToggle: .constant(false),
       onDeleteAccount: {},
-      csvExportAction: { Data() }
+      csvExportAction: { Data() },
+      onToggleDebugOffline: {}
     )
     let texts = try view.inspect().findAll(ViewType.Text.self).map { try $0.string() }
     XCTAssertTrue(texts.contains("Subscription"), "texts: \(texts)")
@@ -206,7 +209,8 @@ nonisolated final class SettingsTests: XCTestCase {
       edSafeToggle: .constant(false),
       burnAddBackToggle: .constant(false),
       onDeleteAccount: {},
-      csvExportAction: { expectedCSV }
+      csvExportAction: { expectedCSV },
+      onToggleDebugOffline: {}
     )
     let shareLink = try view.inspect().find(ViewType.ShareLink.self)
     XCTAssertEqual(try shareLink.accessibilityIdentifier(), "settings.row.export")

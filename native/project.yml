@@ -141,3 +141,15 @@ schemes:
       targets:
         - CoachCalTests
         - CoachCalUITests
+      # 04-07 E2ESyncConvergenceTests: xcodebuild test does not forward the
+      # invoking shell's environment to a UI-test host process the way
+      # `swift test` does — the scheme's own Test-action environment
+      # variables are what XCUITest.ProcessInfo.processInfo.environment
+      # actually sees. `$(...)` is resolved from the shell at `xcodegen
+      # generate` time (never committed — CoachCal.xcodeproj is gitignored)
+      # and becomes an empty string, never a missing key, when unset; the
+      # test's own liveCredentialsConfigured gate treats blank as absent.
+      environmentVariables:
+        TEST_EMAIL: "$(TEST_EMAIL)"
+        TEST_PASSWORD: "$(TEST_PASSWORD)"
+        SUPABASE_ANON_KEY: "$(SUPABASE_ANON_KEY)"

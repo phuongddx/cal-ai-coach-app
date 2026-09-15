@@ -121,7 +121,7 @@ struct FixtureScenarioTests {
   func schema422ThrowsVlmSchemaErrorEnvelope() async throws {
     let client = FixtureApiClient(bundle: .module, scenario: .schema422)
     do {
-      _ = try await client.analyzeFood(ScanRequest(kind: .label, imageReference: "label-1"))
+      _ = try await client.analyzeFood(ScanRequest(kind: .label, imageBase64: "label-1"))
       #expect(Bool(false), "Expected the 422 fixture to throw")
     } catch let error as ScanAPIError {
       #expect(error.isSchemaError)

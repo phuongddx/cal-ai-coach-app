@@ -122,6 +122,11 @@ struct ProfileFlow: View {
             csvExportAction: {
               try await CSVExportService(database: environment.database)
                 .buildFullExportCSV(userId: environment.currentUserId)
+            },
+            onToggleDebugOffline: {
+              #if DEBUG
+              environment.setOfflineOverrideForTesting(!environment.isOffline)
+              #endif
             }
           )
         }

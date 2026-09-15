@@ -31,6 +31,13 @@ struct SettingsDetailView: View {
   let burnAddBackToggle: Binding<Bool>
   let onDeleteAccount: () -> Void
   let csvExportAction: () async throws -> Data
+  // E2ESyncConvergenceTests-only seam (T-P47-01): the closure body itself is
+  // a Release no-op (ProfileFlow gates the body #if DEBUG since the method
+  // it calls doesn't exist in Release), and the button that invokes it below
+  // is #if DEBUG-gated too — so this can never fire outside DEBUG despite
+  // the property itself always being present (keeping it ungated here is
+  // what lets the memberwise init stay a single, unconditional call site).
+  let onToggleDebugOffline: () -> Void
 
   @State private var exportedCSV: Data?
   @State private var showsDeleteConfirmation = false
@@ -172,6 +179,13 @@ struct SettingsDetailView: View {
       }
       .buttonStyle(.plain)
       .accessibilityIdentifier("settings.row.deleteAccount")
+      #if DEBUG
+      Button(action: onToggleDebugOffline) {
+        CCSettingsRow(icon: "wifi.slash", label: "Toggle offline (debug)")
+      }
+      .buttonStyle(.plain)
+      .accessibilityIdentifier("debug.toggleOffline")
+      #endif
     }
     // Loads in the background as soon as Settings appears — by the time the
     // user scrolls to and taps Export CSV the ShareLink is almost always

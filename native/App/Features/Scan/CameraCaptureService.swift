@@ -67,7 +67,15 @@ final class FixtureCaptureService: CameraCaptureService {
     // Stand-in for AE/AF settling so the shutter press has visible work.
     try await Task.sleep(nanoseconds: 120_000_000)
     let kind: ScanRequest.Kind = mode == .label ? .label : .photo
-    return ScanCapture(image: ScanMedia.fixtureMealImage, request: ScanRequest(kind: kind))
+    // 04-07: the Edge Function's strict ScanRequestSchema rejects a
+    // photo/label request with no imageBase64 (400 VALIDATION_ERROR) — the
+    // exact string only matters to FixtureProvider's marker sniffing
+    // (RESEARCH vlm/fixture.ts), so any non-sentinel value lands on the
+    // deterministic chicken-rice default.
+    return ScanCapture(
+      image: ScanMedia.fixtureMealImage,
+      request: ScanRequest(kind: kind, imageBase64: "fixture:chicken-rice")
+    )
   }
 }
 
@@ -164,7 +172,14 @@ final class CameraService: NSObject, CameraCaptureService {
     }
     guard let image else { throw ScanCaptureError.emptyFrame }
     let kind: ScanRequest.Kind = mode == .label ? .label : .photo
-    return ScanCapture(image: image, request: ScanRequest(kind: kind))
+    // 04-07: the Edge Function's strict ScanRequestSchema rejects a
+    // photo/label request with no imageBase64 (400 VALIDATION_ERROR) — a
+    // real device capture must actually carry the photo, not just a local
+    // thumbnail (ScanCapture.image is display-only, never sent over the wire).
+    guard let imageBase64 = image.jpegData(compressionQuality: 0.5)?.base64EncodedString() else {
+      throw ScanCaptureError.emptyFrame
+    }
+    return ScanCapture(image: image, request: ScanRequest(kind: kind, imageBase64: imageBase64))
   }
 
   func flipCamera() {
