@@ -211,6 +211,64 @@ nonisolated final class StreakBadgeInsightTests: XCTestCase {
     XCTAssertEqual(AchievementsView.lockedDaysLeft(streak30), 18, "30-Day badge shows 18 days left")
   }
 
+  // WR-04: the reconcile window must span the engine's full recount (730
+  // days) — a 30-day window capped a 40-day streak at ~31 forever.
+  @MainActor
+  func testStreakReconcileCountsBeyondTheThirtyDayStatsWindow() async throws {
+    let clock = Date()
+    let calendar = CoachModel.databaseCalendar
+    let userId = AppEnvironment.demoUserId
+
+    try await pool.write { database in
+      try StreakState(
+        id: 1,
+        currentStreak: 5,
+        bestStreak: 18,
+        freezesLeft: 0,
+        freezeUsedOn: nil,
+        lastLoggedDay: Self.dayString(clock, calendar: calendar)
+      ).insert(database)
+    }
+    // 40 consecutive logged days including today, via calendar-day arithmetic
+    // so DST shifts cannot collapse two entries onto one day.
+    for dayOffset in 0..<40 {
+      let loggedAt = try XCTUnwrap(calendar.date(byAdding: .day, value: -dayOffset, to: clock))
+      let entry = DiaryEntry(
+        id: UUID(),
+        userId: userId,
+        displayText: "Streak fill \(dayOffset)",
+        createdAt: loggedAt,
+        updatedAt: loggedAt,
+        deletedAt: nil,
+        serverVersion: 0,
+        acceptedOpId: nil,
+        serverUpdatedAt: loggedAt
+      )
+      try await pool.write { try entry.insert($0) }
+    }
+
+    let progress = ProgressModel(
+      pool: pool,
+      userId: userId,
+      tracking: TrackingRepository(database: pool),
+      engagement: EngagementRepository(database: pool),
+      now: { clock }
+    )
+
+    var reconciled = false
+    for _ in 0..<150 {
+      if progress.snapshot.streakDiaryDays.count == 40,
+        progress.snapshot.streak?.currentStreak == 40
+      {
+        reconciled = true
+        break
+      }
+      try await Task.sleep(nanoseconds: 20_000_000)
+    }
+    XCTAssertTrue(reconciled, "40 logged days must reconcile to a 40-day streak, got \(progress.snapshot.streak?.currentStreak ?? -1)")
+    XCTAssertEqual(progress.snapshot.streak?.bestStreak, 40)
+  }
+
   private static func dayString(_ date: Date, calendar: Calendar) -> String {
     let parts = calendar.dateComponents([.year, .month, .day], from: date)
     return String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day!)

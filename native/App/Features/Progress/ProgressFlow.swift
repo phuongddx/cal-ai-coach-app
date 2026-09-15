@@ -22,6 +22,10 @@ final class ProgressModel {
     var streak: StreakState?
     var badges: [Badge] = []
     var diaryDays: Set<String> = []
+    // Trailing window wide enough for the engine's full recount (730 days) —
+    // the 30-day diaryDays set is for stats surfaces and would cap the
+    // streak at ~31 days.
+    var streakDiaryDays: Set<String> = []
   }
 
   private(set) var snapshot = Snapshot()
@@ -113,6 +117,10 @@ final class ProgressModel {
       calendar.date(byAdding: .day, value: -29, to: now)!,
       calendar: calendar
     )
+    let streakStart = Self.dayString(
+      calendar.date(byAdding: .day, value: -StreakEngine.maxLookbackDays, to: now)!,
+      calendar: calendar
+    )
     let observation = ValueObservation.tracking { database -> ProgressModel.Snapshot in
       let target = try UserTarget
         .filter(Column("user_id") == userId)
@@ -161,13 +169,24 @@ final class ProgressModel {
           arguments: [userId, monthStart]
         )
       )
+      let streakDiaryDays = Set(
+        try String.fetchAll(
+          database,
+          sql: """
+            SELECT DISTINCT date(e.created_at, 'localtime') FROM diary_entries e
+            WHERE e.deleted_at IS NULL AND e.user_id = ? AND date(e.created_at, 'localtime') >= ?
+            """,
+          arguments: [userId, streakStart]
+        )
+      )
       return Snapshot(
         target: target,
         weights: weights.reversed(),
         weekKcals: weekKcals,
         streak: streak,
         badges: badges,
-        diaryDays: diaryDays
+        diaryDays: diaryDays,
+        streakDiaryDays: streakDiaryDays
       )
     }
 
@@ -199,7 +218,7 @@ final class ProgressModel {
     )
     let outcome = StreakEngine.evaluate(
       StreakInput(
-        loggedDays: snapshot.diaryDays,
+        loggedDays: snapshot.streakDiaryDays,
         freezesLeft: persisted.freezesLeft,
         bestStreak: persisted.bestStreak,
         freezeUsedOn: persisted.freezeUsedOn,
@@ -214,7 +233,7 @@ final class ProgressModel {
       bestStreak: max(persisted.bestStreak, outcome.bestStreak),
       freezesLeft: outcome.freezesLeft,
       freezeUsedOn: outcome.freezeUsedOn,
-      lastLoggedDay: snapshot.diaryDays.max() ?? persisted.lastLoggedDay
+      lastLoggedDay: snapshot.streakDiaryDays.max() ?? persisted.lastLoggedDay
     )
     if updated != persisted {
       try? await engagement.saveStreakState(updated)

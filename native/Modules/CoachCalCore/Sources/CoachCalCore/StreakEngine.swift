@@ -54,8 +54,10 @@ public struct StreakOutcome: Equatable, Sendable {
 }
 
 public enum StreakEngine {
-  // Walk bound keeps the recount O(n) over real usage (T-P06-04).
-  private static let maxLookbackDays = 730
+  // Walk bound keeps the recount O(n) over real usage (T-P06-04). Callers
+  // feeding loggedDays from a SQL window must cover at least this span or
+  // the recount silently caps at the window edge.
+  public static let maxLookbackDays = 730
 
   public static func evaluate(_ input: StreakInput) -> StreakOutcome {
     let calendar = input.calendar
