@@ -7,7 +7,14 @@ import Foundation
 enum AppleNonceProvider {
   static func makeNonce() -> (raw: String, hashed: String) {
     var bytes = [UInt8](repeating: 0, count: 32)
-    _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+    let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+    // A silent fallback here would sign in with an all-zero, fully
+    // predictable nonce — defeating Sign in with Apple's replay protection.
+    // Matches this codebase's existing crypto/init-failure convention
+    // (fatalError, e.g. PersistenceBootstrap) rather than proceeding.
+    guard status == errSecSuccess else {
+      fatalError("SecRandomCopyBytes failed with status \(status)")
+    }
     let raw = bytes.map { String(format: "%02x", $0) }.joined()
     let hashed = SHA256.hash(data: Data(raw.utf8)).map { String(format: "%02x", $0) }.joined()
     return (raw, hashed)
