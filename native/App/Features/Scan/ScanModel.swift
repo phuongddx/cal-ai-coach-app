@@ -86,6 +86,9 @@ final class ScanModel {
     let targets: TargetRepository
     let engagement: EngagementRepository
     let catalog: CatalogRepository
+    // Phase 4 dispatch seam — nil default keeps every existing test call site
+    // unmodified; the real app wires environment.notifyLocalMutation() here.
+    var notifyMutation: (@Sendable () -> Void)?
   }
 
   private(set) var phase: Phase = .capture
@@ -364,6 +367,7 @@ final class ScanModel {
       }
       let operations = try await persistence.entries.recordUpserts(upserts, now: stamp)
       savedEntryIds = operations.map(\.recordId)
+      persistence.notifyMutation?()
       savedKcal = mealKcal
       phase = .saved
       await persistSavedMeal()
@@ -382,6 +386,7 @@ final class ScanModel {
         try DiaryEntry.fetchOne(database, key: entryId)
       }) {
         _ = try? await persistence.entries.recordTombstone(entry, now: now())
+        persistence.notifyMutation?()
       }
       try? await persistence.details.delete(entryId: entryId)
     }

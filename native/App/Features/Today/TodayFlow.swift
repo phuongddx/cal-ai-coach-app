@@ -23,7 +23,7 @@ struct TodayFlow: View {
       if model == nil {
         model = TodayModel(
           pool: environment.database,
-          userId: AppEnvironment.demoUserId,
+          userId: environment.currentUserId,
           tracking: TrackingRepository(database: environment.database),
           now: environment.now
         )

@@ -6,7 +6,9 @@ struct RootView: View {
 
   var body: some View {
     if environment.isReady {
-      if environment.hasTargets || environment.onboardingPending {
+      if environment.requiresSignIn && environment.authSession == nil {
+        SignInView()
+      } else if environment.hasTargets || environment.onboardingPending {
         MainShell()
       } else {
         OnboardingFlowRoute()
@@ -27,7 +29,7 @@ struct OnboardingFlowRoute: View {
   var body: some View {
     OnboardingFlowView(
       model: OnboardingModel(
-        userId: AppEnvironment.demoUserId,
+        userId: environment.currentUserId,
         now: environment.now,
         animationsDisabled: environment.animationsDisabled,
         save: { try await environment.targetRepository.saveTarget($0) },

@@ -16,6 +16,10 @@ struct FoodSearchView: View {
   let now: @Sendable () -> Date
   let onSaved: (SavedReceipt) -> Void
   let onDismiss: () -> Void
+  // Phase 4 dispatch seam — defaults to a no-op so existing snapshot tests
+  // (which construct this view directly, with no AppEnvironment ancestor)
+  // are unmodified; the real app wires environment.notifyLocalMutation() here.
+  var notifyMutation: () -> Void = {}
 
   @State private var manualRow: FoodSearchModel.Row?
   @State private var isCustomSheetPresented = false
@@ -232,6 +236,7 @@ struct FoodSearchView: View {
       defer { isSaving = false }
       do {
         _ = try await diaryEntryRepository.recordUpsert(entry, now: stamp)
+        notifyMutation()
         try await diaryDetailRepository.upsert(detail)
         manualRow = nil
         onSaved(

@@ -49,7 +49,7 @@ struct MainShell: View {
       DiaryDayView(
         model: DiaryDayModel(
           pool: environment.database,
-          userId: AppEnvironment.demoUserId,
+          userId: environment.currentUserId,
           day: link.date ?? environment.now(),
           now: environment.now
         )

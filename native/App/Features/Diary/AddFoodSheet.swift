@@ -222,11 +222,12 @@ struct AddFoodSheetRoute: View {
         itemsJson: meal.itemsJson,
         mealName: meal.name,
         mealSlot: mealSlot,
-        userId: AppEnvironment.demoUserId,
+        userId: environment.currentUserId,
         entries: environment.diaryEntryRepository,
         now: environment.now()
       )
       guard !entryIds.isEmpty else { return }
+      environment.notifyLocalMutation()
       onSaved(
         SavedReceipt(
           mealName: ManualLogSheet.mealName(mealSlot),
@@ -301,12 +302,13 @@ struct FoodSearchRoute: View {
         model: model,
         mealSlot: mealSlot,
         catalog: environment.catalogRepository,
-        userId: AppEnvironment.demoUserId,
+        userId: environment.currentUserId,
         diaryEntryRepository: environment.diaryEntryRepository,
         diaryDetailRepository: environment.diaryDetailRepository,
         now: environment.now,
         onSaved: onSaved,
-        onDismiss: onDismiss
+        onDismiss: onDismiss,
+        notifyMutation: { environment.notifyLocalMutation() }
       )
     } else {
       Color.ccBackground.overlay(ProgressView())

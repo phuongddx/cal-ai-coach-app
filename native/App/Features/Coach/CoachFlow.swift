@@ -202,7 +202,7 @@ struct CoachFlow: View {
       if model == nil {
         model = CoachModel(
           pool: environment.database,
-          userId: AppEnvironment.demoUserId,
+          userId: environment.currentUserId,
           engagement: environment.engagementRepository,
           now: environment.now
         )

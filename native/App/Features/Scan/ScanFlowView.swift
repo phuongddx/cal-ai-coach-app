@@ -66,12 +66,13 @@ struct ScanFlowView: View {
       details: environment.diaryDetailRepository,
       targets: environment.targetRepository,
       engagement: environment.engagementRepository,
-      catalog: environment.catalogRepository
+      catalog: environment.catalogRepository,
+      notifyMutation: { environment.notifyLocalMutation() }
     )
     model = ScanModel(
       api: environment.api,
       persistence: persistence,
-      userId: AppEnvironment.demoUserId,
+      userId: environment.currentUserId,
       now: environment.now,
       mealSlot: route.mealSlot ?? .lunch
     )

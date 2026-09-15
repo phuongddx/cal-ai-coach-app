@@ -293,7 +293,7 @@ struct ProgressFlow: View {
       if model == nil {
         model = ProgressModel(
           pool: environment.database,
-          userId: AppEnvironment.demoUserId,
+          userId: environment.currentUserId,
           tracking: environment.trackingRepository,
           engagement: environment.engagementRepository,
           now: environment.now

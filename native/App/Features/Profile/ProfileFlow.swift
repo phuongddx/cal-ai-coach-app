@@ -138,7 +138,7 @@ struct ProfileFlow: View {
       if model == nil {
         model = ProfileModel(
           pool: environment.database,
-          userId: AppEnvironment.demoUserId,
+          userId: environment.currentUserId,
           now: environment.now
         )
       }
