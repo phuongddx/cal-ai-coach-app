@@ -10,9 +10,13 @@ struct SavedReceipt: Equatable {
   let entryIds: [UUID]
 }
 
+// Payload rows from a saved meal's items_json. kcal is optional so legacy
+// [{name, grams}] payloads still decode — those rows log unresolved (kcal nil)
+// instead of borrowing the meal's aggregate figure.
 struct SavedMealItem: Decodable {
   let name: String
   let grams: Int?
+  let kcal: Int?
 }
 
 extension MealSlot: Identifiable {
@@ -203,15 +207,16 @@ struct AddFoodSheetRoute: View {
   }
 
   // One-tap re-log: expand items_json → entry + detail per item, exactly one
-  // outbox op per entry; the first item carries the saved meal's kcal total.
+  // outbox op per entry; each row persists its own per-item kcal (never the
+  // saved meal's aggregate — legacy rows without a figure stay nil).
   private func relog(_ meal: SavedMeal) async {
     let items = (try? JSONDecoder().decode([SavedMealItem].self, from: Data(meal.itemsJson.utf8)))
-      ?? [SavedMealItem(name: meal.name, grams: nil)]
+      ?? [SavedMealItem(name: meal.name, grams: nil, kcal: nil)]
     let userId = AppEnvironment.demoUserId
     let stamp = environment.now()
     var entryIds: [UUID] = []
 
-    for (index, item) in items.enumerated() {
+    for item in items {
       let entry = DiaryEntry(
         id: UUID(),
         userId: userId,
@@ -231,7 +236,7 @@ struct AddFoodSheetRoute: View {
             mealSlot: mealSlot.rawValue,
             title: item.name,
             grams: item.grams,
-            kcal: index == 0 ? meal.kcal : nil,
+            kcal: item.kcal,
             proteinG: nil,
             carbsG: nil,
             fatG: nil,

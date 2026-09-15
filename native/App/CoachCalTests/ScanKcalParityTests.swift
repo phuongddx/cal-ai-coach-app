@@ -137,6 +137,10 @@ struct ScanKcalParityTests {
     #expect(railMeal.kcal == 290 + 86)
     let railItems = try JSONDecoder().decode([ScanModel.SavedMealItemPayload].self, from: Data(railMeal.itemsJson.utf8))
     #expect(railItems.map(\.grams) == [200, 20])
+    #expect(
+      railItems.map(\.kcal) == [290, 86],
+      "each payload row carries its own KcalArithmetic figure, never the aggregate"
+    )
 
     await model.undo()
 

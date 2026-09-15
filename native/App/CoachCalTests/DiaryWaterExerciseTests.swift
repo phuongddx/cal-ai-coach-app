@@ -235,6 +235,23 @@ nonisolated final class DiaryWaterExerciseTests: XCTestCase {
     XCTAssertEqual(DiaryMath.servingKcal(perServingKcal: 240, servings: 2), 480)
   }
 
+  // CR-01 contract: re-log decodes each saved row's own kcal; legacy
+  // [{name, grams}] payloads decode with nil kcal (unresolved), never the
+  // meal's aggregate on the first row.
+  func testRelogPayloadDecodesPerItemKcalLeniently() throws {
+    let current = #"""
+      [{"name":"Chicken Rice Bowl","grams":320,"kcal":464},
+       {"name":"House Dressing","grams":20,"kcal":86}]
+      """#
+    let decoded = try JSONDecoder().decode([SavedMealItem].self, from: Data(current.utf8))
+    XCTAssertEqual(decoded.map(\.kcal), [464, 86])
+
+    let legacy = #"[{"name":"Protein Oats","grams":250}]"#
+    let legacyDecoded = try JSONDecoder().decode([SavedMealItem].self, from: Data(legacy.utf8))
+    XCTAssertEqual(legacyDecoded.map(\.grams), [250])
+    XCTAssertEqual(legacyDecoded.map(\.kcal), [nil], "legacy rows must log unresolved, not the aggregate")
+  }
+
   @MainActor
   func testCustomFoodSaveThenSearchFindsIt() async throws {
     try await seeder.ensureSeeded()

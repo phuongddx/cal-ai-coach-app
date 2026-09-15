@@ -380,17 +380,19 @@ final class ScanModel {
   }
 
   // LOG-07: the review's save also feeds the saved-meals rail contract —
-  // itemsJson mirrors SavedMealItem's [{name, grams}] shape that 03-04's
-  // one-tap re-log decodes.
+  // itemsJson mirrors SavedMealItem's [{name, grams, kcal}] shape that 03-04's
+  // one-tap re-log decodes. kcal is KcalArithmetic-derived per item so the
+  // re-log never persists the meal's aggregate figure on a single row.
   struct SavedMealItemPayload: Codable {
     let name: String
     let grams: Int
+    let kcal: Int
   }
 
   private func persistSavedMeal() async {
     guard let persistence, let result else { return }
     let items = result.items.map { item in
-      SavedMealItemPayload(name: item.source.label, grams: item.grams)
+      SavedMealItemPayload(name: item.source.label, grams: item.grams, kcal: itemKcal(at: item.id))
     }
     guard let itemsJson = try? String(data: JSONEncoder().encode(items), encoding: .utf8) else {
       return
