@@ -47,6 +47,8 @@ targets:
         CFBundleDisplayName: CoachCal
         NSCameraUsageDescription: CoachCal uses the camera to photograph your meals so CoachCal can estimate calories and macros.
         ITSAppUsesNonExemptEncryption: false
+        NSHealthShareUsageDescription: CoachCal will read your workouts and activity so calorie estimates stay accurate. This version does not read health data yet.
+        NSHealthUpdateUsageDescription: CoachCal will save burned-energy summaries from your logged meals. This version does not write health data yet.
     dependencies:
       - package: CoachCalCore
       - package: CoachCalDesignSystem
@@ -59,6 +61,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_IDENTITY: "iPhone Distribution: Doan Duy Phuong (K2TYLYAWMK)"
         CODE_SIGN_ENTITLEMENTS: App/CoachCal/SupportingFiles/CoachCal.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PROVISIONING_PROFILE_SPECIFIER: "CoachCal AppStore"
         SUPABASE_URL: "$(COACHCAL_SUPABASE_URL:http://127.0.0.1:54321)"
         SUPABASE_ANON_KEY: "$(COACHCAL_SUPABASE_ANON_KEY)"

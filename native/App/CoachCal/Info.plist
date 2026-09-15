@@ -18,12 +18,27 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.nextlabs.coachcal</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>coachcal</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>CoachCal uses the camera to photograph your meals so CoachCal can estimate calories and macros.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>CoachCal will read your workouts and activity so calorie estimates stay accurate. This version does not read health data yet.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>CoachCal will save burned-energy summaries from your logged meals. This version does not write health data yet.</string>
 	<key>SUPABASE_ANON_KEY</key>
 	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>SUPABASE_URL</key>
