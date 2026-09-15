@@ -9,34 +9,34 @@ struct DescribeMealSheet: View {
   let onLoggedElsewhere: () -> Void
 
   @State private var isSearchPresented = false
+  @FocusState private var isFieldFocused: Bool
 
   var body: some View {
-    VStack(spacing: 0) {
-      HStack {
-        Text("Describe your meal")
-          .ccFont(.heading)
-          .foregroundStyle(Color.ccTextPrimary)
-          .accessibilityIdentifier("scan.describeTitle")
-        Spacer()
-        Button {
-          isSearchPresented = true
-        } label: {
-          Image(systemName: "magnifyingglass")
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(Color.ccTextSecondary)
-            .frame(width: 44, height: 44)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Search the food database")
-        .accessibilityIdentifier("scan.describe.search")
-      }
-      .padding(.horizontal, CCSpace.lg)
-      .padding(.top, CCSpace.lg)
-
-      Spacer()
-
+    // Scrollable + keyboard-dismissable: with the multiline field keeping the
+    // keyboard up, keyboard avoidance pinned the submit under the keyboard
+    // window and pushed the search escape off-screen with no way back.
+    ScrollView {
       VStack(alignment: .leading, spacing: CCSpace.lg) {
+        HStack {
+          Text("Describe your meal")
+            .ccFont(.heading)
+            .foregroundStyle(Color.ccTextPrimary)
+            .accessibilityIdentifier("scan.describeTitle")
+          Spacer()
+          Button {
+            isSearchPresented = true
+          } label: {
+            Image(systemName: "magnifyingglass")
+              .font(.system(size: 16, weight: .semibold))
+              .foregroundStyle(Color.ccTextSecondary)
+              .frame(width: 44, height: 44)
+              .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel("Search the food database")
+          .accessibilityIdentifier("scan.describe.search")
+        }
+
         TextField(
           "What did you eat? Describe the dish, portions, and anything hidden in it.",
           text: $model.describeText,
@@ -47,6 +47,7 @@ struct DescribeMealSheet: View {
         .padding(CCSpace.lg)
         .background(Color.ccCard)
         .clipShape(RoundedRectangle(cornerRadius: CCRadius.lg))
+        .focused($isFieldFocused)
         .accessibilityIdentifier("scan.describeField")
 
         Picker("Meal", selection: $model.mealSlot) {
@@ -60,12 +61,23 @@ struct DescribeMealSheet: View {
         CCPrimaryButton("Analyze description") {
           let description = model.describeText.trimmingCharacters(in: .whitespacesAndNewlines)
           guard !description.isEmpty else { return }
+          isFieldFocused = false
           model.analyze(description: description)
         }
         .disabled(model.describeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         .accessibilityIdentifier("scan.describeSubmit")
       }
       .padding(CCSpace.lg)
+    }
+    .scrollDismissesKeyboard(.interactively)
+    .toolbar {
+      ToolbarItemGroup(placement: .keyboard) {
+        Spacer()
+        Button("Done") {
+          isFieldFocused = false
+        }
+        .accessibilityIdentifier("scan.describe.done")
+      }
     }
     .background(Color.ccBackground.ignoresSafeArea())
     .overlay(alignment: .center) {

@@ -61,6 +61,46 @@ nonisolated final class ScanFlowTests: XCTestCase {
     app.terminate()
   }
 
+  // Text-mode scan leg of LOG-01 (escalated by the validation audit): the
+  // describe sheet must keep its submit reachable while the keyboard is up —
+  // toolbar Done dismisses the keyboard, then the CTA drives analyze → review.
+  func testDescribeTextScanWalksToReview() {
+    let app = XCUIApplication()
+    app.launch()
+
+    let fab = app.buttons["shell.fab"]
+    XCTAssertTrue(fab.waitForExistence(timeout: 15))
+    fab.tap()
+
+    let describePill = app.buttons["scan.modePill.text"]
+    XCTAssertTrue(describePill.waitForExistence(timeout: 10), "Describe pill missing on the scan cover")
+    describePill.tap()
+
+    let field = app.textViews["scan.describeField"]
+    XCTAssertTrue(field.waitForExistence(timeout: 10), "text-mode sheet did not present the describe field")
+    field.tap()
+    field.typeText("Grilled chicken salad with olive oil dressing, around 300 grams")
+
+    let done = app.buttons["scan.describe.done"]
+    XCTAssertTrue(done.waitForExistence(timeout: 5), "keyboard toolbar Done missing — the submit stays unreachable behind the keyboard")
+    done.tap()
+
+    let submit = app.buttons["scan.describeSubmit"]
+    XCTAssertTrue(submit.waitForExistence(timeout: 5))
+    submit.tap()
+
+    let analyzing = app.descendants(matching: .any)["scan.analyzing"]
+    XCTAssertTrue(analyzing.waitForExistence(timeout: 10), "text submit never reached the analyzing checklist")
+
+    let review = app.descendants(matching: .any)["scan.review"]
+    XCTAssertTrue(review.waitForExistence(timeout: 10), "text-mode scan never reached the review state")
+
+    let badge = app.descendants(matching: .any)["scan.badge"]
+    XCTAssertTrue(badge.waitForExistence(timeout: 5), "confidence badge missing on review sheet")
+    XCTAssertTrue(badge.label.contains("High"), "0.92 fixture confidence must badge High — got: \(badge.label)")
+    app.terminate()
+  }
+
   func testQuotaReachedShowsManualPath() {
     let app = XCUIApplication()
     app.launchArguments = ["--ccScanScenario", "402"]
