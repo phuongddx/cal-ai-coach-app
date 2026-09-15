@@ -1,4 +1,5 @@
 import CoachCalDesignSystem
+import CoachCalPersistence
 import SwiftUI
 
 // Group F Settings Detail. The locked copy lives in SettingsCopy so the
@@ -12,7 +13,6 @@ enum SettingsCopy {
     "This permanently deletes your data on this device. Cloud deletion arrives with sync in a later update."
   static let deleteAccountConfirm = "Delete account"
   static let cancel = "Cancel"
-  static let exportNote = "Available soon"
   static let billingNote = "Billing arrives in a later update."
   static let versionCaption = "CoachCal v1.0.0 · Made with 💚"
   static let burnAddBackTitle = "Add exercise calories back"
@@ -30,8 +30,9 @@ struct SettingsDetailView: View {
   let edSafeToggle: Binding<Bool>
   let burnAddBackToggle: Binding<Bool>
   let onDeleteAccount: () -> Void
+  let csvExportAction: () async throws -> Data
 
-  @State private var showsExportNote = false
+  @State private var exportedCSV: Data?
   @State private var showsDeleteConfirmation = false
 
   var body: some View {
@@ -155,18 +156,15 @@ struct SettingsDetailView: View {
 
   private var dataPrivacyGroup: some View {
     CCSettingsGroup {
-      Button {
-        showsExportNote = true
-      } label: {
+      ShareLink(
+        item: CSVDocument(data: exportedCSV ?? Data()),
+        preview: SharePreview("CoachCal Data.csv")
+      ) {
         CCSettingsRow(icon: "square.and.arrow.up", label: "Export CSV")
       }
       .buttonStyle(.plain)
+      .disabled(exportedCSV == nil)
       .accessibilityIdentifier("settings.row.export")
-      if showsExportNote {
-        // TRU-03 is Phase 4: an honest stub, no export logic ships here.
-        CCBannerNote(SettingsCopy.exportNote)
-          .accessibilityIdentifier("settings.exportNote")
-      }
       Button {
         showsDeleteConfirmation = true
       } label: {
@@ -174,6 +172,13 @@ struct SettingsDetailView: View {
       }
       .buttonStyle(.plain)
       .accessibilityIdentifier("settings.row.deleteAccount")
+    }
+    // Loads in the background as soon as Settings appears — by the time the
+    // user scrolls to and taps Export CSV the ShareLink is almost always
+    // already backed by real data; the row stays disabled until it is.
+    .task {
+      guard exportedCSV == nil else { return }
+      exportedCSV = try? await csvExportAction()
     }
   }
 

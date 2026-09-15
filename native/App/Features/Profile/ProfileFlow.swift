@@ -118,6 +118,10 @@ struct ProfileFlow: View {
             burnAddBackToggle: environment.burnAddBackToggle,
             onDeleteAccount: {
               Task { await environment.performLocalAccountReset() }
+            },
+            csvExportAction: {
+              try await CSVExportService(database: environment.database)
+                .buildFullExportCSV(userId: environment.currentUserId)
             }
           )
         }
