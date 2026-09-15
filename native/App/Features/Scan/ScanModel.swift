@@ -96,6 +96,7 @@ final class ScanModel {
   var mealSlot: MealSlot
   var describeText = ""
   private(set) var savedEntryIds: [UUID] = []
+  private(set) var isSaving = false
   private(set) var savedKcal: Int?
   private(set) var todayKcal: Int?
   private(set) var goalKcal: Int?
@@ -297,7 +298,7 @@ final class ScanModel {
   }
 
   var isSaveEnabled: Bool {
-    result != nil && !hasUnresolved && !isAnalyzing && savedEntryIds.isEmpty
+    result != nil && !hasUnresolved && !isAnalyzing && !isSaving && savedEntryIds.isEmpty
   }
 
   func captureCorrection(kind: Correction.Kind, note: String, for itemId: Int) {
@@ -312,14 +313,18 @@ final class ScanModel {
   // MARK: - Save / Undo
 
   // Mirror + outbox via the diary repositories (one pending op per entry,
-  // detail row per item with recomputed nutrition). Outbox DISPATCH is wired
-  // in Phase 4 — the write path matches 03-03's committed diary idiom.
+  // detail row per item with recomputed nutrition). The whole batch commits
+  // in one transaction and isSaving rejects re-entrant Save taps, so a
+  // double-tap or mid-write failure can never duplicate entries. Outbox
+  // DISPATCH is wired in Phase 4 — the write path matches 03-03's committed
+  // diary idiom.
   func save() async {
-    guard isSaveEnabled, let result, let persistence else { return }
+    guard !isSaving, let result, let persistence, isSaveEnabled else { return }
+    isSaving = true
+    defer { isSaving = false }
     let stamp = now()
-    var entryIds: [UUID] = []
     do {
-      for item in result.items {
+      let upserts = result.items.map { item in
         let entry = DiaryEntry(
           id: UUID(),
           userId: userId,
@@ -331,34 +336,33 @@ final class ScanModel {
           acceptedOpId: nil,
           serverUpdatedAt: stamp
         )
-        _ = try await persistence.entries.recordUpsert(entry, now: stamp)
-        try await persistence.details.upsert(
-          DiaryEntryDetail(
-            entryId: entry.id,
-            mealSlot: mealSlot.rawValue,
-            title: item.id == 0 ? mealTitle : item.source.label,
-            grams: item.grams,
-            kcal: itemKcal(at: item.id),
-            proteinG: KcalArithmetic.macroGrams(per100g: item.source.per100g.proteinG, grams: item.grams),
-            carbsG: KcalArithmetic.macroGrams(per100g: item.source.per100g.carbsG, grams: item.grams),
-            fatG: KcalArithmetic.macroGrams(per100g: item.source.per100g.fatG, grams: item.grams),
-            fiberG: KcalArithmetic.macroGrams(per100g: item.source.per100g.fiberG, grams: item.grams),
-            confidence: item.source.confidence,
-            hiddenFatLikely: item.source.hiddenFatLikely,
-            source: "scan",
-            unresolved: item.isUnresolved,
-            scanId: result.scanId.uuidString
-          )
+        let detail = DiaryEntryDetail(
+          entryId: entry.id,
+          mealSlot: mealSlot.rawValue,
+          title: item.id == 0 ? mealTitle : item.source.label,
+          grams: item.grams,
+          kcal: itemKcal(at: item.id),
+          proteinG: KcalArithmetic.macroGrams(per100g: item.source.per100g.proteinG, grams: item.grams),
+          carbsG: KcalArithmetic.macroGrams(per100g: item.source.per100g.carbsG, grams: item.grams),
+          fatG: KcalArithmetic.macroGrams(per100g: item.source.per100g.fatG, grams: item.grams),
+          fiberG: KcalArithmetic.macroGrams(per100g: item.source.per100g.fiberG, grams: item.grams),
+          confidence: item.source.confidence,
+          hiddenFatLikely: item.source.hiddenFatLikely,
+          source: "scan",
+          unresolved: item.isUnresolved,
+          scanId: result.scanId.uuidString
         )
-        entryIds.append(entry.id)
+        return DiaryEntryRepository.EntryDetailUpsert(entry: entry, detail: detail)
       }
-      savedEntryIds = entryIds
+      let operations = try await persistence.entries.recordUpserts(upserts, now: stamp)
+      savedEntryIds = operations.map(\.recordId)
       savedKcal = mealKcal
       phase = .saved
       await persistSavedMeal()
       await loadSavedContext()
     } catch {
-      // Local-first write failure keeps the review open so Save can retry.
+      // Local-first write failure keeps the review open so Save can retry
+      // from a clean slate — the rolled-back transaction left nothing behind.
     }
   }
 

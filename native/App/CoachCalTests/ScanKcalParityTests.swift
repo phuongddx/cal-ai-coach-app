@@ -95,6 +95,38 @@ struct ScanKcalParityTests {
     #expect(model.isSaveEnabled)
   }
 
+  // WR-01: a second Save while one is in flight must be rejected — both taps
+  // resolve to exactly one batch (two entries, two ops), never duplicates.
+  @Test func concurrentSaveTapsProduceExactlyOneBatch() async throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appending(component: "scan-parity-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let pool = try Database.makePool(
+      at: directory.appending(component: "coach-cal.sqlite").path(percentEncoded: false)
+    )
+    try Migrations.foundationSync.migrate(pool)
+    let persistence = ScanModel.Persistence(
+      pool: pool,
+      entries: DiaryEntryRepository(database: pool),
+      details: DiaryDetailRepository(database: pool),
+      targets: TargetRepository(database: pool),
+      engagement: EngagementRepository(database: pool),
+      catalog: CatalogRepository(database: pool)
+    )
+    let model = Self.makeModel(persistence: persistence)
+    model.receive(Self.twoItemResponse())
+
+    async let first: Void = model.save()
+    async let second: Void = model.save()
+    _ = await (first, second)
+
+    #expect(model.phase == .saved)
+    let pendingOps = try await pool.read { try PendingOp.fetchCount($0) }
+    #expect(pendingOps == 2, "a double-tap must not enqueue duplicate ops")
+    let entryCount = try await pool.read { try DiaryEntry.fetchCount($0) }
+    #expect(entryCount == 2, "a double-tap must not write duplicate entries")
+  }
+
   @Test func saveEnqueuesOnePendingOpPerEntryAndUndoTombstones() async throws {
     let directory = FileManager.default.temporaryDirectory
       .appending(component: "scan-parity-\(UUID().uuidString)")

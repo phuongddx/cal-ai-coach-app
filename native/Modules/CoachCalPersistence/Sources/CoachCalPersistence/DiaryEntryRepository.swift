@@ -12,6 +12,44 @@ public struct DiaryEntryRepository: Sendable {
     try await recordUpsert(entry, now: now) { _ in }
   }
 
+  // One mirror row + its detail row in the same transaction (scan save path).
+  public struct EntryDetailUpsert: Sendable {
+    public let entry: DiaryEntry
+    public let detail: DiaryEntryDetail?
+
+    public init(entry: DiaryEntry, detail: DiaryEntryDetail?) {
+      self.entry = entry
+      self.detail = detail
+    }
+  }
+
+  // Batch upsert: every entry, its detail row and its outbox op commit or roll
+  // back together — a mid-batch failure must never leave k-of-n rows behind
+  // for a retry to duplicate under fresh ids.
+  public func recordUpserts(_ upserts: [EntryDetailUpsert], now: Date) async throws -> [PendingOp] {
+    try await database.write { database in
+      var operations: [PendingOp] = []
+      for upsert in upserts {
+        let operation = PendingOp(
+          opId: UUID(),
+          tableName: "diary_entries",
+          recordId: upsert.entry.id,
+          kind: "upsert",
+          snapshot: Self.snapshot(for: upsert.entry),
+          clientTimestamp: now,
+          createdAt: now
+        )
+        try upsert.entry.upsert(database)
+        if let detail = upsert.detail {
+          try detail.upsert(database)
+        }
+        try operation.insert(database)
+        operations.append(operation)
+      }
+      return operations
+    }
+  }
+
   public func recordTombstone(_ entry: DiaryEntry, now: Date = Date()) async throws -> PendingOp {
     try await recordTombstone(entry, now: now) { _ in }
   }
