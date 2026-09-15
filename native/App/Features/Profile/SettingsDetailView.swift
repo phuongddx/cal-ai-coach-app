@@ -17,6 +17,7 @@ enum SettingsCopy {
   static let versionCaption = "CoachCal v1.0.0 · Made with 💚"
   static let burnAddBackTitle = "Add exercise calories back"
   static let burnAddBackDescription = "Adds Apple Health workouts to today's calorie budget."
+  static let burnAddBackNote = "Adding these to today's budget arrives in a later update."
 
   // VoiceOver contract: the toggle announces its state, never a raw boolean.
   static func edSafeAnnouncement(isOn: Bool) -> String {
@@ -140,25 +141,33 @@ struct SettingsDetailView: View {
   // TRK-03 burn add-back toggle: defaults off (HealthKitSettingsKey.burnAddBackEnabled);
   // reuses CCSettingsRow's icon/label rhythm with a trailing Toggle in place of the chevron.
   private var healthCard: some View {
-    CCSettingsGroup {
-      HStack(spacing: CCSpace.md) {
-        Image(systemName: "flame")
-          .font(.system(size: 20))
-          .foregroundStyle(Color.ccTextSecondary)
-          .frame(width: 24)
-          .accessibilityHidden(true)
-        Text(SettingsCopy.burnAddBackTitle)
-          .ccFont(.subhead)
-          .foregroundStyle(Color.ccTextPrimary)
-        Spacer()
-        Toggle("", isOn: burnAddBackToggle)
-          .labelsHidden()
-          .accessibilityIdentifier("settings.burnAddBackToggle")
+    VStack(alignment: .leading, spacing: CCSpace.sm) {
+      CCSettingsGroup {
+        HStack(spacing: CCSpace.md) {
+          Image(systemName: "flame")
+            .font(.system(size: 20))
+            .foregroundStyle(Color.ccTextSecondary)
+            .frame(width: 24)
+            .accessibilityHidden(true)
+          Text(SettingsCopy.burnAddBackTitle)
+            .ccFont(.subhead)
+            .foregroundStyle(Color.ccTextPrimary)
+          Spacer()
+          Toggle("", isOn: burnAddBackToggle)
+            .labelsHidden()
+            .accessibilityIdentifier("settings.burnAddBackToggle")
+        }
+        .padding(.vertical, 14)
+        .padding(.horizontal, CCSpace.lg)
       }
-      .padding(.vertical, 14)
-      .padding(.horizontal, CCSpace.lg)
+      .accessibilityElement(children: .contain)
+      // IN-01: the toggle persists but nothing reads it yet (no
+      // writeBurnedEnergy call site by design, 04-03-SUMMARY) — the row
+      // must not present as a working, descriptive control until the
+      // consumer lands, matching subscriptionCard's footnote convention.
+      CCBannerNote(SettingsCopy.burnAddBackNote)
+        .accessibilityIdentifier("settings.burnAddBackNote")
     }
-    .accessibilityElement(children: .contain)
   }
 
   private var dataPrivacyGroup: some View {
