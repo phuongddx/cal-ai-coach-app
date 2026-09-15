@@ -73,7 +73,8 @@ nonisolated final class SettingsTests: XCTestCase {
     let view = SettingsDetailView(
       edSafeToggle: .constant(false),
       burnAddBackToggle: .constant(false),
-      onDeleteAccount: {}
+      onDeleteAccount: {},
+      csvExportAction: { Data() }
     )
     let toggle = try view.inspect().find(ViewType.Toggle.self)
     XCTAssertEqual(
@@ -96,7 +97,8 @@ nonisolated final class SettingsTests: XCTestCase {
     let view = SettingsDetailView(
       edSafeToggle: .constant(false),
       burnAddBackToggle: .constant(false),
-      onDeleteAccount: {}
+      onDeleteAccount: {},
+      csvExportAction: { Data() }
     )
     let toggle = try view.inspect().find(ViewType.Toggle.self) { toggle in
       (try? toggle.accessibilityIdentifier()) == "settings.burnAddBackToggle"
@@ -167,7 +169,8 @@ nonisolated final class SettingsTests: XCTestCase {
     let view = SettingsDetailView(
       edSafeToggle: .constant(true),
       burnAddBackToggle: .constant(false),
-      onDeleteAccount: {}
+      onDeleteAccount: {},
+      csvExportAction: { Data() }
     )
     let texts = try view.inspect().findAll(ViewType.Text.self).map { try $0.string() }
     XCTAssertTrue(texts.contains("Subscription"), "texts: \(texts)")
@@ -189,10 +192,30 @@ nonisolated final class SettingsTests: XCTestCase {
     )
   }
 
-  // Export CSV is an honest stub in Phase 3 (TRU-03 is Phase 4).
+  // TRU-03: real ShareLink export replaces the Phase-3 "Available soon" stub.
+  // The ShareLink is structurally present regardless of load state (disabled
+  // until the injected action resolves; see SettingsDetailView's own `.task`).
+  // The closure is a stored property, so its wiring is verified by invoking
+  // it directly rather than through a simulated tap — ViewInspector cannot
+  // re-render @State after a tap on a manually-constructed view (see the
+  // Apple Health tap test above for the established workaround pattern).
   @MainActor
-  func testExportCsvShowsAvailableSoon() {
-    XCTAssertEqual(SettingsCopy.exportNote, "Available soon")
+  func testExportCsvPresentsShareLink() async throws {
+    let expectedCSV = Data("# user_targets\nid\n".utf8)
+    let view = SettingsDetailView(
+      edSafeToggle: .constant(false),
+      burnAddBackToggle: .constant(false),
+      onDeleteAccount: {},
+      csvExportAction: { expectedCSV }
+    )
+    let shareLink = try view.inspect().find(ViewType.ShareLink.self)
+    XCTAssertEqual(try shareLink.accessibilityIdentifier(), "settings.row.export")
+
+    let produced = try await view.csvExportAction()
+    XCTAssertEqual(
+      produced, expectedCSV,
+      "Export CSV must share exactly what the injected action produces"
+    )
   }
 
   // Every save funnels through TargetsEngine: sub-floor requests clamp to the

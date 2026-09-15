@@ -255,7 +255,8 @@ struct EdSafeSweepSnapshotTests {
         SettingsDetailView(
           edSafeToggle: .constant(edSafe),
           burnAddBackToggle: .constant(false),
-          onDeleteAccount: {}
+          onDeleteAccount: {},
+          csvExportAction: { Data() }
         ),
         edSafe: edSafe,
         dark: dark
