@@ -497,6 +497,17 @@ final class AppEnvironment {
         event.breadcrumbs = event.breadcrumbs?.filter {
           Self.isAllowListedText($0.message) && Self.isAllowListedText($0.category)
         }
+        // Auto-instrumented network breadcrumbs (enableNetworkBreadcrumbs,
+        // on by default) store the request URL/method/status in
+        // `breadcrumb.data`, not `.message`/`.category` — that field must
+        // be scrubbed the same way or every Supabase endpoint name leaks
+        // through unfiltered (WR-02).
+        event.breadcrumbs?.forEach { breadcrumb in
+          for (key, value) in breadcrumb.data ?? [:]
+          where !Self.isAllowListedBreadcrumbValue(key: key, value: value) {
+            breadcrumb.setData(value: nil, key: key)
+          }
+        }
         event.extra = event.extra?.filter { Self.isAllowListedKey($0.key) }
         event.tags = event.tags?.filter { Self.isAllowListedKey($0.key) }
         return event
@@ -540,6 +551,15 @@ final class AppEnvironment {
   private static func isAllowListedText(_ text: String?) -> Bool {
     guard let text else { return true }
     return Self.isAllowListedKey(text)
+  }
+
+  // Breadcrumb.data values are untyped (NSDictionary<String, Any>); only
+  // string values can carry a leaked endpoint/table name, so non-string
+  // values (status codes, durations, etc.) pass through unfiltered.
+  private static func isAllowListedBreadcrumbValue(key: String, value: Any) -> Bool {
+    guard Self.isAllowListedKey(key) else { return false }
+    guard let stringValue = value as? String else { return true }
+    return Self.isAllowListedText(stringValue)
   }
 
   // T-P46-02: MetricKit payloads never leave the device raw — only counts,
