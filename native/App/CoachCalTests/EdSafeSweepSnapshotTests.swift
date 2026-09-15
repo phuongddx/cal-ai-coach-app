@@ -244,6 +244,25 @@ struct EdSafeSweepSnapshotTests {
     assertSnapshot(of: renderedImage(view, edSafe: true, dark: true), as: .image, named: "sweep-profile-edsafe-dark")
   }
 
+  // MARK: - Screen 9: Settings detail (Group F; hosts the ED-Safe toggle)
+
+  // PLT-03 theming backstop for the one Group F screen outside the original
+  // 8-screen sweep: the binding tracks the mode so the ED-Safe pair shows the
+  // toggle ON, as the user would see it.
+  @Test func settingsMatrix() async throws {
+    func settingsImage(edSafe: Bool, dark: Bool) -> UIImage {
+      renderedImage(
+        SettingsDetailView(edSafeToggle: .constant(edSafe), onDeleteAccount: {}),
+        edSafe: edSafe,
+        dark: dark
+      )
+    }
+    assertSnapshot(of: settingsImage(edSafe: false, dark: false), as: .image, named: "sweep-settings-light")
+    assertSnapshot(of: settingsImage(edSafe: false, dark: true), as: .image, named: "sweep-settings-dark")
+    assertSnapshot(of: settingsImage(edSafe: true, dark: false), as: .image, named: "sweep-settings-edsafe-light")
+    assertSnapshot(of: settingsImage(edSafe: true, dark: true), as: .image, named: "sweep-settings-edsafe-dark")
+  }
+
   // MARK: - Rendering
 
   private func renderedImage(_ view: some View, edSafe: Bool, dark: Bool) -> UIImage {

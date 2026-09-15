@@ -113,6 +113,71 @@ nonisolated final class FoodSearchTests: XCTestCase {
     app.terminate()
   }
 
+  // LOG-07: one-tap re-log. "Protein Oats" is the discriminator — no seeded
+  // diary row, food, or other saved meal carries that title, so the asserted
+  // diary row can only be the re-logged write.
+  @MainActor
+  func testSavedMealRailRelogWritesDiaryRowAndToast() {
+    let app = XCUIApplication()
+    app.terminate()
+    app.launchArguments = ["--ccFreshStart"]
+    app.launch()
+    app.terminate()
+
+    app.launchArguments = ["--ccDisableAnimations"]
+    app.launch()
+
+    let mealRow = app.descendants(matching: .any).matching(identifier: "today.foodRow").firstMatch
+    XCTAssertTrue(mealRow.waitForExistence(timeout: 15), "seeded Today row missing")
+    app.swipeUp()
+    mealRow.tap()
+
+    let addFood = app.buttons["diary.addFood.breakfast"]
+    XCTAssertTrue(addFood.waitForExistence(timeout: 10), "diary dashed Add food missing")
+    addFood.tap()
+
+    let searchTile = app.buttons["addfood.tile.search"]
+    XCTAssertTrue(searchTile.waitForExistence(timeout: 10), "Add Food sheet missing")
+    // The sheet opens at the medium detent; the saved-meals rail sits below
+    // the fold until the sheet expands to large.
+    app.swipeUp()
+
+    let cards = app.descendants(matching: .any).matching(identifier: "addfood.savedMeal")
+    let emptyCard = app.descendants(matching: .any).matching(identifier: "addfood.savedMealsEmpty").firstMatch
+    XCTAssertTrue(
+      cards.firstMatch.waitForExistence(timeout: 10),
+      "saved-meals rail missing after detent expand (empty card present: \(emptyCard.exists))"
+    )
+    let oatsCard = cards.matching(NSPredicate(format: "label CONTAINS %@", "Protein Oats")).firstMatch
+    XCTAssertTrue(oatsCard.waitForExistence(timeout: 5), "seeded Protein Oats rail card missing")
+    oatsCard.tap()
+
+    // The re-log writes through the diary repositories, then dismisses the
+    // sheet and toasts over the diary — same receipt plumbing as manual log.
+    let toastTexts = app.staticTexts.matching(
+      NSPredicate(format: "label IN %@", ["Saved to Breakfast", "380 kcal added"])
+    )
+    XCTAssertTrue(
+      toastTexts.firstMatch.waitForExistence(timeout: 10),
+      "one-tap re-log must surface the Saved toast over the diary"
+    )
+    XCTAssertEqual(
+      toastTexts.allElementsBoundByIndex.map(\.label).sorted(),
+      ["380 kcal added", "Saved to Breakfast"]
+    )
+
+    app.swipeDown()
+    let reloggedRow = app.descendants(matching: .any)
+      .matching(identifier: "diary.foodRow")
+      .matching(NSPredicate(format: "label CONTAINS %@", "Protein Oats"))
+      .firstMatch
+    XCTAssertTrue(
+      reloggedRow.waitForExistence(timeout: 10),
+      "one-tap re-log must write a diary row for the saved meal"
+    )
+    app.terminate()
+  }
+
   // Navigation: seeded Today → Recent meals row → Day View → dinner Add food.
   @MainActor
   private func launchToFoodSearch() -> XCUIApplication {
