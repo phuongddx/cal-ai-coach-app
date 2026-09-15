@@ -19,6 +19,9 @@ enum ScanCaptureError: Error {
 @MainActor
 protocol CameraCaptureService: AnyObject {
   var preview: AnyView { get }
+  // Resolves video permission before the session is configured: requests
+  // access when undetermined, reports denial for the permission card.
+  func requestAccessIfNeeded() async -> Bool
   func start()
   func stop()
   func capture() async throws -> ScanCapture
@@ -56,6 +59,9 @@ final class FixtureCaptureService: CameraCaptureService {
 
   func start() {}
   func stop() {}
+
+  // The fixture seam never touches AVCapture, so it is always "granted".
+  func requestAccessIfNeeded() async -> Bool { true }
 
   func capture() async throws -> ScanCapture {
     // Stand-in for AE/AF settling so the shutter press has visible work.
@@ -107,6 +113,20 @@ final class CameraService: NSObject, CameraCaptureService {
   }
 
   var preview: AnyView { AnyView(CameraPreviewView(session: session)) }
+
+  // Without this prompt the .notDetermined fresh-install path dead-ends:
+  // AVCaptureDeviceInput creation fails and every capture throws into the
+  // generic error card with no permission dialog ever shown.
+  func requestAccessIfNeeded() async -> Bool {
+    switch AVCaptureDevice.authorizationStatus(for: .video) {
+    case .authorized:
+      return true
+    case .notDetermined:
+      return await AVCaptureDevice.requestAccess(for: .video)
+    default:
+      return false
+    }
+  }
 
   func start() {
     configureIfNeeded()

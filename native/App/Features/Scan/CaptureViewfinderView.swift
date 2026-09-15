@@ -19,8 +19,26 @@ struct CaptureViewfinderView: View {
   @State private var isCapturing = false
   @State private var pickedItem: PhotosPickerItem?
   @State private var isSearchPresented = false
+  @State private var isCameraAccessDenied: Bool
+  @State private var dataScannerFailed = false
 
-  private var usesDataScanner: Bool { mode == .barcode && DataScannerViewController.isSupported }
+  init(
+    model: ScanModel,
+    mode: ScanMode,
+    onModeChange: @escaping (ScanMode) -> Void,
+    onLoggedElsewhere: @escaping () -> Void,
+    isCameraAccessDenied: Bool = false
+  ) {
+    self.model = model
+    self.mode = mode
+    self.onModeChange = onModeChange
+    self.onLoggedElsewhere = onLoggedElsewhere
+    _isCameraAccessDenied = State(initialValue: isCameraAccessDenied)
+  }
+
+  private var usesDataScanner: Bool {
+    mode == .barcode && DataScannerViewController.isSupported && !dataScannerFailed
+  }
 
   var body: some View {
     ZStack {
@@ -58,7 +76,12 @@ struct CaptureViewfinderView: View {
       if service == nil {
         service = ScanCaptureSeam.make(mode: mode)
       }
-      service?.start()
+      if let cameraService = service as? CameraService {
+        isCameraAccessDenied = !(await cameraService.requestAccessIfNeeded())
+      }
+      if !isCameraAccessDenied {
+        service?.start()
+      }
     }
     .onDisappear { service?.stop() }
     .task(id: pickedItem) {
@@ -91,9 +114,17 @@ struct CaptureViewfinderView: View {
   }
 
   @ViewBuilder private var viewfinderCore: some View {
-    VStack(spacing: CCSpace.md) {
+    if isCameraAccessDenied {
+      CameraPermissionCard(onOpenSettings: openSettings)
+        .accessibilityIdentifier("scan.cameraDenied")
+    } else {
+      VStack(spacing: CCSpace.md) {
       if usesDataScanner {
-        DataScannerReticle()
+        DataScannerReticle(onStartFailure: {
+          // startScanning can fail (permission revoked mid-session, sensor
+          // busy) — fall back to the library picker instead of a dead reticle.
+          DispatchQueue.main.async { dataScannerFailed = true }
+        })
           .frame(width: 200, height: 200)
       } else if mode == .barcode {
         PhotosPicker(selection: $pickedItem, matching: .images) {
@@ -120,7 +151,13 @@ struct CaptureViewfinderView: View {
           .textCase(.uppercase)
           .accessibilityIdentifier("scan.zoom")
       }
+      }
     }
+  }
+
+  private func openSettings() {
+    guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+    UIApplication.shared.open(url)
   }
 
   // 200pt alignment frame: 2pt lime @40% border, radius-lg, 3pt lime edge bars.
@@ -232,7 +269,7 @@ struct CaptureViewfinderView: View {
       }
     }
     .buttonStyle(.plain)
-    .disabled(isCapturing || model.isAnalyzing)
+    .disabled(isCapturing || model.isAnalyzing || isCameraAccessDenied)
     .accessibilityLabel("Capture photo, button")
     .accessibilityIdentifier("scan.shutter")
   }
@@ -290,9 +327,11 @@ struct CaptureViewfinderView: View {
 // Device reticle: DataScanner behind its own runtime availability checks —
 // never constructed where isSupported is false (simulator, pre-A12).
 private struct DataScannerReticle: View {
+  let onStartFailure: () -> Void
+
   var body: some View {
     if DataScannerViewController.isSupported, DataScannerViewController.isAvailable {
-      DataScannerRepresentable()
+      DataScannerRepresentable(onStartFailure: onStartFailure)
         .clipShape(RoundedRectangle(cornerRadius: CCRadius.lg))
         .overlay(
           RoundedRectangle(cornerRadius: CCRadius.lg)
@@ -306,6 +345,8 @@ private struct DataScannerReticle: View {
 }
 
 private struct DataScannerRepresentable: UIViewControllerRepresentable {
+  let onStartFailure: () -> Void
+
   func makeUIViewController(context: Context) -> DataScannerViewController {
     let controller = DataScannerViewController(
       recognizedDataTypes: [.barcode(symbologies: [.ean8, .ean13, .code128, .qr])],
@@ -316,11 +357,46 @@ private struct DataScannerRepresentable: UIViewControllerRepresentable {
       isGuidanceEnabled: true,
       isHighlightingEnabled: true
     )
-    try? controller.startScanning()
+    // Swallowed errors left the user with a dead reticle; surface them by
+    // falling back to the PhotosPicker branch.
+    do {
+      try controller.startScanning()
+    } catch {
+      onStartFailure()
+    }
     return controller
   }
 
   func updateUIViewController(_ uiViewController: DataScannerViewController, context: Context) {}
+}
+
+// Camera permission card: the denial state's only surface — Settings deep
+// link plus the library picker, which works without camera access.
+struct CameraPermissionCard: View {
+  let onOpenSettings: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: CCSpace.md) {
+      HStack(spacing: CCSpace.sm) {
+        Image(systemName: "video.slash")
+          .font(.system(size: 16, weight: .semibold))
+          .foregroundStyle(Color.ccTextPrimary)
+          .accessibilityHidden(true)
+        Text("Camera access is off")
+          .ccFont(.headline)
+          .foregroundStyle(Color.ccTextPrimary)
+      }
+      Text("CoachCal needs the camera to scan your meals. Turn it on in Settings, or pick a photo from your library instead.")
+        .ccFont(.subhead)
+        .foregroundStyle(Color.ccTextSecondary)
+      CCSecondaryButton("Open Settings", bordered: true, action: onOpenSettings)
+        .accessibilityIdentifier("scan.openSettings")
+    }
+    .padding(CCSpace.lg)
+    .background(Color.ccCard)
+    .clipShape(RoundedRectangle(cornerRadius: CCRadius.lg))
+    .padding(.horizontal, CCSpace.lg)
+  }
 }
 
 // Inline error card — UI-SPEC: never a system alert. Verbatim copy per error
