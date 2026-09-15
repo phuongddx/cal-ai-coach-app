@@ -10,6 +10,8 @@ let package = Package(
   ],
   dependencies: [
     .package(path: "../CoachCalCore"),
+    .package(path: "../CoachCalPersistence"),
+    .package(path: "../CoachCalSync"),
     .package(
       url: "https://github.com/supabase/supabase-swift.git",
       .exact(Version("2.55.2"))
@@ -25,7 +27,7 @@ let package = Package(
     ),
     .testTarget(
       name: "CoachCalNetworkingTests",
-      dependencies: ["CoachCalNetworking"],
+      dependencies: ["CoachCalNetworking", "CoachCalPersistence", "CoachCalSync"],
       resources: [.copy("Fixtures")]
     )
   ]
