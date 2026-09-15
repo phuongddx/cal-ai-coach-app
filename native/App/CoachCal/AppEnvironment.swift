@@ -312,17 +312,16 @@ final class AppEnvironment {
 
   // T-P07-04: Phase 3 delete-account is a local reset; Phase 4 adds the
   // server-side cascade (explicit table purge + admin.deleteUser) ahead of
-  // it. A cascade failure still falls through to the local wipe — the
-  // device must never be left showing stale rows even if the server call
-  // failed (documented here, not silently swallowed).
+  // it. The cascade and the local Keychain sign-out are both best-effort
+  // and unconditional — a cascade failure (offline, already deleted, etc.)
+  // must never skip signOut(), since the user-visible promise is "this
+  // device forgets you" even when the server call needs a retry/support
+  // follow-up. The device must never be left showing stale rows, and it
+  // must never silently re-authenticate via a surviving Keychain session
+  // on the next cold launch.
   func performLocalAccountReset() async {
-    do {
-      try await accountDeletionTransport.deleteAccount()
-      try? await authSessionStore.signOut()
-    } catch {
-      // Server cascade failed (offline, already deleted, etc.) — the local
-      // wipe below still runs so this device is never left in a stale state.
-    }
+    try? await accountDeletionTransport.deleteAccount()
+    try? await authSessionStore.signOut()
     authSession = nil
     UserDefaults.standard.removeObject(forKey: Self.edSafeDefaultsKey)
     edSafeMode = false
