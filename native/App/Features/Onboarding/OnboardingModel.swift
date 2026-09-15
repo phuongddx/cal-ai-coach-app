@@ -173,9 +173,10 @@ final class OnboardingModel {
       draft.requestedPaceKgPerWeek = nil
       paceClamped = false
     case .lose, .gain:
-      if let requested = draft.requestedPaceKgPerWeek {
-        setPace(requested)
-      }
+      // Always land on an engine-clamped value — re-clamping only `if let`
+      // let the maintain→lose roundtrip keep nil, so the slider displayed
+      // 0.50 while the engine computed (and persisted) pace 0.
+      setPace(draft.requestedPaceKgPerWeek ?? 0.5)
     }
   }
 

@@ -1,3 +1,4 @@
+import CoachCalCore
 import SwiftUI
 import ViewInspector
 import XCTest
@@ -100,6 +101,27 @@ nonisolated final class OnboardingContractTests: XCTestCase {
     model.setPace(0.3)
     XCTAssertEqual(model.draft.requestedPaceKgPerWeek, 0.3)
     XCTAssertFalse(model.paceClamped)
+  }
+
+  // WR-05: maintain→lose must land the draft on an engine-clamped pace —
+  // the old re-clamp-only-if-set path kept nil, so the slider displayed 0.50
+  // while the engine computed (and persisted) pace 0.
+  @MainActor
+  func testMaintainToLoseRoundtripReclampsPaceThroughEngine() {
+    let model = makeModel()
+    model.setPace(0.3)
+    model.selectGoal(.maintain)
+    XCTAssertNil(model.draft.requestedPaceKgPerWeek)
+
+    model.selectGoal(.lose)
+    let clamped = model.draft.requestedPaceKgPerWeek
+    XCTAssertNotNil(clamped, "the roundtrip must restore a concrete pace, never nil")
+    XCTAssertEqual(
+      clamped,
+      TargetsEngine.targets(for: model.draft).paceKgPerWeek,
+      "the displayed pace must equal what the engine computes for the draft"
+    )
+    XCTAssertGreaterThan(clamped ?? 0, 0, "a lose goal can never carry pace 0")
   }
 
   @MainActor
