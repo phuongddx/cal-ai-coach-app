@@ -351,6 +351,80 @@ nonisolated final class DiaryWaterExerciseTests: XCTestCase {
     XCTAssertNil(AppEnvironment.linkDate(from: URL(string: "coachcal://diary?date=not-a-date")!))
   }
 
+  // WR-09: the re-log write is one transactional batch — per-item kcal rows,
+  // exactly one outbox op per entry, never k-of-n partials.
+  @MainActor
+  func testRelogBatchWritesPerItemKcalAndOneOpPerEntry() async throws {
+    try await seeder.ensureSeeded()
+    let itemsJson = #"""
+      [{"name":"Chicken Rice Bowl","grams":320,"kcal":464},
+       {"name":"House Dressing","grams":20,"kcal":86}]
+      """#
+    let stamp = Date()
+
+    let entryIds = try await AddFoodSheetRoute.performRelog(
+      itemsJson: itemsJson,
+      mealName: "Chicken Rice Bowl",
+      mealSlot: .lunch,
+      userId: AppEnvironment.demoUserId,
+      entries: DiaryEntryRepository(database: pool),
+      now: stamp
+    )
+
+    XCTAssertEqual(entryIds.count, 2)
+    let details = try await DiaryDetailRepository(database: pool)
+      .details(forDay: DiaryDayModel.dayString(stamp), mealSlot: "lunch")
+    XCTAssertEqual(details.count, 2)
+    XCTAssertEqual(
+      details.compactMap(\.kcal).sorted(),
+      [86, 464],
+      "each re-logged row carries its own per-item kcal, not the meal aggregate"
+    )
+    XCTAssertTrue(details.allSatisfy { $0.source == "relog" })
+    let pendingOps = try await pool.read { try PendingOp.fetchCount($0) }
+    // 2 re-log ops + 7 seeded tombstone-free entries seed 0 → exactly 2.
+    XCTAssertEqual(pendingOps, 2, "exactly one outbox op per re-logged entry")
+  }
+
+  // WR-09 mirror of concurrentSaveTapsProduceExactlyOneBatch at the re-log
+  // write seam: overlapping batches complete whole and never half-written.
+  @MainActor
+  func testConcurrentRelogBatchesLeaveNoPartialState() async throws {
+    try await seeder.ensureSeeded()
+    let entries = DiaryEntryRepository(database: pool)
+    let stamp = Date()
+
+    async let batchA: [UUID] = AddFoodSheetRoute.performRelog(
+      itemsJson: #"[{"name":"Chicken Rice Bowl","grams":320,"kcal":464},{"name":"House Dressing","grams":20,"kcal":86}]"#,
+      mealName: "Chicken Rice Bowl",
+      mealSlot: .lunch,
+      userId: AppEnvironment.demoUserId,
+      entries: entries,
+      now: stamp
+    )
+    async let batchB: [UUID] = AddFoodSheetRoute.performRelog(
+      itemsJson: #"[{"name":"Protein Oats","grams":250,"kcal":380}]"#,
+      mealName: "Protein Oats",
+      mealSlot: .lunch,
+      userId: AppEnvironment.demoUserId,
+      entries: entries,
+      now: stamp
+    )
+    let (idsA, idsB) = try await (batchA, batchB)
+
+    XCTAssertEqual(idsA.count, 2)
+    XCTAssertEqual(idsB.count, 1)
+    let details = try await DiaryDetailRepository(database: pool)
+      .details(forDay: DiaryDayModel.dayString(stamp), mealSlot: "lunch")
+    XCTAssertEqual(
+      details.map(\.kcal).sorted(),
+      [86, 380, 464],
+      "both batches must land complete — no half-written batch"
+    )
+    let pendingOps = try await pool.read { try PendingOp.fetchCount($0) }
+    XCTAssertEqual(pendingOps, 3)
+  }
+
   @MainActor
   func testCustomFoodSaveThenSearchFindsIt() async throws {
     try await seeder.ensureSeeded()

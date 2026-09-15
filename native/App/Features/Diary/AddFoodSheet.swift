@@ -178,6 +178,7 @@ struct AddFoodSheetRoute: View {
   @Environment(AppEnvironment.self) private var environment
   @State private var savedMeals: [SavedMeal] = []
   @State private var isSearchPresented = false
+  @State private var isRelogging = false
 
   var body: some View {
     AddFoodSheet(
@@ -206,17 +207,51 @@ struct AddFoodSheetRoute: View {
     }
   }
 
-  // One-tap re-log: expand items_json → entry + detail per item, exactly one
-  // outbox op per entry; each row persists its own per-item kcal (never the
-  // saved meal's aggregate — legacy rows without a figure stay nil).
+  // One-tap re-log: expand items_json → entry + detail per item, committed as
+  // ONE transactional batch (single-flight on isRelogging), so a double-tap
+  // cannot duplicate rows and a mid-write failure rolls the whole batch back
+  // — the same treatment WR-01 gave the scan-save path. Each row persists its
+  // own per-item kcal (never the saved meal's aggregate — legacy rows without
+  // a figure stay nil).
   private func relog(_ meal: SavedMeal) async {
-    let items = (try? JSONDecoder().decode([SavedMealItem].self, from: Data(meal.itemsJson.utf8)))
-      ?? [SavedMealItem(name: meal.name, grams: nil, kcal: nil)]
-    let userId = AppEnvironment.demoUserId
-    let stamp = environment.now()
-    var entryIds: [UUID] = []
+    guard !isRelogging else { return }
+    isRelogging = true
+    defer { isRelogging = false }
+    do {
+      let entryIds = try await AddFoodSheetRoute.performRelog(
+        itemsJson: meal.itemsJson,
+        mealName: meal.name,
+        mealSlot: mealSlot,
+        userId: AppEnvironment.demoUserId,
+        entries: environment.diaryEntryRepository,
+        now: environment.now()
+      )
+      guard !entryIds.isEmpty else { return }
+      onSaved(
+        SavedReceipt(
+          mealName: ManualLogSheet.mealName(mealSlot),
+          kcalText: "\(meal.kcal) kcal added",
+          entryIds: entryIds
+        )
+      )
+      onDismiss()
+    } catch {
+      // Rail stays interactive; the rolled-back batch left nothing behind.
+    }
+  }
 
-    for item in items {
+  // The re-log write, view-independent for the hosted concurrency tests.
+  static func performRelog(
+    itemsJson: String,
+    mealName: String,
+    mealSlot: MealSlot,
+    userId: UUID,
+    entries: DiaryEntryRepository,
+    now stamp: Date
+  ) async throws -> [UUID] {
+    let items = (try? JSONDecoder().decode([SavedMealItem].self, from: Data(itemsJson.utf8)))
+      ?? [SavedMealItem(name: mealName, grams: nil, kcal: nil)]
+    let upserts = items.map { item in
       let entry = DiaryEntry(
         id: UUID(),
         userId: userId,
@@ -228,41 +263,26 @@ struct AddFoodSheetRoute: View {
         acceptedOpId: nil,
         serverUpdatedAt: stamp
       )
-      do {
-        _ = try await environment.diaryEntryRepository.recordUpsert(entry, now: stamp)
-        try await environment.diaryDetailRepository.upsert(
-          DiaryEntryDetail(
-            entryId: entry.id,
-            mealSlot: mealSlot.rawValue,
-            title: item.name,
-            grams: item.grams,
-            kcal: item.kcal,
-            proteinG: nil,
-            carbsG: nil,
-            fatG: nil,
-            fiberG: nil,
-            confidence: nil,
-            hiddenFatLikely: false,
-            source: "relog",
-            unresolved: false,
-            scanId: nil
-          )
-        )
-        entryIds.append(entry.id)
-      } catch {
-        // Rail stays interactive; partial re-logs surface in the live diary.
-      }
-    }
-
-    guard !entryIds.isEmpty else { return }
-    onSaved(
-      SavedReceipt(
-        mealName: ManualLogSheet.mealName(mealSlot),
-        kcalText: "\(meal.kcal) kcal added",
-        entryIds: entryIds
+      let detail = DiaryEntryDetail(
+        entryId: entry.id,
+        mealSlot: mealSlot.rawValue,
+        title: item.name,
+        grams: item.grams,
+        kcal: item.kcal,
+        proteinG: nil,
+        carbsG: nil,
+        fatG: nil,
+        fiberG: nil,
+        confidence: nil,
+        hiddenFatLikely: false,
+        source: "relog",
+        unresolved: false,
+        scanId: nil
       )
-    )
-    onDismiss()
+      return DiaryEntryRepository.EntryDetailUpsert(entry: entry, detail: detail)
+    }
+    let operations = try await entries.recordUpserts(upserts, now: stamp)
+    return operations.map(\.recordId)
   }
 }
 
