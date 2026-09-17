@@ -70,6 +70,11 @@ import PackageDescription
 
     let packageSettings = PackageSettings(
         productTypes: [:]
+        // NOTE (added during Task 2 execution): this got overridden to
+        // .staticFramework for all 5 local modules once building the app +
+        // widget targets surfaced a real cross-project build-order problem.
+        // See Task 2's "Discovered during execution" note below — this file
+        // is touched again in Task 2, not just Task 1.
     )
 #endif
 
@@ -235,15 +240,34 @@ let project = Project(
 Run: `cd native && tuist generate --no-open`
 Expected: Succeeds, produces `native/CoachCal.xcodeproj`.
 
-Run: `xcodebuild build -project CoachCal.xcodeproj -scheme CoachCal -destination "$(native/scripts/../../ci_scripts/../ci_scripts/ci_post_clone.sh 2>/dev/null; echo generic/platform=iOS Simulator)"` — simplified, actually run:
+**DISCOVERED DURING EXECUTION (controller-diagnosed):** raw `xcodebuild build -project CoachCal.xcodeproj -scheme CoachCal ...` fails at this point in the plan with `error: unable to resolve module dependency: 'CoachCalCore'` in `CoachCalWidget`'s compile step — NOT because the target/dependency definitions are wrong, but because no custom scheme exists yet (Task 3 adds it); Tuist's auto-generated default scheme has incomplete implicit cross-project dependency discovery for this app+extension+multiple-local-package-target shape. Confirmed via manual pbxproj inspection: `CoachCalCore.framework` IS correctly listed as a linked framework in both the app's and widget's Frameworks build phase — the target/link graph is correct, only the *scheme's build order* is incomplete.
+
+Also required: `native/Tuist/Package.swift`'s `PackageSettings.productTypes` (from Task 1) must be changed from `[:]` to force `.staticFramework` for the 5 local modules — a plain dynamic `.framework` product type for a module shared between the app and its widget extension hit intermittent "unable to resolve module dependency" failures (varying which module failed between runs) under Xcode's explicit-module build system; `.staticFramework` is deterministic and resolved it in conjunction with the scheme finding above:
+
+```swift
+let packageSettings = PackageSettings(
+    productTypes: [
+        "CoachCalCore": .staticFramework,
+        "CoachCalDesignSystem": .staticFramework,
+        "CoachCalPersistence": .staticFramework,
+        "CoachCalNetworking": .staticFramework,
+        "CoachCalSync": .staticFramework,
+    ]
+)
+```
+
+**Corrected Task 2 verification** (do not use raw `xcodebuild -scheme` yet — there is no custom scheme until Task 3):
 
 ```bash
 cd native
-DEST="generic/platform=iOS Simulator"
-xcodebuild build -project CoachCal.xcodeproj -scheme CoachCal -destination "$DEST" CODE_SIGNING_ALLOWED=NO
+tuist build CoachCal -- -destination "generic/platform=iOS Simulator" CODE_SIGNING_ALLOWED=NO
 ```
 
-Expected: `** BUILD SUCCEEDED **`. If it fails on an unknown manifest key/API (e.g. `.external`, `.extendingDefault`, `SettingsDictionary` signature), consult `tuist generate --help` and fix the manifest, then re-run this step. Do not proceed until this passes.
+Expected: `Build Succeeded` / `The project built successfully` (ignore the "`tuist build` is deprecated in favor of `tuist xcodebuild`" warning — the modern `tuist xcodebuild build` wrapper's exact flag-passthrough syntax wasn't resolved during this session; `tuist build` is confirmed working and is an acceptable interim choice, not a regression).
+
+**Carried forward to Task 3:** once the custom scheme exists (explicit `buildAction` listing all 4 targets), re-verify whether plain `xcodebuild build -project CoachCal.xcodeproj -scheme CoachCal ...` now succeeds on its own. If yes, Tasks 3/4/6/7's existing raw-`xcodebuild` commands are fine as written. If the same module-resolution failure persists even with an explicit scheme, every `xcodebuild build`/`xcodebuild test` invocation in Tasks 3, 4, 6, and 7 (including the GitHub Actions workflow YAML and the Xcode Cloud script) must be changed to the `tuist build`/`tuist xcodebuild` equivalent — do not assume either way; run it and check.
+
+If a *different* manifest API mismatch shows up (e.g. `.external`, `.extendingDefault`, `SettingsDictionary` signature), consult `tuist generate --help` and fix the manifest, then re-run this step. Do not proceed until the build genuinely succeeds.
 
 - [ ] **Step 3: Commit**
 
