@@ -118,11 +118,92 @@ let coachCalWidgetTarget = Target.target(
     ])
 )
 
+let coachCalTestsTarget = Target.target(
+    name: "CoachCalTests",
+    destinations: .iOS,
+    product: .unitTests,
+    bundleId: "com.nextlabs.coachcal.unit-tests",
+    deploymentTargets: .iOS("18.0"),
+    infoPlist: .default,
+    sources: [
+        "App/CoachCalTests/**",
+        "CoachCalWidget/CaloriesRemainingTimelineProvider.swift",
+    ],
+    dependencies: [
+        .target(name: "CoachCal"),
+        .external(name: "ViewInspector"),
+        .external(name: "SnapshotTesting"),
+    ],
+    settings: .settings(base: [
+        // Same trap as appSettings/CoachCalWidget above: Tuist's default
+        // target settings inject "iPhone Developer" at TARGET scope,
+        // which wins over the project-level Distribution identity in
+        // projectBaseSettings. Confirmed recurring here via pbxproj
+        // inspection during Task 3 (was NOT already inherited correctly,
+        // contrary to the plan's assumption that unsigned-in-project.yml
+        // test targets would just inherit).
+        "CODE_SIGN_IDENTITY": "iPhone Distribution: Doan Duy Phuong (K2TYLYAWMK)",
+    ])
+)
+
+let coachCalUITestsTarget = Target.target(
+    name: "CoachCalUITests",
+    destinations: .iOS,
+    product: .uiTests,
+    bundleId: "com.nextlabs.coachcal.tests",
+    deploymentTargets: .iOS("18.0"),
+    infoPlist: .default,
+    sources: [
+        "App/CoachCalUITests/**",
+    ],
+    dependencies: [
+        .target(name: "CoachCal"),
+    ],
+    settings: .settings(base: [
+        "UI_TESTING": "YES",
+        "CODE_SIGN_IDENTITY": "iPhone Distribution: Doan Duy Phuong (K2TYLYAWMK)",
+    ])
+)
+
+let coachCalScheme = Scheme.scheme(
+    name: "CoachCal",
+    buildAction: .buildAction(targets: [
+        .target("CoachCal"),
+        .target("CoachCalTests"),
+    ]),
+    testAction: .targets(
+        [
+            .testableTarget(target: .target("CoachCalTests"), isParallelizable: false),
+            .testableTarget(target: .target("CoachCalUITests"), isParallelizable: false),
+        ],
+        // ProjectDescription 4.206.0's `TestAction.targets(...)` has no
+        // `environmentVariables:` parameter directly (unlike the plan's
+        // original draft) — env vars for the Test action live on
+        // `arguments: .arguments(environmentVariables:)`, mirroring
+        // RunAction's shape. Same rationale as the old project.yml scheme
+        // comment: xcodebuild test does not forward the invoking shell's
+        // environment to a UI-test host process the way `swift test`
+        // does, so these must be set on the scheme's Test action.
+        arguments: .arguments(environmentVariables: [
+            "TEST_EMAIL": .environmentVariable(value: "$(TEST_EMAIL)", isEnabled: true),
+            "TEST_PASSWORD": .environmentVariable(value: "$(TEST_PASSWORD)", isEnabled: true),
+            "SUPABASE_ANON_KEY": .environmentVariable(value: "$(SUPABASE_ANON_KEY)", isEnabled: true),
+        ]),
+        configuration: .debug
+    ),
+    runAction: .runAction(configuration: .debug)
+)
+
 let project = Project(
     name: "CoachCal",
     settings: .settings(base: projectBaseSettings),
     targets: [
         coachCalTarget,
         coachCalWidgetTarget,
+        coachCalTestsTarget,
+        coachCalUITestsTarget,
+    ],
+    schemes: [
+        coachCalScheme,
     ]
 )
