@@ -5,7 +5,13 @@ import PackageDescription
     import ProjectDescription
 
     let packageSettings = PackageSettings(
-        productTypes: [:]
+        productTypes: [
+            "CoachCalCore": .staticFramework,
+            "CoachCalDesignSystem": .staticFramework,
+            "CoachCalPersistence": .staticFramework,
+            "CoachCalNetworking": .staticFramework,
+            "CoachCalSync": .staticFramework,
+        ]
     )
 #endif
 
