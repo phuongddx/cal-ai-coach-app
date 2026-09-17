@@ -56,3 +56,6 @@ yarn-error.*
 
 # SwiftPM isolated scratch builds (swift test --scratch-path .build-XXXX)
 .build-*/
+
+# Local git worktrees (superpowers:using-git-worktrees)
+.worktrees/
