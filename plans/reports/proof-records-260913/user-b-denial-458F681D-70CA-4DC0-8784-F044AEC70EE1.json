@@ -1,0 +1,1 @@
+{"checks":[{"name":"ownershipDenial","status":"pass","timingMs":0}],"environment":{"runtime":"iOS 18.4","stack":"local-supabase"},"errorCode":"42501","pendingCount":1,"runId":"458F681D-70CA-4DC0-8784-F044AEC70EE1","scenario":"user-b-denial","schemaVersion":1,"startedAt":"2026-09-13T18:56:20+07:00","tombstone":false}

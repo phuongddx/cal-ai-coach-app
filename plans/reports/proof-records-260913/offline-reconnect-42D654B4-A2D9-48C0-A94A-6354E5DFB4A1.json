@@ -1,0 +1,1 @@
+{"checks":[{"name":"reconnectFlush","status":"pass","timingMs":1}],"environment":{"runtime":"iOS 18.4","stack":"local-supabase"},"pendingCount":0,"rowId":"A60170E8-6817-4E3C-B0A8-E8BA8FC78E46","runId":"42D654B4-A2D9-48C0-A94A-6354E5DFB4A1","scenario":"offline-reconnect","schemaVersion":1,"serverVersion":24,"startedAt":"2026-09-13T18:56:20+07:00","tombstone":false}
