@@ -11,7 +11,7 @@ ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
 SRC_PLIST="$ROOT/native/App/CoachCal/Info.plist"
 SRC_ENTITLEMENTS="$ROOT/native/App/CoachCal/SupportingFiles/CoachCal.entitlements"
 SRC_PRIVACY="$ROOT/native/App/CoachCal/SupportingFiles/PrivacyInfo.xcprivacy"
-PROJECT_YML="$ROOT/native/project.yml"
+PROJECT_CONFIG="$ROOT/native/Project.swift"
 IPA=${1:-"$ROOT/native/artifacts/export/CoachCal.ipa"}
 
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/coachcal-compliance.XXXXXX") || exit 2
@@ -46,8 +46,8 @@ else
     [ "${tracking:-}" = "false" ] || fail "source PrivacyInfo.xcprivacy: NSPrivacyTracking must be false"
 fi
 
-grep -q 'CODE_SIGN_ENTITLEMENTS' "$PROJECT_YML" 2>/dev/null ||
-    fail "project.yml: CODE_SIGN_ENTITLEMENTS not wired"
+grep -q 'CoachCal.entitlements' "$PROJECT_CONFIG" 2>/dev/null ||
+    fail "Project.swift: CoachCal entitlements not wired"
 
 IPA_MODE=source-only
 if [ -f "$IPA" ]; then
