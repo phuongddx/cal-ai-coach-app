@@ -20,6 +20,14 @@ let appSettings: SettingsDictionary = [
     "PRODUCT_BUNDLE_IDENTIFIER": "com.nextlabs.coachcal",
     "TARGETED_DEVICE_FAMILY": "1",
     "PROVISIONING_PROFILE_SPECIFIER": "CoachCal AppStore",
+    // Tuist's default (.recommended) target settings inject their own
+    // CODE_SIGN_IDENTITY ("iPhone Developer") at TARGET scope, which wins
+    // over the project-level Distribution identity in projectBaseSettings
+    // (target settings always win over project settings for the same key
+    // in a generated Xcode project). Re-declaring it explicitly here is
+    // required to actually preserve Manual/Distribution signing, not
+    // redundant. Task 2 review (round 1) caught this as a Critical finding.
+    "CODE_SIGN_IDENTITY": "iPhone Distribution: Doan Duy Phuong (K2TYLYAWMK)",
     "SUPABASE_URL": "$(COACHCAL_SUPABASE_URL:http://127.0.0.1:54321)",
     "SUPABASE_ANON_KEY": "$(COACHCAL_SUPABASE_ANON_KEY)",
     "SENTRY_DSN": "$(COACHCAL_SENTRY_DSN:)",
@@ -57,6 +65,14 @@ let coachCalTarget = Target.target(
     resources: [
         "App/CoachCal/Assets.xcassets",
         "App/CoachCal/Resources/**",
+        // Tuist's `sources:` glob only matches compilable source
+        // extensions, unlike XcodeGen's folder-based `App/CoachCal` source
+        // which implicitly bucketed every non-source file (including this
+        // one) as a resource. Without this explicit entry the privacy
+        // manifest is silently dropped from the app bundle (App Store
+        // submission blocker). Task 2 review (round 1) caught this as a
+        // Critical finding.
+        "App/CoachCal/SupportingFiles/PrivacyInfo.xcprivacy",
     ],
     entitlements: .file(path: "App/CoachCal/SupportingFiles/CoachCal.entitlements"),
     dependencies: [
@@ -96,6 +112,9 @@ let coachCalWidgetTarget = Target.target(
     settings: .settings(base: [
         "PRODUCT_BUNDLE_IDENTIFIER": "com.nextlabs.coachcal.CoachCalWidget",
         "TARGETED_DEVICE_FAMILY": "1",
+        // Same fix as appSettings above: Tuist's default target settings
+        // override the project-level Distribution identity per-target.
+        "CODE_SIGN_IDENTITY": "iPhone Distribution: Doan Duy Phuong (K2TYLYAWMK)",
     ])
 )
 
