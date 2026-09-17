@@ -3,17 +3,18 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
-if ! command -v xcodegen >/dev/null 2>&1; then
+if ! command -v tuist >/dev/null 2>&1; then
   if command -v brew >/dev/null 2>&1; then
-    brew install xcodegen
+    brew install tuist
   else
-    echo "error: xcodegen is required and Homebrew is unavailable to install it" >&2
+    echo "error: tuist is required and Homebrew is unavailable to install it" >&2
     exit 1
   fi
 fi
 
 cd "$ROOT/native"
-xcodegen generate
+tuist install
+tuist generate --no-open
 
 for package in Modules/*; do
   if [ "$(basename "$package")" = "CoachCalDesignSystem" ]; then
@@ -34,8 +35,11 @@ else
   fi
 fi
 
-xcodebuild test \
-  -project CoachCal.xcodeproj \
-  -scheme CoachCal \
+# DISCOVERED DURING EXECUTION (Task 3): raw `xcodebuild test -scheme CoachCal`
+# fails with "unable to resolve module dependency" even with the custom
+# scheme in place — only Tuist's own build/test orchestration (`tuist
+# test`, not `xcodebuild test`) reliably resolves this app+widget+local-
+# package-modules graph. Do not revert this to raw xcodebuild.
+tuist test CoachCal -- \
   -destination "$destination" \
   -derivedDataPath DerivedData
