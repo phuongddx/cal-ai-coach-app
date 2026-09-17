@@ -265,7 +265,7 @@ tuist build CoachCal -- -destination "generic/platform=iOS Simulator" CODE_SIGNI
 
 Expected: `Build Succeeded` / `The project built successfully` (ignore the "`tuist build` is deprecated in favor of `tuist xcodebuild`" warning — the modern `tuist xcodebuild build` wrapper's exact flag-passthrough syntax wasn't resolved during this session; `tuist build` is confirmed working and is an acceptable interim choice, not a regression).
 
-**Carried forward to Task 3:** once the custom scheme exists (explicit `buildAction` listing all 4 targets), re-verify whether plain `xcodebuild build -project CoachCal.xcodeproj -scheme CoachCal ...` now succeeds on its own. If yes, Tasks 3/4/6/7's existing raw-`xcodebuild` commands are fine as written. If the same module-resolution failure persists even with an explicit scheme, every `xcodebuild build`/`xcodebuild test` invocation in Tasks 3, 4, 6, and 7 (including the GitHub Actions workflow YAML and the Xcode Cloud script) must be changed to the `tuist build`/`tuist xcodebuild` equivalent — do not assume either way; run it and check.
+**Carried forward to Task 3 — RESOLVED:** re-verified once Task 3's custom scheme existed. Answer: **no**, the explicit scheme does NOT fix it — raw `xcodebuild build`/`test -scheme CoachCal` (and `tuist xcodebuild`, which is a thin passthrough to the same call) still fail identically. Tasks 3, 4, 6, and 7 (including the GitHub Actions workflow and the Xcode Cloud script) have all been updated in this plan to use `tuist build`/`tuist test` instead of raw `xcodebuild`.
 
 If a *different* manifest API mismatch shows up (e.g. `.external`, `.extendingDefault`, `SettingsDictionary` signature), consult `tuist generate --help` and fix the manifest, then re-run this step. Do not proceed until the build genuinely succeeds.
 
@@ -412,16 +412,23 @@ done
 
 Expected: all module test suites pass (they don't depend on the project generator).
 
-- [ ] **Step 2: Run the full app test suite via the Tuist-generated project**
+- [ ] **Step 2: Run the full app test suite via Tuist's own orchestration**
+
+**DISCOVERED DURING EXECUTION (Task 3, definitively resolved the Task 2 open question):** even with Task 3's explicit custom scheme in place, raw `xcodebuild build`/`test -scheme CoachCal` still fails identically to the schemeless case (`unable to resolve module dependency: 'CoachCalCore'`). `tuist xcodebuild` is a thin passthrough to the same broken invocation and fails the same way. Only `tuist build`/`tuist test` (Tuist's own graph-based orchestration, not a raw `xcodebuild -scheme` call) reliably works. Use `tuist test`, not `xcodebuild test`, here and in every later task.
+
+A generic destination (`generic/platform=iOS Simulator`) works for `tuist build` but is REJECTED by `tuist test`/`xcodebuild test` with "Tests must be run on a concrete device" — a concrete simulator name is required.
 
 ```bash
 cd native
 resolved_name="$(xcrun simctl list devices available 2>/dev/null | grep -m1 -o 'iPhone [^(]*' | tail -n 1 | sed 's/ *$//')"
-DEST="platform=iOS Simulator,name=${resolved_name:-iPhone 16}"
-xcodebuild test -project CoachCal.xcodeproj -scheme CoachCal -destination "$DEST" CODE_SIGNING_ALLOWED=NO
+tuist test CoachCal -- -destination "platform=iOS Simulator,name=${resolved_name:-iPhone 16}" CODE_SIGNING_ALLOWED=NO
 ```
 
-Expected: `** TEST SUCCEEDED **`. If any test fails for reasons unrelated to the generator swap (e.g. a genuinely broken test), stop and report — that's a pre-existing issue, not something this migration should silently paper over.
+Expected: Tuist generates, builds, and actually reaches test execution (this alone proves Task 3's target/scheme wiring is structurally correct — no module-resolution error). The test *content* may still report `** TEST FAILED **` for reasons that are Task 4's job to triage, not Task 3's: e.g. snapshot tests can be simulator/OS-version-sensitive, and any test whose name implies a live dependency (e.g. one literally named `...ConvergesOnRealSupabase`) requires real `TEST_EMAIL`/`TEST_PASSWORD`/`SUPABASE_ANON_KEY` credentials that won't be set in an ad-hoc local run — that is a pre-existing environment-gating condition, not a regression from this migration. Distinguish "fails to build/wire" (this migration's concern — must be zero) from "fails because a specific test needs credentials or an exact snapshot baseline this environment doesn't have" (pre-existing, report but do not treat as a migration regression) before deciding whether to stop and fix or note-and-continue.
+
+- [ ] **Step 2b: Triage any test-content failures**
+
+For each failing test, determine: (a) does it fail the same way on `main` before this migration (check by looking at what the test actually asserts/needs — e.g. `grep` the test file for env-var reads or snapshot-comparison calls), or (b) is it new. Only (b) blocks this task. Record (a)-class failures in the ledger as pre-existing/environment-gated, not migration defects.
 
 - [ ] **Step 3: Commit** (only if any fixes were needed in the previous steps; otherwise skip — this task is verification-only)
 
@@ -543,9 +550,12 @@ else
   fi
 fi
 
-xcodebuild test \
-  -project CoachCal.xcodeproj \
-  -scheme CoachCal \
+# DISCOVERED DURING EXECUTION (Task 3): raw `xcodebuild test -scheme CoachCal`
+# fails with "unable to resolve module dependency" even with the custom
+# scheme in place — only Tuist's own build/test orchestration (`tuist
+# test`, not `xcodebuild test`) reliably resolves this app+widget+local-
+# package-modules graph. Do not revert this to raw xcodebuild.
+tuist test CoachCal -- \
   -destination "$destination" \
   -derivedDataPath DerivedData
 ```
@@ -642,9 +652,12 @@ jobs:
         run: |
           resolved_name="$(xcrun simctl list devices available 2>/dev/null | grep -m1 -o 'iPhone [^(]*' | tail -n 1 | sed 's/ *$//')"
           destination="platform=iOS Simulator,name=${resolved_name:-iPhone 16}"
-          xcodebuild test \
-            -project CoachCal.xcodeproj \
-            -scheme CoachCal \
+          # DISCOVERED DURING EXECUTION (Task 3): raw `xcodebuild test
+          # -scheme CoachCal` fails ("unable to resolve module dependency")
+          # even with the custom scheme present — use Tuist's own
+          # orchestration, not raw xcodebuild, for this app+widget+local-
+          # package-modules graph.
+          tuist test CoachCal -- \
             -destination "$destination" \
             CODE_SIGNING_ALLOWED=NO
 ```
