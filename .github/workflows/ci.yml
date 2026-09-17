@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app
+
+      - name: Install Tuist
+        run: |
+          if ! command -v tuist >/dev/null 2>&1; then
+            brew install tuist
+          fi
+          tuist version
+
+      - name: Cache Tuist dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            native/.tuist
+            ~/.tuist
+          key: ${{ runner.os }}-tuist-${{ hashFiles('native/Tuist/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-tuist-
+
+      - name: Install dependencies
+        working-directory: native
+        run: tuist install
+
+      - name: Generate Xcode project
+        working-directory: native
+        run: tuist generate --no-open
+
+      - name: Test local Swift packages
+        working-directory: native
+        run: |
+          for package in Modules/*; do
+            if [ "$(basename "$package")" = "CoachCalDesignSystem" ]; then
+              continue
+            fi
+            echo "Running package tests in $package"
+            (cd "$package" && swift test)
+          done
+
+      - name: Build and test CoachCal app
+        working-directory: native
+        run: |
+          resolved_name="$(xcrun simctl list devices available 2>/dev/null | grep -m1 -o 'iPhone [^(]*' | tail -n 1 | sed 's/ *$//')"
+          destination="platform=iOS Simulator,name=${resolved_name:-iPhone 16}"
+          # DISCOVERED DURING EXECUTION (Task 3): raw `xcodebuild test
+          # -scheme CoachCal` fails ("unable to resolve module dependency")
+          # even with the custom scheme present — use Tuist's own
+          # orchestration, not raw xcodebuild, for this app+widget+local-
+          # package-modules graph.
+          # --no-selective-testing: always run every test in CI, never let
+          # hash-based selective testing skip coverage.
+          tuist test CoachCal --no-selective-testing -- \
+            -destination "$destination" \
+            CODE_SIGNING_ALLOWED=NO
