@@ -121,13 +121,23 @@ Translates `project.yml`'s `CoachCal` and `CoachCalWidget` target blocks verbati
 ```swift
 import ProjectDescription
 
-let appSettings: SettingsDictionary = [
+// project.yml's root-level `settings.base` applied SWIFT_VERSION,
+// actor-isolation, concurrency, and signing-team/identity to EVERY target
+// (app, widget, tests, UI tests) by XcodeGen's default inheritance. Tuist's
+// `Project(settings:)` is the equivalent project-wide default — do not put
+// these only on the app target, or the widget/test targets silently regress
+// to Swift 5 language mode and lose actor isolation.
+let projectBaseSettings: SettingsDictionary = [
     "SWIFT_VERSION": "6.0",
     "SWIFT_DEFAULT_ACTOR_ISOLATION": "MainActor",
     "SWIFT_APPROACHABLE_CONCURRENCY": "YES",
     "CODE_SIGN_STYLE": "Manual",
     "DEVELOPMENT_TEAM": "K2TYLYAWMK",
     "CODE_SIGN_IDENTITY": "iPhone Distribution: Doan Duy Phuong (K2TYLYAWMK)",
+]
+
+// App-target-only additions from project.yml's `targets.CoachCal.settings.base`.
+let appSettings: SettingsDictionary = [
     "PRODUCT_BUNDLE_IDENTIFIER": "com.nextlabs.coachcal",
     "TARGETED_DEVICE_FAMILY": "1",
     "PROVISIONING_PROFILE_SPECIFIER": "CoachCal AppStore",
@@ -212,6 +222,7 @@ let coachCalWidgetTarget = Target.target(
 
 let project = Project(
     name: "CoachCal",
+    settings: .settings(base: projectBaseSettings),
     targets: [
         coachCalTarget,
         coachCalWidgetTarget,
@@ -321,6 +332,7 @@ let coachCalScheme = Scheme.scheme(
 
 let project = Project(
     name: "CoachCal",
+    settings: .settings(base: projectBaseSettings),
     targets: [
         coachCalTarget,
         coachCalWidgetTarget,
