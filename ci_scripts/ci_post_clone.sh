@@ -40,6 +40,9 @@ fi
 # scheme in place — only Tuist's own build/test orchestration (`tuist
 # test`, not `xcodebuild test`) reliably resolves this app+widget+local-
 # package-modules graph. Do not revert this to raw xcodebuild.
-tuist test CoachCal -- \
+# --no-selective-testing: this is the CI safety net — always run every
+# test, never let hash-based selective testing skip coverage even if
+# Tuist Cloud/remote caching gets configured later (Task 6 review finding).
+tuist test CoachCal --no-selective-testing -- \
   -destination "$destination" \
   -derivedDataPath DerivedData

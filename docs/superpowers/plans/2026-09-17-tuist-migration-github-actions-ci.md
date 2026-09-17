@@ -421,7 +421,7 @@ A generic destination (`generic/platform=iOS Simulator`) works for `tuist build`
 ```bash
 cd native
 resolved_name="$(xcrun simctl list devices available 2>/dev/null | grep -m1 -o 'iPhone [^(]*' | tail -n 1 | sed 's/ *$//')"
-tuist test CoachCal -- -destination "platform=iOS Simulator,name=${resolved_name:-iPhone 16}" CODE_SIGNING_ALLOWED=NO
+tuist test CoachCal --no-selective-testing -- -destination "platform=iOS Simulator,name=${resolved_name:-iPhone 16}" CODE_SIGNING_ALLOWED=NO
 ```
 
 Expected: Tuist generates, builds, and actually reaches test execution (this alone proves Task 3's target/scheme wiring is structurally correct — no module-resolution error). The test *content* may still report `** TEST FAILED **` for reasons that are Task 4's job to triage, not Task 3's: e.g. snapshot tests can be simulator/OS-version-sensitive, and any test whose name implies a live dependency (e.g. one literally named `...ConvergesOnRealSupabase`) requires real `TEST_EMAIL`/`TEST_PASSWORD`/`SUPABASE_ANON_KEY` credentials that won't be set in an ad-hoc local run — that is a pre-existing environment-gating condition, not a regression from this migration. Distinguish "fails to build/wire" (this migration's concern — must be zero) from "fails because a specific test needs credentials or an exact snapshot baseline this environment doesn't have" (pre-existing, report but do not treat as a migration regression) before deciding whether to stop and fix or note-and-continue.
@@ -555,7 +555,10 @@ fi
 # scheme in place — only Tuist's own build/test orchestration (`tuist
 # test`, not `xcodebuild test`) reliably resolves this app+widget+local-
 # package-modules graph. Do not revert this to raw xcodebuild.
-tuist test CoachCal -- \
+# --no-selective-testing: this is the CI safety net — always run every
+# test, never let hash-based selective testing skip coverage even if
+# Tuist Cloud/remote caching gets configured later (Task 6 review finding).
+tuist test CoachCal --no-selective-testing -- \
   -destination "$destination" \
   -derivedDataPath DerivedData
 ```
@@ -657,7 +660,9 @@ jobs:
           # even with the custom scheme present — use Tuist's own
           # orchestration, not raw xcodebuild, for this app+widget+local-
           # package-modules graph.
-          tuist test CoachCal -- \
+          # --no-selective-testing: always run every test in CI, never let
+          # hash-based selective testing skip coverage.
+          tuist test CoachCal --no-selective-testing -- \
             -destination "$destination" \
             CODE_SIGNING_ALLOWED=NO
 ```
