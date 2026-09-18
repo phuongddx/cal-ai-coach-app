@@ -184,7 +184,6 @@ let coachCalScheme = Scheme.scheme(
     name: "CoachCal",
     buildAction: .buildAction(targets: [
         .target("CoachCal"),
-        .target("CoachCalTests"),
     ]),
     testAction: .targets(
         [
