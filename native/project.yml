@@ -58,6 +58,7 @@ targets:
         NSHealthShareUsageDescription: CoachCal reads your step count from Apple Health to show it on the Today screen and keep calorie estimates accurate.
         NSHealthUpdateUsageDescription: CoachCal saves burned-energy summaries to Apple Health only when you explicitly confirm them — never automatically from a scan.
         NSSupportsLiveActivities: true
+        CFBundleVersion: "2"
         # Root cause of "app doesn't fill the real device screen" (black
         # letterbox bars top/bottom): without a UILaunchScreen dict (or a
         # legacy launch storyboard), iOS treats the app as not opted into
