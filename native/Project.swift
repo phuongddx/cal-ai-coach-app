@@ -57,7 +57,7 @@ let coachCalTarget = Target.target(
         "NSHealthShareUsageDescription": "CoachCal reads your step count from Apple Health to show it on the Today screen and keep calorie estimates accurate.",
         "NSHealthUpdateUsageDescription": "CoachCal saves burned-energy summaries to Apple Health only when you explicitly confirm them — never automatically from a scan.",
         "NSSupportsLiveActivities": true,
-        "CFBundleVersion": "2",
+        "CFBundleVersion": "3",
         // Root cause of "app doesn't fill the real device screen" (black
         // letterbox bars top/bottom): without a UILaunchScreen dict (or a
         // legacy launch storyboard), iOS treats the app as not opted into
@@ -106,7 +106,7 @@ let coachCalWidgetTarget = Target.target(
     deploymentTargets: .iOS("18.0"),
     infoPlist: .extendingDefault(with: [
         "CFBundleDisplayName": "CoachCal Widget",
-        "CFBundleVersion": "2",
+        "CFBundleVersion": "3",
         "NSExtension": [
             "NSExtensionPointIdentifier": "com.apple.widgetkit-extension",
         ],

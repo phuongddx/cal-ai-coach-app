@@ -185,7 +185,12 @@ final class AppEnvironment {
     #if DEBUG
     requiresSignIn = arguments.requireSignIn
     #else
-    requiresSignIn = true
+    // TEMP (skip login for now, requested 2026-09-18): release builds no
+    // longer gate on sign-in. RootView's gate short-circuits, `api` falls
+    // back to FixtureApiClient, and currentUserId uses the local demoUserId
+    // — same behavior as a DEBUG build with no launch args. Revert to
+    // `true` to restore the mandatory Supabase sign-in flow.
+    requiresSignIn = false
     #endif
 
     if arguments.edSafe {
