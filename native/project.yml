@@ -126,6 +126,7 @@ targets:
       path: CoachCalWidget/Info.plist
       properties:
         CFBundleDisplayName: CoachCal Widget
+        CFBundleVersion: "2"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     dependencies:
@@ -136,6 +137,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.nextlabs.coachcal.CoachCalWidget
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_ENTITLEMENTS: CoachCalWidget/CoachCalWidget.entitlements
+        PROVISIONING_PROFILE_SPECIFIER: "CoachCal Widget AppStore"
 schemes:
   CoachCal:
     build:
