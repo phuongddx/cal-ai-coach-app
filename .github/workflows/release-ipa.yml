@@ -109,13 +109,11 @@ jobs:
         working-directory: native
         run: |
           mkdir -p artifacts
-          xcodebuild archive \
-            -project CoachCal.xcodeproj \
+          tuist xcodebuild archive \
             -scheme CoachCal \
             -configuration Release \
             -destination 'generic/platform=iOS' \
-            -archivePath "$PWD/artifacts/CoachCal-1.0-4.xcarchive" \
-            archive
+            -archivePath "$PWD/artifacts/CoachCal-1.0-4.xcarchive"
 
       - name: Export App Store IPA
         working-directory: native
