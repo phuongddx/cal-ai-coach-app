@@ -5,39 +5,50 @@ import Testing
 @MainActor
 @Suite
 struct MetricKitIsolationTests {
-  @Test func metricCallbacksRunOffTheMainActor() async {
-    await confirmation("metric payloads") { metricPayloads in
-      let subscriber = MetricKitSubscriber(
-        onMetricPayloads: { _ in metricPayloads() },
-        onDiagnosticPayloads: { _ in
-          Issue.record("Metric payloads must not invoke the diagnostic callback")
-        }
-      )
+  @Test func objCDispatchOffMainDeliversBothPayloadTypesWithoutIsolationTrap() async {
+    let counter = CallbackCounter()
+    let subscriber = MetricKitSubscriber(
+      onMetricPayloads: { _ in counter.recordMetricPayload() },
+      onDiagnosticPayloads: { _ in counter.recordDiagnosticPayload() }
+    )
+    let metricSelector = #selector(
+      subscriber.didReceive(_:) as ([MXMetricPayload]) -> Void
+    )
+    let diagnosticSelector = #selector(
+      subscriber.didReceive(_:) as ([MXDiagnosticPayload]) -> Void
+    )
 
+    await withCheckedContinuation { continuation in
       DispatchQueue(label: "coachcal.metrickit.test").async {
-        let selector = #selector(
-          subscriber.didReceive(_:) as ([MXMetricPayload]) -> Void
-        )
-        subscriber.perform(selector, with: NSArray())
+        subscriber.perform(metricSelector, with: NSArray())
+        subscriber.perform(diagnosticSelector, with: NSArray())
+        continuation.resume()
       }
     }
+
+    let counts = counter.counts
+    #expect(counts.metric == 1)
+    #expect(counts.diagnostic == 1)
+  }
+}
+
+private nonisolated final class CallbackCounter: @unchecked Sendable {
+  private let lock = NSLock()
+  private var metricPayloadCount = 0
+  private var diagnosticPayloadCount = 0
+
+  func recordMetricPayload() {
+    lock.lock(); defer { lock.unlock() }
+    metricPayloadCount += 1
   }
 
-  @Test func diagnosticCallbacksRunOffTheMainActor() async {
-    await confirmation("diagnostic payloads") { diagnosticPayloads in
-      let subscriber = MetricKitSubscriber(
-        onMetricPayloads: { _ in
-          Issue.record("Diagnostic payloads must not invoke the metric callback")
-        },
-        onDiagnosticPayloads: { _ in diagnosticPayloads() }
-      )
+  func recordDiagnosticPayload() {
+    lock.lock(); defer { lock.unlock() }
+    diagnosticPayloadCount += 1
+  }
 
-      DispatchQueue(label: "coachcal.metrickit.test").async {
-        let selector = #selector(
-          subscriber.didReceive(_:) as ([MXDiagnosticPayload]) -> Void
-        )
-        subscriber.perform(selector, with: NSArray())
-      }
-    }
+  var counts: (metric: Int, diagnostic: Int) {
+    lock.lock(); defer { lock.unlock() }
+    return (metricPayloadCount, diagnosticPayloadCount)
   }
 }
