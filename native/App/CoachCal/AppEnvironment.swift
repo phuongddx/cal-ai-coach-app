@@ -605,7 +605,9 @@ final class AppEnvironment {
 // @Observable class can't satisfy that without inheriting NSObject, so this
 // tiny adapter is the standard bridge rather than retrofitting NSObject onto
 // the whole environment.
-private final class MetricKitSubscriber: NSObject, MXMetricManagerSubscriber {
+// The subscriber has only immutable @Sendable closures, so it can safely cross
+// from the MainActor composition root to MetricKit's delivery queue.
+final class MetricKitSubscriber: NSObject, MXMetricManagerSubscriber, @unchecked Sendable {
   private let onMetricPayloads: @Sendable ([MXMetricPayload]) -> Void
   private let onDiagnosticPayloads: @Sendable ([MXDiagnosticPayload]) -> Void
 
@@ -617,11 +619,11 @@ private final class MetricKitSubscriber: NSObject, MXMetricManagerSubscriber {
     self.onDiagnosticPayloads = onDiagnosticPayloads
   }
 
-  func didReceive(_ payloads: [MXMetricPayload]) {
+  nonisolated func didReceive(_ payloads: [MXMetricPayload]) {
     onMetricPayloads(payloads)
   }
 
-  func didReceive(_ payloads: [MXDiagnosticPayload]) {
+  nonisolated func didReceive(_ payloads: [MXDiagnosticPayload]) {
     onDiagnosticPayloads(payloads)
   }
 }
