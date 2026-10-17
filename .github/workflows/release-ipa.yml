@@ -60,6 +60,8 @@ jobs:
             "${DISTRIBUTION_P12_PASSWORD%$'\n'}"
             "${DISTRIBUTION_P12_PASSWORD%$'\r'}"
             "${DISTRIBUTION_P12_PASSWORD%$'\r\n'}"
+            "${DISTRIBUTION_P12_PASSWORD%$'\r'}"$'\n'
+            "${DISTRIBUTION_P12_PASSWORD%$'\r'}"$'\r\n'
           )
           import_succeeded=0
           for password_candidate in "${password_candidates[@]}"; do
