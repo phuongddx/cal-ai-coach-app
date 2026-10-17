@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "VLM_SCHEMA_ERROR",
+    "details": [
+      "items.0"
+    ]
+  }
+}

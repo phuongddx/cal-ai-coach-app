@@ -1,0 +1,16 @@
+{
+  "rows": [
+    {
+      "table": "diary_entries",
+      "recordId": "c496b3a4-d266-4566-b361-680b498c5445",
+      "snapshot": {
+        "id": "c496b3a4-d266-4566-b361-680b498c5445",
+        "deletedAt": null,
+        "displayText": "Golden fixture",
+        "acceptedOpId": "c496b3a4-d266-4566-b361-680b498c5445",
+        "serverVersion": 19
+      }
+    }
+  ],
+  "cursor": 19
+}

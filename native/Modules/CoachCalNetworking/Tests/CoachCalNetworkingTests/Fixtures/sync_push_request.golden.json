@@ -1,0 +1,18 @@
+{
+  "operations": [
+    {
+      "opId": "c496b3a4-d266-4566-b361-680b498c5445",
+      "table": "diary_entries",
+      "recordId": "c496b3a4-d266-4566-b361-680b498c5445",
+      "kind": "upsert",
+      "snapshot": {
+        "id": "c496b3a4-d266-4566-b361-680b498c5445",
+        "displayText": "Golden fixture",
+        "deletedAt": null,
+        "serverVersion": 0,
+        "acceptedOpId": null
+      },
+      "clientTimestamp": "2026-09-13T08:26:01.593Z"
+    }
+  ]
+}
