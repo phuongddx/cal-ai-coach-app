@@ -22,12 +22,29 @@ jobs:
       - name: Select Xcode 26.6
         run: sudo xcode-select -s /Applications/Xcode_26.6.app
 
-      - name: Install Tuist
+      - name: Install pinned Tuist
+        env:
+          TUIST_VERSION: 4.206.0
         run: |
-          if ! command -v tuist >/dev/null 2>&1; then
-            brew install tuist
-          fi
-          tuist version
+          set -euo pipefail
+          tuist_dir="$RUNNER_TEMP/tuist-$TUIST_VERSION"
+          mkdir -p "$tuist_dir"
+          curl --fail --location --retry 3 \
+            "https://github.com/tuist/tuist/releases/download/$TUIST_VERSION/tuist.zip" \
+            -o "$tuist_dir/tuist.zip"
+          (
+            cd "$tuist_dir"
+            curl --fail --location --retry 3 \
+              "https://github.com/tuist/tuist/releases/download/$TUIST_VERSION/SHASUMS256.txt" \
+              -o SHASUMS256.txt
+            grep ' ./tuist.zip$' SHASUMS256.txt \
+              | sed 's| ./tuist.zip$|  tuist.zip|' \
+              | shasum -a 256 --check -
+            unzip -q tuist.zip
+            chmod +x tuist
+            ./tuist version
+          )
+          echo "$tuist_dir" >> "$GITHUB_PATH"
 
       - name: Cache Tuist dependencies
         uses: actions/cache@v4
@@ -35,8 +52,8 @@ jobs:
           path: |
             native/.tuist
             ~/.tuist
-          key: release-tuist-${{ hashFiles('native/Tuist/Package.resolved') }}
-          restore-keys: release-tuist-
+          key: release-tuist-4.206.0-${{ hashFiles('native/Tuist/Package.resolved') }}
+          restore-keys: release-tuist-4.206.0-
 
       - name: Install signing assets
         env:
