@@ -19,7 +19,7 @@ let projectBaseSettings: SettingsDictionary = [
 let appSettings: SettingsDictionary = [
     "PRODUCT_BUNDLE_IDENTIFIER": "com.nextlabs.coachcal",
     "TARGETED_DEVICE_FAMILY": "1",
-    "PROVISIONING_PROFILE_SPECIFIER": "CoachCal AppStore",
+    "PROVISIONING_PROFILE_SPECIFIER": "CoachCal AppStore Build 4 CI",
     // Tuist's default (.recommended) target settings inject their own
     // CODE_SIGN_IDENTITY ("iPhone Developer") at TARGET scope, which wins
     // over the project-level Distribution identity in projectBaseSettings
@@ -129,7 +129,7 @@ let coachCalWidgetTarget = Target.target(
         // Resolves the archive warning where CoachCalWidget had no
         // explicit provisioning profile and inherited an ambiguous one.
         // Ported from project.yml (pre-Tuist).
-        "PROVISIONING_PROFILE_SPECIFIER": "CoachCal Widget AppStore",
+        "PROVISIONING_PROFILE_SPECIFIER": "CoachCal Widget AppStore Build 4 CI",
     ])
 )
 
