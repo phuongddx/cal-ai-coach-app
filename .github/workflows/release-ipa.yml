@@ -127,6 +127,7 @@ jobs:
         run: |
           mkdir -p artifacts
           tuist xcodebuild archive \
+            -workspace CoachCal.xcworkspace \
             -scheme CoachCal \
             -configuration Release \
             -destination 'generic/platform=iOS' \
