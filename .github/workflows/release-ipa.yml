@@ -52,11 +52,27 @@ jobs:
 
           p12="$RUNNER_TEMP/coachcal-distribution.p12"
           printf '%s' "$DISTRIBUTION_P12_BASE64" | base64 --decode > "$p12"
-          security import "$p12" \
-            -k "$KEYCHAIN_PATH" \
-            -P "$DISTRIBUTION_P12_PASSWORD" \
-            -T /usr/bin/codesign \
-            -T /usr/bin/security
+          # gh secret set preserves the password file's trailing newline while
+          # the PKCS#12 exporter uses the trimmed line. Try both forms rather
+          # than requiring callers to remember a printf-only secret upload.
+          password_candidates=(
+            "$DISTRIBUTION_P12_PASSWORD"
+            "${DISTRIBUTION_P12_PASSWORD%$'\n'}"
+            "${DISTRIBUTION_P12_PASSWORD%$'\r'}"
+            "${DISTRIBUTION_P12_PASSWORD%$'\r\n'}"
+          )
+          import_succeeded=0
+          for password_candidate in "${password_candidates[@]}"; do
+            if security import "$p12" \
+              -k "$KEYCHAIN_PATH" \
+              -P "$password_candidate" \
+              -T /usr/bin/codesign \
+              -T /usr/bin/security; then
+              import_succeeded=1
+              break
+            fi
+          done
+          test "$import_succeeded" -eq 1
           security set-key-partition-list \
             -S apple-tool:,apple:,codesign: \
             -s \
