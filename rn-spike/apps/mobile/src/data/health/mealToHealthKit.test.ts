@@ -237,6 +237,15 @@ describe('healthKitMeals adapter (library mocked)', () => {
     expect(control.state.authorizationStatus).toBe(AuthorizationStatus.notDetermined);
   });
 
+  it('ignores the correlation type status, which is sharingAuthorized before any request', async () => {
+    control.setAuthorizationStatus(AuthorizationStatus.notDetermined);
+    const save = await saveMealToHealth(fixtureMeal(NOON_ON_FIXTURE_DAY));
+    expect(save.ok).toBe(false);
+    if (save.ok) return;
+    expect(save.error.code).toBe('unauthorized');
+    expect(control.state.saveCalls).toHaveLength(0);
+  });
+
   it('reports unauthorized when the user denied sharing', async () => {
     control.setAuthorizationStatus(AuthorizationStatus.sharingDenied);
     const read = await readMealsFromHealth('2026-11-27');

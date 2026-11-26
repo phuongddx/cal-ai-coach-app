@@ -49,8 +49,10 @@ export const requestAuthorization = async (toRequest: {
   return true;
 };
 
-export const authorizationStatusFor = (_type: string): number =>
-  control.state.authorizationStatus;
+// Like the real store on the iOS 26.4 Simulator: the correlation type always answers
+// sharingAuthorized (value 2); only the quantity types carry the real status.
+export const authorizationStatusFor = (type: string): number =>
+  type === 'HKCorrelationTypeIdentifierFood' ? 2 : control.state.authorizationStatus;
 
 type MockRevision = {
   source: { name: string; bundleIdentifier: string };

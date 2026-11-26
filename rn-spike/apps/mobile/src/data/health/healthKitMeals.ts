@@ -82,11 +82,19 @@ export async function requestMealAuthorization(): Promise<
 /**
  * HealthKit has no readable read-grant (Apple hides it), and querying a type that was
  * never requested can crash the app (the library README warns about exactly this). The
- * write status of the correlation type is the proxy: `notDetermined` (never asked) and
+ * write status of the four quantity types is the proxy: `notDetermined` (never asked) and
  * `sharingDenied` (asked, refused) both count as unauthorized.
+ *
+ * The correlation type is deliberately not checked: on the iOS 26.4 Simulator
+ * `authorizationStatusFor('HKCorrelationTypeIdentifierFood')` answers `sharingAuthorized`
+ * before any request, because Apple tracks authorization per contained quantity type.
+ * Guarding on it let a never-authorized save through to HealthKit ("Authorization is not
+ * determined", reported as `saveFailed`).
  */
 function isAuthorizedForMeals(): boolean {
-  return authorizationStatusFor(MEAL_CORRELATION_TYPE) === AuthorizationStatus.sharingAuthorized;
+  return MEAL_QUANTITY_IDENTIFIERS.every(
+    (identifier) => authorizationStatusFor(identifier) === AuthorizationStatus.sharingAuthorized,
+  );
 }
 
 export type SaveMealOutcome = {
