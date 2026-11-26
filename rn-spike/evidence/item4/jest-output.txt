@@ -1,0 +1,44 @@
+
+> coachcal-rn-spike@0.0.0 test
+> npm run test --workspaces --if-present
+
+
+> @coachcal/api@0.0.0 test
+> NODE_OPTIONS=--experimental-vm-modules jest
+
+(node:64949) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        9.009 s
+Ran all test suites.
+
+> @coachcal/mobile@0.0.1 test
+> jest
+
+
+Test Suites: 3 passed, 3 total
+Tests:       17 passed, 17 total
+Snapshots:   0 total
+Time:        1.094 s, estimated 2 s
+Ran all test suites.
+
+> @coachcal/api-contract@0.0.0 test
+> jest
+
+
+Test Suites: 2 passed, 2 total
+Tests:       22 passed, 22 total
+Snapshots:   0 total
+Time:        0.382 s, estimated 1 s
+Ran all test suites.
+
+> @coachcal/core@0.0.0 test
+> jest
+
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        0.307 s
+Ran all test suites.

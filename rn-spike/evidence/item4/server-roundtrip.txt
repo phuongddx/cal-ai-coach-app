@@ -1,0 +1,29 @@
+# start-api.sh round trip — 2026-11-26T17:26:15Z
+$ bash scripts/start-api.sh
+[start-api] initdb -> /var/folders/nn/n6wtxkdd3n10d78wf4xmygrm0000gp/T//coachcal-spike-pg.OCA66m
+[start-api] starting PostgreSQL 17 on port 5433 (trust auth, 127.0.0.1 only — throwaway)
+waiting for server to start.... done
+server started
+NOTICE:  database "coachcal_spike" does not exist, skipping
+DROP DATABASE
+CREATE DATABASE
+[start-api] schema.sql applied to coachcal_spike
+[start-api] starting the sync API on port 8787
+[start-api] ready.
+  API:          http://127.0.0.1:8787  (GET /health answers {ok:true})
+  PostgreSQL:   postgres://ddphuong@127.0.0.1:5433/coachcal_spike
+  Tokens:       apps/api/dev-tokens.json (spike-dev-token, spike-dev-token-2)
+  Stop both:    /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-spike-sync/rn-spike/scripts/start-api.sh stop
+  Logs:         /private/var/folders/nn/n6wtxkdd3n10d78wf4xmygrm0000gp/T/opencode/rn-logs/t3-postgres.log, /private/var/folders/nn/n6wtxkdd3n10d78wf4xmygrm0000gp/T/opencode/rn-logs/t3-api.log
+  Cluster dir:  /var/folders/nn/n6wtxkdd3n10d78wf4xmygrm0000gp/T//coachcal-spike-pg.OCA66m (deleted on stop)
+
+$ curl http://127.0.0.1:8787/health
+{"ok":true,"service":"coachcal-rn-spike-api"}
+
+$ bash scripts/start-api.sh stop
+[start-api] stopped the API (pid 65793)
+[start-api] stopped PostgreSQL and deleted /var/folders/nn/n6wtxkdd3n10d78wf4xmygrm0000gp/T//coachcal-spike-pg.OCA66m
+[start-api] done.
+
+$ lsof -ti :5433 :8787 | wc -l
+       0

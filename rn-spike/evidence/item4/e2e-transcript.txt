@@ -1,0 +1,49 @@
+CoachCal RN spike — e2e sync (curl-only steps)
+API: http://127.0.0.1:8787
+
+=== 1. Push meals A and C (user 1) — both applied with serverVersion 1 ===
+{"accepted":[{"opId":"eeeeeeee-eeee-4eee-8eee-000000000001","status":"applied","record":{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","eatenAt":"2026-11-27T01:00:00.000Z","name":"Overnight oats","kcal":320,"proteinG":12,"carbsG":45,"fatG":9,"fiberG":6,"updatedAt":1764200400000,"deleted":false,"serverVersion":1,"acceptedOpId":"eeeeeeee-eeee-4eee-8eee-000000000001"}},{"opId":"eeeeeeee-eeee-4eee-8eee-000000000002","status":"applied","record":{"id":"cccccccc-cccc-4ccc-8ccc-cccccccccccc","eatenAt":"2026-11-27T05:40:00.000Z","name":"Chicken rice bowl","kcal":624,"proteinG":38,"carbsG":70,"fatG":18,"fiberG":4,"updatedAt":1764210000000,"deleted":false,"serverVersion":1,"acceptedOpId":"eeeeeeee-eeee-4eee-8eee-000000000002"}}]}
+  ok: A status (applied)
+  ok: A serverVersion (1)
+  ok: C status (applied)
+  ok: C serverVersion (1)
+
+=== 2. Pull with cursor 0 (user 1) — 2 rows, hasMore false ===
+{"rows":[{"seq":1,"record":{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","eatenAt":"2026-11-27T01:00:00.000Z","name":"Overnight oats","kcal":320,"proteinG":12,"carbsG":45,"fatG":9,"fiberG":6,"updatedAt":1764200400000,"deleted":false,"serverVersion":1,"acceptedOpId":"eeeeeeee-eeee-4eee-8eee-000000000001"}},{"seq":2,"record":{"id":"cccccccc-cccc-4ccc-8ccc-cccccccccccc","eatenAt":"2026-11-27T05:40:00.000Z","name":"Chicken rice bowl","kcal":624,"proteinG":38,"carbsG":70,"fatG":18,"fiberG":4,"updatedAt":1764210000000,"deleted":false,"serverVersion":1,"acceptedOpId":"eeeeeeee-eeee-4eee-8eee-000000000002"}}],"cursor":2,"hasMore":false}
+  ok: row count (2)
+  ok: hasMore (false)
+  ok: new cursor (2)
+
+=== 3. Replay the same push — duplicates, no new change rows ===
+{"accepted":[{"opId":"eeeeeeee-eeee-4eee-8eee-000000000001","status":"duplicate","record":{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","eatenAt":"2026-11-27T01:00:00.000Z","name":"Overnight oats","kcal":320,"proteinG":12,"carbsG":45,"fatG":9,"fiberG":6,"updatedAt":1764200400000,"deleted":false,"serverVersion":1,"acceptedOpId":"eeeeeeee-eeee-4eee-8eee-000000000001"}},{"opId":"eeeeeeee-eeee-4eee-8eee-000000000002","status":"duplicate","record":{"id":"cccccccc-cccc-4ccc-8ccc-cccccccccccc","eatenAt":"2026-11-27T05:40:00.000Z","name":"Chicken rice bowl","kcal":624,"proteinG":38,"carbsG":70,"fatG":18,"fiberG":4,"updatedAt":1764210000000,"deleted":false,"serverVersion":1,"acceptedOpId":"eeeeeeee-eeee-4eee-8eee-000000000002"}}]}
+  ok: A replay status (duplicate)
+  ok: C replay status (duplicate)
+{"rows":[],"cursor":2,"hasMore":false}
+  ok: rows after replay (0)
+
+=== 4. Pull with an old cursor (0) — the same rows re-deliver harmlessly ===
+{"rows":[{"seq":1,"record":{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","eatenAt":"2026-11-27T01:00:00.000Z","name":"Overnight oats","kcal":320,"proteinG":12,"carbsG":45,"fatG":9,"fiberG":6,"updatedAt":1764200400000,"deleted":false,"serverVersion":1,"acceptedOpId":"eeeeeeee-eeee-4eee-8eee-000000000001"}},{"seq":2,"record":{"id":"cccccccc-cccc-4ccc-8ccc-cccccccccccc","eatenAt":"2026-11-27T05:40:00.000Z","name":"Chicken rice bowl","kcal":624,"proteinG":38,"carbsG":70,"fatG":18,"fiberG":4,"updatedAt":1764210000000,"deleted":false,"serverVersion":1,"acceptedOpId":"eeeeeeee-eeee-4eee-8eee-000000000002"}}],"cursor":2,"hasMore":false}
+  ok: row count (2)
+  ok: A name (Overnight oats)
+
+=== 5. User 2 sees nothing (users are isolated) ===
+{"rows":[],"cursor":0,"hasMore":false}
+  ok: user 2 row count (0)
+
+=== 6. Contract errors: 401 on a bad token, 400 on an unknown key ===
+  ok: bad token (401)
+  ok: unknown key (400)
+
+=== Done — all curl steps green ===
+
+App-driven steps (integration task T6, via deep links and the [spike] log):
+  1. Online:      ccspike://spike?action=seed ; action=sync   → server has A and C (already true above)
+  2. Offline:     scripts/start-api.sh stop (server stopped); on the device
+                  action=force-offline, action=add-meal (B), action=edit-meal (A 450),
+                  action=delete-meal (C); force-stop and relaunch the app; B present,
+                  A edited, C gone, outbox = 3.
+  3. Start the API again (scripts/start-api.sh), action=force-online, action=sync
+                  → 3 operations pushed, outbox = 0, cursor advanced.
+  4. curl the pull with the old cursor: A (edited), B, C (deleted).
+                  Replay step 3's push body with curl: three `duplicate` answers.
+  5. Second device: curl push editing B (user 1 token); the app pulls and shows the edit.

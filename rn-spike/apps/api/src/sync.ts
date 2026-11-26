@@ -268,7 +268,13 @@ export function registerSyncRoutes(app: Hono<AppEnv>, store: SyncStoreApi): void
       const last = page.at(-1);
       return c.json(
         {
-          rows: page.map((row) => ({ seq: Number(row.seq), record: row.record as MealRecord })),
+          rows: page.map((row) => {
+            // postgres.js hands jsonb back as a string, PGlite as an object —
+            // normalise so the wire always carries the record object.
+            const raw = row.record;
+            const record = typeof raw === 'string' ? (JSON.parse(raw) as MealRecord) : (raw as MealRecord);
+            return { seq: Number(row.seq), record };
+          }),
           cursor: last === undefined ? cursor : Number(last.seq),
           hasMore,
         },
