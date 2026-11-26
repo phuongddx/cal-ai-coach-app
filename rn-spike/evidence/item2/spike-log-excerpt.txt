@@ -1,0 +1,20 @@
+[spike] {"ts":"2026-11-26T18:12:32.800Z","item":"widget","event":"action-start","data":{"name":"widget-publish"}}
+[spike] {"ts":"2026-11-26T18:12:32.813Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+[spike] {"ts":"2026-11-26T18:12:32.828Z","item":"widget","event":"action-done","data":{"name":"widget-publish","status":"ok","summary":"Published 1154/2100 kcal for 2026-11-27 with a midnight entry"}}
+[spike] {"ts":"2026-11-26T18:13:24.088Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+[spike] {"ts":"2026-11-26T18:14:02.526Z","item":"widget","event":"action-start","data":{"name":"widget-publish"}}
+[spike] {"ts":"2026-11-26T18:14:02.536Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+[spike] {"ts":"2026-11-26T18:14:02.548Z","item":"widget","event":"action-done","data":{"name":"widget-publish","status":"ok","summary":"Published 1154/2100 kcal for 2026-11-27 with a midnight entry"}}
+[spike] {"ts":"2026-11-26T18:15:51.018Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+[spike] {"ts":"2026-11-26T18:16:24.542Z","item":"widget","event":"action-start","data":{"name":"widget-publish"}}
+[spike] {"ts":"2026-11-26T18:16:24.557Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+[spike] {"ts":"2026-11-26T18:16:24.567Z","item":"widget","event":"action-done","data":{"name":"widget-publish","status":"ok","summary":"Published 1154/2100 kcal for 2026-11-27 with a midnight entry"}}
+[spike] {"ts":"2026-11-26T18:17:59.731Z","item":"sync","event":"add-meal","data":{"id":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","outbox":1,"pending":true}}
+[spike] {"ts":"2026-11-26T18:18:21.452Z","item":"sync","event":"delete-meal","data":{"id":"cccccccc-cccc-4ccc-8ccc-cccccccccccc","outbox":1}}
+[spike] {"ts":"2026-11-26T18:18:21.485Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+[spike] {"ts":"2026-11-26T18:18:43.933Z","item":"sync","event":"edit-meal","data":{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","kcal":450,"updatedAt":1795717123899,"outbox":1}}
+[spike] {"ts":"2026-11-26T18:18:43.949Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+[spike] {"ts":"2026-11-26T18:19:23.819Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+[spike] {"ts":"2026-11-26T18:19:49.962Z","item":"widget","event":"action-start","data":{"name":"widget-publish"}}
+[spike] {"ts":"2026-11-26T18:19:49.975Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-26T18:21:19.962Z"}}
+[spike] {"ts":"2026-11-26T18:19:49.986Z","item":"widget","event":"action-done","data":{"name":"widget-publish","status":"ok","summary":"Published 660/2100 kcal for 2026-11-27 (rollover entry at 2026-11-26T18:21:19.962Z)"}}
