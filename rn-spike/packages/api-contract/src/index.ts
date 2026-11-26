@@ -10,4 +10,4 @@ export const ErrorEnvelopeSchema = z.strictObject({
 
 export type ErrorEnvelope = z.infer<typeof ErrorEnvelopeSchema>;
 
-// TODO(spike item 4): meal row, push/pull request/response schemas live here.
+export * from './sync';

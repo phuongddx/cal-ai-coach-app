@@ -1,0 +1,3 @@
+apps/api: tsc clean
+packages/api-contract: tsc clean
+apps/mobile: tsc clean

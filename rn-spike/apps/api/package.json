@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "test": "jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -15,9 +15,11 @@
     "@hono/node-server": "^2.1.11",
     "@hono/zod-validator": "^0.9.1",
     "hono": "^4.13.22",
+    "postgres": "^3.4.9",
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.6.0",
     "@types/node": "^24.10.0",
     "tsx": "^4.23.15"
   }
