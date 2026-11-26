@@ -1,0 +1,10 @@
+# CoachCalSpike measurements — debug build (2026-11-27 00:23:42 +07)
+# Simulator iPhone 17 Pro, iOS 26.4, UDID 85024D2F-71DE-43C0-8E11-CE58F4578FC3. All numbers are Simulator numbers.
+# app: /Users/ddphuong/Library/Developer/Xcode/DerivedData/CoachCalSpike-fhyapvehhugeyhekdxsjhsdmxfkm/Build/Products/Debug-iphonesimulator/CoachCalSpike.app
+
+## Size (debug)
+metric          value
+app (.app)      197568 kB  (192.9 MB)
+zipped (.zip)   38552 kB  (37.6 MB)
+
+MEASURE_RUNTIME=0 — size-only dry run; idle memory and cold start not measured.
