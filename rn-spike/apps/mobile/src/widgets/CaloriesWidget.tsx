@@ -6,6 +6,7 @@ import {
   frame,
   gaugeStyle,
   progressViewStyle,
+  scaleEffect,
   tint,
 } from '@expo/ui/swift-ui/modifiers';
 import { createWidget, type WidgetEnvironment } from 'expo-widgets';
@@ -91,26 +92,34 @@ const CaloriesWidget = (props: CaloriesWidgetProps, environment: WidgetEnvironme
   const consumedFraction = props.goalKcal > 0 ? clamp01(consumed / props.goalKcal) : 0;
   const rounded = (value: number) => Math.max(0, Math.round(value));
 
+  // The Gauge's `currentValueLabel` slot did not draw on the first Simulator run (the ring showed
+  // no number), so the number sits in a ZStack over a label-free Gauge. The circularCapacity style
+  // draws about 58 points wide whatever `frame` says, so it is scaled up to the design size.
   const ring = (size: number, numberSize: number) => (
-    <Gauge
-      value={consumedFraction}
-      currentValueLabel={
-        <VStack spacing={0}>
-          <Text
-            modifiers={[
-              font({ size: numberSize, weight: 'bold', design: 'rounded' }),
-              foregroundStyle(textPrimary),
-            ]}>
-            {String(remaining)}
-          </Text>
-          <Text modifiers={[font({ size: 11, weight: 'regular' }), foregroundStyle(textSecondary)]}>
-            kcal left
-          </Text>
-        </VStack>
-      }
-      modifiers={[gaugeStyle('circularCapacity'), tint(accent), frame({ width: size, height: size })]}>
-      <Text>kcal</Text>
-    </Gauge>
+    <ZStack modifiers={[frame({ width: size, height: size })]}>
+      <Gauge
+        value={consumedFraction}
+        modifiers={[
+          gaugeStyle('circularCapacity'),
+          tint(accent),
+          frame({ width: 58, height: 58 }),
+          scaleEffect(size / 58),
+        ]}>
+        <Text>kcal</Text>
+      </Gauge>
+      <VStack spacing={0}>
+        <Text
+          modifiers={[
+            font({ size: numberSize, weight: 'bold', design: 'rounded' }),
+            foregroundStyle(textPrimary),
+          ]}>
+          {String(remaining)}
+        </Text>
+        <Text modifiers={[font({ size: 11, weight: 'regular' }), foregroundStyle(textSecondary)]}>
+          kcal left
+        </Text>
+      </VStack>
+    </ZStack>
   );
 
   const macroRow = (label: string, grams: number, goal: number, color: string) => (
@@ -134,7 +143,7 @@ const CaloriesWidget = (props: CaloriesWidgetProps, environment: WidgetEnvironme
   if (environment.widgetFamily === 'systemMedium') {
     return (
       <HStack spacing={16} modifiers={[background]}>
-        {ring(104, 30)}
+        {ring(104, 24)}
         <VStack spacing={8}>
           {macroRow('Protein', props.proteinG, props.proteinGoalG, protein)}
           {macroRow('Carbs', props.carbsG, props.carbsGoalG, carbs)}
@@ -154,7 +163,7 @@ const CaloriesWidget = (props: CaloriesWidgetProps, environment: WidgetEnvironme
           </Text>
           <Spacer />
         </HStack>
-        {ring(96, 28)}
+        {ring(96, 22)}
       </VStack>
     </ZStack>
   );
