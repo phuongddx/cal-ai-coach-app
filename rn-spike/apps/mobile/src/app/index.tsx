@@ -1,18 +1,17 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo } from 'react';
 
-import { kcalFromMacros } from '@coachcal/core';
+import { EmberView } from '../features/ember/EmberView';
+import { useEmberState } from '../features/ember/emberStore';
+import { fixtureTargets } from '../features/ember/fixture';
+import { writeFirstRender } from '../spike/firstRender';
 
-// Skeleton placeholder: replaced by the Ember screen in plan task T1.
 export default function EmberScreen() {
-  return (
-    <View style={styles.root} testID="ember:root">
-      <Text style={styles.title}>Ember (skeleton)</Text>
-      <Text testID="ember:kcal">{kcalFromMacros({ proteinG: 10, carbsG: 20, fatG: 5 })} kcal</Text>
-    </View>
-  );
-}
+  const { meals, isOffline } = useEmberState();
+  const now = useMemo(() => new Date(), []);
 
-const styles = StyleSheet.create({
-  root: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  title: { fontSize: 28, fontWeight: '700' },
-});
+  useEffect(() => {
+    writeFirstRender();
+  }, []);
+
+  return <EmberView meals={meals} targets={fixtureTargets} now={now} isOffline={isOffline} streakDays={0} />;
+}
