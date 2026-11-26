@@ -186,7 +186,7 @@ describe('healthKitMeals adapter (library mocked)', () => {
       expect(control.state.authRequests[0].toRead).toContain(identifier);
       expect(control.state.authRequests[0].toShare).toContain(identifier);
     }
-    expect(control.state.authRequests[0].toShare).toContain(MEAL_CORRELATION_TYPE);
+    expect(control.state.authRequests[0].toShare).not.toContain(MEAL_CORRELATION_TYPE);
   });
 
   it('saves one food correlation with the meal name in metadata', async () => {
@@ -287,6 +287,21 @@ describe('healthKitMeals adapter (library mocked)', () => {
     expect(save.error.code).toBe('saveFailed');
   });
 
+  it('removes the child samples too, because deleting a correlation leaves them behind', async () => {
+    control.setAuthorizationStatus(AuthorizationStatus.sharingAuthorized);
+    await saveMealToHealth(fixtureMeal(NOON_ON_FIXTURE_DAY));
+
+    const result = await deleteMealFromHealth(fixtureMeal(NOON_ON_FIXTURE_DAY));
+    expect(result.ok && result.value).toEqual({ deleted: 1, deletedSamples: 4 });
+    expect(control.state.looseSamples).toEqual([]);
+    const sampleDeletes = control.state.deleteCalls.filter(
+      (call) => call.objectTypeIdentifier !== MEAL_CORRELATION_TYPE,
+    );
+    expect(sampleDeletes.map((call) => call.objectTypeIdentifier).sort()).toEqual(
+      [...MEAL_QUANTITY_IDENTIFIERS].sort(),
+    );
+  });
+
   it('deletes only the stored meal by its derived id and reports the count', async () => {
     control.setAuthorizationStatus(AuthorizationStatus.sharingAuthorized);
     await saveMealToHealth(fixtureMeal(NOON_ON_FIXTURE_DAY));
@@ -301,7 +316,7 @@ describe('healthKitMeals adapter (library mocked)', () => {
     });
 
     const result = await deleteMealFromHealth(fixtureMeal(NOON_ON_FIXTURE_DAY));
-    expect(result).toEqual({ ok: true, value: { deleted: 1 } });
+    expect(result).toEqual({ ok: true, value: { deleted: 1, deletedSamples: 4 } });
 
     const remaining = await readMealsFromHealth('2026-11-27');
     expect(remaining.ok).toBe(true);

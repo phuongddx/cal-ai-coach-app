@@ -32,6 +32,8 @@ export type HealthKitMockState = {
   }>;
   /** Args captured from mocked `deleteObjects` calls. */
   deleteCalls: Array<{ objectTypeIdentifier: string; filter: unknown }>;
+  /** Child samples left behind when their correlation is deleted (as in the real store). */
+  looseSamples: Array<{ uuid: string; quantityType: string }>;
   failNextSaveWith: Error | null;
   failNextQueryWith: Error | null;
   nextUuid: number;
@@ -45,6 +47,7 @@ const freshState = (): HealthKitMockState => ({
   savedCorrelations: [],
   saveCalls: [],
   deleteCalls: [],
+  looseSamples: [],
   failNextSaveWith: null,
   failNextQueryWith: null,
   nextUuid: 1,
@@ -91,9 +94,26 @@ export const healthKitMockControl = {
   removeCorrelations(uuids: ReadonlySet<string>): number {
     const before = this.state.storedCorrelations.length + this.state.savedCorrelations.length;
     const keep = (row: CorrelationSample) => !uuids.has(row.uuid);
+    // Deleting a correlation leaves its child samples in the store (iOS 26.4 Simulator).
+    for (const row of this.allCorrelations().filter((row) => uuids.has(row.uuid))) {
+      for (const child of row.objects) {
+        if ('quantityType' in child) {
+          this.state.looseSamples.push({ uuid: child.uuid, quantityType: child.quantityType });
+        }
+      }
+    }
     this.state.storedCorrelations = this.state.storedCorrelations.filter(keep);
     this.state.savedCorrelations = this.state.savedCorrelations.filter(keep);
     return before - this.state.storedCorrelations.length - this.state.savedCorrelations.length;
+  },
+
+  /** Delete child samples by uuid; returns how many were removed. */
+  removeSamples(quantityType: string, uuids: ReadonlySet<string>): number {
+    const before = this.state.looseSamples.length;
+    this.state.looseSamples = this.state.looseSamples.filter(
+      (sample) => !(sample.quantityType === quantityType && uuids.has(sample.uuid)),
+    );
+    return before - this.state.looseSamples.length;
   },
 
   /** True when `filter.metadata` matches a row's metadata (equalTo when a value is given, presence otherwise). */

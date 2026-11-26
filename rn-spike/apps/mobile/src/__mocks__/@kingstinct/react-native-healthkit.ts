@@ -160,10 +160,15 @@ export const queryCorrelationSamples = async (
 export const deleteObjects = async (
   objectTypeIdentifier: string,
   filter: {
+    uuids?: string[];
     metadata?: { withMetadataKey: string; operatorType?: number; value?: unknown };
   },
 ): Promise<number> => {
   control.state.deleteCalls.push({ objectTypeIdentifier, filter });
+  // Child samples: like the real store, only the listed samples go; a correlation stays.
+  if (objectTypeIdentifier !== 'HKCorrelationTypeIdentifierFood') {
+    return control.removeSamples(objectTypeIdentifier, new Set(filter.uuids ?? []));
+  }
   const rows = control.allCorrelations();
   const matching = rows.filter((row) =>
     control.matchesMetadataFilter(row.metadata as Record<string, unknown>, filter.metadata),

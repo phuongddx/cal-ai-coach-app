@@ -91,7 +91,7 @@ export const healthDeleteAction: SpikeAction = {
     if (!result.ok) return errorResult(result.error);
     return {
       status: 'ok',
-      summary: `Deleted ${result.value.deleted} correlation(s) for ${meal.name}`,
+      summary: `Deleted ${result.value.deleted} correlation(s) and ${result.value.deletedSamples} sample(s) for ${meal.name}`,
       data: result.value,
     };
   },
