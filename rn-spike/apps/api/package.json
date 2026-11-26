@@ -1,0 +1,24 @@
+{
+  "name": "@coachcal/api",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Minimal local sync API (Node + Hono) for spike item 4. Not the production backend.",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@coachcal/api-contract": "*",
+    "@hono/node-server": "^2.1.11",
+    "@hono/zod-validator": "^0.9.1",
+    "hono": "^4.13.22",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "tsx": "^4.23.15"
+  }
+}

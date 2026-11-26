@@ -33,7 +33,8 @@ T0 base (owner)
 ```
 
 T1–T4 never edit the same file; the table below is the contract. T5 is a plain merge. T6 is the
-only task that touches every folder.
+only task that touches every folder. Native builds run only in the main worktree (T0, T1, T6, T7):
+one built worktree holds about 6 GB and the disk started with 16 GB free.
 
 ## Places
 
@@ -45,9 +46,8 @@ only task that touches every folder.
 | T2 worktree, branch `spike/rn-expo-widget` | `/Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-spike-widget` |
 | T3 worktree, branch `spike/rn-expo-sync` | `/Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-spike-sync` |
 | T4 worktree, branch `spike/rn-expo-health` | `/Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-spike-health` |
-| Simulator (T0, T1, T6, T7) | `iPhone 17 Pro`, iOS 26.4, UDID `85024D2F-71DE-43C0-8E11-CE58F4578FC3` |
-| Simulator (T2) | `RN-Spike-Widget`, iOS 26.4 (created by the owner) |
-| Metro | 8081 main worktree, 8082 T2 worktree |
+| Simulator (all native runs) | `iPhone 17 Pro`, iOS 26.4, UDID `85024D2F-71DE-43C0-8E11-CE58F4578FC3` |
+| Metro | port 8081, main worktree only |
 | API | `http://127.0.0.1:8787` |
 | PostgreSQL 17 (throwaway) | port 5433, binaries `/opt/homebrew/opt/postgresql@17/bin` |
 | Log directory | `/private/var/folders/nn/n6wtxkdd3n10d78wf4xmygrm0000gp/T/opencode/rn-logs/` |
@@ -72,7 +72,7 @@ only task that touches every folder.
 | `scripts/e2e-sync.sh`, `scripts/start-api.sh`, `apps/api/dev-tokens.json` | — | — | only | — |
 | `scripts/measure.sh` | — | — | — | only |
 | `docs/findings/T<n>-*.md` | own file | own file | own file | own file |
-| `evidence/item<n>/` | `item1/` | `item2/` | `item4/` | `item3/`, `measurements/` |
+| `evidence/item<n>/` | `item1/` | — (T6 captures item 2) | `item4/` | `item3/`, `measurements/` |
 
 T2, T3 and T4 cannot edit `src/spike/**` in their stage. They export their console actions from
 their own folder (`spikeActions.ts`, see T1 for the shape) and list the registration lines in their
@@ -87,7 +87,8 @@ findings file; T6 registers them.
 4. `export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8` before anything that runs CocoaPods or `expo run:ios`.
 5. A command that can run over a minute writes to a log file in the log directory and gets a
    generous timeout. Never rerun a timed-out command unchanged; read its log first.
-6. Before a native build run `df -h /System/Volumes/Data`; under 6 GB free, stop and report.
+6. Native builds (`expo run:ios`, `pod install`, `prebuild`) only where your task says so, and only in
+   the main worktree. Before one, run `df -h /System/Volumes/Data`; under 6 GB free, stop and report.
 7. No Supabase, no EAS, no new accounts, no secrets, no changes outside the spike.
 8. Do not add a dependency unless the spec names it. If one is unavoidable, say why in your report.
 9. When stuck, read the official docs for the package in `node_modules/<pkg>` (README, types) before
@@ -236,29 +237,26 @@ Brief:
 >    definition (`{ name: 'widget-publish', item: 'widget', title: 'Publish snapshot', run }`) that pushes a
 >    fixture snapshot. You cannot edit `src/spike/**`; the integration task registers it. Write the exact
 >    registration line in your findings file.
-> 4. A native build in your worktree on the simulator `RN-Spike-Widget` (iOS 26.4), Metro on port 8082.
->    Add the widget to the home screen in both families (long press with
->    `axe touch -x <x> -y <y> --down --up --delay 1.2`, then the "+" button and the gallery; or the
->    computer tools on the Simulator window), publish from the app, and capture it with
->    `xcrun simctl io <udid> screenshot`.
-> 5. Evidence under `evidence/item2/`: home-screen screenshots (small, medium), the Metro log lines that
->    show the pushed props, Jest output.
-> 6. `docs/findings/T2-widget.md`: was any Swift, plist or target edit needed beyond the config plugin;
->    which `@expo/ui/swift-ui` components and modifiers you used and which were missing; how the widget
->    behaves when the app is killed; what the gallery shows before the first launch (`initialLayout`);
->    whether the midnight timeline entry works (you may verify by publishing a timeline with a near-future
->    reset and reloading); every place the docs were wrong.
+> 4. No native build in this task: the disk has no room for a second built worktree (about 6 GB each),
+>    so the widget first runs on a simulator in T6. Instead, check your widget file against every
+>    `'widget'` rule line by line, and write `docs/findings/T2-widget.md` as the integration task's
+>    checklist: how to place the widget on the home screen with `axe` (long press, "+", gallery, add),
+>    what to look for in each family, and the ways a first run can fail (missing `containerBackground`,
+>    a component or modifier `@expo/ui/swift-ui` does not support, a name that differs from the config,
+>    a value read from module scope) with the fix for each. Add to it: which `@expo/ui/swift-ui`
+>    components and modifiers you used and which were missing; what the gallery shows before the first
+>    launch (`initialLayout`); how to prove the midnight timeline entry on a device; and every place
+>    the docs were wrong.
 >
-> Done when: `npm test` and `npx tsc --noEmit` pass in your worktree; the app with your widget builds and
->    installs on the simulator; the widget renders on the home screen in small and medium with the pushed
->    kcal, or — if placing it is impossible to automate — the build, the gallery and `getTimeline()` output
->    are captured and the report says exactly what is missing; evidence and
-> `docs/findings/T2-widget.md` are committed on `spike/rn-expo-widget`.
+> Done when: `npm test` and `npx tsc --noEmit` pass in your worktree; the widget, the publisher and the
+> `buildTimeline` tests are complete; `docs/findings/T2-widget.md` holds the checklist; everything is
+> committed on `spike/rn-expo-widget` with your report in the plan's format, which says plainly that
+> the widget has not run on a simulator yet.
 >
-> Limits: edit only the paths the ownership table gives T2 (in `app.config.ts` only the `expo-widgets`
-> plugin block; `npm ci`, no `npm install`). Disk is scarce: check free space before the build, and delete
-> `apps/mobile/ios/build` after your evidence is captured. No new feature. No Supabase, EAS, accounts,
-> secrets, push, merge or PR.
+> Limits: no `expo run:ios`, no `pod install`, no `prebuild` — the main worktree is the only place that
+> builds. Edit only the paths the ownership table gives T2 (in `app.config.ts` only the `expo-widgets`
+> plugin block; `npm ci`, no `npm install`). No new feature. No Supabase, EAS, accounts, secrets, push,
+> merge or PR.
 
 ## T3 — Sync: contract, API, local store, engine (Worker-G1)
 
@@ -417,8 +415,9 @@ Brief:
 > 3. Run, on `iPhone 17 Pro` (iOS 26.4), with the Metro log going to a file:
 >    - `scripts/start-api.sh`, then `scripts/e2e-sync.sh` end to end including the app-driven steps
 >      (stop the server for the offline step; force-stop and relaunch the app with `xcrun simctl`).
->    - Item 2: place the widget on the home screen in both families, change today's meals in the app,
->       confirm the widget follows; kill the app and confirm the widget keeps its last value.
+>    - Item 2: follow `docs/findings/T2-widget.md`: place the widget on the home screen in both families,
+>       change today's meals in the app, confirm the widget follows; kill the app and confirm the widget
+>       keeps its last value. If it fails at first run, fix it and record what it was.
 >    - Item 3: `health-request`, `health-save`, `health-read`, `health-delete` on the simulator; note
 >       whether the authorization sheet appeared, what Health shows, and whether deleting the correlation
 >       removed its samples.
