@@ -35,6 +35,8 @@ export type SpikeActionResult = {
 /** Handed to `run` so an action can emit `[spike]` lines without importing the console code. */
 export type SpikeActionContext = {
   log: (event: string, data?: Record<string, unknown>) => void;
+  /** Extra query parameters of the deep link (`ccspike://spike?action=x&key=value`); empty from a button. */
+  params: Readonly<Record<string, string>>;
 };
 
 export type SpikeAction = {

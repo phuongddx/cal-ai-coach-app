@@ -74,3 +74,18 @@ describe('runSpikeAction', () => {
     expect(new Date(first.ts).toISOString()).toBe(first.ts);
   });
 });
+
+describe('deep link parameters', () => {
+  it('passes the extra query parameters to the action', async () => {
+    const run = jest.fn((ctx: { params: Readonly<Record<string, string>> }) => ({
+      status: 'ok' as const,
+      summary: JSON.stringify(ctx.params),
+    }));
+    registerSpikeAction({ name: 'widget-publish', item: 'widget', title: 'Publish', run });
+
+    await handleSpikeUrl('ccspike://spike?action=widget-publish&rolloverInSeconds=90');
+
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(getLastRuns().widget?.result?.summary).toBe('{"rolloverInSeconds":"90"}');
+  });
+});

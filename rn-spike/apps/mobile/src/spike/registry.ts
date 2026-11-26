@@ -44,7 +44,7 @@ export function subscribeSpike(listener: () => void) {
 }
 
 /** Run a registered action, log it, and publish its result for the console. Never throws. */
-export async function runSpikeAction(name: string): Promise<SpikeActionResult> {
+export async function runSpikeAction(name: string, params: Readonly<Record<string, string>> = {}): Promise<SpikeActionResult> {
   const action = getSpikeAction(name);
   if (!action) {
     const result: SpikeActionResult = { status: 'error', summary: `unknown action: ${name}` };
@@ -57,7 +57,7 @@ export async function runSpikeAction(name: string): Promise<SpikeActionResult> {
   spikeLog(action.item, 'action-start', { name: action.name });
   let result: SpikeActionResult;
   try {
-    result = await action.run({ log: (event, data) => spikeLog(action.item, event, data) });
+    result = await action.run({ log: (event, data) => spikeLog(action.item, event, data), params });
   } catch (e) {
     result = { status: 'error', summary: e instanceof Error ? e.message : String(e) };
   }

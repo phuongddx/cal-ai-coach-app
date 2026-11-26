@@ -8,7 +8,7 @@ import { buildFixtureMeals, type EmberMeal } from './fixture';
  */
 type EmberState = { meals: EmberMeal[]; isOffline: boolean };
 
-let state: EmberState = { meals: buildFixtureMeals(new Date()), isOffline: false };
+let state: EmberState = { meals: [], isOffline: false };
 const listeners = new Set<() => void>();
 
 function set(next: EmberState) {
@@ -24,6 +24,11 @@ export function seedFixtureMeals(now: Date = new Date()): EmberMeal[] {
   const meals = buildFixtureMeals(now);
   set({ ...state, meals });
   return meals;
+}
+
+/** The data binding (src/data/binding.ts) replaces meals and the offline flag from SQLite and the engine. */
+export function setEmberState(next: EmberState) {
+  set(next);
 }
 
 export function setOffline(isOffline: boolean) {

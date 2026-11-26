@@ -1,27 +1,19 @@
-import { sumMacros } from '@coachcal/core';
-
-import { seedFixtureMeals } from '../features/ember/emberStore';
+import { healthSpikeActions } from '../data/health/spikeActions';
+import { syncSpikeActions } from '../data/sync/spikeActions';
+import { widgetSpikeAction } from '../data/widget/spikeActions';
 import { registerSpikeAction } from './registry';
-import type { SpikeAction } from './types';
 
-/** T1: the fixture-backed `seed` action. T6 replaces its body with the SQLite repository seed. */
-export const seedAction: SpikeAction = {
-  name: 'seed',
-  item: 'ui',
-  title: 'Seed fixture meals',
-  run: (ctx) => {
-    const meals = seedFixtureMeals(new Date());
-    const totals = sumMacros(meals);
-    ctx.log('seeded', { meals: meals.length, ...totals });
-    return { status: 'ok', summary: `seeded ${meals.length} meals, ${totals.kcal} kcal`, data: { meals: meals.map((m) => m.id), totals } };
-  },
-};
-
+/**
+ * Registers every spike action (spec D5): item 2 widget, item 3 HealthKit, item 4 sync. `seed` is the
+ * SQLite one from `syncSpikeActions` (T1's fixture-only seed is gone: Ember reads the repository).
+ * Idempotent; called once from the root layout.
+ */
 let registered = false;
 
-/** Idempotent; called once from the root layout. */
 export function registerBuiltinSpikeActions(): void {
   if (registered) return;
   registered = true;
-  registerSpikeAction(seedAction);
+  registerSpikeAction(widgetSpikeAction);
+  for (const action of syncSpikeActions) registerSpikeAction(action);
+  for (const action of healthSpikeActions) registerSpikeAction(action);
 }

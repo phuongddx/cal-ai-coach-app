@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { StyleSheet, useColorScheme, View } from 'react-native';
 
 import { getColors } from '../features/ember/tokens';
+import { startDataBinding } from '../data/binding';
 import { startSpikeDeepLinks } from '../spike/deepLink';
 import { registerBuiltinSpikeActions } from '../spike/builtinActions';
 
@@ -16,6 +17,8 @@ export default function RootLayout() {
   const c = getColors(scheme);
 
   useEffect(() => startSpikeDeepLinks(), []);
+  // Sync triggers, widget foreground reload, SQLite -> Ember/widget binding.
+  useEffect(() => startDataBinding(), []);
 
   return (
     <View style={styles.root}>

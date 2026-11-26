@@ -1,8 +1,14 @@
 import { render, screen } from '@testing-library/react-native';
+import type { ReactElement } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { EmberView } from '../features/ember/EmberView';
 import { buildFixtureMeals, fixtureTargets } from '../features/ember/fixture';
 import { formatHeaderDate, weekStrip } from '../features/ember/format';
+
+// EmberView reads the top safe-area inset (the sticky week strip must sit below the status bar).
+const metrics = { frame: { x: 0, y: 0, width: 402, height: 874 }, insets: { top: 62, left: 0, right: 0, bottom: 34 } };
+const inProvider = (ui: ReactElement) => <SafeAreaProvider initialMetrics={metrics}>{ui}</SafeAreaProvider>;
 
 // Tuesday 24 Nov 2026, local time.
 const NOW = new Date(2026, 10, 24, 18, 0, 0);
@@ -10,7 +16,7 @@ const NOW = new Date(2026, 10, 24, 18, 0, 0);
 // RNTL 14: render is async (it builds on `test-renderer`), so every render is awaited.
 describe('EmberView', () => {
   it('shows the totals computed from the meals it is given', async () => {
-    await render(<EmberView meals={buildFixtureMeals(NOW)} targets={fixtureTargets} now={NOW} isOffline={false} colorScheme="light" />);
+    await render(inProvider(<EmberView meals={buildFixtureMeals(NOW)} targets={fixtureTargets} now={NOW} isOffline={false} colorScheme="light" />));
     expect(screen.getByTestId('ember:eaten')).toHaveTextContent('1,284');
     expect(screen.getByTestId('ember:goal')).toHaveTextContent('2,100');
     expect(screen.getByTestId('ember:kcal-left')).toHaveTextContent('816');
@@ -22,7 +28,7 @@ describe('EmberView', () => {
 
   it('follows different meals instead of fixed numbers', async () => {
     const [oats] = buildFixtureMeals(NOW);
-    await render(<EmberView meals={[oats]} targets={fixtureTargets} now={NOW} isOffline={false} colorScheme="dark" />);
+    await render(inProvider(<EmberView meals={[oats]} targets={fixtureTargets} now={NOW} isOffline={false} colorScheme="dark" />));
     expect(screen.getByTestId('ember:eaten')).toHaveTextContent('410');
     expect(screen.getByTestId('ember:kcal-left')).toHaveTextContent('1,690');
     expect(screen.getByTestId(`ember:meal-kcal:${oats.id}`)).toHaveTextContent('410');
@@ -30,7 +36,7 @@ describe('EmberView', () => {
 
   it('counts only meals eaten on the shown day', async () => {
     const yesterday = buildFixtureMeals(new Date(2026, 10, 23, 18, 0, 0));
-    await render(<EmberView meals={yesterday} targets={fixtureTargets} now={NOW} isOffline={false} colorScheme="light" />);
+    await render(inProvider(<EmberView meals={yesterday} targets={fixtureTargets} now={NOW} isOffline={false} colorScheme="light" />));
     expect(screen.getByTestId('ember:eaten')).toHaveTextContent('0');
     expect(screen.getByTestId('ember:kcal-left')).toHaveTextContent('2,100');
     expect(screen.getByTestId('ember:empty')).toBeOnTheScreen();
@@ -38,15 +44,15 @@ describe('EmberView', () => {
 
   it('shows the offline chip only when offline', async () => {
     const { rerender } = await render(
-      <EmberView meals={[]} targets={fixtureTargets} now={NOW} isOffline={false} colorScheme="light" />,
+      inProvider(<EmberView meals={[]} targets={fixtureTargets} now={NOW} isOffline={false} colorScheme="light" />),
     );
     expect(screen.queryByTestId('ember:offline')).toBeNull();
-    await rerender(<EmberView meals={[]} targets={fixtureTargets} now={NOW} isOffline colorScheme="light" />);
+    await rerender(inProvider(<EmberView meals={[]} targets={fixtureTargets} now={NOW} isOffline colorScheme="light" />));
     expect(screen.getByTestId('ember:offline')).toHaveTextContent('Offline · syncs later');
   });
 
   it('renders the week strip with today selected and the streak card', async () => {
-    await render(<EmberView meals={[]} targets={fixtureTargets} now={NOW} isOffline={false} streakDays={0} colorScheme="light" />);
+    await render(inProvider(<EmberView meals={[]} targets={fixtureTargets} now={NOW} isOffline={false} streakDays={0} colorScheme="light" />));
     expect(screen.getByTestId('ember:date')).toHaveTextContent('Tuesday, 24 Nov');
     expect(screen.getByTestId('ember:week:2026-11-24')).toHaveTextContent('T24');
     expect(screen.getByTestId('ember:streak')).toHaveTextContent('0-day streak');

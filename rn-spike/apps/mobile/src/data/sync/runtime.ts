@@ -24,6 +24,8 @@ export type SyncRuntime = {
   startTriggers: () => SyncTriggerHandle;
   /** Convenience for the console: fire and forget a sync. */
   syncNow: () => void;
+  /** Fires after every sync run and every local write; returns an unsubscribe function. */
+  subscribe: (listener: () => void) => () => void;
 };
 
 let runtimePromise: Promise<SyncRuntime> | null = null;
@@ -39,18 +41,26 @@ export function getSyncRuntime(): Promise<SyncRuntime> {
     const store = createSqliteSyncStore(db);
     const transport = createFetchSyncTransport();
 
+    const listeners = new Set<() => void>();
+    const notify = () => listeners.forEach((listener) => listener());
+
     let netConnected = true;
     const engine = createSyncEngine({
       store,
       transport,
       now: () => Date.now(),
       isOnline: () => netConnected,
+      onChange: notify,
     });
+    const triggerSync = createLocalWriteTrigger(engine);
     const repository = createMealRepository({
       store,
       now: () => Date.now(),
       newId: uuid,
-      onLocalWrite: createLocalWriteTrigger(engine),
+      onLocalWrite: () => {
+        notify();
+        triggerSync();
+      },
     });
 
     return {
@@ -62,6 +72,12 @@ export function getSyncRuntime(): Promise<SyncRuntime> {
         startSyncTriggers({ engine, setNetConnected: (connected) => (netConnected = connected) }),
       syncNow: () => {
         void engine.sync();
+      },
+      subscribe: (listener) => {
+        listeners.add(listener);
+        return () => {
+          listeners.delete(listener);
+        };
       },
     } satisfies SyncRuntime;
   })();

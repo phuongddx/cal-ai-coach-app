@@ -3,6 +3,7 @@ import { GlassView } from 'expo-glass-effect';
 import { SymbolView } from 'expo-symbols';
 import { type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, useColorScheme, View, type TextStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 import type { EmberMeal, EmberTargets } from './fixture';
@@ -28,6 +29,9 @@ export function EmberView({ meals, targets, now, isOffline, streakDays = 0, colo
   const system = useColorScheme();
   const scheme: EmberScheme = colorScheme ?? (system === 'dark' ? 'dark' : 'light');
   const c = getColors(scheme);
+  // The sticky week strip sticks to the top of the scroll view, so the scroll view itself starts below
+  // the status bar (the strip then never sits under the clock).
+  const insets = useSafeAreaInsets();
 
   const today = dayKey(now);
   const todays = meals.filter((m) => dayKey(new Date(m.eatenAt)) === today);
@@ -44,10 +48,11 @@ export function EmberView({ meals, targets, now, isOffline, streakDays = 0, colo
   ] as const;
 
   return (
+    <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: c.grouped }}>
     <ScrollView
       testID="ember:scroll"
       style={{ backgroundColor: c.grouped }}
-      contentInsetAdjustmentBehavior="automatic"
+      contentInsetAdjustmentBehavior="never"
       contentContainerStyle={styles.content}
       stickyHeaderIndices={[1]}
       showsVerticalScrollIndicator={false}
@@ -180,6 +185,7 @@ export function EmberView({ meals, targets, now, isOffline, streakDays = 0, colo
         )}
       </View>
     </ScrollView>
+    </View>
   );
 }
 
@@ -258,7 +264,8 @@ function MealRow({ meal, c }: { meal: EmberMeal; c: EmberColors }) {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: space.s4, paddingBottom: 160 },
+  // Bottom inset: tab bar (~96) + floating Scan button (64 + 104 offset) + air, so the last row ends above both.
+  content: { paddingHorizontal: space.s4, paddingBottom: 216 },
   header: { flexDirection: 'row', alignItems: 'center', paddingTop: space.s2, paddingBottom: space.s2 },
   dateLine: { fontSize: 15 },
   title: { fontSize: 34, fontWeight: '800', letterSpacing: -0.5 },

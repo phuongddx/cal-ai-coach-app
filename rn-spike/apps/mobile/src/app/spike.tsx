@@ -3,7 +3,8 @@ import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { useSyncExternalStore } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
-import { setOffline, useEmberState } from '../features/ember/emberStore';
+import { useSyncState } from '../data/binding';
+import { useEmberState } from '../features/ember/emberStore';
 import { getColors } from '../features/ember/tokens';
 import { getLastRuns, listSpikeActions, runSpikeAction, subscribeSpike } from '../spike/registry';
 import type { SpikeItem } from '../spike/types';
@@ -21,6 +22,7 @@ export default function SpikeConsoleScreen() {
   // React Compiler memoizes zero-arg calls: read the store only through the hook's return value.
   const runs = useSyncExternalStore(subscribeSpike, getLastRuns, getLastRuns);
   const ember = useEmberState();
+  const sync = useSyncState();
   const actions = useSyncExternalStore(subscribeSpike, listSpikeActions, listSpikeActions);
 
   return (
@@ -34,14 +36,16 @@ export default function SpikeConsoleScreen() {
       {CARDS.map(({ item, title }) => {
         const run = runs[item];
         const mine = actions.filter((a) => a.item === item);
-        const wired = mine.length > 0;
+        const wired = mine.length > 0 || item === 'ui';
         const statusText = !wired
           ? 'not wired yet'
           : run?.running
             ? `running ${run.name}…`
             : run?.result
               ? `${run.result.status}: ${run.result.summary}`
-              : 'idle';
+              : item === 'ui'
+                ? `Ember offline chip follows the engine: ${ember.isOffline ? 'offline' : 'online'}`
+                : 'idle';
         const json =
           item === 'ui'
             ? JSON.stringify(
@@ -66,18 +70,17 @@ export default function SpikeConsoleScreen() {
               {mine.map((a) => (
                 <Button key={a.name} testID={`spike:${item}:${a.name}`} label={a.title} onPress={() => void runSpikeAction(a.name)} c={c} />
               ))}
-              {item === 'ui' ? (
-                <Button
-                  testID="spike:ui:toggle-offline"
-                  label={ember.isOffline ? 'Go online (chip off)' : 'Show offline chip'}
-                  onPress={() => setOffline(!ember.isOffline)}
-                  c={c}
-                />
-              ) : null}
             </View>
             <Text testID={`spike:${item}:status`} style={[styles.status, { color: wired ? c.text2 : c.text3 }]}>
               {statusText}
             </Text>
+            {item === 'sync' ? (
+              <Text testID="spike:sync:state" style={[styles.status, { color: c.text2 }]}>
+                {sync.ready
+                  ? `${sync.online ? 'online' : sync.forcedOffline ? 'forced offline' : 'offline'} · last run ${sync.lastStatus} · outbox ${sync.outbox} · cursor ${sync.cursor} · quarantined ${sync.quarantined} · meals ${sync.meals}`
+                  : 'sync runtime starting…'}
+              </Text>
+            ) : null}
             <Text testID={`spike:${item}:result`} selectable style={[styles.json, { backgroundColor: c.fill, color: c.text }]}>
               {json}
             </Text>

@@ -42,6 +42,8 @@ export type EngineDeps = {
   schedule?: (fn: () => void, delayMs: number) => void;
   batchSize?: number;
   pullPageSize?: number;
+  /** Called after every run settles and when forced-offline flips (the UI re-reads meals and state). */
+  onChange?: () => void;
 };
 
 export type SyncEngine = {
@@ -49,6 +51,8 @@ export type SyncEngine = {
   setForcedOffline(value: boolean): void;
   isForcedOffline(): boolean;
   isOnline(): boolean;
+  /** Result of the most recent finished run (`offline` before the first one). */
+  lastResult(): SyncResult;
 };
 
 const BATCH_SIZE = 50;
@@ -206,6 +210,7 @@ export function createSyncEngine(deps: EngineDeps): SyncEngine {
     inFlight = runOnce()
       .then((result) => {
         lastResult = result;
+        deps.onChange?.();
         return result;
       })
       .finally(() => {
@@ -222,8 +227,10 @@ export function createSyncEngine(deps: EngineDeps): SyncEngine {
     sync,
     setForcedOffline(value) {
       forcedOffline = value;
+      deps.onChange?.();
     },
     isForcedOffline: () => forcedOffline,
     isOnline: online,
+    lastResult: () => lastResult,
   };
 }
