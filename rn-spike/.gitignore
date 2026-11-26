@@ -28,3 +28,6 @@ coverage/
 # evidence that is machine-generated and large; curated screenshots live in evidence/ and ARE committed
 evidence/tmp/
 *.log
+
+# locally built app bundles kept for `xcrun simctl install`; never committed
+apps/mobile/build-output/

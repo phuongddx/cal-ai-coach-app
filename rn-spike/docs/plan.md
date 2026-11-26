@@ -5,17 +5,21 @@ Spec: `spec.md` in this directory. Owner: CoachCal bot. Date: 2026-11-26.
 ## Exit condition
 
 Checked box by box at the end; a box is ticked only with evidence committed under `evidence/`.
+State on 2026-11-27, after T7:
 
-- [ ] Spec and plan committed in `rn-spike/docs/` on branch `spike/rn-expo`.
-- [ ] `npm test` green at `rn-spike/` (core, api-contract, api, mobile).
-- [ ] The app built by `npx expo run:ios` runs on the iOS 26.4 Simulator (`iPhone 17 Pro`).
-- [ ] Item 1 (tabs + glass + Ember): pass / fail / partial, with evidence.
-- [ ] Item 2 (widget): pass / fail / partial, with evidence.
-- [ ] Item 3 (HealthKit): pass / fail / partial, with evidence.
-- [ ] Item 4 (offline sync): pass / fail / partial, with evidence.
-- [ ] Measurements recorded (size, idle memory, cold start; Simulator, labelled).
-- [ ] `docs/report.md` complete: 4-item table, measurements, problems, device-only list, go / no-go.
-- [ ] Worker threads closed; child worktrees removed.
+- [x] Spec and plan committed in `rn-spike/docs/` on branch `spike/rn-expo`.
+- [x] `npm test` green at `rn-spike/`: 119 tests (api 11, mobile 76, api-contract 22, core 10).
+- [x] The app built by `npx expo run:ios` runs on the iOS 26.4 Simulator (`iPhone 17 Pro`).
+- [x] Item 1 (tabs + glass + Ember): pass on the Simulator, `evidence/item1/`.
+- [x] Item 2 (widget): pass on the Simulator, `evidence/item2/`.
+- [x] Item 3 (HealthKit): pass on the Simulator after three integration fixes, `evidence/item3/`.
+- [x] Item 4 (offline sync): pass on the Simulator against local Hono + PostgreSQL 17, `evidence/item4/`.
+- [x] Measurements recorded (`evidence/measurements/`), Simulator only, labelled.
+- [x] `docs/report.md` complete: 4-item table, measurements, problems, device-only list, go / no-go.
+- [x] Worker threads closed; child worktrees removed.
+
+Android was not built (no SDK on the machine) and nothing ran on a physical device; `docs/report.md`
+says so.
 
 ## Shape of the work
 

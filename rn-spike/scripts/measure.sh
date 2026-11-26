@@ -106,7 +106,9 @@ LAUNCH_OUT="$(xcrun simctl launch "$UDID" "$BUNDLE_ID")"
 IDLE_PID="$(echo "$LAUNCH_OUT" | awk -F': ' '{print $NF}')"
 sleep "$IDLE_WAIT_SEC"
 
-FOOTPRINT="$(vmmap -summary "$IDLE_PID" 2>/dev/null | awk '/Physical footprint:/ {print $3; exit}' || echo unavailable)"
+# No early `exit` in awk: with pipefail on, awk quitting first breaks vmmap's pipe and the `||`
+# fallback appended a second, wrong "unavailable" line after the real value (seen in the first run).
+FOOTPRINT="$(vmmap -summary "$IDLE_PID" 2>/dev/null | awk '/Physical footprint:/ {v=$3} END {print (v == "" ? "unavailable" : v)}' || true)"
 RSS_KB="$(ps -o rss= -p "$IDLE_PID" 2>/dev/null | tr -d ' ' || echo unavailable)"
 
 if [ "$RSS_KB" != "unavailable" ] && [ -n "$RSS_KB" ]; then

@@ -17,6 +17,7 @@ Living file. The owner (CoachCal bot) maintains it; workers add pitfalls to thei
 | PostgreSQL | 15, 16, 17 binaries from Homebrew under `/opt/homebrew/opt/postgresql@<n>/bin`; no server running |
 | UI automation | `axe` 2.1.1, `xcbeautify` 3.2.1; no Maestro, no idb |
 | Disk at start | about 16 GB free on the data volume; one built worktree costs about 6.3 GB |
+| Disk after the spike | about 11 GB free. The app's DerivedData (7.8 GB after a Debug and a Release build) and `apps/mobile/ios/Pods` (1.4 GB) were deleted to give the disk back. The two built `.app` bundles are kept in `apps/mobile/build-output/` (git-ignored) for `xcrun simctl install` |
 
 ## Versions
 
@@ -51,7 +52,9 @@ export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8   # CocoaPods crashes without a UTF-8
 | Screenshot | `xcrun simctl io <udid> screenshot <file>.png` | |
 | Tests | `npm test` | 4 workspaces, about 4 s total |
 | Types | `npm run typecheck` | |
-| Release build (measurements) | `cd apps/mobile && CI=1 npx expo run:ios --configuration Release --no-bundler --device <udid>` | not yet measured |
+| Release build (measurements), official way | `cd apps/mobile && CI=1 npx expo run:ios --configuration Release --no-bundler --device <udid>` | not run here (builds both architectures) |
+| Release build, one architecture | `cd apps/mobile/ios && xcodebuild -workspace CoachCalSpike.xcworkspace -scheme CoachCalSpike -configuration Release -destination "id=<udid>" ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO build`, then `xcrun simctl install <udid> ~/Library/Developer/Xcode/DerivedData/CoachCalSpike-*/Build/Products/Release-iphonesimulator/CoachCalSpike.app` | 9 min; `.app` 74.4 MB; adds about 4 GB of DerivedData |
+| Measurements | `scripts/measure.sh debug` (Metro must run on 8081) and `scripts/measure.sh release` | 5 cold starts each; results in `evidence/measurements/` |
 
 `CI=1` makes Expo CLI non-interactive and it also turns off Metro's watch mode ("reloads are
 disabled"), so pass `CI=1` to `expo run:ios` but not to `expo start`.
@@ -76,6 +79,23 @@ disabled"), so pass `CI=1` to `expo run:ios` but not to `expo start`.
    or start Metro with a persistent background job and stop it by port (`lsof -ti :8081 | xargs kill`).
 9. **Shared caches.** `~/Library/Caches/ReactNative` (457 MB) and `~/Library/Caches/CocoaPods`
    (1.1 GB) were filled by the first build and are reused by later builds.
+
+10. **A new native build after the cleanup is a full build.** `npx expo run:ios` runs `pod install`
+    first (about 3 min from the CocoaPods cache) and then compiles everything (about 23 min for Debug,
+    about 6 GB of disk). Check the free space first.
+11. **Deep-link confirmation.** `xcrun simctl openurl <udid> "ccspike://spike?action=…"` showed an
+    "Open in CoachCal Spike?" dialog in T1 and none in T6. Automation taps **Open** when the dialog is
+    there.
+12. **Metro with `CI=1` never reloads.** After a JS change, restart Metro, terminate the app and
+    launch it again, or it keeps the old bundle.
+13. **React Compiler caches zero-argument calls.** A component that reads a module-level store through
+    a plain function call renders once and never updates. Read it through `useSyncExternalStore` with a
+    stable snapshot. Jest does not catch this.
+14. **Hermes has no `crypto.randomUUID`** in this setup; `apps/mobile/src/spike/uuid.ts` builds v4 ids.
+15. **`axe tap --label` misses the glass tab bar and the Health sheet**; use coordinates there
+    (402 × 874 pt, screenshots are about 2.29 times larger).
+16. **`scripts/measure.sh` printed a stray `unavailable` line** after the real footprint in its first
+    two runs (pipefail plus an early `exit` in awk). Fixed; the two evidence files carry a note.
 
 ## Proof of the base commit
 
