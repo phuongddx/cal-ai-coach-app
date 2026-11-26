@@ -14,6 +14,7 @@ import { createSqliteSyncStore } from './store.sqlite';
 import { createLocalWriteTrigger, startSyncTriggers, type SyncTriggerHandle } from './triggers';
 import { createSyncEngine, type SyncEngine } from './engine';
 import type { SyncStore, SyncTransport } from './types';
+import { newUuid } from './uuid';
 
 export type SyncRuntime = {
   engine: SyncEngine;
@@ -29,11 +30,6 @@ export type SyncRuntime = {
 };
 
 let runtimePromise: Promise<SyncRuntime> | null = null;
-
-const uuid = (): string =>
-  globalThis.crypto?.randomUUID?.() ??
-  // Same fallback shape as web/store.js (Hermes may lack randomUUID).
-  `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
 
 export function getSyncRuntime(): Promise<SyncRuntime> {
   runtimePromise ??= (async () => {
@@ -56,7 +52,7 @@ export function getSyncRuntime(): Promise<SyncRuntime> {
     const repository = createMealRepository({
       store,
       now: () => Date.now(),
-      newId: uuid,
+      newId: newUuid,
       onLocalWrite: () => {
         notify();
         triggerSync();
