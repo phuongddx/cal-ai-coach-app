@@ -1,0 +1,14 @@
+ LOG  [spike] {"ts":"2026-11-26T17:13:17.580Z","item":"ui","event":"first-render","data":{"iso":"2026-11-26T17:13:17.558Z","uri":"file:///Users/ddphuong/Library/Developer/CoreSimulator/Devices/85024D2F-71DE-43C0-8E11-CE58F4578FC3/data/Containers/Data/Application/F2BF97D1-A3A1-4967-BA0B-13F8C330B131/Documents/first-render.txt"}}
+ LOG  [spike] {"ts":"2026-11-26T17:13:20.683Z","item":"ui","event":"first-render","data":{"iso":"2026-11-26T17:13:20.679Z","uri":"file:///Users/ddphuong/Library/Developer/CoreSimulator/Devices/85024D2F-71DE-43C0-8E11-CE58F4578FC3/data/Containers/Data/Application/F2BF97D1-A3A1-4967-BA0B-13F8C330B131/Documents/first-render.txt"}}
+ LOG  [spike] {"ts":"2026-11-26T17:14:03.462Z","item":"ui","event":"action-start","data":{"name":"seed"}}
+ LOG  [spike] {"ts":"2026-11-26T17:14:03.469Z","item":"ui","event":"seeded","data":{"meals":3,"kcal":1284,"proteinG":82,"carbsG":140,"fatG":38,"fiberG":14}}
+ LOG  [spike] {"ts":"2026-11-26T17:14:03.540Z","item":"ui","event":"action-done","data":{"name":"seed","status":"ok","summary":"seeded 3 meals, 1284 kcal"}}
+ LOG  [spike] {"ts":"2026-11-26T17:14:17.958Z","item":"ui","event":"action-start","data":{"name":"seed"}}
+ LOG  [spike] {"ts":"2026-11-26T17:14:17.964Z","item":"ui","event":"seeded","data":{"meals":3,"kcal":1284,"proteinG":82,"carbsG":140,"fatG":38,"fiberG":14}}
+ LOG  [spike] {"ts":"2026-11-26T17:14:18.003Z","item":"ui","event":"action-done","data":{"name":"seed","status":"ok","summary":"seeded 3 meals, 1284 kcal"}}
+ LOG  [spike] {"ts":"2026-11-26T17:14:39.528Z","item":"ui","event":"action-start","data":{"name":"seed"}}
+ LOG  [spike] {"ts":"2026-11-26T17:14:39.530Z","item":"ui","event":"seeded","data":{"meals":3,"kcal":1284,"proteinG":82,"carbsG":140,"fatG":38,"fiberG":14}}
+ LOG  [spike] {"ts":"2026-11-26T17:14:39.552Z","item":"ui","event":"action-done","data":{"name":"seed","status":"ok","summary":"seeded 3 meals, 1284 kcal"}}
+ LOG  [spike] {"ts":"2026-11-26T17:15:14.669Z","item":"ui","event":"action-start","data":{"name":"seed"}}
+ LOG  [spike] {"ts":"2026-11-26T17:15:14.670Z","item":"ui","event":"seeded","data":{"meals":3,"kcal":1284,"proteinG":82,"carbsG":140,"fatG":38,"fiberG":14}}
+ LOG  [spike] {"ts":"2026-11-26T17:15:14.688Z","item":"ui","event":"action-done","data":{"name":"seed","status":"ok","summary":"seeded 3 meals, 1284 kcal"}}
