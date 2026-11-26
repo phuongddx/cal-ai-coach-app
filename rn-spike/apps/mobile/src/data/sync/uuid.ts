@@ -11,7 +11,7 @@ type RandomSource = {
   getRandomValues?: (bytes: Uint8Array) => Uint8Array;
 };
 
-export function newUuid(source: RandomSource | undefined = globalThis.crypto): string {
+export function newUuid(source: RandomSource | undefined = globalThis.crypto as RandomSource | undefined): string {
   if (source?.randomUUID) return source.randomUUID();
 
   const bytes = new Uint8Array(16);
