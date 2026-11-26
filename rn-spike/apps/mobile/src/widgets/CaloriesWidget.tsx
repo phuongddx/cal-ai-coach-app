@@ -39,6 +39,7 @@ export const placeholderProps: CaloriesWidgetProps = {
   fatGoalG: 70,
 };
 
+// Ember tokens (docs/reference/ember-widgets.png) are declared inside the function below.
 // The function below is serialized to a string and evaluated in the widget's own JS runtime.
 // It may only use its two arguments and the `@expo/ui/swift-ui` components and modifiers that are
 // rewritten to globals. No hooks, no async, no imports, no module-scope values: every token is
@@ -46,14 +47,12 @@ export const placeholderProps: CaloriesWidgetProps = {
 const CaloriesWidget = (props: CaloriesWidgetProps, environment: WidgetEnvironment) => {
   'widget';
 
-  // Ember tokens (docs/reference/ember-widgets.png).
   const dark = environment.colorScheme !== 'light';
   const surface = dark ? '#141210' : '#F7F5F2';
   const glow = dark ? 'rgba(255, 106, 0, 0.30)' : 'rgba(255, 106, 0, 0.14)';
   const textPrimary = dark ? '#F7F5F2' : '#141210';
   const textSecondary = dark ? '#ABA6A0' : '#6B665F';
   const accent = '#FF6A00';
-  const track = dark ? '#3A342F' : '#E4DFD8';
   const protein = '#6EA8FF';
   const carbs = '#3CCFBE';
   const fat = '#B794FF';
@@ -145,7 +144,7 @@ const CaloriesWidget = (props: CaloriesWidgetProps, environment: WidgetEnvironme
     );
   }
 
-  // systemSmall, and the fallback for any other family.
+  /* systemSmall, and the fallback for any other family. */
   return (
     <ZStack modifiers={[background]}>
       <VStack spacing={6}>
