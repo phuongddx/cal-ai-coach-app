@@ -94,7 +94,7 @@ stop() {
   else
     echo "[start-api] API not running (or pid gone)"
   fi
-  lsof -ti ":$API_PORT" | xargs kill >/dev/null 2>&1 || true
+  lsof -ti ":$API_PORT" -sTCP:LISTEN | xargs kill >/dev/null 2>&1 || true
 
   if [ -n "${CLUSTER:-}" ] && [ -d "$CLUSTER" ]; then
     "$PG_BIN/pg_ctl" -D "$CLUSTER" stop -m fast >/dev/null 2>&1 || true
