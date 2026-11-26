@@ -63,7 +63,8 @@ one built worktree holds about 6 GB and the disk started with 16 GB free.
 | `apps/mobile/app.config.ts` | yes, except the two marked plugin blocks | the `expo-widgets` plugin block only | — | — |
 | `apps/mobile/src/app/**` | only | — | — | — |
 | `apps/mobile/src/features/ember/**` | only | — | — | — |
-| `apps/mobile/src/spike/**` | only | — | — | — |
+| `apps/mobile/src/spike/**` (except `types.ts`) | only | — | — | — |
+| `apps/mobile/src/spike/types.ts` | — (frozen; import only) | — (frozen; import only) | — (frozen; import only) | — (frozen; import only) |
 | `apps/mobile/src/widgets/**`, `apps/mobile/src/data/widget/**` | — | only | — | — |
 | `apps/mobile/src/data/db/**`, `src/data/sync/**`, `src/data/api/**` | — | — | only | — |
 | `apps/mobile/src/data/health/**` | — | — | — | only |
@@ -74,9 +75,10 @@ one built worktree holds about 6 GB and the disk started with 16 GB free.
 | `docs/findings/T<n>-*.md` | own file | own file | own file | own file |
 | `evidence/item<n>/` | `item1/` | — (T6 captures item 2) | `item4/` | `item3/`, `measurements/` |
 
-T2, T3 and T4 cannot edit `src/spike/**` in their stage. They export their console actions from
-their own folder (`spikeActions.ts`, see T1 for the shape) and list the registration lines in their
-findings file; T6 registers them.
+T2, T3 and T4 cannot edit `src/spike/**` in their stage. `src/spike/types.ts` is frozen and holds the
+shared `SpikeAction` shape: they type their exported action definitions with it
+(`import type { SpikeAction } from '../spike/types'`) from their own `spikeActions.ts`, and list the
+registration lines in their findings file; T6 registers them.
 
 ## Rules for every task
 
@@ -176,7 +178,7 @@ Brief:
 >    field names as the contract `Meal` in spec D4 (plus `fiberG`).
 > 3. Glass: `expo-glass-effect` `GlassView` on the header icon button and on one larger surface. Scan
 >    button: round orange glass button next to the tab bar, visual only.
-> 4. `src/spike/`: a `spikeLog(item, event, data)` helper that prints `[spike] {json}` with an ISO
+> 4. `src/spike/` (`types.ts` is frozen; build next to it): a `spikeLog(item, event, data)` helper that prints `[spike] {json}` with an ISO
 >    timestamp; an action registry `registerSpikeAction({ name, item, title, run })`; a deep-link router
 >    so `ccspike://spike?action=<name>` runs a registered action; and `src/app/spike.tsx`, a debug console
 >    with one card per item, buttons with `testID="spike:<item>:<control>"`, a status line and a JSON
@@ -233,10 +235,10 @@ Brief:
 >    a zeroed snapshot at local midnight) and `publish(snapshot)` (`updateTimeline`, then `reload()` on app
 >    foreground through a listener the app can start). Pure functions unit-tested; the widget file itself
 >    stays too thin to need a test.
-> 3. `src/data/widget/spikeActions.ts`: export `widgetSpikeAction`, a `registerSpikeAction`-compatible
->    definition (`{ name: 'widget-publish', item: 'widget', title: 'Publish snapshot', run }`) that pushes a
->    fixture snapshot. You cannot edit `src/spike/**`; the integration task registers it. Write the exact
->    registration line in your findings file.
+> 3. `src/data/widget/spikeActions.ts`: export `widgetSpikeAction`, typed with the frozen
+>    `SpikeAction` from `src/spike/types.ts` (`{ name: 'widget-publish', item: 'widget', title: 'Publish snapshot', run }`),
+>    which pushes a fixture snapshot. You cannot edit `src/spike/**`; the integration task registers it.
+>    Write the exact registration line in your findings file.
 > 4. No native build in this task: the disk has no room for a second built worktree (about 6 GB each),
 >    so the widget first runs on a simulator in T6. Instead, check your widget file against every
 >    `'widget'` rule line by line, and write `docs/findings/T2-widget.md` as the integration task's
@@ -266,68 +268,75 @@ Brief:
 
 > Goal: write the offline-first sync of the CoachCal RN spike — the Zod contract, a minimal Hono API on
 > PostgreSQL, the SQLite outbox store, and the sync engine — with Jest tests for each. This is spike item
-> 4 of `rn-spike/docs/spec.md`. Read D4 line by line: it is the contract between your parts, and another
-> worker wires it into the app later.
+> 4 of `rn-spike/docs/spec.md`. Read D4 line by line: it is the contract between your parts, and the
+> integration task wires them into the app later.
 >
 > Context: `rn-spike/` is a throwaway Expo SDK 58 monorepo. Your worktree is on branch
 > `spike/rn-expo-sync`. Existing pieces: `packages/api-contract/src/index.ts` (error envelope schema),
-> `apps/api/src/app.ts` (Hono app with `/health`), `expo-sqlite`, `drizzle-orm`, `@react-native-community/netinfo`,
-> `hono`, `@hono/node-server`, `@hono/zod-validator`, `zod` are installed and locked. References you may
-> read (not edit): `/Users/ddphuong/Projects/next-labs/cal-ai-coach-app/web/core.js` (`winsLww`) and
-> `web/store.js` (the localStorage outbox), `native/Modules/CoachCalCore/Sources/CoachCalCore/SyncEnvelope.swift`
+> `apps/api/src/app.ts` (Hono app with `/health`); `expo-sqlite`, `drizzle-orm`,
+> `@react-native-community/netinfo`, `hono`, `@hono/node-server`, `@hono/zod-validator`, `zod` are installed
+> and locked. References you may read (not edit): `/Users/ddphuong/Projects/next-labs/cal-ai-coach-app/web/core.js`
+> (`winsLww`) and `web/store.js` (the localStorage outbox), and
+> `/Users/ddphuong/Projects/next-labs/cal-ai-coach-app/native/Modules/CoachCalCore/Sources/CoachCalCore/SyncEnvelope.swift`
 > (the current wire contracts; the spec keeps their names).
 >
-> Output, in this order, each with its tests before the next:
+> Output, in this order; the tests of a step pass before the next step starts:
 > 1. `packages/api-contract/src/sync.ts`: the schemas of spec D4 as Zod 4 `strictObject`; export the
->    inferred types. Tests: every schema; unknown key rejected; `meal` required for `upsert` and rejected
->    for `tombstone`; limits (1..50 operations, name ≤ 200, numbers ≥ 0).
-> 2. `apps/api/src/`: `sync.ts` routes `POST /v1/sync/push` and `/v1/sync/pull`, `store.ts` (a
+>    inferred types from `src/index.ts`. Tests: every schema; unknown key rejected; `meal` required for
+>    `upsert` and rejected for `tombstone`; limits (1..50 operations, name ≤ 200, numbers ≥ 0).
+> 2. `apps/api/src/`: `sync.ts` (routes `POST /v1/sync/push` and `POST /v1/sync/pull`), `store.ts` (the
 >    `query(sql, params)` port), `store.postgres.ts` (postgres.js), `schema.sql` (tables `meals`,
 >    `sync_ops`, `sync_changes` with `seq BIGSERIAL`), `auth.ts` (bearer token → user id from
->    `apps/api/dev-tokens.json`, checked in: `{"spike-dev-token": "<uuid for user 1>", "spike-dev-token-2":
->    "<uuid for user 2>"}`), and the error handling of spec D4. Add `postgres` as a dependency of
->    `@coachcal/api` only (edit `apps/api/package.json`, then run `npm install` from `rn-spike/`). Tests
->    with `app.request`: the list under "apps/api" in spec Testing — use `@electric-sql/pglite` for a
->    Postgres that starts in memory inside Jest (add it as a devDependency of `@coachcal/api`).
+>    `apps/api/dev-tokens.json`, checked in, with `"spike-dev-token"` and `"spike-dev-token-2"` as the two
+>    tokens), and the error handling of spec D4. Tests with `app.request` on every case under "apps/api"
+>    in spec Testing, using `@electric-sql/pglite` as a Postgres that starts in memory inside Jest. The
+>    only dependency change you may make: add `postgres` (dependency) and `@electric-sql/pglite`
+>    (devDependency) to `apps/api/package.json`, run `npm install` once from `rn-spike/` in your worktree,
+>    and commit the lockfile change.
 > 3. `apps/mobile/src/data/db/`: Drizzle schema for `meals`, `outbox`, `sync_state`; a client that opens
->    `coachcal.db` with WAL; migrations generated by `drizzle-kit` and applied at open.
->    `apps/mobile/src/data/api/syncClient.ts`: fetch-based `SyncTransport` that parses with the contract
->    schemas (unknown key → typed error) and reads `baseUrl` + token from `expo-constants` extra
->    (`apiBaseUrl` default `http://127.0.0.1:8787`, `apiToken` default `spike-dev-token`).
-> 4. `apps/mobile/src/data/sync/`: `types.ts` (the `SyncStore` and `SyncTransport` ports), `repository.ts`
->    (local write = one transaction: meal row + outbox operation; delete = remove row + tombstone;
->    `hasPendingIntent(recordId)` = an outbox row exists), `engine.ts` per spec D4 (push FIFO ≤ 50, pull
->    pages, pending-intent skip, one transaction per batch and per page, backoff, quarantine on 400, stop
->    on 401, coalescing, `setForcedOffline`), `triggers.ts` (app start, foreground, NetInfo, 500 ms after
->    a local write). Export `createSyncEngine(deps)`; the integration task will call it.
+>    `coachcal.db` with WAL; migrations generated by `npx drizzle-kit@0.31.11 generate` from an
+>    `apps/mobile/drizzle.config.ts` (do not edit `apps/mobile/package.json`) and applied at open.
+>    `apps/mobile/src/data/api/syncClient.ts`: a fetch-based `SyncTransport` that parses with the contract
+>    schemas (unknown key → typed error) and reads base URL and token from `expo-constants` extra
+>    (`apiBaseUrl`, default `http://127.0.0.1:8787`; `apiToken`, default `spike-dev-token`).
+> 4. `apps/mobile/src/data/sync/`: `types.ts` (the `SyncStore` and `SyncTransport` ports),
+>    `repository.ts` (local write = one transaction: meal row + outbox operation; delete = remove row +
+>    tombstone; `hasPendingIntent(recordId)` = an outbox row exists), `engine.ts` per spec D4 (push FIFO
+>    ≤ 50, pull pages, pending-intent skip, one transaction per batch and per page, backoff, quarantine
+>    on 400, stop on 401, coalescing, `setForcedOffline`), `triggers.ts` (app start, foreground, NetInfo,
+>    500 ms after a local write). Export `createSyncEngine(deps)` and a `getSyncRuntime()` that wires the
+>    real store, transport and triggers; the integration task calls them.
 > 5. Engine tests against an in-memory `SyncStore` and a fake transport — every case under "apps/mobile"
->    in spec Testing that names the engine. `src/data/sync/spikeActions.ts` may import nothing from
->    `src/spike/**`.
-> 6. `apps/mobile/src/data/sync/spikeActions.ts`: export definitions for a `registerSpikeAction` registry
->    owned by another worker — `{ name, item: 'sync', title, run }` for `seed`, `add-meal`, `edit-meal`,
->    `delete-meal`, `sync`, `force-offline`, `force-online`, `reset` — using an in-memory `meals` list as
->    the "meal editor" (the spike has no meal UI). You cannot edit `src/spike/**`; write the registration
->    lines in your findings file.
+>    in spec Testing that names the engine.
+> 6. `apps/mobile/src/data/sync/spikeActions.ts`: export action definitions typed with the frozen
+>    `SpikeAction` from `src/spike/types.ts` (`item: 'sync'`) for `seed`, `add-meal`, `edit-meal`,
+>    `delete-meal`, `sync`, `force-offline`, `force-online`, `reset`. They call the real repository and
+>    engine, so on a device `add-meal` writes SQLite and the outbox: `seed` inserts fixture meals A and C
+>    through the repository, `edit-meal` changes A's kcal, `delete-meal` deletes C, `sync` runs one manual
+>    sync and reports pushed and pulled counts, `force-offline` / `force-online` toggle
+>    `setForcedOffline`, `reset` empties the local tables and the cursor. Log through the action's
+>    `ctx.log`. You cannot edit `src/spike/**`; write the registration lines in your findings file.
 > 7. `scripts/start-api.sh`: start a throwaway PostgreSQL 17 cluster (`initdb` into a temp dir, `pg_ctl`
 >    on port 5433, binaries `/opt/homebrew/opt/postgresql@17/bin`), apply `schema.sql`, start the API on
->    8787, and print how to stop both. `scripts/e2e-sync.sh`: the five steps of spec Testing "End-to-end"
->    that need no app (`curl` only): push A and C, replay the push (duplicates), pull with cursor 0 and
->    with an old cursor, user 2 sees nothing. Keep the app-driven steps as commented placeholders for the
->    integration task. Add only `postgres`, `@electric-sql/pglite` and `drizzle-kit` as dependencies.
-> 8. Evidence under `evidence/item4/`: Jest output, the `curl` transcript of `e2e-sync.sh` against real
->    PostgreSQL 17, and `docs/findings/T3-sync.md` (what Drizzle and PGlite made easy or hard, docs that
->    were wrong, anything left for the device run).
+>    8787, and print how to stop both. `scripts/e2e-sync.sh`: the steps of spec Testing "End-to-end" that
+>    need no app (`curl` only): push A and C, replay the push (duplicates), pull with cursor 0 and with an
+>    old cursor, user 2 sees nothing. Keep the app-driven steps as commented placeholders for the
+>    integration task.
+> 8. Evidence under `evidence/item4/`: Jest output and the `curl` transcript of `e2e-sync.sh` against
+>    real PostgreSQL 17. `docs/findings/T3-sync.md`: what Drizzle and PGlite made easy or hard, docs that
+>    were wrong, the registration lines, and everything left for the device run.
 >
 > Done when: `npm test` passes at `rn-spike/` and `npx tsc --noEmit` passes in `apps/api`,
-> `packages/api-contract` and `apps/mobile`; `scripts/start-api.sh` brings up PostgreSQL 17 and the API and
->    `scripts/e2e-sync.sh` runs green with its transcript saved; the server and cluster are stopped
->    afterwards; everything is committed on `spike/rn-expo-sync` with your report in the plan's format.
+> `packages/api-contract` and `apps/mobile`; `scripts/start-api.sh` brings up PostgreSQL 17 and the API,
+>    and `scripts/e2e-sync.sh` runs green with its transcript saved; the server and the cluster are
+>    stopped afterwards; everything is committed on `spike/rn-expo-sync` with your report in the plan's
+>    format.
 >
-> Limits: this task needs no native build — do not run `expo run:ios` or `pod install`; you will not see
-> the engine run on a simulator, the integration task does that. Edit only the paths the ownership table
-> gives T3. If Drizzle blocks you for about 45 minutes, fall back to `expo-sqlite`'s SQL helpers and say
-> why. No real auth. No Supabase, EAS, accounts, secrets, push, merge or PR. Node is 26.8.1 here; write
-> for Node 24 too.
+> Limits: this task needs no native build — do not run `expo run:ios`, `pod install` or `prebuild`; you
+> will not see the engine run on a simulator, the integration task does that. Edit only the paths the
+> ownership table gives T3. If Drizzle blocks you for about 45 minutes, fall back to `expo-sqlite`'s SQL
+> helpers and say why. No real auth. No Supabase, EAS, accounts, secrets, push, merge or PR. Node is
+> 26.8.1 here; write for Node 24 too.
 
 ## T4 — HealthKit and measurement script (Worker-G2)
 
@@ -360,14 +369,15 @@ Brief:
 >    right identifiers and units; a meal of 624 kcal reads back as 624; an unauthorized query becomes
 >    `HealthMealError('unauthorized')` and never throws out of the adapter; an unavailable HealthKit store
 >    (iPad-like) becomes `notAvailable`.
-> 3. `apps/mobile/src/data/health/spikeActions.ts`: export definitions for a `registerSpikeAction`
->    registry owned by another worker — `{ name, item: 'health', title, run }` for `health-request`,
+> 3. `apps/mobile/src/data/health/spikeActions.ts`: export action definitions typed with the frozen
+>    `SpikeAction` from `src/spike/types.ts` (`item: 'health'`) for `health-request`,
 >    `health-save`, `health-read`, `health-delete` — where `health-save` writes a fixture meal
 >    (`Chicken rice bowl`, 624 kcal, 38 g protein, 70 g carbs, 18 g fat, eaten today at 12:40) and
 >    `health-read` returns the read-back for today. You cannot edit `src/spike/**`; write the
 >    registration lines in your findings file.
-> 4. `scripts/measure.sh`: per spec D6 — find the newest `CoachCalSpike.app` under `apps/mobile/ios/build`
->    (argument: `debug` or `release`), report `du -sk` and zip size; launch on the simulator, wait 15 s,
+> 4. `scripts/measure.sh` (argument `debug` or `release`), per spec D6. The built app is at
+>    `~/Library/Developer/Xcode/DerivedData/CoachCalSpike-*/Build/Products/<Debug|Release>-iphonesimulator/CoachCalSpike.app`
+>    (take the newest); report `du -sk` of the `.app` and of a zip of it. Then launch it on the simulator, wait 15 s,
 >    read `Physical footprint` from `vmmap -summary` and RSS from `ps`; then 5 cold starts (terminate,
 >    record host time in ms, `xcrun simctl launch`, poll for `first-render.txt` in the app container from
 >    `xcrun simctl get_app_container <udid> com.nextlabs.coachcal.rnspike data`, report each and the
