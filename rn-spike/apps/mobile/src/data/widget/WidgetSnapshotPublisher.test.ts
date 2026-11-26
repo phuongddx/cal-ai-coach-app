@@ -82,6 +82,14 @@ describe('buildTimeline', () => {
     expect(entries[1].date.getTime() - late.getTime()).toBe(1000);
   });
 
+  it('uses an explicit rolloverAt and its day key for the second entry', () => {
+    const rolloverAt = new Date(2026, 10, 27, 14, 32, 5);
+    const entries = buildTimeline(snapshot, now, rolloverAt);
+    expect(entries[1].date).toEqual(rolloverAt);
+    expect(entries[1].props.date).toBe('2026-11-27');
+    expect(entries[1].props.consumedKcal).toBe(0);
+  });
+
   it('puts the next midnight a full day away when now is exactly midnight', () => {
     const midnightNow = new Date(2026, 10, 27, 0, 0, 0, 0);
     const entries = buildTimeline(snapshot, midnightNow);
@@ -115,6 +123,13 @@ describe('publish', () => {
     expect(widget.updateTimeline).toHaveBeenCalledTimes(1);
     expect(widget.updateTimeline).toHaveBeenCalledWith(buildTimeline(snapshot, now));
     expect(log).toHaveBeenCalledWith('widget-publish', expect.objectContaining({ entries: 2 }));
+  });
+
+  it('passes rolloverAt through to the timeline', () => {
+    const widget = { updateTimeline: jest.fn(), reload: jest.fn() };
+    const rolloverAt = new Date(2026, 10, 27, 14, 32);
+    publish(snapshot, { widget, now: () => now, log: jest.fn(), rolloverAt });
+    expect(widget.updateTimeline).toHaveBeenCalledWith(buildTimeline(snapshot, now, rolloverAt));
   });
 
   it('logs and returns false when the widget throws, never rethrows', () => {

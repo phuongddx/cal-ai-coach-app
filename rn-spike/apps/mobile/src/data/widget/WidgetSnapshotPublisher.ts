@@ -30,20 +30,26 @@ export function nextLocalMidnight(now: Date): Date {
  * Timeline for one snapshot: the snapshot itself from `now`, then a zeroed snapshot (same goals,
  * new day key) at the next local midnight so the widget rolls over to the new day without the
  * app running. A placeholder snapshot (`date === ''`) has no day to roll over, so it stays one entry.
+ *
+ * `rolloverAt` exists so the on-device proof does not have to wait for midnight: pass a time a couple
+ * of minutes ahead and watch the widget switch. Leave it out in the app.
  */
-export function buildTimeline(snapshot: WidgetSnapshot, now: Date): WidgetTimeline {
+export function buildTimeline(
+  snapshot: WidgetSnapshot,
+  now: Date,
+  rolloverAt: Date = nextLocalMidnight(now)
+): WidgetTimeline {
   const current: WidgetTimelineEntry<WidgetSnapshot> = { date: now, props: { ...snapshot } };
   if (snapshot.date === '') {
     return [current];
   }
-  const midnight = nextLocalMidnight(now);
   return [
     current,
     {
-      date: midnight,
+      date: rolloverAt,
       props: {
         ...snapshot,
-        date: localDayKey(midnight),
+        date: localDayKey(rolloverAt),
         consumedKcal: 0,
         proteinG: 0,
         carbsG: 0,
@@ -62,7 +68,13 @@ const defaultLog: PublisherLogger = (event, data) => {
   console.log(`[spike] ${event}`, data ?? '');
 };
 
-type PublishDeps = { widget?: WidgetHandle; now?: () => Date; log?: PublisherLogger };
+type PublishDeps = {
+  widget?: WidgetHandle;
+  now?: () => Date;
+  log?: PublisherLogger;
+  /** Test and proof hook, see `buildTimeline`. */
+  rolloverAt?: Date;
+};
 
 /**
  * Pushes a snapshot to the widget. On iOS `updateSnapshot` is `updateTimeline([{ date: now, props }])`
@@ -73,9 +85,9 @@ type PublishDeps = { widget?: WidgetHandle; now?: () => Date; log?: PublisherLog
  * Returns `true` when the timeline was handed to the widget.
  */
 export function publish(snapshot: WidgetSnapshot, deps: PublishDeps = {}): boolean {
-  const { widget = defaultHandle, now = () => new Date(), log = defaultLog } = deps;
+  const { widget = defaultHandle, now = () => new Date(), log = defaultLog, rolloverAt } = deps;
   try {
-    const entries = buildTimeline(snapshot, now());
+    const entries = buildTimeline(snapshot, now(), rolloverAt);
     widget.updateTimeline(entries);
     log('widget-publish', {
       date: snapshot.date,
