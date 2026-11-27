@@ -6,12 +6,14 @@
  * through TEST_OWNER_URL (role coachcal_owner: seeds and cleans tables, runs migrations) and
  * TEST_API_URL (role coachcal_api: what the app connects as). The two variables come from the
  * process environment or, when the verify command runs `npm test` in a fresh process, from the
- * env file the start script wrote (RN_API_ENV_FILE, default $TMPDIR/coachcal-rn-api.env).
+ * env file the start script wrote for this checkout (RN_API_ENV_FILE, default
+ * $TMPDIR/coachcal-rn-api-<key>.env, see `defaultEnvFile`).
  * When neither is present the suite says so with a console.warn and is skipped: it never
  * passes silently.
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { readFileSync, realpathSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 import type { Hono } from 'hono';
 import postgres from 'postgres';
@@ -31,8 +33,20 @@ export interface SqlEnv {
   apiUrl: string;
 }
 
+const repoRoot = realpathSync(resolve(__dirname, '..', '..', '..', '..'));
+
+/**
+ * The env file `scripts/rn/start-api.sh` wrote for THIS checkout: the same name rule (first 12 hex
+ * digits of the SHA-256 of the checkout path), so a run in another worktree never picks up a cluster
+ * it did not migrate.
+ */
+export function defaultEnvFile(tmpDir: string = process.env.TMPDIR ?? '/tmp', root: string = repoRoot): string {
+  const key = createHash('sha256').update(root).digest('hex').slice(0, 12);
+  return join(tmpDir, `coachcal-rn-api-${key}.env`);
+}
+
 function readEnvFile(): Record<string, string> {
-  const file = process.env.RN_API_ENV_FILE ?? join(process.env.TMPDIR ?? '/tmp', 'coachcal-rn-api.env');
+  const file = process.env.RN_API_ENV_FILE ?? defaultEnvFile();
   let text: string;
   try {
     text = readFileSync(file, 'utf8');

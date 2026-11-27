@@ -14,8 +14,12 @@
 #      RC_WEBHOOK_SIGNING_SECRET, OTP_SENDER=log (the code is printed to the API log), Apple and
 #      Google unset (their routes answer 503), AUTH_DEV_TOKENS=1, VLM_PROVIDER=fixture.
 #   5. Write TEST_OWNER_URL, TEST_API_URL, API_BASE_URL and API_LOG into an env file other commands
-#      can source. Default $TMPDIR/coachcal-rn-api.env, override with RN_API_ENV_FILE. The Jest suites
-#      read the same file when the variables are not already set; the file is deleted on stop.
+#      can source. Default $TMPDIR/coachcal-rn-api-<key>.env, where <key> is the first 12 hex digits
+#      of the SHA-256 of this checkout's path; override with RN_API_ENV_FILE. The Jest suites of this
+#      checkout read the same file when the variables are not already set; the file is deleted on stop.
+#
+# Ports 5433 and 8787 and the state file are shared by every checkout: one cluster at a time, and
+# only the unit whose brief gives it the API slot starts one (standing-orders rule 17).
 #
 # Nothing is registered as a service; the cluster lives in a temp dir and is deleted on stop.
 set -euo pipefail
@@ -29,7 +33,11 @@ API_PORT="${API_PORT:-8787}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LOG_DIR="${RN_SPIKE_LOG_DIR:-/private/var/folders/nn/n6wtxkdd3n10d78wf4xmygrm0000gp/T/opencode/rn-logs}"
 STATE_FILE="$LOG_DIR/api-dev.state"
-ENV_FILE="${RN_API_ENV_FILE:-${TMPDIR:-/tmp}/coachcal-rn-api.env}"
+# Keyed by checkout: only the tree that started this cluster reads its variables back, so a
+# `npm test` in another worktree skips the SQL suites instead of running against a schema it
+# does not have. The Jest harness derives the same name (apps/api/src/testing/sqlHarness.ts).
+WORKTREE_KEY="$(printf '%s' "$ROOT" | shasum -a 256 | cut -c1-12)"
+ENV_FILE="${RN_API_ENV_FILE:-${TMPDIR:-/tmp}/coachcal-rn-api-$WORKTREE_KEY.env}"
 SUPERUSER="$(id -un)"
 DB_NAME=coachcal
 OWNER_URL="postgres://coachcal_owner@127.0.0.1:$PG_PORT/$DB_NAME"

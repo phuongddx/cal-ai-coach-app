@@ -40,3 +40,6 @@ for ws in "$SRC"/apps/* "$SRC"/packages/*; do
   rel="${ws#"$SRC"/}/node_modules"
   [ -d "$SRC/$rel" ] && clone "$rel"
 done
+
+# The last workspace may have no nested node_modules; that failed test is not the script's result.
+exit 0

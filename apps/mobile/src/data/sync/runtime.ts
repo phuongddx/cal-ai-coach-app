@@ -17,6 +17,8 @@ import type { SyncStore, SyncTransport } from './types';
 import { newUuid } from './uuid';
 
 export type SyncRuntime = {
+  /** The app's one database handle; every repository is created over it (`src/data/environment.ts`). */
+  db: Awaited<ReturnType<typeof openLocalDb>>['db'];
   engine: SyncEngine;
   repository: MealRepository;
   transport: SyncTransport;
@@ -25,6 +27,8 @@ export type SyncRuntime = {
   startTriggers: () => SyncTriggerHandle;
   /** Convenience for the console: fire and forget a sync. */
   syncNow: () => void;
+  /** Re-reads for the UI, then schedules a sync; what `notifyLocalMutation` calls. */
+  notifyLocalWrite: () => void;
   /** Fires after every sync run and every local write; returns an unsubscribe function. */
   subscribe: (listener: () => void) => () => void;
 };
@@ -49,17 +53,19 @@ export function getSyncRuntime(): Promise<SyncRuntime> {
       onChange: notify,
     });
     const triggerSync = createLocalWriteTrigger(engine);
+    const notifyLocalWrite = () => {
+      notify();
+      triggerSync();
+    };
     const repository = createMealRepository({
       store,
       now: () => Date.now(),
       newId: newUuid,
-      onLocalWrite: () => {
-        notify();
-        triggerSync();
-      },
+      onLocalWrite: notifyLocalWrite,
     });
 
     return {
+      db,
       engine,
       repository,
       transport,
@@ -69,6 +75,7 @@ export function getSyncRuntime(): Promise<SyncRuntime> {
       syncNow: () => {
         void engine.sync();
       },
+      notifyLocalWrite,
       subscribe: (listener) => {
         listeners.add(listener);
         return () => {
@@ -78,6 +85,14 @@ export function getSyncRuntime(): Promise<SyncRuntime> {
     } satisfies SyncRuntime;
   })();
   return runtimePromise;
+}
+
+/**
+ * What feature code calls after a write through a data repository (`src/data/repos/**`): the UI
+ * re-reads and a sync is scheduled, as `notifyLocalMutation()` does in the Swift app.
+ */
+export function notifyLocalMutation(): void {
+  void getSyncRuntime().then((runtime) => runtime.notifyLocalWrite());
 }
 
 /** Test hook: forget the memoized runtime. */
