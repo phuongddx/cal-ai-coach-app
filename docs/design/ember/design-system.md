@@ -75,10 +75,31 @@ export const cc = (k: Key) =>
 | Dark selected segment (`.seg a.on`, Review and Diary edit), 27/11 | 3.93:1 (#45403B) | 4.59:1 (`ccFillElevated` #3A3632) |
 
 ## Type, spacing, shape
-- **Type:** SF Pro text styles with Dynamic Type: Large Title 34, Title1 28, Title2 22, Headline 17 semibold, Body 17, Subheadline 15, Footnote 13. Numbers use SF Pro Rounded with `.monospacedDigit()`.
+- **Type:** SF Pro text styles with Dynamic Type. Since 27/11 (round 4) the scale lives in `tokens.css` as `--t-*` (`font: var(--t-body)`) and in `tokens.json` → `type` (size, lineHeight, weight, family) + `typeVar`. Values are the default (Large) Dynamic Type size:
+
+  | Token | JSON | Weight · size/line | Family | iOS text style (scales with) |
+  |---|---|---|---|---|
+  | `--t-large-title` | `largeTitle` | 700 · 34/41 | text | `.largeTitle` |
+  | `--t-title1` | `title1` | 700 · 28/34 | text | `.title` |
+  | `--t-title2` | `title2` | 700 · 22/28 | text | `.title2` |
+  | `--t-title3` | `title3` | 600 · 20/25 | text | `.title3` |
+  | `--t-headline` | `headline` | 600 · 17/22 | text | `.headline` |
+  | `--t-body` | `body` | 400 · 17/22 | text | `.body` |
+  | `--t-callout` | `callout` | 400 · 16/21 | text | `.callout` |
+  | `--t-subheadline` | `subheadline` | 400 · 15/20 | text | `.subheadline` |
+  | `--t-footnote` | `footnote` | 400 · 13/18 | text | `.footnote` |
+  | `--t-caption1` | `caption1` | 500 · 12/16 | text | `.caption` |
+  | `--t-caption2` | `caption2` | 500 · 11/13 | text | `.caption2` |
+  | `--t-num-xl` | `numXl` | 700 · 44/44 | rounded | `.largeTitle` (kcal left, light ring) |
+  | `--t-num-lg` | `numLg` | 700 · 36/36 | rounded | `.largeTitle` (kcal left, ember ring) |
+  | `--t-num-md` | `numMd` | 700 · 22/28 | rounded | `.title2` (ember stat tile) |
+  | `--t-num-sm` | `numSm` | 700 · 20/25 | rounded | `.title3` (Eaten / Goal, item kcal) |
+  | `--t-num-body` | `numBody` | 600 · 17/22 | rounded | `.body` (grams, list kcal) |
+
+  Rounded = SF Pro Rounded with `.monospacedDigit()`. SwiftUI: `.font(.system(size:weight:design: .rounded))` wrapped in `@ScaledMetric(relativeTo:)` of the style in the last column, or `Font.custom(…, relativeTo:)`. RN: `allowFontScaling` on, `maxFontSizeMultiplier` per screen.
 - **Spacing:** 4, 8, 12, 16, 20, 24, 32, 40, 48.
-- **Radii:** 10, 14, 20, 28, capsule. Use `ConcentricRectangle` on iOS 26.
-- **Sizes:** 44 tap target, 56 button, 76 shutter, ring 184 with a 16 stroke.
+- **Radii:** 10, 14, 20, 28, capsule; `--r-btn` 18 (full-width button and the 36-high chip). Use `ConcentricRectangle` on iOS 26.
+- **Sizes:** 44 tap target, 56 button, 76 shutter, 62 floating Scan button (`--fab`), macro bar 8 high (`--macro-bar`, radius = height / 2). Rings, with the rendered stroke: `--ring` 184 / 16 (Today light hero), `--ring-md` 150 / 13 (kcal ring on the ember card: Today dark, Coach), `--ring-sm` 120 / 12 (onboarding target). Round the stroke cap.
 
 ## Component mapping
 | Canvas | SwiftUI | RN (TS) |
@@ -170,6 +191,13 @@ All frames are templated in `screens-more.js`, loaded after `screens-additions.j
 - `--cc-segment-selected` (`segmentSelected`): the selected pill of a segmented control. Light #FFFFFF on the `fill` track; dark #3A3632 on the #2A2724 track and inside sheets. The canvas now reads it in `.seg a.on` and the old hard-coded #45403B rule is gone. Rendering is unchanged (same values as before).
 - `--cc-on-media` (`onMedia`): the white glyph of glass buttons over a photo or the camera feed (`tone="overMedia"`). It is #FFFFFF in every mode, including dark and High Contrast, because the backdrop is the photo, not the theme. Always pair it with `--cc-media-scrim` (`mediaScrim`, 45% black) behind the glyph, plus the system blur where available. On the canvas: `.glassbtn.on-media` (viewfinder Close, Flash) and the library/flip buttons.
 - Rule: no literal `#fff` / `rgba(0,0,0,.45)` in feature code for these. Text over media that is not on a scrim (for example a caption on a photo) needs its own gradient scrim and is not covered by these tokens.
+
+**Round 4 tokens (CoachCal request, 27/11).** Values the app drew outside the token chain, now in `tokens.css` and `tokens.json`:
+- `--cc-apple-health` (`appleHealth`) #FF2D55, same in every mode: the Apple Health icon tile (Profile › Apple Health, onboarding Connect Apple Health). Graphic only, white glyph 3.65:1. Never use it for text. It replaces the error red that the tile used on the canvas.
+- `--cc-ember-tile` (`emberTile`) #2A2724, same in every mode: the stat tiles inside the ember card on Coach (meals logged, protein days, day streak). Value text uses `--t-num-md`, label `--cc-ember-text-2` (6.15:1). Don't borrow `elevated` for this: it is #FFFFFF in light.
+- `--cc-media-scrim-strong` (`mediaScrimStrong`) 55% black, same in every mode: a pill that carries **text** over the camera or a photo (the viewfinder scan counter). Label is `--cc-on-media`. Worst case over a pure-white photo: 4.74:1. Keep `--cc-media-scrim` (45%) for glyph-only glass buttons.
+- `--r-btn`, `--fab`, `--ring-md`, `--ring-md-stroke`, `--ring-sm`, `--ring-sm-stroke`, `--macro-bar` and the `--t-*` type scale: see "Type, spacing, shape".
+- Icon `i-carrot` added to the sprite (52 symbols). The Diary frames still mark Dinner with `i-moon` (sunrise / sun / moon by time of day); `i-carrot` is there for food-type use, not as the Dinner header.
 
 **Icon layers.** `icon/layers/{default,dark,clear,tinted}/` holds flat SVG layers per appearance (see `icon/layers/README.md`). The no-alpha 1024 PNGs are unchanged.
 

@@ -25,6 +25,9 @@ export const emberTokens = {
       "segmentSelected": "#FFFFFF",
       "onMedia": "#FFFFFF",
       "mediaScrim": "rgba(0,0,0,.45)",
+      "mediaScrimStrong": "rgba(0,0,0,.55)",
+      "appleHealth": "#FF2D55",
+      "emberTile": "#2A2724",
       "border": "rgba(20,18,16,.08)",
       "separator": "rgba(20,18,16,.12)",
       "text": "#141210",
@@ -69,6 +72,9 @@ export const emberTokens = {
       "segmentSelected": "#3A3632",
       "onMedia": "#FFFFFF",
       "mediaScrim": "rgba(0,0,0,.45)",
+      "mediaScrimStrong": "rgba(0,0,0,.55)",
+      "appleHealth": "#FF2D55",
+      "emberTile": "#2A2724",
       "border": "rgba(255,255,255,.08)",
       "separator": "rgba(255,255,255,.12)",
       "text": "#F7F5F2",
@@ -113,6 +119,9 @@ export const emberTokens = {
       "segmentSelected": "#FFFFFF",
       "onMedia": "#FFFFFF",
       "mediaScrim": "rgba(0,0,0,.45)",
+      "mediaScrimStrong": "rgba(0,0,0,.55)",
+      "appleHealth": "#FF2D55",
+      "emberTile": "#2A2724",
       "border": "rgba(20,18,16,.08)",
       "separator": "rgba(20,18,16,.12)",
       "text": "#000000",
@@ -157,6 +166,9 @@ export const emberTokens = {
       "segmentSelected": "#3A3632",
       "onMedia": "#FFFFFF",
       "mediaScrim": "rgba(0,0,0,.45)",
+      "mediaScrimStrong": "rgba(0,0,0,.55)",
+      "appleHealth": "#FF2D55",
+      "emberTile": "#2A2724",
       "border": "rgba(255,255,255,.08)",
       "separator": "rgba(255,255,255,.12)",
       "text": "#FFFFFF",
@@ -201,13 +213,136 @@ export const emberTokens = {
     "md": 14,
     "lg": 20,
     "xl": 28,
-    "pill": 999
+    "pill": 999,
+    "btn": 18
   },
   "size": {
     "tap": 44,
     "btn": 56,
     "shutter": 76,
     "ring": 184,
-    "ringStroke": 16
+    "ringStroke": 16,
+    "fab": 62,
+    "ringMd": 150,
+    "ringMdStroke": 13,
+    "ringSm": 120,
+    "ringSmStroke": 12,
+    "macroBar": 8
+  },
+  "type": {
+    "largeTitle": {
+      "size": 34,
+      "lineHeight": 41,
+      "weight": 700,
+      "family": "text"
+    },
+    "title1": {
+      "size": 28,
+      "lineHeight": 34,
+      "weight": 700,
+      "family": "text"
+    },
+    "title2": {
+      "size": 22,
+      "lineHeight": 28,
+      "weight": 700,
+      "family": "text"
+    },
+    "title3": {
+      "size": 20,
+      "lineHeight": 25,
+      "weight": 600,
+      "family": "text"
+    },
+    "headline": {
+      "size": 17,
+      "lineHeight": 22,
+      "weight": 600,
+      "family": "text"
+    },
+    "body": {
+      "size": 17,
+      "lineHeight": 22,
+      "weight": 400,
+      "family": "text"
+    },
+    "callout": {
+      "size": 16,
+      "lineHeight": 21,
+      "weight": 400,
+      "family": "text"
+    },
+    "subheadline": {
+      "size": 15,
+      "lineHeight": 20,
+      "weight": 400,
+      "family": "text"
+    },
+    "footnote": {
+      "size": 13,
+      "lineHeight": 18,
+      "weight": 400,
+      "family": "text"
+    },
+    "caption1": {
+      "size": 12,
+      "lineHeight": 16,
+      "weight": 500,
+      "family": "text"
+    },
+    "caption2": {
+      "size": 11,
+      "lineHeight": 13,
+      "weight": 500,
+      "family": "text"
+    },
+    "numXl": {
+      "size": 44,
+      "lineHeight": 44,
+      "weight": 700,
+      "family": "rounded"
+    },
+    "numLg": {
+      "size": 36,
+      "lineHeight": 36,
+      "weight": 700,
+      "family": "rounded"
+    },
+    "numMd": {
+      "size": 22,
+      "lineHeight": 28,
+      "weight": 700,
+      "family": "rounded"
+    },
+    "numSm": {
+      "size": 20,
+      "lineHeight": 25,
+      "weight": 700,
+      "family": "rounded"
+    },
+    "numBody": {
+      "size": 17,
+      "lineHeight": 22,
+      "weight": 600,
+      "family": "rounded"
+    }
+  },
+  "typeVar": {
+    "largeTitle": "--t-large-title",
+    "title1": "--t-title1",
+    "title2": "--t-title2",
+    "title3": "--t-title3",
+    "headline": "--t-headline",
+    "body": "--t-body",
+    "callout": "--t-callout",
+    "subheadline": "--t-subheadline",
+    "footnote": "--t-footnote",
+    "caption1": "--t-caption1",
+    "caption2": "--t-caption2",
+    "numXl": "--t-num-xl",
+    "numLg": "--t-num-lg",
+    "numMd": "--t-num-md",
+    "numSm": "--t-num-sm",
+    "numBody": "--t-num-body"
   }
 } as const;
