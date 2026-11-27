@@ -1,14 +1,17 @@
 /**
  * A fake server-side sync endpoint for the engine tests. It implements the
- * D4 semantics (LWW on `updatedAt`, idempotency ledger on `opId`, a seq'd
- * change log) so the tests exercise real convergence behaviour — the same
- * rules the real Hono API enforces.
+ * D4 semantics (LWW on `updatedAt`, idempotency ledger on `opId`, a change log)
+ * so the tests exercise real convergence behaviour — the same rules the real
+ * Hono API enforces. Like the real `sync_push`, it numbers every applied
+ * operation from one global sequence: `serverVersion` is that number and a
+ * pull row's `seq` equals it. An operation that loses is answered `applied`
+ * with the record the server keeps and is not numbered.
  */
 import type { MealRecord, PullResponse, PushResponse, SyncOperation } from '@coachcal/api-contract';
 
 import { SyncError, type SyncTransport } from './types';
 
-const epochRecord = (recordId: string, op: SyncOperation): MealRecord => ({
+const epochRecord = (recordId: string, op: SyncOperation, serverVersion: number): MealRecord => ({
   id: recordId,
   eatenAt: '1970-01-01T00:00:00.000Z',
   name: '',
@@ -19,7 +22,7 @@ const epochRecord = (recordId: string, op: SyncOperation): MealRecord => ({
   fiberG: 0,
   updatedAt: op.clientTimestamp,
   deleted: true,
-  serverVersion: 1,
+  serverVersion,
   acceptedOpId: op.opId,
 });
 
@@ -27,18 +30,26 @@ export class FakeServer implements SyncTransport {
   readonly records = new Map<string, MealRecord>();
   private readonly seenOps = new Set<string>();
   private readonly changes: Array<{ seq: number; record: MealRecord }> = [];
-  private seqCounter = 0;
+  private versionCounter = 0;
   pushCalls = 0;
   pullCalls = 0;
   /** When set, the next push rejects with it (then the error is cleared). */
   pushError: SyncError | null = null;
   pullError: SyncError | null = null;
 
-  /** Seeds the server as if another device had pushed this record. */
+  /**
+   * Seeds the server as if another device had pushed this record. The record's `serverVersion` is the
+   * global version and the pull `seq`; seed in ascending order.
+   */
   seed(record: MealRecord): void {
     this.records.set(record.id, record);
-    this.seqCounter += 1;
-    this.changes.push({ seq: this.seqCounter, record });
+    this.versionCounter = Math.max(this.versionCounter, record.serverVersion);
+    this.changes.push({ seq: record.serverVersion, record });
+  }
+
+  private nextVersion(): number {
+    this.versionCounter += 1;
+    return this.versionCounter;
   }
 
   private applyOperation(op: SyncOperation): PushResponse['accepted'][number] {
@@ -53,17 +64,17 @@ export class FakeServer implements SyncTransport {
     let record: MealRecord;
     if (op.kind === 'upsert') {
       if (stored === undefined) {
-        record = { ...op.meal, deleted: false, serverVersion: 1, acceptedOpId: op.opId };
+        record = { ...op.meal, deleted: false, serverVersion: this.nextVersion(), acceptedOpId: op.opId };
       } else if (op.meal.updatedAt > stored.updatedAt) {
-        record = { ...op.meal, deleted: false, serverVersion: stored.serverVersion + 1, acceptedOpId: op.opId };
+        record = { ...op.meal, deleted: false, serverVersion: this.nextVersion(), acceptedOpId: op.opId };
       } else {
         record = stored;
       }
     } else {
       if (stored === undefined) {
-        record = epochRecord(op.recordId, op);
+        record = epochRecord(op.recordId, op, this.nextVersion());
       } else if (op.clientTimestamp >= stored.updatedAt) {
-        record = { ...stored, deleted: true, updatedAt: op.clientTimestamp, serverVersion: stored.serverVersion + 1, acceptedOpId: op.opId };
+        record = { ...stored, deleted: true, updatedAt: op.clientTimestamp, serverVersion: this.nextVersion(), acceptedOpId: op.opId };
       } else {
         record = stored;
       }
@@ -71,8 +82,7 @@ export class FakeServer implements SyncTransport {
 
     if (record !== stored) {
       this.records.set(record.id, record);
-      this.seqCounter += 1;
-      this.changes.push({ seq: this.seqCounter, record });
+      this.changes.push({ seq: record.serverVersion, record });
     }
     return { opId: op.opId, status: 'applied', record };
   }

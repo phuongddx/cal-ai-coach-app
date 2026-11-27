@@ -33,7 +33,11 @@ import FOOD_SEED from '../db/seed/foods.json';
 export const SEED_VERSION_KEY = 'seed_version';
 export const SEED_VERSION = 'demo_v1';
 
-/** SeedDataManager.demoUserId — DE000000-0000-4000-8000-000000000001. */
+/**
+ * SeedDataManager.demoUserId — DE000000-0000-4000-8000-000000000001. Owner of the seeded demo rows
+ * only: sync mirror rows carry the session user's id, and this constant stands in for it only when
+ * no session exists (fixture and debug mode; see data/sync/runtime.ts).
+ */
 export const DEMO_USER_ID = 'de000000-0000-4000-8000-000000000001';
 
 export interface SeededFoodRow {

@@ -17,6 +17,8 @@ const MEAL_A = {
   updatedAt: 1_764_200_400_000,
 };
 
+const OWNER = 'de000000-0000-4000-8000-000000000001';
+
 let clock = 1_764_200_000_000;
 let idCounter = 0;
 
@@ -37,7 +39,7 @@ const serverRecord = (meal: typeof MEAL_A, version: number): MealRecord => ({
   acceptedOpId: null,
 });
 
-function makeHarness() {
+async function makeHarness() {
   const store = createInMemorySyncStore();
   const server = new FakeServer();
   const scheduled: Array<{ fn: () => void; delayMs: number }> = [];
@@ -48,6 +50,7 @@ function makeHarness() {
     isOnline: () => true,
     schedule: (fn, delayMs) => scheduled.push({ fn, delayMs }),
   });
+  await engine.bind(OWNER);
   const repository = createMealRepository({ store, now: tick, newId: nextId });
   return { store, server, engine, repository, scheduled };
 }
@@ -59,7 +62,7 @@ describe('sync engine', () => {
   });
 
   it('an offline add stays queued, then pushes once the app is back online', async () => {
-    const { store, server, engine, repository } = makeHarness();
+    const { store, server, engine, repository } = await makeHarness();
     engine.setForcedOffline(true);
 
     const meal = await repository.addMeal({ name: 'Overnight oats', ...pickNumbers(MEAL_A), eatenAt: MEAL_A.eatenAt });
@@ -82,7 +85,7 @@ describe('sync engine', () => {
   });
 
   it('applying the same pull page twice changes nothing', async () => {
-    const { store, server, engine } = makeHarness();
+    const { store, server, engine } = await makeHarness();
     server.seed(serverRecord({ ...MEAL_A, name: 'Server oats' }, 2));
 
     await engine.sync();
@@ -96,11 +99,11 @@ describe('sync engine', () => {
     expect(await store.listMeals()).toEqual(afterOnce);
     expect(await store.cursor()).toBe(cursorOnce);
     expect(afterOnce[0]?.name).toBe('Server oats');
-    expect(cursorOnce).toBe(1);
+    expect(cursorOnce).toBe(2); // the page's cursor is the seeded record's global version
   });
 
   it('pull skips records with pending local intent and keeps the local edit', async () => {
-    const { store, server, engine, repository } = makeHarness();
+    const { store, server, engine, repository } = await makeHarness();
     server.pushError = new SyncError('invalidRequest', 'the API rejected the request (400)');
 
     const meal = await repository.addMeal({ name: 'Local oats', ...pickNumbers(MEAL_A) });
@@ -115,7 +118,7 @@ describe('sync engine', () => {
     const stored = await store.getMeal(meal.id);
     // Pending intent (quarantined rows exist): the server record must not overwrite.
     expect(stored?.name).toBe('Local oats');
-    expect(await store.cursor()).toBe(1);
+    expect(await store.cursor()).toBe(4); // the cursor still advanced to the seeded record's global version
     expect((await store.quarantinedOperations()).length).toBe(1);
   });
 
@@ -125,6 +128,7 @@ describe('sync engine', () => {
     server.seed(serverRecord({ ...MEAL_A, id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', name: 'Shake' }, 1));
     const store = createInMemorySyncStore({ failPullRecordId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' });
     const engine = createSyncEngine({ store, transport: server, now: tick, isOnline: () => true });
+    await engine.bind(OWNER);
 
     await expect(engine.sync()).rejects.toThrow('simulated crash');
     expect(await store.cursor()).toBe(0);
@@ -136,7 +140,7 @@ describe('sync engine', () => {
   });
 
   it('a server failure keeps operations pending and retries with backoff', async () => {
-    const { store, server, engine, repository, scheduled } = makeHarness();
+    const { store, server, engine, repository, scheduled } = await makeHarness();
     server.pushError = new SyncError('server', 'the API failed (500)');
     await repository.addMeal({ name: 'Overnight oats', ...pickNumbers(MEAL_A) });
 
@@ -151,14 +155,15 @@ describe('sync engine', () => {
 
     // The scheduled retry pushes what stayed pending.
     scheduled[0]?.fn();
-    await Promise.resolve();
-    await Promise.resolve();
+    for (let i = 0; i < 100 && server.pushCalls < 2; i += 1) {
+      await drainMicrotasks();
+    }
     expect(server.pushCalls).toBe(2);
     expect(await store.outboxCount()).toBe(0);
   });
 
   it('a 400 quarantines the batch and it is never retried automatically', async () => {
-    const { store, server, engine, repository } = makeHarness();
+    const { store, server, engine, repository } = await makeHarness();
     server.pushError = new SyncError('invalidRequest', 'the API rejected the request (400)');
     await repository.addMeal({ name: 'Overnight oats', ...pickNumbers(MEAL_A) });
 
@@ -174,7 +179,7 @@ describe('sync engine', () => {
   });
 
   it('an unauthorized push stops the sync and keeps the operations pending', async () => {
-    const { store, server, engine, repository } = makeHarness();
+    const { store, server, engine, repository } = await makeHarness();
     server.pushError = new SyncError('unauthorized', 'the API rejected the token');
     await repository.addMeal({ name: 'Overnight oats', ...pickNumbers(MEAL_A) });
 
@@ -185,7 +190,7 @@ describe('sync engine', () => {
   });
 
   it('edit then delete offline converge: the server ends with a tombstone and the outbox empties', async () => {
-    const { store, server, engine, repository } = makeHarness();
+    const { store, server, engine, repository } = await makeHarness();
     engine.setForcedOffline(true);
 
     const meal = await repository.addMeal({ name: 'Protein shake', ...pickNumbers({ ...MEAL_A, kcal: 210, id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' }), eatenAt: MEAL_A.eatenAt });
@@ -208,7 +213,7 @@ describe('sync engine', () => {
   });
 
   it('a newer server record wins on ack and overwrites the local row', async () => {
-    const { store, server, engine, repository } = makeHarness();
+    const { store, server, engine, repository } = await makeHarness();
     // Another device pushed a newer edit (updatedAt is 2s later than the local clock).
     server.seed(serverRecord({ ...MEAL_A, name: 'Server oats', updatedAt: MEAL_A.updatedAt + 2_000 }, 2));
 
@@ -223,7 +228,7 @@ describe('sync engine', () => {
   });
 
   it('a new engine over the same store drains what a previous run left', async () => {
-    const { store, engine } = makeHarness();
+    const { store, engine } = await makeHarness();
     engine.setForcedOffline(true);
     const repositoryA = createMealRepository({ store, now: tick, newId: nextId });
     await repositoryA.addMeal({ name: 'Overnight oats', ...pickNumbers(MEAL_A) });
@@ -232,6 +237,7 @@ describe('sync engine', () => {
 
     const server2 = new FakeServer();
     const engine2 = createSyncEngine({ store, transport: server2, now: tick, isOnline: () => true });
+    await engine2.bind(OWNER);
     const result = await engine2.sync();
     expect(result.status).toBe('synced');
     expect(result.pushed).toBe(2);
@@ -240,7 +246,7 @@ describe('sync engine', () => {
   });
 
   it('a sync already running coalesces into one follow-up run', async () => {
-    const { server, engine, repository } = makeHarness();
+    const { server, engine, repository } = await makeHarness();
 
     let release!: () => void;
     const gate = new Promise<void>((resolve) => {
@@ -273,7 +279,7 @@ describe('sync engine', () => {
   });
 
   it('forced offline makes isOnline false without touching the server', async () => {
-    const { server, engine } = makeHarness();
+    const { server, engine } = await makeHarness();
     engine.setForcedOffline(true);
     expect(engine.isOnline()).toBe(false);
     const result = await engine.sync();

@@ -17,25 +17,34 @@
  * this file maps between the meal wire shape and the Swift tables. The
  * `SyncStore` interface itself is unchanged, so the engine keeps working.
  */
-import { asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, lte, or, sql } from 'drizzle-orm';
 
 import type { Meal, MealRecord, PullResponse, SyncOperation } from '@coachcal/api-contract';
+import { decodeDiaryEntrySnapshot, type PullResponse as MergePullResponse } from '@coachcal/core';
 import type { DiaryEntry, DiaryEntryDetail } from '../repos/diaryEntryRepository';
 
 import { diaryEntryDetails, diaryEntries, pendingOps, syncState } from '../db/schema';
 import { entryToRow, rowToEntry, rowToDetail } from '../repos/diaryEntryRepository';
-import { applyAcknowledgement, applyPulledRow, enqueueDiaryOp } from '../repos/syncMergeRepository';
+import { applyAcknowledgedRecord, applyPulledRow, enqueueDiaryOp } from '../repos/syncMergeRepository';
 import { fromIso, inTransaction, toIso, type SqlDb } from '../repos/sqlDb';
-import type { LocalMeal, OutboxEntry, SyncStore } from './types';
+import type { DueBatch, LocalMeal, OutboxEntry, SyncStore, UndecodableOperation } from './types';
 
 type Db = SqlDb;
 
 /**
- * Single-account device: mirror rows carry this owner until the auth unit
- * lands (Swift gets it from the session). The demo user id from
- * SeedDataManager keeps the seed and the sync writes consistent.
+ * The owner mirror rows carry when no session exists (fixture and debug mode). The demo user id from
+ * SeedDataManager keeps the seed and the sync writes consistent. With a signed-in user the runtime
+ * passes that user's id through `SqliteSyncStoreOptions.ownerId` and this constant is never read.
  */
-const LOCAL_OWNER_ID = 'de000000-0000-4000-8000-000000000001';
+export const LOCAL_OWNER_ID = 'de000000-0000-4000-8000-000000000001';
+
+export type SqliteSyncStoreOptions = {
+  /**
+   * The user id new mirror rows are written for (Swift: the session's user id). Read on every write,
+   * so a sign-in after the store was built takes effect at once. Defaults to the demo owner.
+   */
+  ownerId?: () => string;
+};
 
 /** Wire meals carry no slot; derive the details row's slot from eatenAt. */
 function mealSlotFor(eatenAtIso: string): string {
@@ -46,10 +55,13 @@ function mealSlotFor(eatenAtIso: string): string {
   return 'snacks';
 }
 
-function mealToEntry(meal: Meal, extras: { deletedAt: Date | null; serverVersion: number; acceptedOpId: string | null; now: Date }): DiaryEntry {
+function mealToEntry(
+  meal: Meal,
+  extras: { owner: string; deletedAt: Date | null; serverVersion: number; acceptedOpId: string | null; now: Date },
+): DiaryEntry {
   return {
     id: meal.id,
-    userId: LOCAL_OWNER_ID,
+    userId: extras.owner,
     displayText: meal.name,
     createdAt: new Date(meal.eatenAt),
     updatedAt: new Date(meal.updatedAt),
@@ -101,13 +113,14 @@ async function readDetail(tx: Db, entryId: string): Promise<DiaryEntryDetail | n
   return rows[0] === undefined ? null : rowToDetail(rows[0]);
 }
 
-export function createSqliteSyncStore(db: Db): SyncStore {
+export function createSqliteSyncStore(db: Db, options: SqliteSyncStoreOptions = {}): SyncStore {
+  const ownerId = options.ownerId ?? (() => LOCAL_OWNER_ID);
   return {
     /** Local write = one transaction: mirror row + detail row + pending op. */
     async recordUpsert(meal, op) {
       await inTransaction(db, async (tx) => {
         const at = new Date(op.clientTimestamp);
-        const entry = mealToEntry(meal, { deletedAt: null, serverVersion: 0, acceptedOpId: null, now: at });
+        const entry = mealToEntry(meal, { owner: ownerId(), deletedAt: null, serverVersion: 0, acceptedOpId: null, now: at });
         await tx.insert(diaryEntries).values(entryToRow(entry)).onConflictDoUpdate({ target: diaryEntries.id, set: entryToRow(entry) });
         await tx
           .insert(diaryEntryDetails)
@@ -133,7 +146,7 @@ export function createSqliteSyncStore(db: Db): SyncStore {
         const entry = existing === null
           ? {
               id: recordId,
-              userId: LOCAL_OWNER_ID,
+              userId: ownerId(),
               displayText: '',
               createdAt: at,
               updatedAt: at,
@@ -175,10 +188,7 @@ export function createSqliteSyncStore(db: Db): SyncStore {
       return rows[0]?.pullCursor ?? 0;
     },
 
-    /**
-     * FIFO by created_at then op_id, not quarantined — the outbox's due batch
-     * (engine batches are already ≤ 50, the Swift cap).
-     */
+    /** FIFO by created_at then op_id, not quarantined (whatever the retry time). */
     async pendingOperations(limit) {
       const rows = await db
         .select()
@@ -186,24 +196,47 @@ export function createSqliteSyncStore(db: Db): SyncStore {
         .where(eq(pendingOps.quarantined, false))
         .orderBy(asc(pendingOps.createdAt), asc(pendingOps.opId))
         .limit(limit);
-      const entries: OutboxEntry[] = [];
-      for (const row of rows) {
-        entries.push(await outboxEntryForRow(db, row));
-      }
-      return entries;
+      return decodableEntries(db, rows);
     },
 
+    /**
+     * Swift `dueOps`: FIFO, not quarantined, retry time passed or never set, at most `limit` rows. A row
+     * whose snapshot does not decode (or whose table or kind is unsupported) is reported as
+     * undecodable instead of being turned into a wire operation.
+     */
+    async dueOperations(limit, dueAt): Promise<DueBatch> {
+      const rows = await db
+        .select()
+        .from(pendingOps)
+        .where(
+          and(
+            eq(pendingOps.quarantined, false),
+            or(isNull(pendingOps.nextRetryAt), lte(pendingOps.nextRetryAt, toIso(new Date(dueAt)))),
+          ),
+        )
+        .orderBy(asc(pendingOps.createdAt), asc(pendingOps.opId))
+        .limit(limit);
+      const operations: OutboxEntry[] = [];
+      const undecodable: UndecodableOperation[] = [];
+      for (const row of rows) {
+        const reason = undecodableReason(row);
+        if (reason === null) {
+          operations.push(await outboxEntryForRow(db, row));
+        } else {
+          undecodable.push({ opId: row.opId, attempts: row.dispatchAttempts, reason });
+        }
+      }
+      return { operations, undecodable };
+    },
+
+    /** Quarantined operations (rows that do not decode are left out: they have no wire shape). */
     async quarantinedOperations() {
       const rows = await db
         .select()
         .from(pendingOps)
         .where(eq(pendingOps.quarantined, true))
         .orderBy(asc(pendingOps.createdAt), asc(pendingOps.opId));
-      const entries: OutboxEntry[] = [];
-      for (const row of rows) {
-        entries.push(await outboxEntryForRow(db, row));
-      }
-      return entries;
+      return decodableEntries(db, rows);
     },
 
     /** The mirror row + its detail row, as the wire LocalMeal. */
@@ -230,19 +263,30 @@ export function createSqliteSyncStore(db: Db): SyncStore {
     },
 
     /**
-     * Push acks, one transaction, the Swift acknowledgement rules: stamp the
-     * acked canonical version onto the mirror row (only when newer) and
-     * delete the op; the content itself arrives with the next pull.
+     * Push acks, one transaction. Every acknowledged op leaves the outbox. When no newer op is pending
+     * for the record, the record the server returned is applied: a winning op keeps its local content
+     * and gets the canonical version stamped; a losing op (the server answers `applied` with the
+     * winner's record) has that record written into the mirror and the details rows like a pulled row,
+     * so this device does not keep its rejected text under the winner's version. With a newer op
+     * pending the mirror stays untouched.
      */
     async applyPushAcks(entries) {
       await inTransaction(db, async (tx) => {
         for (const { op, record } of entries) {
-          await applyAcknowledgement(tx, {
-            opId: op.opId,
-            serverVersion: record.serverVersion,
-            acceptedOpId: record.acceptedOpId ?? '',
-            duplicate: false,
-          }, new Date(record.updatedAt));
+          const outcome = await applyAcknowledgedRecord(
+            tx,
+            { opId: op.opId, serverVersion: record.serverVersion, acceptedOpId: record.acceptedOpId ?? '', duplicate: false },
+            pulledRowFor(record),
+            ownerId(),
+            new Date(record.updatedAt),
+          );
+          if (outcome === 'applied' && !record.deleted) {
+            const detail = detailForMeal(mealFromRecord(record), 'sync');
+            await tx
+              .insert(diaryEntryDetails)
+              .values({ ...detail })
+              .onConflictDoUpdate({ target: diaryEntryDetails.entryId, set: { ...detail } });
+          }
         }
       });
     },
@@ -255,22 +299,7 @@ export function createSqliteSyncStore(db: Db): SyncStore {
     async applyPullPage(rows: PullResponse['rows'], newCursor: number) {
       await inTransaction(db, async (tx) => {
         for (const { record } of rows) {
-          const applied = await applyPulledRow(
-            tx,
-            {
-              table: 'diary_entries',
-              recordId: record.id,
-              snapshot: {
-                id: record.id,
-                displayText: record.name,
-                deletedAt: record.deleted ? toIso(new Date(record.updatedAt)) : null,
-                serverVersion: record.serverVersion,
-                acceptedOpId: record.acceptedOpId,
-              },
-            },
-            LOCAL_OWNER_ID,
-            new Date(),
-          );
+          const applied = await applyPulledRow(tx, pulledRowFor(record), ownerId(), new Date());
           // Details are local-only (I4): write them only for rows the merge
           // actually applied, and only for live content — a tombstone never
           // carries nutrition.
@@ -289,13 +318,14 @@ export function createSqliteSyncStore(db: Db): SyncStore {
       });
     },
 
-    /** Failed attempt: bump the attempt counter, retry time stays open. */
-    async markAttempts(opIds, lastError) {
+    /** Failed attempt (Swift `markFailed`): bump the attempt counter, set when the op is due again. */
+    async markAttempts(opIds, lastError, retryAt) {
       if (opIds.length === 0) return;
+      const retry = retryAt === null ? null : toIso(new Date(retryAt));
       for (const opId of opIds) {
         await db
           .update(pendingOps)
-          .set({ dispatchAttempts: sql`${pendingOps.dispatchAttempts} + 1` })
+          .set({ dispatchAttempts: sql`${pendingOps.dispatchAttempts} + 1`, nextRetryAt: retry })
           .where(eq(pendingOps.opId, opId));
       }
       void lastError; // pending_ops has no error column (Swift parity)
@@ -326,6 +356,21 @@ export function createSqliteSyncStore(db: Db): SyncStore {
   };
 }
 
+/** The merge repository's pulled-row shape for a wire meal record. */
+function pulledRowFor(record: MealRecord): MergePullResponse['rows'][number] {
+  return {
+    table: 'diary_entries',
+    recordId: record.id,
+    snapshot: {
+      id: record.id,
+      displayText: record.name,
+      deletedAt: record.deleted ? toIso(new Date(record.updatedAt)) : null,
+      serverVersion: record.serverVersion,
+      acceptedOpId: record.acceptedOpId,
+    },
+  };
+}
+
 function mealFromRecord(record: MealRecord): Meal {
   return {
     id: record.id,
@@ -338,6 +383,26 @@ function mealFromRecord(record: MealRecord): Meal {
     fiberG: record.fiberG,
     updatedAt: record.updatedAt,
   };
+}
+
+/** Why a stored op cannot become a wire operation, or null when it can (Swift: the snapshot decode). */
+function undecodableReason(row: typeof pendingOps.$inferSelect): string | null {
+  if (row.tableName !== 'diary_entries') return `unsupported sync table ${row.tableName}`;
+  if (row.kind !== 'upsert' && row.kind !== 'tombstone') return `unsupported mutation kind ${row.kind}`;
+  try {
+    decodeDiaryEntrySnapshot(JSON.parse(row.snapshot));
+  } catch (error) {
+    return error instanceof Error ? error.message : 'the snapshot does not decode';
+  }
+  return null;
+}
+
+async function decodableEntries(db: Db, rows: Array<typeof pendingOps.$inferSelect>): Promise<OutboxEntry[]> {
+  const entries: OutboxEntry[] = [];
+  for (const row of rows) {
+    if (undecodableReason(row) === null) entries.push(await outboxEntryForRow(db, row));
+  }
+  return entries;
 }
 
 /**
@@ -363,6 +428,7 @@ async function outboxEntryForRow(db: Db, row: typeof pendingOps.$inferSelect): P
     state: row.quarantined ? 'quarantined' : 'pending',
     lastError: null,
     createdAt: fromIso(row.createdAt).getTime(),
+    nextRetryAt: row.nextRetryAt === null ? null : fromIso(row.nextRetryAt).getTime(),
   };
 }
 

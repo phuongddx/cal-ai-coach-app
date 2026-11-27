@@ -1,25 +1,34 @@
 /**
- * RFC 4122 version 4 UUID for record ids and operation ids.
+ * RFC 4122 version 4 UUID for record ids, operation ids and the Apple nonce.
  *
- * The API contract uses `z.uuid()`, which checks the version and variant
- * nibbles, so a random-looking string is not enough. Hermes on RN 0.88 has no
- * `crypto.randomUUID`, so the fallback builds a real v4 from 16 random bytes
- * (`crypto.getRandomValues` when present, `Math.random` otherwise).
+ * The API contract uses `z.uuid()`, which checks the version and variant nibbles, so a
+ * random-looking string is not enough. Hermes on RN 0.88 has no `globalThis.crypto`, so the 16
+ * bytes come from `expo-crypto`'s `getRandomValues` (the platform's secure random source:
+ * SecRandomCopyBytes on iOS). There is no weaker fallback: when the secure source cannot be
+ * loaded, `newUuid` throws instead of handing out guessable ids, because the Apple nonce is
+ * built from two of these ids.
+ *
+ * `expo-crypto` is loaded lazily, the way `auth/appleNonce.ts` does it: the native build the
+ * Simulator runs today may predate the package, and a top-level import would crash the app
+ * at start-up rather than at the first id.
  */
-type RandomSource = {
-  randomUUID?: () => string;
-  getRandomValues?: (bytes: Uint8Array) => Uint8Array;
+export type FillRandomBytes = (bytes: Uint8Array) => unknown;
+
+type ExpoCryptoModule = { getRandomValues: <T extends ArrayBufferView>(typedArray: T) => T };
+
+// A `require` inside the function, not a top-level import: Metro only evaluates the module when
+// the function runs.
+const loadSecureRandom = (): FillRandomBytes => {
+  const mod = require('expo-crypto') as ExpoCryptoModule;
+  return (bytes) => mod.getRandomValues(bytes);
 };
 
-export function newUuid(source: RandomSource | undefined = globalThis.crypto as RandomSource | undefined): string {
-  if (source?.randomUUID) return source.randomUUID();
-
+/**
+ * @param fill test seam: how the 16 random bytes are produced. Production code always omits it.
+ */
+export function newUuid(fill?: FillRandomBytes): string {
   const bytes = new Uint8Array(16);
-  if (source?.getRandomValues) {
-    source.getRandomValues(bytes);
-  } else {
-    for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256);
-  }
+  (fill ?? loadSecureRandom())(bytes);
   bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
   bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 10xx
 
