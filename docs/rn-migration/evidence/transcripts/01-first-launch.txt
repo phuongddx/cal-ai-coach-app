@@ -1,0 +1,22 @@
+  ok: simulator already booted
+  ok: simulator ready (85024D2F-71DE-43C0-8E11-CE58F4578FC3)
+  ok: appearance light
+
+=== fresh install of the built dev client ===
+  ok: uninstalled + installed com.nextlabs.coachcal
+  ok: app: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-native/apps/mobile/build-output/CoachCal-dev.app
+
+=== opening the app via the dev client URL ===
+  ok: found title 'Today' (Heading at y=326)
+  ok: app is showing 'Today' (attempt 1)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/PL-01/01-first-launch-light.png (612 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/PL-01-01-first-launch-light.png
+
+=== switch to dark ===
+  ok: appearance dark
+  ok: found text: Today
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/PL-01/01-first-launch-dark.png (507 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/PL-01-01-first-launch-dark.png
+  ok: appearance light
+
+=== flow done — 0 failed ===
