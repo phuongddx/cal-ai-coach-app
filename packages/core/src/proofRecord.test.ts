@@ -4,6 +4,7 @@ import type { ProofRecord, ProofValue } from './proofRecord';
 
 declare const process: { env: Record<string, string | undefined>; execPath: string };
 declare const require: (id: string) => unknown;
+declare const __dirname: string;
 
 // Ported 1:1 from ProofSerializerTests.swift. The legacy identity literals are
 // built by joining parts so the forbidden tokens never appear in source

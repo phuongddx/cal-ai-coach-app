@@ -8,7 +8,7 @@ import {
   validatePullResponse,
 } from './syncEnvelope';
 
-import type { PushAcknowledgement, SyncOperation, SyncTransport } from './syncEnvelope';
+import type { PushAcknowledgement, PushRequest, SyncOperation, SyncTransport } from './syncEnvelope';
 
 const SNAPSHOT_ID = 'B07537F5-5709-45FA-B4C6-20CB5F0F1A1F';
 const RECORD_ID = '40604E0E-D515-4AC1-B4F8-79B83FA4B740';
