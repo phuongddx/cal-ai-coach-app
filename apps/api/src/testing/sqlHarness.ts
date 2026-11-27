@@ -58,7 +58,12 @@ export function sqlEnv(): SqlEnv | null {
  * `describe` for a SQL-backed suite. `define` receives a getter for the harness (created on the
  * first test, closed after the last). Without the database the suite is skipped, loudly.
  */
-export function describeSql(label: string, define: (harness: () => Harness) => void): void {
+export function describeSql(
+  label: string,
+  define: (harness: () => Harness) => void,
+  /** Read when the harness is first used, so a suite can build providers in `beforeAll`. */
+  options: HarnessOptions | (() => HarnessOptions) = {},
+): void {
   const env = sqlEnv();
   if (!env) {
     const message =
@@ -78,7 +83,7 @@ export function describeSql(label: string, define: (harness: () => Harness) => v
       await harness?.cleanup();
     });
     define(() => {
-      harness ??= new Harness(env);
+      harness ??= new Harness(env, typeof options === 'function' ? options() : options);
       return harness;
     });
   });

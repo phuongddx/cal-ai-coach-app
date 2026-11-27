@@ -37,7 +37,8 @@ export function registerWebhookRoute(app: Hono<any>, deps: WebhookDeps): void {
   app.post('/webhooks/revenuecat', async (c) => {
     const raw = await c.req.text();
     const signature = c.req.header(SIGNATURE_HEADER);
-    if (!signature || !verifyRcHmac(raw, signature, deps.secret)) {
+    // An empty secret would make every HMAC computable by anyone: fail closed.
+    if (deps.secret.length === 0 || !signature || !verifyRcHmac(raw, signature, deps.secret)) {
       return json(401, { error: { code: 'INVALID_SIGNATURE' } });
     }
 
