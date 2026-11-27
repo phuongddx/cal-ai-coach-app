@@ -1,14 +1,22 @@
 /**
  * Debug and fixture flags (PL-05). The names are the Swift app's launch arguments, read once at
- * startup. Reading process arguments needs a native module and a native build, which lands with
- * U-51; until then the flags are set through `setDebugFlags` by tests and by the debug console.
- * `flagsFromArguments` is the parser that reader will call with the process arguments.
+ * startup. Reading process arguments needs a native module and a native build, which belongs to the
+ * native slot (U-50); until then the flags are set through `setDebugFlags` by tests and by the debug
+ * console. `flagsFromArguments` is the parser that reader will call with the process arguments.
+ *
+ * The seven arguments `DebugLaunchArguments.parse()` reads (`AppEnvironment.swift`) follow it exactly:
+ * six are bare switches matched by exact name, and `--ccFixedClock` takes the NEXT argument as an
+ * ISO 8601 instant in the form `ISO8601DateFormatter` accepts by default (`2026-11-27T05:40:00Z`, no
+ * fractional seconds). `--ccScanScenario` and `--ccFixtureCapture` are Swift's `CameraCaptureService`
+ * arguments and keep their own forms.
  */
+import { useSyncExternalStore } from 'react';
+
 export type DebugFlags = {
   freshStart: boolean;
   disableAnimations: boolean;
   edSafe: boolean;
-  /** `--ccFixedClock=<ISO instant or epoch milliseconds>`; null means the real clock. */
+  /** `--ccFixedClock <ISO 8601 instant>` in epoch milliseconds; null means the real clock. */
   fixedClock: number | null;
   fixtureCapture: boolean;
   forceOffline: boolean;
@@ -30,9 +38,13 @@ export const DEFAULT_DEBUG_FLAGS: Readonly<DebugFlags> = Object.freeze({
   seedNoTargets: false,
 });
 
-function parseInstant(value: string): number | null {
-  const numeric = Number(value);
-  return Number.isNaN(numeric) ? Date.parse(value) || null : numeric;
+/** `ISO8601DateFormatter()` default: date, `T`, time to whole seconds, and `Z` or an offset. */
+const SWIFT_ISO8601 = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$/;
+
+function parseSwiftInstant(value: string): number | null {
+  if (!SWIFT_ISO8601.test(value)) return null;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
 }
 
 /** Reads the flags out of a process argument list; unknown arguments are ignored. */
@@ -56,8 +68,9 @@ export function flagsFromArguments(argv: readonly string[]): DebugFlags {
   flags.requireSignIn = has('--ccRequireSignIn');
   flags.seedNoTargets = has('--ccSeedNoTargets');
 
-  const clock = valueOf('--ccFixedClock');
-  if (clock !== null && clock.length > 0) flags.fixedClock = parseInstant(clock);
+  // Swift: `firstIndex(of:)` then `index + 1 < count`; an unparsable value leaves the real clock.
+  const clockIndex = argv.indexOf('--ccFixedClock');
+  if (clockIndex !== -1 && clockIndex + 1 < argv.length) flags.fixedClock = parseSwiftInstant(argv[clockIndex + 1]);
   const scenario = valueOf('--ccScanScenario');
   if (scenario !== null && scenario.length > 0) flags.scanScenario = scenario;
 
@@ -65,18 +78,36 @@ export function flagsFromArguments(argv: readonly string[]): DebugFlags {
 }
 
 let current: DebugFlags = { ...DEFAULT_DEBUG_FLAGS };
+const listeners = new Set<() => void>();
 
 /** The flags in effect; a frozen snapshot until the next `setDebugFlags`. */
 export function getDebugFlags(): Readonly<DebugFlags> {
   return current;
 }
 
-/** Replaces the given flags and keeps the others. */
+/** Replaces the given flags and keeps the others; subscribers (the root gate, the console) hear of a change. */
 export function setDebugFlags(patch: Partial<DebugFlags>): void {
-  current = { ...current, ...patch };
+  const next = { ...current, ...patch };
+  if ((Object.keys(next) as Array<keyof DebugFlags>).every((key) => next[key] === current[key])) return;
+  current = next;
+  listeners.forEach((listener) => listener());
+}
+
+/** Calls `listener` after every change of the flags; returns the unsubscribe function. */
+export function subscribeDebugFlags(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/** The flags for a component; re-renders when they change. */
+export function useDebugFlags(): Readonly<DebugFlags> {
+  return useSyncExternalStore(subscribeDebugFlags, getDebugFlags, getDebugFlags);
 }
 
 /** Test hook: back to the defaults. */
 export function resetDebugFlagsForTests(): void {
   current = { ...DEFAULT_DEBUG_FLAGS };
+  listeners.forEach((listener) => listener());
 }
