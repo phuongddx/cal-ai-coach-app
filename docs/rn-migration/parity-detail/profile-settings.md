@@ -3,7 +3,8 @@
 Per-behavior record of the Group F profile/settings port (`apps/mobile/src/features/profile`).
 Sources of truth: `native/App/Features/Profile/` (read in full), `native/App/CoachCal/AppEnvironment.swift`
 (the toggle persistence, lines 88–110 and the reset around line 330), `native/App/CoachCalUITests/EdSafeTests.swift`.
-Test evidence: `apps/mobile/src/features/profile/**/*.test.tsx` plus the plan-reveal ED-safe case in
+Test evidence: `apps/mobile/src/features/profile/**/*.test.ts(x)` (including the deletion-entry
+proof `settingsReset.test.ts` over a real sql.js store) plus the plan-reveal ED-safe case in
 `apps/mobile/src/features/onboarding/PlanRevealScreen.test.tsx`, run by `npm test`.
 
 ## Files
@@ -39,7 +40,7 @@ Test evidence: `apps/mobile/src/features/profile/**/*.test.tsx` plus the plan-re
 | The toggle persists the policy: app_settings `'1'/'0'` under the app-wide key, then the design flag applies; a fresh instance reads the persisted value | AppEnvironment.edSafeToggle didSet (UserDefaults key `edSafeMode`) | `settingsModel.ts` `setWellnessPolicy` (persist → apply); the key literal lives in `app/settings.tsx` and U-51 reads it at launch | twin case 1 (`the toggle flips and persists the wellness policy across a relaunch`); the route binding is `app/settings.tsx` |
 | Toggle announcement: "ED-Safe Mode, on/off", carried by the toggle element | SettingsCopy.edSafeAnnouncement + the toggle's identifier | `settingsCopy.ts` `wellnessAnnouncement()`; the Switch carries it as its accessibility label | twin case 2 (label function + the switch element) |
 | Burn add-back: defaults off, persists `'1'/'0'` under `burnAddBackEnabled`, no consumer yet (IN-01 note stays) | AppEnvironment.burnAddBackEnabled didSet | `settingsModel.ts` `setBurnAddBack`/`loadBurnAddBack` | twin case 3 (`burn add-back defaults off and its toggle persists the stored flag`) |
-| Delete account: the entry opens the confirmation with the locked copy; the destructive action runs the best-effort chain (server cascade → sync store reset → sign-out); a failed step never skips the next; flags clear | SettingsDetailView.confirmationDialog + AppEnvironment.performLocalAccountReset | `SettingsDetailView.tsx` confirm overlay + `settingsModel.ts` `resetAccount` | twin case 5 (`the local account reset wipes tables and routes to onboarding` — order + failure-tolerance) + `SettingsDetailView.test.tsx` (confirm-gated calls) |
+| Delete account: the entry opens the confirmation with the locked copy; the destructive action runs the best-effort chain (server cascade → the platform's full local reset with the remote step off → sign-out); a failed step never skips the next; flags clear | SettingsDetailView.confirmationDialog + AppEnvironment.performLocalAccountReset | `SettingsDetailView.tsx` confirm overlay + `settingsModel.ts` `resetAccount` + `app/settings.tsx` (`environment.resetLocalData({ deleteRemote: false })`, PR-22's flow) | twin case 5 (`the local account reset wipes tables and routes to onboarding` — order + failure-tolerance) + `settingsReset.test.ts` (every one of the fifteen tables + both stored flags gone over the real store) + `SettingsDetailView.test.tsx` (confirm-gated calls) |
 | Subscription card display-only: "Subscription"/"Active"/"Free"/"Change plan"/"Cancel subscription" inert + billing footnote | SettingsDetailView.subscriptionCard | `SettingsDetailView.tsx` | twin case 6 (`the subscription card renders display only`) |
 | Export CSV: ShareLink present, disabled until the injected action resolves, shares exactly what it produced | SettingsDetailView.dataPrivacyGroup + CSVExportService | `SettingsDetailView.tsx` export row + Share.share of `model.exportedCsv` | twin case 7 (`export CSV presents the share link with the produced export`) + `SettingsDetailView.test.tsx` (disabled → enabled → share payload) |
 | Support rows (Help & FAQ, Contact us) and version caption | SettingsDetailView.support | `SettingsDetailView.tsx` | `SettingsDetailView.test.tsx` (identifiers) |
@@ -65,10 +66,11 @@ ED-safe mode"; the four pre-existing cases keep passing unchanged in normal mode
 
 ## Accessibility identifier table
 
-Every `accessibilityIdentifier` of the Swift views and its RN `testID`. One deviation,
-marked below; the acceptance grep (`grep -rn "edSafe" apps/mobile/src/features/profile`
-prints nothing) forbids the Swift string, whose literal contains the design policy API's
-name — the same convention U-31 applied to copy field names (values stay verbatim).
+Every `accessibilityIdentifier` of the Swift views and its RN `testID`. Per standing-order rule 20,
+an identifier (or a copy key or a stored key) that contains `edSafe` is correct — the Swift app has
+`settings.edSafeToggle` and the stored key `edSafeMode`; what rule 20 forbids is a feature deciding
+what to show by calling `edSafeMode(`/`edSafeHidden(`/`useEdSafeHidden(`, which this feature never
+does (the switch reads the mode with `useEdSafeMode()`). Two RN-added rows are marked below.
 
 | Swift identifier | RN testID | Element |
 |---|---|---|
@@ -82,7 +84,7 @@ name — the same convention U-31 applied to copy field names (values stay verba
 | profile.row.appleHealth | profile.row.appleHealth | integrations: Apple Health row |
 | profile.healthNote | profile.healthNote | revealed health footnote |
 | profile.row.settings | profile.row.settings | settings entry row |
-| settings.edSafeToggle | **settings.wellnessToggle** (deviation, see above) | wellness switch |
+| settings.edSafeToggle | settings.edSafeToggle | wellness switch |
 | settings.wellnessCard | settings.wellnessCard | wellness card |
 | settings.burnAddBackToggle | settings.burnAddBackToggle | burn add-back switch |
 | settings.burnAddBackNote | settings.burnAddBackNote | burn add-back note |
@@ -103,8 +105,8 @@ name — the same convention U-31 applied to copy field names (values stay verba
 | settings.targetEdit.kcal | settings.targetEdit.kcal | kcal value |
 | settings.targetEdit.kcalUp | settings.targetEdit.kcalUp | +50 step |
 | settings.targetEdit.safetyFloor | settings.targetEdit.safetyFloor | floor banner |
-| (Swift cancel button has no identifier) | settings.cancelDelete | RN confirmation cancel |
-| debug.toggleOffline (#if DEBUG) | — not ported | see findings/U-41.md §7 |
+| (Swift cancel button has no identifier) | settings.cancelDelete | RN-added: the custom confirmation dialog's cancel button needs an identifier the Swift `confirmationDialog` never had |
+| debug.toggleOffline (#if DEBUG) | — not ported | Swift-only DEBUG row: the offline override it calls has no RN counterpart (see findings/U-41.md §7) |
 
 ## Storage keys (the write half of PL-08)
 
