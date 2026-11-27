@@ -12,6 +12,7 @@ that has to be repeated in briefs belongs here.
 | Native worktree, only for the unit that holds the native slot | `/Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-native` |
 | Your worktree and branch | named in your brief; already created, `node_modules` already present |
 | Simulator, only for the unit that holds the simulator slot | the available `iPhone 17 Pro` on iOS 26.4; scripts find it by name through `scripts/rn/sim-udid.sh`. Never write a UDID into a script: the machine lost every Simulator on 2026-11-27 and the device came back with a new id |
+| Development client, read only, for the unit that holds the simulator slot | `.worktrees/rn-native/apps/mobile/build-output/CoachCal-dev.app` (built in U-79). `bash scripts/rn/check-native-modules.sh` says which native module the code on `main` needs and the build lacks |
 | Metro, only for the simulator slot holder | port 8081 |
 | API and PostgreSQL 17, only when your brief gives you the API slot | `http://127.0.0.1:8787`, port 5433, through `scripts/rn/start-api.sh`; the env file it writes is named after your checkout |
 | The database handle and the repositories | `apps/mobile/src/data/environment.ts` (`getDataEnvironment()`); after a write through a repository call `notifyLocalMutation()` from `apps/mobile/src/data/sync/runtime.ts` |
@@ -82,13 +83,18 @@ that has to be repeated in briefs belongs here.
     stored key that merely contains `edSafe` is correct: the Swift app has
     `settings.edSafeToggle` and the stored key `edSafeMode`. Never rename one to satisfy a grep.
 21. A unit that runs the built development app checks first that the app holds every native module
-    the code on `main` requires (look into `Frameworks/` of the built app; `uuid.ts` needs
-    `ExpoCrypto`). If one is missing, stop and ask the owner for the native slot. Do not weaken the
-    code to fit an old build.
+    the code on `main` requires: `bash scripts/rn/check-native-modules.sh` exits 0 and names what
+    is missing otherwise. Never judge a build by what is under `Frameworks/`: a statically linked
+    pod is compiled into the code of the app and does not show there (`uuid.ts` needs `ExpoCrypto`,
+    which the development client of U-79 holds). If a module is missing, stop and ask the owner for
+    the native slot. Do not weaken the code to fit an old build.
 22. The token source is `docs/design/ember/tokens.css` (light in `:root`, dark in `.dark`), not the
     Swift `Tokens.swift`. Feature code uses tokens and design components only, never a literal
     color. A unit that restyles a screen does not change its behavior, its tests' sentences or its
     identifiers: a test may change only where it asserts a visual value.
+23. `bash scripts/rn/evidence/run-all.sh` rewrites the screenshot of every row it covers. After it
+    runs, restore the screenshots outside the evidence paths your brief names writable
+    (`git checkout -- <path>`): a pull request changes no screenshot outside its own rows.
 
 ## Report format
 
