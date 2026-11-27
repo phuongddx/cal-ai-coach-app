@@ -78,10 +78,6 @@ export function describeSql(label: string, define: (harness: () => Harness) => v
   });
 }
 
-// The legacy user-mapping column of public.entitlements. The parity gate forbids the vendor name
-// literal in .ts files, and the column name itself is kept as the ported schema has it.
-const MAPPING_COLUMN = ['supabase', 'user', 'id'].join('_');
-
 const STUB_STORE = {
   query: () => Promise.reject(new Error('the sync store is not used by the scan suites')),
   transaction: () => Promise.reject(new Error('the sync store is not used by the scan suites')),
@@ -126,16 +122,16 @@ export class Harness {
     this.#users.add(userId);
     const expires = expiresAt ?? new Date(Date.now() + 24 * 60 * 60 * 1000);
     await this.owner.unsafe(
-      `INSERT INTO public.entitlements (app_user_id, entitlement_id, ${MAPPING_COLUMN}, active, expires_at)
+      `INSERT INTO public.entitlements (app_user_id, entitlement_id, user_id, active, expires_at)
        VALUES ($1::text, 'coachcal_pro', $3::uuid, true, $2::timestamptz)
        ON CONFLICT (app_user_id, entitlement_id)
-       DO UPDATE SET ${MAPPING_COLUMN} = excluded.${MAPPING_COLUMN}, active = true, expires_at = excluded.expires_at`,
+       DO UPDATE SET user_id = excluded.user_id, active = true, expires_at = excluded.expires_at`,
       [userId, expires.toISOString(), userId],
     );
   }
 
   async removeEntitlement(userId: string): Promise<void> {
-    await this.owner.unsafe(`DELETE FROM public.entitlements WHERE ${MAPPING_COLUMN} = $1::uuid`, [userId]);
+    await this.owner.unsafe(`DELETE FROM public.entitlements WHERE user_id = $1::uuid`, [userId]);
   }
 
   async seedCache(
@@ -226,7 +222,7 @@ export class Harness {
       await this.owner`DELETE FROM public.scan_items WHERE user_id = ${userId}::uuid`;
       await this.owner`DELETE FROM public.scans WHERE user_id = ${userId}::uuid`;
       await this.owner`DELETE FROM public.scan_usage WHERE user_id = ${userId}::uuid`;
-      await this.owner.unsafe(`DELETE FROM public.entitlements WHERE ${MAPPING_COLUMN} = $1::uuid`, [userId]);
+      await this.owner.unsafe(`DELETE FROM public.entitlements WHERE user_id = $1::uuid`, [userId]);
     }
     for (const key of this.#cacheKeys) {
       await this.owner`DELETE FROM public.food_cache WHERE cache_key = ${key}`;
