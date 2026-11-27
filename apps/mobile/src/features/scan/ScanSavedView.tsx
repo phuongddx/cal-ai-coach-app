@@ -5,8 +5,7 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { SecondaryButton, StreakCard, Toast, space, typography, useTokens } from '../../design';
-import { EdSafeCollapse } from './EdSafeCollapse';
+import { EdSafeCollapse, SecondaryButton, StreakCard, Toast, space, typography, useTokens } from '../../design';
 import { mealName } from './scanCopy';
 import type { ScanModel } from './scanModel';
 import { useScanState } from './useScanModel';

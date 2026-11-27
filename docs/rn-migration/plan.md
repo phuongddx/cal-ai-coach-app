@@ -373,12 +373,12 @@ has about 1 GB free and a build needs 5 GB.
 
 ## State after wave 3 (2026-11-27)
 
-Landed on `main`: PR 17 (U-23, `380d833`), PR 18 (U-32, `fdfde23`), PR 19 (U-31, `c57db8b`).
-PR 16 (U-30, scan flow) stays open until two review fixes are in (a Flip camera button without an
-action, and a hint that promised OCR). The owner merged the four on one integration branch and ran
-everything on that tree: 1,015 tests with PostgreSQL 17 up (api 252, mobile 629, contract 47, core
-87), typecheck clean, parity gate 0 problems, the curl sync script 15 of 15 steps, both smokes 5 of 5.
-Three independent reviews read the diffs before the merge.
+Landed on `main`: PR 17 (U-23, `380d833`), PR 18 (U-32, `fdfde23`), PR 19 (U-31, `c57db8b`),
+PR 16 (U-30, `bfb8408`, after a rework: a Flip camera button without an action and a hint that
+promised OCR). The owner merged the four on one integration branch and ran everything on that tree:
+1,018 tests with PostgreSQL 17 up (api 252, mobile 632, contract 47, core 87), typecheck clean,
+parity gate 0 problems, the curl sync script 15 of 15 steps, both smokes 5 of 5. Three independent
+reviews read the diffs before the merge.
 
 **The machine lost every Simulator.** Between 13:19 and 13:32 a cleanup outside this program (it
 needed administrator rights) removed all Simulator runtimes and devices, while the disk was full.
@@ -390,7 +390,9 @@ Follow-ups the drain and the reviews found, each with its owner:
 
 | Finding | Owner |
 |---|---|
-| Scan flow: the Flip camera button has no action; the label-mode hint says text is read automatically while the app uploads the photo; quota routing is looser than Swift | Worker-S2, rework on PR 16 |
+| Scan flow: the Flip camera button had no action; the label-mode hint promised OCR; quota routing was looser than Swift | done in the rework of PR 16 |
+| Two suites timed out at the 5 s Jest default under a load of 12 with unchanged code | done: the mobile Jest timeout is 15 s |
+| `EdSafeCollapse` lived in `features/scan` while two units of wave 4 need it | done: it moved into `src/design` before wave 4 |
 | Onboarding (OB-09): in ED-safe mode the kcal hero and the weekly range of the plan reveal still show; no design component owns that branch. `EdSafeCollapse` exists in `features/scan` and belongs in `src/design` | U-41 |
 | Onboarding asks HealthKit for write and read on five types; Swift asks to read steps only, and only when not decided | U-42 |
 | Two caption rows of onboarding that Swift hides from VoiceOver are readable here | the accessibility pass of U-52 |
@@ -409,7 +411,7 @@ JS only for three units; one unit holds the Simulator slot. Briefs: `briefs/U-33
 |---|---|---|---|---|
 | U-33 Today and the Simulator evidence | S2 | TD-01; evidence of SC-02 to SC-07 and DB-01 | The Today screen on the design tokens in `features/today`; the Scan button never covers a meal's kcal; the week strip contrast; then on the recreated Simulator: the screenshots U-30 could not take and a re-run of the five flows of U-14 | Simulator slot |
 | U-40 Progress and Coach | G2 | PG-01 to PG-04, CH-01 | Charts with react-native-svg and an accessibility description, the weight log, weekly energy hidden in ED-safe mode, achievements, the weekly review | nothing |
-| U-41 Profile and Settings | G1 | PR-01 to PR-03, OB-09 | Settings copy, the inert subscription card, the ED-safe toggle and its persistence, the account deletion entry, the target edit sheet; closes OB-09 with an `EdSafeCollapse` component in `src/design` | nothing |
+| U-41 Profile and Settings | G1 | PR-01 to PR-03, OB-09 | Settings copy, the inert subscription card, the ED-safe toggle and its persistence, the account deletion entry, the target edit sheet; closes OB-09 with `EdSafeCollapse` from `src/design` | nothing |
 | U-51 Composition root, root gate, debug console | S1 | PL-01, PL-02, PL-05 | The React environment over `getDataEnvironment()`; the root gate (sign-in, onboarding, shell); session load at launch; the local reset on sign-out and account deletion; flags settable from the debug console | nothing |
 
 Topology of wave 4 (one writer per file):
@@ -419,13 +421,15 @@ Topology of wave 4 (one writer per file):
 | `apps/mobile/src/app/_layout.tsx`, `debug.tsx` | U-51 |
 | `apps/mobile/src/app/(tabs)/index.tsx`, `(tabs)/_layout.tsx` | U-33 |
 | `apps/mobile/src/app/(tabs)/progress.tsx`, `coach.tsx` | U-40 |
-| `apps/mobile/src/app/(tabs)/profile.tsx`, `settings.tsx`, `settings/**` | U-41 |
+| `apps/mobile/src/app/(tabs)/profile.tsx`, `settings.tsx` | U-41 |
 | `apps/mobile/src/features/today/**`, `src/data/binding.ts` (exports unchanged) | U-33 |
 | `apps/mobile/src/features/progress/**`, `coach/**` | U-40 |
 | `apps/mobile/src/features/profile/**`, `features/onboarding/PlanRevealScreen.tsx` and its test | U-41 |
-| `apps/mobile/src/design/components/EdSafeCollapse.tsx` (moved from `features/scan`) and the import lines in `features/scan` | U-41 |
-| `apps/mobile/src/app/environment.tsx`, `src/data/environment.ts`, `src/data/sync/runtime.ts`, `src/debug/launchArgs.ts` | U-51 |
-| `apps/mobile/src/features/ember/**`, `src/spike/**` | nobody: they are deleted after wave 4 |
+| `apps/mobile/src/design/**` | nobody: frozen (`EdSafeCollapse` is in it since the drain) |
+| `apps/mobile/src/platform/**` (root gate, account reset, telemetry seam, the React environment), `src/data/environment.ts`, `src/data/sync/runtime.ts` (their exports keep name and signature), `src/debug/**` | U-51 |
+| `apps/mobile/src/spike/**` | U-51, only what the console needs |
+| `apps/mobile/src/features/ember/**` | nobody: deleted after wave 4 |
+| `src/__tests__/routes.test.tsx` | nobody: no unit adds or removes a route file in wave 4 |
 | `scripts/rn/evidence/**` | U-33 |
 
 ## Waves 5 to 7 (outline; scoped at the drain before each)
