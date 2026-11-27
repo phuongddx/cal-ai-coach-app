@@ -87,6 +87,16 @@ live-diary join and its localtime day grouping are part of the behavior under te
 | Water has no kcal framing and stays visible under ED-safe; the droplet tile is accessibility-hidden | `WaterCard.swift` | `screens/WaterCard.tsx` | policy by construction (no calorie ring reuse); tile a11y-hidden |
 | Card tap opens the log sheet; Close dismisses | `TodayView.swift` (mount, U-33) / `WaterLogSheet` | `screens/WaterCard.tsx` | `__tests__/WaterCard.test.tsx` › "a tap hands over to the log sheet"; `__tests__/WaterLogSheet.test.tsx` › "Close dismisses the sheet" |
 
+## DY-08 — the edit sheet of a food (new in Ember; stage A2)
+
+| Behavior | Swift source | TypeScript | Jest case |
+|---|---|---|---|
+| The row tap opens the edit sheet; the long-press delete stays reachable | — (frame addition; Designer's frame pending) | `screens/DiaryDayView.tsx` (`diary.editFood.<id>` wrapper) | `__tests__/DiaryDayView.test.tsx` › "a tap on the food row opens the edit sheet of the entry"; the delete twins: "a long press on the food row opens the delete confirmation and Delete tombstones" |
+| The kcal recomputes from the new grams over the entry's stored per-100g basis (KcalArithmetic) | — | `screens/DiaryEditSheet.tsx` + `diaryDayModel.ts` (`updateEntry`) | `__tests__/DiaryDayView.test.tsx` › "a tap on the food row…" (320 → 333 at +10 g); the model twin below |
+| The save writes mirror + detail + one pending op in ONE batch, then notifies, and the model re-reads | — | `diaryDayModel.ts` (`recordUpserts`) | `__tests__/DiaryWaterExercise.test.ts` › "editing a food recomputes the kcal and writes one batch with one pending op" (543 → 465 at 350 g → 300 g) |
+| Cancel changes nothing | — | `screens/DiaryEditSheet.tsx` | `__tests__/DiaryDayView.test.tsx` › "the edit sheet Close changes nothing" |
+| The kcal figure collapses under ED-Safe; grams and Save stay | — | `screens/DiaryEditSheet.tsx` (`EdSafeCollapse`) | `__tests__/DiaryDayView.test.tsx` › "the edit sheet kcal hides in the ED-safe mode and returns when it is off" |
+
 ## Accessibility identifier inventory
 
 Every `accessibilityIdentifier` of the Swift diary views is the `testID` of the same element (same
@@ -99,14 +109,20 @@ call sites (pager buttons, water tiles, custom-food fields).
 | `diary.foodRow` | food row (combined children) | `screens/DiaryDayView.tsx` `FoodItemRow` Pressable |
 | `diary.addFood.breakfast` / `.lunch` / `.dinner` / `.snacks` | dashed add buttons | `screens/DiaryDayView.tsx` wrapper Views around `DashedAddButton` |
 | `diary.exerciseRow` | exercise row | `screens/DiaryDayView.tsx` `ExerciseRowView` |
-| `diary.addExercise` | add exercise button | `screens/DiaryDayView.tsx` Pressable |
+| `diary.addExercise` | add exercise button | `screens/DiaryDayView.tsx` |
+| `diary.editFood.<id>` | the row's edit action wrapper (added A2, DY-08) | `screens/DiaryDayView.tsx` |
+| `diary.edit` / `diary.edit.close` / `diary.edit.title` | the edit sheet's `SheetHeader` bar (added A2, DY-08) | `screens/DiaryEditSheet.tsx` |
+| `diary.edit.grams.<id>` (+ `.ruler`) | the grams control and its `GramsRuler` (added A2, DY-08) | `screens/DiaryEditSheet.tsx` |
+| `diary.edit.save` | the edit sheet's save wrapper (added A2, DY-08) | `screens/DiaryEditSheet.tsx` |
 | `diary.toast` | saved toast | `screens/DiaryDayView.tsx` wrapper View around `Toast` |
 | `addfood.close` | sheet close | `screens/AddFoodSheet.tsx` |
+| `addfood.title` | the sheet bar's title (DS `SheetHeader` pattern, A2) | `screens/AddFoodSheet.tsx` |
 | `addfood.tile.photo` / `.barcode` / `.label` / `.describe` / `.search` | quick-action tiles | `screens/AddFoodSheet.tsx` wrapper Views around `QuickActionTile` |
 | `addfood.savedMealsEmpty` | empty rail card | `screens/AddFoodSheet.tsx` |
 | `addfood.savedMeal` | rail card (label "Log saved meal, …") | `screens/AddFoodSheet.tsx` Pressable |
-| `search.back` | back chevron | `screens/FoodSearchView.tsx` |
+| `search.back` | back/dismiss button (the `SheetHeader` bar's back slot since A2) | `screens/FoodSearchView.tsx` |
 | `search.field` | search field | `screens/FoodSearchView.tsx` wrapper View around `SearchField` |
+| `search.title` | the bar's title, "Add to <meal>" (DS `SheetHeader` pattern, A2) | `screens/FoodSearchView.tsx` |
 | `search.emptyState` | verbatim empty state | `screens/FoodSearchView.tsx` |
 | `search.foodRow` | result row (label "Add food, …") | `screens/FoodSearchView.tsx` `FoodSearchRowView` |
 | `search.segment.<value>` | segment option (added U-74, Ember frame) | `screens/FoodSearchView.tsx` |
@@ -114,17 +130,21 @@ call sites (pager buttons, water tiles, custom-food fields).
 | `search.escape.describe` / `search.escape.manual` | escape card actions (added U-74, Ember frame) | `screens/FoodSearchView.tsx` |
 | `search.createCustom` | create-custom-food row | `screens/FoodSearchView.tsx` |
 | `custom.close` | custom sheet close | `screens/CustomFoodSheet.tsx` |
+| `custom.title` | the sheet bar's title (DS `SheetHeader` pattern, A2) | `screens/CustomFoodSheet.tsx` |
 | `custom.nameField` / `custom.kcalField` / `custom.proteinField` / `custom.carbsField` / `custom.fatField` / `custom.fiberField` / `custom.servingGramsField` | text fields | `screens/CustomFoodSheet.tsx` `Field` |
 | `custom.basis.per100g` / `custom.basis.per_serving` | basis chips | `screens/CustomFoodSheet.tsx` wrapper Views around `ChipOption` |
 | `custom.save` | save button | `screens/CustomFoodSheet.tsx` wrapper View around `PrimaryButton` |
 | `manual.close` | manual sheet close | `screens/ManualLogSheet.tsx` |
+| `manual.title` | the sheet bar's title (DS `SheetHeader` pattern, A2) | `screens/ManualLogSheet.tsx` |
 | `manual.stepper` | grams stepper | `screens/ManualLogSheet.tsx` wrapper View around `Stepper` |
 | `manual.kcal` | the derived kcal figure | `screens/ManualLogSheet.tsx` |
 | `manual.save` | save button | `screens/ManualLogSheet.tsx` wrapper View around `PrimaryButton` |
 | `exercise.close` | exercise sheet close | `screens/ExerciseLogSheet.tsx` |
+| `exercise.title` | the sheet bar's title (DS `SheetHeader` pattern, A2) | `screens/ExerciseLogSheet.tsx` |
 | `exercise.typeField` / `exercise.kcalField` | text fields | `screens/ExerciseLogSheet.tsx` |
 | `exercise.save` | save button | `screens/ExerciseLogSheet.tsx` wrapper View around `PrimaryButton` |
 | `water.close` | water sheet close | `screens/WaterCard.tsx` `WaterLogSheet` |
+| `water.title` | the sheet bar's title (DS `SheetHeader` pattern, A2) | `screens/WaterCard.tsx` `WaterLogSheet` |
 | `water.subtract` / `water.add` | ±250 ml chips | `screens/WaterCard.tsx` `WaterLogSheet` |
 | `today.waterCard` | water card (label "Water, N of M glasses") | `screens/WaterCard.tsx` |
 | `ccstepper.decrement` / `ccstepper.increment` | DS stepper buttons (design system, unchanged) | DS `Stepper`; the serving and duration steppers reuse the same strings |
