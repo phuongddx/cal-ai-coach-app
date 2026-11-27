@@ -51,3 +51,5 @@ ts	unit	state	branch	pr	head	by	evidence
 2026-11-27T11:52:54Z	U-42	running	rn/u-42-health	-	43ba369	Worker-G1	docs/rn-migration/briefs/U-42.md (thread faeb80ff, receipt 505319a6)
 2026-11-27T11:57:24Z	U-33	fail	rn/u-33-today	27	59e9c76	CoachCal (owner)	PR 27 holds the Today screen with tests and two commits outside the brief (design system ring number, diary route fix); the owner keeps the diary fix and asked for the design change to be reverted by a revert commit; independent review running
 2026-11-27T11:57:24Z	U-33	running	rn/u-33-today	27	-	Worker-S2	rework: revert f9de230, fix the findings, push the harness changes on rn/u-33-harness, rerun the three gates (thread 9347cb89, receipt 1eca10ca)
+2026-11-27T12:05:UTC	U-33	running	rn/u-33-today	27	-	Worker-S2	rework 2: dispose the Today model when the route unmounts early (one should-fix of the review), drop a tautological assertion, a route test for the diary fix if cheap (thread 9cb2000b, receipt 1b3c4829)
+2026-11-27T12:05:UTC	U-79	running	rn/u-79-launch-args	-	9c35848	Worker-S2	docs/rn-migration/briefs/U-79.md (native slot and Simulator slot; receipt 1420fe04, queued behind the rework of PR 27)
