@@ -262,6 +262,35 @@ describe('sign in screen on Ember', () => {
     expect(screen.queryByText('Sign in to keep your diary safe')).toBeNull();
   });
 
+  it('the e-mail field keeps the keyboard props of the old screen and the placeholder', async () => {
+    await renderScreen();
+    await openEmailStep();
+    const field = screen.getByTestId('auth.emailField');
+    expect(field).toHaveProp('autoCapitalize', 'none');
+    expect(field).toHaveProp('autoCorrect', false);
+    expect(field).toHaveProp('keyboardType', 'email-address');
+    expect(field).toHaveProp('textContentType', 'emailAddress');
+    expect(field).toHaveProp('placeholder', 'Email');
+    expect(field).toHaveProp('accessibilityLabel', 'Email');
+  });
+
+  it('the code field keeps number-pad and the one-time-code autofill, and the placeholder', async () => {
+    await renderScreen();
+    await openEmailStep();
+    await userEvent.type(screen.getByTestId('auth.emailField'), 'phuong@example.com');
+    await userEvent.press(screen.getByText('Send code'));
+    const field = await screen.findByTestId('auth.otpField');
+    expect(field).toHaveProp('keyboardType', 'number-pad');
+    expect(field).toHaveProp('textContentType', 'oneTimeCode');
+    expect(field).toHaveProp('placeholder', '6-digit code');
+    expect(field).toHaveProp('accessibilityLabel', '6-digit code');
+  });
+
+  it('the Apple button has the corners of the frame, 14 pt (radius.md)', async () => {
+    await renderScreen();
+    expect(await screen.findByTestId('auth.signInApple')).toHaveProp('cornerRadius', 14);
+  });
+
   it('the e-mail step has no password, segment or reset-link controls', async () => {
     await renderScreen();
     await openEmailStep();

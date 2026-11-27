@@ -7,12 +7,24 @@
  * the password notes under the dock and the reset-link screen. The code is one path for a new address and
  * a known one, and the API has no password creation and no reset route.
  *
+ * The two fields are the native `TextInput` of the old screen with its keyboard props (`FillField` has no
+ * text-input props, findings/U-77b.md "Needs a design component"), drawn with tokens to the frame.
+ *
  * The header is two controls and not `SheetHeader`: `SheetHeader` names its back button
  * `<testID>.back`, and the identifier of this one is `auth.emailBack`.
  */
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { FillField, GlassIconButton, PrimaryButton, size, space, textStyles, typography, useTokens } from '../../design';
+import {
+  GlassIconButton,
+  PrimaryButton,
+  radius,
+  size,
+  space,
+  textStyles,
+  typography,
+  useTokens,
+} from '../../design';
 import { ErrorLine } from './ErrorLine';
 
 export type EmailStepProps = {
@@ -80,15 +92,25 @@ export function EmailStep({
         </Text>
 
         <View style={styles.fields}>
-          <FillField
-            label="Email"
-            testID="auth.emailField"
-            accessibilityLabel="Email"
-            placeholder="Email"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={onChangeEmail}
-          />
+          <View style={styles.field}>
+            <Text testID="auth.emailField.label" style={[styles.fieldLabel, { color: colors.text2 }]}>
+              Email
+            </Text>
+            <TextInput
+              testID="auth.emailField"
+              accessibilityLabel="Email"
+              placeholder="Email"
+              placeholderTextColor={colors.text3}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              selectionColor={colors.accent}
+              value={email}
+              onChangeText={onChangeEmail}
+              style={[styles.input, { backgroundColor: colors.fill, color: colors.text }]}
+            />
+          </View>
 
           {otpSent ? (
             <>
@@ -103,15 +125,23 @@ export function EmailStep({
               >
                 We sent a code to <Text style={{ fontWeight: '700', color: colors.text }}>{email}</Text>.
               </Text>
-              <FillField
-                label="Code"
-                testID="auth.otpField"
-                accessibilityLabel="6-digit code"
-                placeholder="6-digit code"
-                keyboardType="number-pad"
-                value={otpCode}
-                onChangeText={onChangeOtpCode}
-              />
+              <View style={styles.field}>
+                <Text testID="auth.otpField.label" style={[styles.fieldLabel, { color: colors.text2 }]}>
+                  Code
+                </Text>
+                <TextInput
+                  testID="auth.otpField"
+                  accessibilityLabel="6-digit code"
+                  placeholder="6-digit code"
+                  placeholderTextColor={colors.text3}
+                  keyboardType="number-pad"
+                  textContentType="oneTimeCode"
+                  selectionColor={colors.accent}
+                  value={otpCode}
+                  onChangeText={onChangeOtpCode}
+                  style={[styles.input, { backgroundColor: colors.fill, color: colors.text }]}
+                />
+              </View>
             </>
           ) : null}
         </View>
@@ -146,5 +176,16 @@ const styles = StyleSheet.create({
   headerSpacer: { width: size.tap, height: size.tap },
   content: { paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.xl, gap: space.lg },
   fields: { gap: space.lg },
+  field: { gap: space.sm - 2 },
+  fieldLabel: { fontSize: 13, fontWeight: '500' },
+  // The frame's fill box: full width, radius `--r-md`, the value at 17/400 (the body size).
+  input: {
+    height: size.btn,
+    borderRadius: radius.md,
+    paddingHorizontal: space.lg,
+    paddingVertical: 0,
+    fontSize: typography.body.fontSize,
+    fontWeight: typography.body.fontWeight,
+  },
   dock: { paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.lg },
 });

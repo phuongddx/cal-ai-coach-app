@@ -109,7 +109,7 @@ export function EntryStep({ appleAvailable, isBusy, errorMessage, onApple, onGoo
                 ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
                 : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
             }
-            cornerRadius={radius.btn}
+            cornerRadius={radius.md}
             style={styles.apple}
             onPress={onApple}
           />
