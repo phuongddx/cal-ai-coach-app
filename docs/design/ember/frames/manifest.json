@@ -168,45 +168,477 @@
     "caption": "9 · Your plan"
   },
   {
-    "file": "29-glance-small-widget.png",
+    "file": "29-diaryedit-edit-item-light.png",
+    "kind": "screen",
+    "section": "diaryedit",
+    "caption": "Edit item (light)"
+  },
+  {
+    "file": "30-diaryedit-edit-item-dark.png",
+    "kind": "screen",
+    "section": "diaryedit",
+    "caption": "Edit item (dark)"
+  },
+  {
+    "file": "31-diaryedit-edit-item-ed-safe.png",
+    "kind": "screen",
+    "section": "diaryedit",
+    "caption": "Edit item (ED-Safe)"
+  },
+  {
+    "file": "32-diaryedit-delete-confirm-light.png",
+    "kind": "screen",
+    "section": "diaryedit",
+    "caption": "Delete confirm (light)"
+  },
+  {
+    "file": "33-diaryedit-delete-confirm-dark.png",
+    "kind": "screen",
+    "section": "diaryedit",
+    "caption": "Delete confirm (dark)"
+  },
+  {
+    "file": "34-diaryedit-delete-confirm-ed-safe.png",
+    "kind": "screen",
+    "section": "diaryedit",
+    "caption": "Delete confirm (ED-Safe)"
+  },
+  {
+    "file": "35-diaryedit-saved-light.png",
+    "kind": "screen",
+    "section": "diaryedit",
+    "caption": "Saved (light)"
+  },
+  {
+    "file": "36-diaryedit-saved-dark.png",
+    "kind": "screen",
+    "section": "diaryedit",
+    "caption": "Saved (dark)"
+  },
+  {
+    "file": "37-diaryedit-saved-ed-safe.png",
+    "kind": "screen",
+    "section": "diaryedit",
+    "caption": "Saved (ED-Safe)"
+  },
+  {
+    "file": "38-diaryedit-deleted-undo-light.png",
+    "kind": "screen",
+    "section": "diaryedit",
+    "caption": "Deleted + Undo (light)"
+  },
+  {
+    "file": "39-diaryedit-deleted-undo-dark.png",
+    "kind": "screen",
+    "section": "diaryedit",
+    "caption": "Deleted + Undo (dark)"
+  },
+  {
+    "file": "40-diaryedit-deleted-undo-ed-safe.png",
+    "kind": "screen",
+    "section": "diaryedit",
+    "caption": "Deleted + Undo (ED-Safe)"
+  },
+  {
+    "file": "41-export-export-write-failed-light.png",
+    "kind": "screen",
+    "section": "export",
+    "caption": "Export: Write failed (light)"
+  },
+  {
+    "file": "42-export-export-write-failed-dark.png",
+    "kind": "screen",
+    "section": "export",
+    "caption": "Export: Write failed (dark)"
+  },
+  {
+    "file": "43-export-export-no-data-in-range-light.png",
+    "kind": "screen",
+    "section": "export",
+    "caption": "Export: No data in range (light)"
+  },
+  {
+    "file": "44-export-export-no-data-in-range-dark.png",
+    "kind": "screen",
+    "section": "export",
+    "caption": "Export: No data in range (dark)"
+  },
+  {
+    "file": "45-export-export-share-sheet-cancelled-light.png",
+    "kind": "screen",
+    "section": "export",
+    "caption": "Export: Share sheet cancelled (light)"
+  },
+  {
+    "file": "46-export-export-share-sheet-cancelled-dark.png",
+    "kind": "screen",
+    "section": "export",
+    "caption": "Export: Share sheet cancelled (dark)"
+  },
+  {
+    "file": "47-darkmode-1-welcome-dark-same-in-both-modes.png",
+    "kind": "screen",
+    "section": "darkmode",
+    "caption": "1 · Welcome (dark, same in both modes)"
+  },
+  {
+    "file": "48-darkmode-2-goal-dark.png",
+    "kind": "screen",
+    "section": "darkmode",
+    "caption": "2 · Goal (dark)"
+  },
+  {
+    "file": "49-darkmode-3-about-you-dark.png",
+    "kind": "screen",
+    "section": "darkmode",
+    "caption": "3 · About you (dark)"
+  },
+  {
+    "file": "50-darkmode-4-goal-weight-and-pace-dark.png",
+    "kind": "screen",
+    "section": "darkmode",
+    "caption": "4 · Goal weight and pace (dark)"
+  },
+  {
+    "file": "51-darkmode-5-activity-and-diet-dark.png",
+    "kind": "screen",
+    "section": "darkmode",
+    "caption": "5 · Activity and diet (dark)"
+  },
+  {
+    "file": "52-darkmode-6-projection-dark.png",
+    "kind": "screen",
+    "section": "darkmode",
+    "caption": "6 · Projection (dark)"
+  },
+  {
+    "file": "53-darkmode-7-privacy-health-and-ed-safe-dark.png",
+    "kind": "screen",
+    "section": "darkmode",
+    "caption": "7 · Privacy, Health and ED-Safe (dark)"
+  },
+  {
+    "file": "54-darkmode-8-building-your-plan-dark.png",
+    "kind": "screen",
+    "section": "darkmode",
+    "caption": "8 · Building your plan (dark)"
+  },
+  {
+    "file": "55-darkmode-9-your-plan-dark.png",
+    "kind": "screen",
+    "section": "darkmode",
+    "caption": "9 · Your plan (dark)"
+  },
+  {
+    "file": "56-darkmode-quota-reached-dark-sheet.png",
+    "kind": "screen",
+    "section": "darkmode",
+    "caption": "Quota reached (dark sheet)"
+  },
+  {
+    "file": "57-darkmode-plans-paywall-dark.png",
+    "kind": "screen",
+    "section": "darkmode",
+    "caption": "Plans / paywall (dark)"
+  },
+  {
+    "file": "58-darkmode-cancel-flow-dark.png",
+    "kind": "screen",
+    "section": "darkmode",
+    "caption": "Cancel flow (dark)"
+  },
+  {
+    "file": "59-hc-edit-item-high-contrast-light.png",
+    "kind": "screen",
+    "section": "hc",
+    "caption": "Edit item (High Contrast light)"
+  },
+  {
+    "file": "60-hc-edit-item-high-contrast-dark.png",
+    "kind": "screen",
+    "section": "hc",
+    "caption": "Edit item (High Contrast dark)"
+  },
+  {
+    "file": "61-auth-sign-in-light.png",
+    "kind": "screen",
+    "section": "auth",
+    "caption": "Sign in (light)"
+  },
+  {
+    "file": "62-auth-sign-in-dark.png",
+    "kind": "screen",
+    "section": "auth",
+    "caption": "Sign in (dark)"
+  },
+  {
+    "file": "63-auth-email-password-light.png",
+    "kind": "screen",
+    "section": "auth",
+    "caption": "Email + password (light)"
+  },
+  {
+    "file": "64-auth-email-password-dark.png",
+    "kind": "screen",
+    "section": "auth",
+    "caption": "Email + password (dark)"
+  },
+  {
+    "file": "65-auth-wrong-password-light.png",
+    "kind": "screen",
+    "section": "auth",
+    "caption": "Wrong password (light)"
+  },
+  {
+    "file": "66-auth-wrong-password-dark.png",
+    "kind": "screen",
+    "section": "auth",
+    "caption": "Wrong password (dark)"
+  },
+  {
+    "file": "67-auth-reset-link-sent-light.png",
+    "kind": "screen",
+    "section": "auth",
+    "caption": "Reset link sent (light)"
+  },
+  {
+    "file": "68-target-edit-goal-sheet-light.png",
+    "kind": "screen",
+    "section": "target",
+    "caption": "Edit goal sheet (light)"
+  },
+  {
+    "file": "69-target-edit-goal-sheet-dark.png",
+    "kind": "screen",
+    "section": "target",
+    "caption": "Edit goal sheet (dark)"
+  },
+  {
+    "file": "70-target-edit-goal-sheet-ed-safe.png",
+    "kind": "screen",
+    "section": "target",
+    "caption": "Edit goal sheet (ED-Safe)"
+  },
+  {
+    "file": "71-target-goal-below-healthy-range-light.png",
+    "kind": "screen",
+    "section": "target",
+    "caption": "Goal below healthy range (light)"
+  },
+  {
+    "file": "72-scansheets-describe-a-meal-typing-light.png",
+    "kind": "screen",
+    "section": "scansheets",
+    "caption": "Describe a meal: typing (light)"
+  },
+  {
+    "file": "73-scansheets-describe-a-meal-typing-dark.png",
+    "kind": "screen",
+    "section": "scansheets",
+    "caption": "Describe a meal: typing (dark)"
+  },
+  {
+    "file": "74-scansheets-describe-a-meal-estimating-light.png",
+    "kind": "screen",
+    "section": "scansheets",
+    "caption": "Describe a meal: estimating (light)"
+  },
+  {
+    "file": "75-scansheets-report-a-problem-light.png",
+    "kind": "screen",
+    "section": "scansheets",
+    "caption": "Report a problem (light)"
+  },
+  {
+    "file": "76-scansheets-report-a-problem-dark.png",
+    "kind": "screen",
+    "section": "scansheets",
+    "caption": "Report a problem (dark)"
+  },
+  {
+    "file": "77-scansheets-report-sent-light.png",
+    "kind": "screen",
+    "section": "scansheets",
+    "caption": "Report sent (light)"
+  },
+  {
+    "file": "78-paywallstates-paywall-loading-prices-light.png",
+    "kind": "screen",
+    "section": "paywallstates",
+    "caption": "Paywall: loading prices (light)"
+  },
+  {
+    "file": "79-paywallstates-paywall-prices-failed-light.png",
+    "kind": "screen",
+    "section": "paywallstates",
+    "caption": "Paywall: prices failed (light)"
+  },
+  {
+    "file": "80-paywallstates-paywall-prices-failed-dark.png",
+    "kind": "screen",
+    "section": "paywallstates",
+    "caption": "Paywall: prices failed (dark)"
+  },
+  {
+    "file": "81-darkmore-profile-dark.png",
+    "kind": "screen",
+    "section": "darkmore",
+    "caption": "Profile (dark)"
+  },
+  {
+    "file": "82-darkmore-settings-dark.png",
+    "kind": "screen",
+    "section": "darkmore",
+    "caption": "Settings (dark)"
+  },
+  {
+    "file": "83-darkmore-food-search-dark-ed-safe.png",
+    "kind": "screen",
+    "section": "darkmore",
+    "caption": "Food search (dark, ED-Safe)"
+  },
+  {
+    "file": "84-darkmore-manual-log-dark-ed-safe.png",
+    "kind": "screen",
+    "section": "darkmore",
+    "caption": "Manual log (dark, ED-Safe)"
+  },
+  {
+    "file": "85-glance-small-widget.png",
     "kind": "glanceable",
     "section": "glance",
     "caption": "Small widget"
   },
   {
-    "file": "30-glance-small-widget-ed-safe.png",
+    "file": "86-glance-small-widget-ed-safe.png",
     "kind": "glanceable",
     "section": "glance",
     "caption": "Small widget · ED-Safe"
   },
   {
-    "file": "31-glance-medium-widget.png",
+    "file": "87-glance-medium-widget.png",
     "kind": "glanceable",
     "section": "glance",
     "caption": "Medium widget"
   },
   {
-    "file": "32-glance-lock-screen-widgets.png",
+    "file": "88-glance-lock-screen-widgets.png",
     "kind": "glanceable",
     "section": "glance",
     "caption": "Lock Screen widgets"
   },
   {
-    "file": "33-glance-live-activity-lock-screen.png",
+    "file": "89-glance-live-activity-lock-screen.png",
     "kind": "glanceable",
     "section": "glance",
     "caption": "Live Activity · Lock Screen"
   },
   {
-    "file": "34-glance-dynamic-island.png",
+    "file": "90-glance-dynamic-island.png",
     "kind": "glanceable",
     "section": "glance",
     "caption": "Dynamic Island"
   },
   {
-    "file": "35-glance-live-activity-ed-safe.png",
+    "file": "91-glance-live-activity-ed-safe.png",
     "kind": "glanceable",
     "section": "glance",
     "caption": "Live Activity · ED-Safe"
+  },
+  {
+    "file": "92-icon-default.png",
+    "kind": "panel",
+    "section": "icon",
+    "caption": "Default"
+  },
+  {
+    "file": "93-icon-dark.png",
+    "kind": "panel",
+    "section": "icon",
+    "caption": "Dark"
+  },
+  {
+    "file": "94-icon-clear.png",
+    "kind": "panel",
+    "section": "icon",
+    "caption": "Clear"
+  },
+  {
+    "file": "95-icon-tinted.png",
+    "kind": "panel",
+    "section": "icon",
+    "caption": "Tinted"
+  },
+  {
+    "file": "96-icon-icon-composer-layers.png",
+    "kind": "panel",
+    "section": "icon",
+    "caption": "Icon Composer layers"
+  },
+  {
+    "file": "97-icon-default.png",
+    "kind": "panel",
+    "section": "icon",
+    "caption": "Default"
+  },
+  {
+    "file": "98-icon-dark.png",
+    "kind": "panel",
+    "section": "icon",
+    "caption": "Dark"
+  },
+  {
+    "file": "99-icon-clear-light.png",
+    "kind": "panel",
+    "section": "icon",
+    "caption": "Clear light"
+  },
+  {
+    "file": "100-icon-clear-dark.png",
+    "kind": "panel",
+    "section": "icon",
+    "caption": "Clear dark"
+  },
+  {
+    "file": "101-icon-tinted-light.png",
+    "kind": "panel",
+    "section": "icon",
+    "caption": "Tinted light"
+  },
+  {
+    "file": "102-icon-tinted-dark.png",
+    "kind": "panel",
+    "section": "icon",
+    "caption": "Tinted dark"
+  },
+  {
+    "file": "103-hc-high-contrast-overrides-read-live-from-tokens-cs.png",
+    "kind": "panel",
+    "section": "hc",
+    "caption": "High Contrast overrides (read live from tokens.css)"
+  },
+  {
+    "file": "104-glance2-medium-widget-ed-safe.png",
+    "kind": "panel",
+    "section": "glance2",
+    "caption": "Medium widget · ED-Safe"
+  },
+  {
+    "file": "105-glance2-live-activity-processing-lock-screen.png",
+    "kind": "panel",
+    "section": "glance2",
+    "caption": "Live Activity · processing (Lock Screen)"
+  },
+  {
+    "file": "106-glance2-dynamic-island-processing.png",
+    "kind": "panel",
+    "section": "glance2",
+    "caption": "Dynamic Island · processing"
+  },
+  {
+    "file": "107-glance2-live-activity-couldn-t-read.png",
+    "kind": "panel",
+    "section": "glance2",
+    "caption": "Live Activity · couldn't read"
   }
 ]

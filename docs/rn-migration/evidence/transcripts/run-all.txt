@@ -1,27 +1,35 @@
-run-all start: 2026-11-27 12:23:07
-worktree: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14
-simulator: 85024D2F-71DE-43C0-8E11-CE58F4578FC3 / app: com.nextlabs.coachcal
+run-all start: 2026-11-27 20:38:56
+worktree: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79
+simulator: A902237E-29DE-4A6F-9E93-23199FC2107F / app: com.nextlabs.coachcal
 
 ########## flow 01-first-launch ##########
   ok: simulator already booted
-  ok: simulator ready (85024D2F-71DE-43C0-8E11-CE58F4578FC3)
+  ok: simulator ready (A902237E-29DE-4A6F-9E93-23199FC2107F)
   ok: appearance light
 
 === fresh install of the built dev client ===
   ok: uninstalled + installed com.nextlabs.coachcal
   ok: app: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-native/apps/mobile/build-output/CoachCal-dev.app
 
+=== seeding a target in the fresh install (the root gate shows onboarding without one) ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+
+=== deep link: coachcal:///?seed=1 ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: found text: Spaghetti Bolognese
+  ok: target seeded; the app is stopped
+
 === opening the app via the dev client URL ===
-  ok: found title 'Today' (Heading at y=326)
+  ok: found title 'Today' (Heading at y=92.333335876464844)
   ok: app is showing 'Today' (attempt 1)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/PL-01/01-first-launch-light.png (612 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/PL-01-01-first-launch-light.png
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/PL-01/01-first-launch-light.png (382 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/PL-01-01-first-launch-light.png
 
 === switch to dark ===
   ok: appearance dark
   ok: found text: Today
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/PL-01/01-first-launch-dark.png (507 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/PL-01-01-first-launch-dark.png
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/PL-01/01-first-launch-dark.png (371 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/PL-01-01-first-launch-dark.png
   ok: appearance light
 
 === flow done — 0 failed ===
@@ -29,48 +37,48 @@ simulator: 85024D2F-71DE-43C0-8E11-CE58F4578FC3 / app: com.nextlabs.coachcal
 
 ########## flow 02-tabs ##########
   ok: simulator already booted
-  ok: simulator ready (85024D2F-71DE-43C0-8E11-CE58F4578FC3)
+  ok: simulator ready (A902237E-29DE-4A6F-9E93-23199FC2107F)
 
 === opening the app via the dev client URL ===
-  ok: found title 'Today' (Heading at y=326)
+  ok: found title 'Today' (Heading at y=92.333335876464844)
   ok: app is showing 'Today' (attempt 1)
 
 === tab: Progress ===
   tap 'Progress' (RadioButton) at (158, 822) from frame x=110.66666666666669 y=795 w=95 h=54
   ok: tap at (158, 822)
-  ok: found title 'Progress' (StaticText at y=122.66666412353516)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/PL-01/02-tab-progress.png (156 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/PL-01-02-tab-progress.png
+  ok: found title 'Progress' (StaticText at y=370)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/PL-01/02-tab-progress.png (577 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/PL-01-02-tab-progress.png
 
 === tab: Coach ===
   tap 'Coach' (RadioButton) at (243, 822) from frame x=196.33333333333334 y=795 w=95.000000000000028 h=54
   ok: tap at (243, 822)
-  ok: found title 'Coach' (StaticText at y=88)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/PL-01/02-tab-coach.png (155 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/PL-01-02-tab-coach.png
+  ok: found title 'TODAY'S INSIGHTS' (Heading at y=370)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/PL-01/02-tab-coach.png (420 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/PL-01-02-tab-coach.png
 
 === tab: Profile ===
   tap 'Profile' (RadioButton) at (329, 822) from frame x=282 y=795 w=95 h=54
   ok: tap at (329, 822)
-  ok: found title 'Profile' (StaticText at y=89.666664123535156)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/PL-01/02-tab-profile.png (153 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/PL-01-02-tab-profile.png
+  ok: found title 'GOALS & TARGETS' (Heading at y=370)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/PL-01/02-tab-profile.png (328 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/PL-01-02-tab-profile.png
 
 === back to Today ===
   tap 'Today' (RadioButton) at (72, 822) from frame x=25 y=795 w=95 h=54
   ok: tap at (72, 822)
-  ok: found title 'Today' (Heading at y=326)
+  ok: found title 'Today' (Heading at y=92.333335876464844)
 
 === flow done — 0 failed ===
 ########## flow 02-tabs: 0 failed ##########
 
 ########## flow 03-today-seeded ##########
   ok: simulator already booted
-  ok: simulator ready (85024D2F-71DE-43C0-8E11-CE58F4578FC3)
+  ok: simulator ready (A902237E-29DE-4A6F-9E93-23199FC2107F)
   ok: appearance light
 
 === opening the app via the dev client URL ===
-  ok: found title 'Today' (Heading at y=326)
+  ok: found title 'Today' (Heading at y=92.333335876464844)
   ok: app is showing 'Today' (attempt 1)
 
 === seed via the debug deep link ===
@@ -79,19 +87,19 @@ simulator: 85024D2F-71DE-43C0-8E11-CE58F4578FC3 / app: com.nextlabs.coachcal
   ok: found title 'Debug console' (Heading at y=118.66666666666669)
 
 === deep link: coachcal:/// ===
-  ok: found title 'Today' (Heading at y=326)
+  ok: found title 'Today' (Heading at y=92.333335876464844)
 
 === the seeded meals must be in the tree ===
   ok: found text: Chicken rice bowl
   ok: found text: Overnight oats
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/TD-01/03-today-seeded-light.png (675 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/TD-01-03-today-seeded-light.png
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/TD-01/03-today-seeded-light.png (382 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/TD-01-03-today-seeded-light.png
 
 === seeded Today in dark ===
   ok: appearance dark
   ok: found text: Chicken rice bowl
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/TD-01/03-today-seeded-dark.png (625 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/TD-01-03-today-seeded-dark.png
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/TD-01/03-today-seeded-dark.png (374 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/TD-01-03-today-seeded-dark.png
   ok: appearance light
 
 === flow done — 0 failed ===
@@ -99,34 +107,36 @@ simulator: 85024D2F-71DE-43C0-8E11-CE58F4578FC3 / app: com.nextlabs.coachcal
 
 ########## flow 04-diary-sheet ##########
   ok: simulator already booted
-  ok: simulator ready (85024D2F-71DE-43C0-8E11-CE58F4578FC3)
+  ok: simulator ready (A902237E-29DE-4A6F-9E93-23199FC2107F)
 
 === opening the app via the dev client URL ===
-  ok: found title 'Today' (Heading at y=326)
+  ok: found title 'Today' (Heading at y=92.333335876464844)
   ok: app is showing 'Today' (attempt 1)
 
 === deep link: coachcal://diary ===
-  ok: found title 'Diary' (StaticText at y=43.333332061767578)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/DY-01/04-diary-sheet.png (88 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/DY-01-04-diary-sheet.png
+
+=== the diary sheet shows its date title and the meal sections ===
+  ok: the diary sheet is open (date title and Breakfast section)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/DY-01/04-diary-sheet.png (301 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/DY-01-04-diary-sheet.png
 
 === flow done — 0 failed ===
 ########## flow 04-diary-sheet: 0 failed ##########
 
 ########## flow 05-debug-console ##########
   ok: simulator already booted
-  ok: simulator ready (85024D2F-71DE-43C0-8E11-CE58F4578FC3)
+  ok: simulator ready (A902237E-29DE-4A6F-9E93-23199FC2107F)
 
 === opening the app via the dev client URL ===
-  ok: found title 'Today' (Heading at y=326)
+  ok: found title 'Today' (Heading at y=92.333335876464844)
   ok: app is showing 'Today' (attempt 1)
 
 === deep link: coachcal://debug ===
   ok: found title 'Debug console' (Heading at y=118.66666666666669)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/PL-05/05-debug-console.png (245 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/PL-05-05-debug-console.png
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/PL-05/05-debug-console.png (342 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/PL-05-05-debug-console.png
 
 === flow done — 0 failed ===
 ########## flow 05-debug-console: 0 failed ##########
 
-run-all done: 0 failed (transcripts: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/transcripts)
+run-all done: 0 failed (transcripts: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/transcripts)

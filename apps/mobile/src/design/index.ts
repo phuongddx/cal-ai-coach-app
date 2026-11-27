@@ -9,24 +9,35 @@ export {
   darkColors,
   fontFamily,
   getTokens,
+  highContrastDarkColors,
+  highContrastLightColors,
   legacyColorAliases,
   lightColors,
   radius,
   scaledNumberSize,
   size,
   space,
+  textStyles,
   typography,
+  typographyRoleSource,
+  colorsByMode,
   useTokens,
   withAlpha,
+  type ColorMode,
   type Colors,
   type EmberColors,
   type LegacyColorKey,
   type Scheme,
+  type TokenOptions,
   type ScaledNumberRole,
+  type EmberTextStyle,
+  type TextStyleName,
   type Tokens,
   type TypographyRole,
   type TypographyStyle,
 } from './tokens';
+
+export { useHighContrast } from './highContrast';
 
 export {
   edSafeHidden,
@@ -69,7 +80,12 @@ export {
   type MacroBarProps,
 } from './components/MacroBar';
 export { MacroMiniCard, macroLabels, type MacroMiniCardProps } from './components/MacroMiniCard';
-export { InsightCard, type InsightCardProps, type InsightVariant } from './components/InsightCard';
+export {
+  InsightCard,
+  type InsightCardAction,
+  type InsightCardProps,
+  type InsightVariant,
+} from './components/InsightCard';
 export { BadgeTile, badgeA11yLabel, type BadgeTileProps } from './components/BadgeTile';
 export {
   StreakCard,
@@ -80,7 +96,9 @@ export {
 export {
   SettingsRow,
   settingsA11yLabel,
+  settingsValueColor,
   type SettingsRowProps,
+  type SettingsValueTint,
 } from './components/SettingsRow';
 export { SettingsGroup, type SettingsGroupProps } from './components/SettingsGroup';
 export {
@@ -104,7 +122,26 @@ export {
   WarningChip,
   type WarningChipProps,
 } from './components/WarningChip';
-export { toastVisibleKcalText, Toast, type ToastProps } from './components/Toast';
+export {
+  carriesCalorieFigure,
+  toastVisibleKcalText,
+  toastVisibleMessage,
+  Toast,
+  type ToastProps,
+} from './components/Toast';
+export { FoldGroup, foldGroupA11yHint, type FoldGroupProps } from './components/FoldGroup';
+export {
+  TrendChart,
+  trendAxis,
+  trendChartHeight,
+  trendDateLabel,
+  trendDateLabelIndexes,
+  trendTickLabel,
+  trendTime,
+  type TrendAxis,
+  type TrendChartProps,
+  type TrendPoint,
+} from './components/TrendChart';
 export {
   Sheet,
   sheetDetentFraction,
@@ -128,6 +165,7 @@ export {
   optionCardIconColor,
   optionCardIconTile,
   OptionCard,
+  optionCardBackground,
   type OptionCardProps,
 } from './components/OptionCard';
 export { ChipOption, type ChipOptionProps } from './components/ChipOption';
