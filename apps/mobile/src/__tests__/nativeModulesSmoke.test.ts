@@ -42,6 +42,13 @@ describe('native modules import under Jest', () => {
     expect(apple.AppleAuthenticationScope.EMAIL).toBeDefined();
   });
 
+  it('expo-crypto computes a SHA-256 digest', async () => {
+    const crypto = require('expo-crypto');
+    await expect(crypto.digestStringAsync(crypto.CryptoDigestAlgorithm.SHA256, 'abc')).resolves.toBe(
+      'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+    );
+  });
+
   it('expo-web-browser exposes the in-app browser', () => {
     const browser = require('expo-web-browser');
     expect(typeof browser.openBrowserAsync).toBe('function');

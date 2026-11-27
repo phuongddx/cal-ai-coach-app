@@ -1,0 +1,30 @@
+  ok: simulator already booted
+  ok: simulator ready (85024D2F-71DE-43C0-8E11-CE58F4578FC3)
+  ok: appearance light
+
+=== opening the app via the dev client URL ===
+  ok: found title 'Today' (Heading at y=326)
+  ok: app is showing 'Today' (attempt 1)
+
+=== seed via the debug deep link ===
+
+=== deep link: coachcal://debug?action=seed ===
+  ok: found title 'Debug console' (Heading at y=118.66666666666669)
+
+=== deep link: coachcal:/// ===
+  ok: found title 'Today' (Heading at y=326)
+
+=== the seeded meals must be in the tree ===
+  ok: found text: Chicken rice bowl
+  ok: found text: Overnight oats
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/TD-01/03-today-seeded-light.png (675 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/TD-01-03-today-seeded-light.png
+
+=== seeded Today in dark ===
+  ok: appearance dark
+  ok: found text: Chicken rice bowl
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/TD-01/03-today-seeded-dark.png (625 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/TD-01-03-today-seeded-dark.png
+  ok: appearance light
+
+=== flow done — 0 failed ===

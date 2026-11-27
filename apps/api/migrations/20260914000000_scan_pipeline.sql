@@ -40,13 +40,13 @@ create index if not exists scan_usage_window_idx
   on public.scan_usage (user_id, created_at);
 
 -- ---------------------------------------------------------------------------
--- entitlements: RevenueCat identity (app_user_id) plus an optional Supabase
--- user mapping column (AD-01); aliasing finalizes in Phase 5
+-- entitlements: RevenueCat identity (app_user_id) plus an optional user_id
+-- mapping column (AD-01); aliasing finalizes in Phase 5
 -- ---------------------------------------------------------------------------
 create table if not exists public.entitlements (
   app_user_id      text not null,
   entitlement_id   text not null,
-  supabase_user_id uuid,
+  user_id          uuid,
   active           boolean not null default false,
   expires_at       timestamptz,
   product_id       text,
@@ -198,7 +198,7 @@ $$;
 -- apply_webhook_event: exactly-once webhook ingestion — the dedupe-ledger
 -- insert and the entitlement upsert commit in this single call.
 -- p_event: { eventId, appUserId, entitlementId, active?, expiresAt?,
---            productId?, supabaseUserId?, timestampMs? }
+--            productId?, userId?, timestampMs? }
 -- ---------------------------------------------------------------------------
 create or replace function public.apply_webhook_event(p_event jsonb)
 returns jsonb
@@ -213,7 +213,7 @@ declare
   v_active           boolean;
   v_expires_at       timestamptz;
   v_product_id       text;
-  v_supabase_user_id uuid;
+  v_user_id          uuid;
   v_last_event_ms    bigint;
   v_applied_ms       bigint;
   v_inserted         boolean;
@@ -236,7 +236,7 @@ begin
   begin
     v_active           := coalesce((p_event ->> 'active')::boolean, false);
     v_expires_at       := (p_event ->> 'expiresAt')::timestamptz;
-    v_supabase_user_id := (p_event ->> 'supabaseUserId')::uuid;
+    v_user_id          := (p_event ->> 'userId')::uuid;
     v_last_event_ms    := (p_event ->> 'timestampMs')::bigint;
   exception
     when invalid_datetime_format or invalid_text_representation then
@@ -272,10 +272,10 @@ begin
 
   insert into public.entitlements
     (app_user_id, entitlement_id, active, expires_at, product_id,
-     supabase_user_id, last_event_ms, updated_at)
+     user_id, last_event_ms, updated_at)
   values
     (v_app_user_id, v_entitlement_id, v_active, v_expires_at, v_product_id,
-     v_supabase_user_id, coalesce(v_last_event_ms, 0), now())
+     v_user_id, coalesce(v_last_event_ms, 0), now())
   on conflict (app_user_id, entitlement_id) do update
     set active           = excluded.active,
         -- Events that state no period end (e.g. a BILLING_ISSUE ledger row)
@@ -284,8 +284,8 @@ begin
         -- because active = excluded.active; the coalesce cannot resurrect it.
         expires_at       = coalesce(excluded.expires_at, public.entitlements.expires_at),
         product_id       = excluded.product_id,
-        supabase_user_id = coalesce(excluded.supabase_user_id,
-                                    public.entitlements.supabase_user_id),
+        user_id = coalesce(excluded.user_id,
+                                    public.entitlements.user_id),
         last_event_ms    = coalesce(v_last_event_ms, public.entitlements.last_event_ms),
         updated_at       = now();
 
@@ -312,7 +312,7 @@ set search_path = ''
 as $$
 declare
   v_scan_id uuid;
-  v_user_id uuid;
+  v_user_id          uuid;
 begin
   if p_scan is null or jsonb_typeof(p_scan) <> 'object' then
     raise exception 'persist_scan expects a jsonb scan object' using errcode = 'P0001';

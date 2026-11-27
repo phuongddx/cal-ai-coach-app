@@ -1,6 +1,6 @@
 /**
  * Entitlement reader (AD-01 resolution order): the caller resolves to an entitlement
- * through the legacy user-mapping column of the entitlements table, then the raw-uuid app_user_id fallback
+ * through the user_id column of the entitlements table, then the raw-uuid app_user_id fallback
  * (both inside the get_entitlement function). An active entitlement bypasses the quota
  * claim entirely: quota is a free-tier-only concept.
  */

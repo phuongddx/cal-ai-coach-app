@@ -1,0 +1,22 @@
+# Automatic HTTPS (Let's Encrypt) for $DOMAIN, everything proxied to the API. Nothing else is exposed.
+# Caddy replaces any client-supplied X-Forwarded-For with the real client address, which is what the
+# API's rate limits read (the last entry).
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Scan photos arrive base64-encoded inside JSON.
+	request_body {
+		max_size 15MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+
+	reverse_proxy api:8787 {
+		health_uri /health
+		health_interval 10s
+	}
+}

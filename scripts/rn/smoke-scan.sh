@@ -9,6 +9,8 @@
 #      (fixture VLM, cache seeded the way the legacy e2e test seeds it) and the golden numbers
 #   3. POST /v1/barcode/resolve for a barcode that is not found (typed 404)
 #   4. POST /v1/foods/search for a seeded food (cache hit)
+#   5. the same photo scan with a real session (e-mail code sign-in, no dev token), then the account
+#      is deleted again; the code is read from the API log (OTP_SENDER=log)
 # The seeds go in through the owner connection and are removed again on exit.
 set -uo pipefail
 
@@ -113,6 +115,33 @@ if [ "$STATUS" = 200 ] && [ "$(jq -r '.results[0].source' <<<"$BODY")" = cache ]
   step "POST /v1/foods/search answers a grounded result" ok
 else
   step "POST /v1/foods/search answers a grounded result" fail "status $STATUS body $BODY"
+fi
+
+# 5. photo scan with a real session instead of the dev token
+SESSION_EMAIL="smoke-scan-$RANDOM$RANDOM@example.test"
+SESSION_SCAN_ID="$(uuidgen | tr 'A-Z' 'a-z')"
+cleanup_session() {
+  owner_sql -c "DELETE FROM public.auth_otp_codes WHERE email = '$SESSION_EMAIL'" \
+            -c "DELETE FROM public.users WHERE email = '$SESSION_EMAIL'" >/dev/null 2>&1 || true
+}
+trap 'cleanup_session; cleanup' EXIT
+call POST /v1/auth/otp/request "{\"email\":\"$SESSION_EMAIL\"}"
+SESSION_CODE="$(grep "\[otp\] code for $SESSION_EMAIL:" "$API_LOG" 2>/dev/null | tail -1 | sed 's/.*: //')"
+if [ "$STATUS" = 200 ] && [ -n "$SESSION_CODE" ]; then
+  call POST /v1/auth/otp/verify "{\"email\":\"$SESSION_EMAIL\",\"code\":\"$SESSION_CODE\"}"
+fi
+if [ "$STATUS" != 200 ]; then
+  step "POST /v1/scan with a real session (no dev token)" fail "could not sign in: status $STATUS body $BODY"
+else
+  TOKEN="$(jq -r .tokens.accessToken <<<"$BODY")"
+  call POST /v1/scan "$(jq -c --arg id "$SESSION_SCAN_ID" '.scanId = $id' "$GOLDEN/scan-request-photo.golden.json")"
+  if [ "$STATUS" = 200 ] && [ "$(jq -r .mealKcal <<<"$BODY")" = "$(jq -r .mealKcal "$GOLDEN/scan-response-200.golden.json")" ]; then
+    step "POST /v1/scan with a real session (no dev token)" ok
+  else
+    step "POST /v1/scan with a real session (no dev token)" fail "status $STATUS body $(head -c 200 <<<"$BODY")"
+  fi
+  # The account goes away with its data (call() sends no bearer token without a body, so use curl).
+  curl -sS -m 30 -o /dev/null -X DELETE "$BASE/v1/account" -H "Authorization: Bearer $TOKEN" || true
 fi
 
 exit "$FAILED"
