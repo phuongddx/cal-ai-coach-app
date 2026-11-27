@@ -11,7 +11,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Polygon } from 'react-native-svg';
 
-import { BannerNote, space, typography, useTokens, withAlpha } from '../../design';
+import { BannerNote, Card, space, typography, useTokens, withAlpha } from '../../design';
 import { TargetsEngine } from '@coachcal/core';
 
 import { onboardingCopy } from './onboardingCopy';
@@ -19,8 +19,9 @@ import { StepScaffold } from './StepScaffold';
 import { useOnboardingModel } from './useOnboardingModel';
 import type { OnboardingModel } from './onboardingModel';
 
-const CHART_WIDTH = 320;
+const CHART_WIDTH = 288;
 const CHART_HEIGHT = 180;
+const CHART_LABELS_WIDTH = 32;
 const MAX_WEEKS = 156;
 
 type Point = { week: number; weight: number };
@@ -91,15 +92,19 @@ export function ProjectionScreen({ model }: { model: OnboardingModel }) {
             </Text>
           </View>
         </View>
-        <ProjectionChart
-          nominal={nominal}
-          lower={lower}
-          upper={upper}
-          accent={colors.accentStrong}
-          grid={withAlpha(colors.text3, 0.2)}
-          labelColor={colors.text2}
-          surface={colors.background}
-        />
+        {/* The frames draw the chart on a card in both schemes (light 25 / dark 52);
+            the hollow goal endpoint carries the card fill. */}
+        <Card>
+          <ProjectionChart
+            nominal={nominal}
+            lower={lower}
+            upper={upper}
+            accent={colors.accentStrong}
+            grid={withAlpha(colors.text3, 0.2)}
+            labelColor={colors.text2}
+            surface={colors.card}
+          />
+        </Card>
         {/* The Swift view marks this caption row accessibilityHidden; RNTL queries
             mirror the accessibility tree, so the row stays queryable (see
             parity-detail/onboarding.md — a11y parity gap noted). */}
@@ -260,7 +265,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   gridLabels: {
-    width: 36,
+    width: CHART_LABELS_WIDTH,
     position: 'relative',
   },
   gridLabel: {
