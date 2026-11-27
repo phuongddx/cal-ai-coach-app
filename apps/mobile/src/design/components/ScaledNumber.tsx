@@ -5,21 +5,19 @@
  * `monospacedDigit()` becomes the `tabular-nums` font variant.
  */
 
-import { StyleSheet, Text, type TextProps } from 'react-native';
+import { StyleSheet, Text, type StyleProp, type TextStyle } from 'react-native';
 
 import { scaledNumberSize, type ScaledNumberRole } from '../tokens';
 
-export type ScaledNumberProps = TextProps & {
+export type ScaledNumberProps = {
   text: string;
   role: ScaledNumberRole;
+  style?: StyleProp<TextStyle>;
 };
 
 export function ScaledNumber({ text, role, style }: ScaledNumberProps) {
   return (
-    <Text
-      allowFontScaling
-      style={[styles.number, { fontSize: scaledNumberSize[role] }, style]}
-    >
+    <Text allowFontScaling style={[styles.number, { fontSize: scaledNumberSize[role] }, style]}>
       {text}
     </Text>
   );

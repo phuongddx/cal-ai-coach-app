@@ -5,7 +5,7 @@
  */
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
+import { SymbolView, type SFSymbol } from 'expo-symbols';
 
 import { radius, space, typography, useTokens, withAlpha, type Colors } from '../tokens';
 
@@ -55,7 +55,7 @@ export function OptionCard({ title, subtitle, icon, isSelected, onSelect }: Opti
       ]}
     >
       <View style={[styles.iconTile, { backgroundColor: optionCardIconTile(colors, isSelected) }]}>
-        <SymbolView name={icon} size={20} tintColor={optionCardIconColor(colors, isSelected)} />
+        <SymbolView name={icon as SFSymbol} size={20} tintColor={optionCardIconColor(colors, isSelected)} />
       </View>
       <View style={styles.textColumn}>
         <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>

@@ -5,7 +5,7 @@
  */
 
 import { StyleSheet, Text, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
+import { SymbolView, type SFSymbol } from 'expo-symbols';
 
 import { radius, space, typography, useTokens, withAlpha } from '../tokens';
 
@@ -43,7 +43,7 @@ export function InsightCard({
     >
       <View style={[styles.bar, { backgroundColor: barColor }]} />
       <View style={[styles.iconTile, { backgroundColor: tileBackground }]}>
-        <SymbolView name={icon} size={17} tintColor={iconColor} />
+        <SymbolView name={icon as SFSymbol} size={17} tintColor={iconColor} />
       </View>
       <View style={styles.textColumn}>
         <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>

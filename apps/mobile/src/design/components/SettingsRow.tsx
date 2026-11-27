@@ -3,7 +3,7 @@
  */
 
 import { StyleSheet, Text, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
+import { SymbolView, type SFSymbol } from 'expo-symbols';
 
 import { space, typography, useTokens } from '../tokens';
 
@@ -26,7 +26,7 @@ export function SettingsRow({ icon, label, value }: SettingsRowProps) {
       testID={`settings-row:${label}`}
       style={styles.row}
     >
-      <SymbolView name={icon} size={20} tintColor={colors.textSecondary} />
+      <SymbolView name={icon as SFSymbol} size={20} tintColor={colors.textSecondary} />
       <Text style={[styles.label, { color: colors.textPrimary }]}>{label}</Text>
       {value != null && (
         <Text style={[styles.value, { color: colors.textSecondary }]}>{value}</Text>

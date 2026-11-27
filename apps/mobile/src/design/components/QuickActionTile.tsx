@@ -4,7 +4,7 @@
  */
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
+import { SymbolView, type SFSymbol } from 'expo-symbols';
 
 import { radius, space, typography, useTokens, withAlpha } from '../tokens';
 
@@ -41,7 +41,7 @@ export function QuickActionTile({
       ]}
     >
       <SymbolView
-        name={icon}
+        name={icon as SFSymbol}
         size={28}
         tintColor={isHighlighted ? colors.accentInk : colors.textPrimary}
       />

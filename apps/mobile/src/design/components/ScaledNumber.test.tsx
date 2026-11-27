@@ -1,11 +1,11 @@
 /** Dual-react preamble — see docs/rn-migration/findings/U-22.md. */
 jest.mock('react', () => {
-  const rnPath: string = require.resolve('react-native');
+  const rnPath: string = (require as unknown as { resolve: (id: string) => string }).resolve('react-native');
   const root = rnPath.slice(0, rnPath.indexOf('/react-native/'));
   return jest.requireActual(`${root}/react`);
 });
 jest.mock('react/jsx-runtime', () => {
-  const rnPath: string = require.resolve('react-native');
+  const rnPath: string = (require as unknown as { resolve: (id: string) => string }).resolve('react-native');
   const root = rnPath.slice(0, rnPath.indexOf('/react-native/'));
   return jest.requireActual(`${root}/react/jsx-runtime`);
 });

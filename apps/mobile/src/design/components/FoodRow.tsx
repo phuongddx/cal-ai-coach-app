@@ -4,7 +4,8 @@
  * the kcal clause is the ED-safe branch: it disappears while the mode is on.
  */
 
-import { StyleSheet, Text, View, type ReactNode } from 'react-native';
+import { type ReactNode } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
 import { space, typography, useTokens } from '../tokens';

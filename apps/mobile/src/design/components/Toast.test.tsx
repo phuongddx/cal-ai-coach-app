@@ -1,11 +1,11 @@
 /** Dual-react preamble — see docs/rn-migration/findings/U-22.md. */
 jest.mock('react', () => {
-  const rnPath: string = require.resolve('react-native');
+  const rnPath: string = (require as unknown as { resolve: (id: string) => string }).resolve('react-native');
   const root = rnPath.slice(0, rnPath.indexOf('/react-native/'));
   return jest.requireActual(`${root}/react`);
 });
 jest.mock('react/jsx-runtime', () => {
-  const rnPath: string = require.resolve('react-native');
+  const rnPath: string = (require as unknown as { resolve: (id: string) => string }).resolve('react-native');
   const root = rnPath.slice(0, rnPath.indexOf('/react-native/'));
   return jest.requireActual(`${root}/react/jsx-runtime`);
 });
@@ -62,7 +62,7 @@ describe('Toast rendering', () => {
   });
 
   it('does not schedule a dismissal without onDismiss', async () => {
-    const onDismissSpy = jest.spyOn(global, 'setTimeout');
+    const onDismissSpy = jest.spyOn(globalThis, 'setTimeout');
     await render(<Toast title="Saved" />);
     expect(onDismissSpy).not.toHaveBeenCalled();
     onDismissSpy.mockRestore();
