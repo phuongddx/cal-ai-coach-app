@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # End-to-end sync scenario, curl-only steps (spec Testing "End-to-end").
 # Prerequisite: scripts/rn/start-api.sh is running on a FRESH cluster (PostgreSQL 17 on 5433, API on
-# 8787). The server numbers every applied operation of a user from one global sequence, so the first
-# two operations get versions 1 and 2 only on an empty database: run `start-api.sh stop` then
-# `start-api.sh` again before a second run.
+# 8787), user 1 empty (the Jest suites clean up their dev-user rows). The server numbers every applied
+# operation from one global sequence shared by all users: on a fresh cluster the first two operations
+# get versions 1 and 2, on a used one they get N and N+1. The script checks that A is numbered first,
+# C is the next number, and the pull cursor is C's version. It is not re-runnable for user 1: its
+# opIds are fixed, so a second run answers `duplicate`. Restart the cluster (`start-api.sh stop`, then
+# `start-api.sh`) before running it again.
 #
 #   bash scripts/rn/e2e-sync.sh 2>&1 | tee docs/rn-migration/evidence/spike/item4/e2e-transcript.txt
 #
@@ -78,13 +81,15 @@ PUSH_BODY='{
 echo "CoachCal RN spike — e2e sync (curl-only steps)"
 echo "API: $BASE"
 
-step "1. Push meals A and C (user 1) — both applied, numbered 1 and 2 from the one global sequence"
+step "1. Push meals A and C (user 1) — both applied, numbered one after the other from the global sequence (1 and 2 on a fresh cluster)"
 RESPONSE="$(post /v1/sync/push "$T1" "$PUSH_BODY")"
 echo "$RESPONSE"
 expect "A status"        "applied" "$(json_get accepted.0.status <<<"$RESPONSE")"
-expect "A serverVersion" "1"       "$(json_get accepted.0.record.serverVersion <<<"$RESPONSE")"
+A_VERSION="$(json_get accepted.0.record.serverVersion <<<"$RESPONSE")"
+expect "A serverVersion is a positive number" "true" "$([ "$A_VERSION" -ge 1 ] 2>/dev/null && echo true || echo false)"
 expect "C status"        "applied" "$(json_get accepted.1.status <<<"$RESPONSE")"
-expect "C serverVersion" "2"       "$(json_get accepted.1.record.serverVersion <<<"$RESPONSE")"
+C_VERSION="$(json_get accepted.1.record.serverVersion <<<"$RESPONSE")"
+expect "C serverVersion follows A's" "$((A_VERSION + 1))" "$C_VERSION"
 
 step "2. Pull with cursor 0 (user 1) — 2 rows, hasMore false"
 RESPONSE="$(post /v1/sync/pull "$T1" '{"cursor": 0}')"
@@ -92,7 +97,7 @@ echo "$RESPONSE"
 expect "row count"  "2"     "$(json_get rows.length <<<"$RESPONSE")"
 expect "hasMore"    "false" "$(json_get hasMore <<<"$RESPONSE")"
 CURSOR="$(json_get cursor <<<"$RESPONSE")"
-expect "new cursor" "2" "$CURSOR"
+expect "new cursor is C's version" "$C_VERSION" "$CURSOR"
 
 step "3. Replay the same push — duplicates, no new change rows"
 RESPONSE="$(post /v1/sync/push "$T1" "$PUSH_BODY")"
@@ -127,11 +132,11 @@ cat <<'APP_STEPS'
 
 App-driven steps (integration task T6, via deep links and the [spike] log):
   1. Online:      coachcal://debug?action=seed ; action=sync   → server has A and C (already true above)
-  2. Offline:     scripts/start-api.sh stop (server stopped); on the device
+  2. Offline:     scripts/rn/start-api.sh stop (server stopped); on the device
                   action=force-offline, action=add-meal (B), action=edit-meal (A 450),
                   action=delete-meal (C); force-stop and relaunch the app; B present,
                   A edited, C gone, outbox = 3.
-  3. Start the API again (scripts/start-api.sh), action=force-online, action=sync
+  3. Start the API again (scripts/rn/start-api.sh), action=force-online, action=sync
                   → 3 operations pushed, outbox = 0, cursor advanced.
   4. curl the pull with the old cursor: A (edited), B, C (deleted).
                   Replay step 3's push body with curl: three `duplicate` answers.

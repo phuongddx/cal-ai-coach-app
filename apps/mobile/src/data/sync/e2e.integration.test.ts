@@ -6,8 +6,9 @@
  * (the same rule and file name as `apps/api/src/testing/sqlHarness.ts`). Without it the suite is
  * skipped with a loud console.warn: it never passes silently. With it, an unreachable API is a failure.
  *
- * The cluster keeps the rows of earlier runs (and of `scripts/rn/e2e-sync.sh`), so every scenario uses
- * fresh record ids and compares whole stores only after both devices pulled everything.
+ * Every scenario uses fresh record ids and compares whole stores only after both devices pulled
+ * everything. The dev user's rows are deleted after the suite (through the owner role of the env file),
+ * so `scripts/rn/e2e-sync.sh`, which expects an empty user 1, can run after `npm test` on the same cluster.
  */
 import { createHash } from 'node:crypto';
 import { readFileSync, realpathSync } from 'node:fs';
@@ -30,19 +31,20 @@ const DEV_USER_ID = '11111111-1111-4111-8111-111111111111';
 
 const repoRoot = realpathSync(resolve(__dirname, '..', '..', '..', '..', '..'));
 
-function apiBaseUrl(): string | null {
-  if (process.env.API_BASE_URL) return process.env.API_BASE_URL;
+/** A variable from the process environment or from the env file `scripts/rn/start-api.sh` wrote for this checkout. */
+function apiEnv(name: string): string | null {
+  if (process.env[name]) return process.env[name] as string;
   const key = createHash('sha256').update(repoRoot).digest('hex').slice(0, 12);
   const file = process.env.RN_API_ENV_FILE ?? join(process.env.TMPDIR ?? '/tmp', `coachcal-rn-api-${key}.env`);
   try {
-    const match = /^\s*(?:export\s+)?API_BASE_URL=(.*)$/m.exec(readFileSync(file, 'utf8'));
+    const match = new RegExp(`^\\s*(?:export\\s+)?${name}=(.*)$`, 'm').exec(readFileSync(file, 'utf8'));
     return match?.[1]?.trim() || null;
   } catch {
     return null;
   }
 }
 
-const baseUrl = apiBaseUrl();
+const baseUrl = apiEnv('API_BASE_URL');
 
 /**
  * `fetch` over node:http. Under jest-expo the global `fetch` is the React Native one, which has no
@@ -140,6 +142,23 @@ describeApi('sync engine and SQLite store against the real API', () => {
     const health = await nodeFetch(`${baseUrl}/health`).catch(() => null);
     if (health === null || !health.ok) {
       throw new Error(`The API env file exists but ${baseUrl}/health does not answer: start it with scripts/rn/start-api.sh`);
+    }
+  });
+
+  afterAll(async () => {
+    const ownerUrl = apiEnv('TEST_OWNER_URL');
+    if (ownerUrl === null) {
+      console.warn('[api-skip] no TEST_OWNER_URL: the dev user rows of the sync e2e suite were not deleted');
+      return;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const postgres = require('postgres') as typeof import('postgres');
+    const owner = postgres(ownerUrl, { max: 1 });
+    try {
+      await owner`DELETE FROM public.sync_operations WHERE user_id = ${DEV_USER_ID}::uuid`;
+      await owner`DELETE FROM public.diary_entries WHERE user_id = ${DEV_USER_ID}::uuid`;
+    } finally {
+      await owner.end();
     }
   });
 
