@@ -129,7 +129,8 @@ dismiss_open_dialog() {
 # A title proves a screen mounted. Verified on iOS 26.4: during the tab-switch transition the
 # incoming title can be reported at an intermediate y (< 200) before it settles (placeholder
 # titles settle at y ~ 408), and on the home screen bottom elements report bogus small y. So a
-# title that names a tab only counts once it sits below y=200; Heading titles (Today header,
+# title that names a tab only counts once it sits below y=200, or (U-79: the real screens put their
+# title at y ~ 100) when it is not a tab-bar RadioButton and sits below y=60; Heading titles (Today header,
 # nav header) and non-tab titles count anywhere in the content area (y < 700).
 _wait_title() {
   local text="$1" sec="${2:-15}" deadline="$((SECONDS + ${2:-15}))" hit tabs
@@ -138,7 +139,7 @@ _wait_title() {
       tabs="$(ui_labels | awk -F'\t' '$2 == "RadioButton" {print $1}' | sort -u)"
       hit="$(ui_labels | awk -F'\t' -v t="$text" '
         $1 == t && $4 < 700 {
-          if ($2 ~ /Heading/ || $4 + 0 > 200) { print; exit }
+          if ($2 ~ /Heading/ || $4 + 0 > 200 || ($2 !~ /RadioButton/ && $4 + 0 > 60)) { print; exit }
         }')"
       if [ -z "$hit" ] && ! grep -qxF -- "$text" <<<"$tabs"; then
         hit="$(ui_labels | awk -F'\t' -v t="$text" '$1 == t && $4 < 700 {print; exit}')"
