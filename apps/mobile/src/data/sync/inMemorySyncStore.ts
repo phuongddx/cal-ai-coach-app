@@ -10,9 +10,19 @@ import type { Meal, MealRecord, PullResponse, SyncOperation } from '@coachcal/ap
 
 import type { LocalMeal, OutboxEntry, OutboxState, SyncStore } from './types';
 
+type OutboxRow = {
+  op: SyncOperation;
+  attempts: number;
+  state: OutboxState;
+  lastError: string | null;
+  createdAt: number;
+  queueSeq: number;
+  nextRetryAt: number | null;
+};
+
 type State = {
   mealRows: Map<string, LocalMeal>;
-  outboxRows: Map<string, { op: SyncOperation; attempts: number; state: OutboxState; lastError: string | null; createdAt: number; queueSeq: number }>;
+  outboxRows: Map<string, OutboxRow>;
   cursor: number;
 };
 
@@ -51,6 +61,7 @@ export function createInMemorySyncStore(options: InMemorySyncStoreOptions = {}):
       lastError: null,
       createdAt: op.clientTimestamp,
       queueSeq: queueCounter,
+      nextRetryAt: null,
     });
   };
 
@@ -70,6 +81,15 @@ export function createInMemorySyncStore(options: InMemorySyncStoreOptions = {}):
       acceptedOpId: record.acceptedOpId,
     });
   };
+
+  const toEntry = ({ op, attempts, state: rowState, lastError, createdAt, nextRetryAt }: OutboxRow): OutboxEntry => ({
+    op,
+    attempts,
+    state: rowState,
+    lastError,
+    createdAt,
+    nextRetryAt,
+  });
 
   const toLocal = (meal: Meal): LocalMeal => ({ ...meal, deleted: false, serverVersion: 0, acceptedOpId: null });
 
@@ -106,26 +126,22 @@ export function createInMemorySyncStore(options: InMemorySyncStoreOptions = {}):
         .filter((row) => row.state === 'pending')
         .sort((a, b) => a.queueSeq - b.queueSeq)
         .slice(0, limit);
-      return pending.map(({ op, attempts, state: rowState, lastError, createdAt }) => ({
-        op,
-        attempts,
-        state: rowState,
-        lastError,
-        createdAt,
-      }));
+      return pending.map(toEntry);
+    },
+
+    async dueOperations(limit, dueAt) {
+      const due = [...state.outboxRows.values()]
+        .filter((row) => row.state === 'pending' && (row.nextRetryAt === null || row.nextRetryAt <= dueAt))
+        .sort((a, b) => a.queueSeq - b.queueSeq)
+        .slice(0, limit);
+      return { operations: due.map(toEntry), undecodable: [] };
     },
 
     async quarantinedOperations() {
       return [...state.outboxRows.values()]
         .filter((row) => row.state === 'quarantined')
         .sort((a, b) => a.queueSeq - b.queueSeq)
-        .map(({ op, attempts, state: rowState, lastError, createdAt }) => ({
-          op,
-          attempts,
-          state: rowState,
-          lastError,
-          createdAt,
-        }));
+        .map(toEntry);
     },
 
     async getMeal(recordId) {
@@ -185,12 +201,13 @@ export function createInMemorySyncStore(options: InMemorySyncStoreOptions = {}):
       commit(next);
     },
 
-    async markAttempts(opIds, lastError) {
+    async markAttempts(opIds, lastError, retryAt) {
       for (const opId of opIds) {
         const row = state.outboxRows.get(opId);
         if (row) {
           row.attempts += 1;
           row.lastError = lastError;
+          row.nextRetryAt = retryAt;
         }
       }
     },
@@ -200,7 +217,9 @@ export function createInMemorySyncStore(options: InMemorySyncStoreOptions = {}):
         const row = state.outboxRows.get(opId);
         if (row) {
           row.state = 'quarantined';
+          row.attempts += 1;
           row.lastError = lastError;
+          row.nextRetryAt = null;
         }
       }
     },
