@@ -38,10 +38,10 @@ export function BadgeTile({ emoji, name, detail, isLocked = false }: BadgeTilePr
       <Text style={styles.emoji} accessibilityElementsHidden>
         {emoji}
       </Text>
-      <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
+      <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
         {name}
       </Text>
-      <Text style={[styles.detail, { color: colors.textSecondary }]}>{detail}</Text>
+      <Text style={[styles.detail, { color: colors.text2 }]}>{detail}</Text>
     </View>
   );
 }

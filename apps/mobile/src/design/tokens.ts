@@ -50,6 +50,8 @@ export const radius = {
   xl: 28,
   pill: 999,
   full: 999,
+  /** Buttons and chips: the canvas `.btn` and `.chip` use 18 (no CSS variable). */
+  button: 18,
 } as const;
 
 /**

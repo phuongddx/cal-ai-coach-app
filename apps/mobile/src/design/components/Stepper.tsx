@@ -1,13 +1,13 @@
 /**
  * CCStepper (Components/Controls.swift). Minus/plus steppers around a gram
- * value; steps of 10, clamped at the minimum. Both buttons funnel through one
+ * value; steps of 10, clamped at the minimum. Ember: 44 pt buttons (`--tap`). Both buttons funnel through one
  * adjust() exactly as the Swift adjust(_ direction:) does.
  */
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
-import { radius, space, typography, useTokens } from '../tokens';
+import { radius, size, space, typography, useTokens } from '../tokens';
 
 export type StepperProps = {
   name: string;
@@ -46,18 +46,18 @@ export function Stepper({
         accessibilityRole="button"
         testID="ccstepper.decrement"
         onPress={() => adjust(-step)}
-        style={[styles.stepButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        style={[styles.stepButton, { backgroundColor: colors.fill, borderColor: colors.border }]}
       >
-        <SymbolView name="minus" size={16} weight="semibold" tintColor={colors.textPrimary} />
+        <SymbolView name="minus" size={16} weight="semibold" tintColor={colors.text} />
       </Pressable>
-      <Text style={[styles.value, { color: colors.textPrimary }]}>{`${value} g`}</Text>
+      <Text style={[styles.value, { color: colors.text }]}>{`${value} g`}</Text>
       <Pressable
         accessibilityRole="button"
         testID="ccstepper.increment"
         onPress={() => adjust(step)}
-        style={[styles.stepButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        style={[styles.stepButton, { backgroundColor: colors.fill, borderColor: colors.border }]}
       >
-        <SymbolView name="plus" size={16} weight="semibold" tintColor={colors.textPrimary} />
+        <SymbolView name="plus" size={16} weight="semibold" tintColor={colors.text} />
       </Pressable>
     </View>
   );
@@ -70,9 +70,9 @@ const styles = StyleSheet.create({
     gap: space.md,
   },
   stepButton: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
+    width: size.tap,
+    height: size.tap,
+    borderRadius: radius.md,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
