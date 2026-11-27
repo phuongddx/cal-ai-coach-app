@@ -23,6 +23,13 @@ export type FoodRowProps = {
   chip?: string;
   /** Identifier of the chip when the caller must keep its own (`diary.editedChip.<id>`). Default `food-row-chip:<title>`. */
   chipTestID?: string;
+  /** Draws the chevron at the end of the row. Default true; the meal rows of Today (frames 07 and 08) draw none. */
+  chevron?: boolean;
+  /**
+   * Draws the number without its unit ("624", frames 07 and 08). Default false ("624 kcal"). The
+   * spoken label of the number keeps the unit. Under ED-safe the number is not drawn at all.
+   */
+  unitHidden?: boolean;
 };
 
 /** The pure ED-safe rule for the chip: kept in every mode, hidden under ED-safe only if it holds a calorie word or figure. */
@@ -39,6 +46,8 @@ export function FoodRow({
   syncPending = false,
   chip,
   chipTestID,
+  chevron = true,
+  unitHidden = false,
 }: FoodRowProps) {
   const { colors } = useTokens();
   const edSafeMode = useEdSafeMode();
@@ -77,11 +86,23 @@ export function FoodRow({
         </View>
       )}
       {!edSafeMode && kcal != null && (
-        <Text style={[styles.kcal, { color: colors.text }]} testID={`food-row-kcal:${title}`}>
-          {`${kcal} kcal`}
+        <Text
+          style={[styles.kcal, { color: colors.text }]}
+          testID={`food-row-kcal:${title}`}
+          accessibilityLabel={unitHidden ? `${kcal} kcal` : undefined}
+        >
+          {unitHidden ? `${kcal}` : `${kcal} kcal`}
         </Text>
       )}
-      <SymbolView name="chevron.right" size={12} weight="semibold" tintColor={colors.text3} />
+      {chevron && (
+        <SymbolView
+          testID={`food-row-chevron:${title}`}
+          name="chevron.right"
+          size={12}
+          weight="semibold"
+          tintColor={colors.text3}
+        />
+      )}
     </View>
   );
 }
