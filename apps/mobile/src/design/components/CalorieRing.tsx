@@ -131,6 +131,7 @@ export function CalorieRing({
             <ScaledNumber
               text={`${remaining}`}
               role="hero"
+              fitWidth
               style={{ color: colors.textPrimary }}
             />
             <Text style={[styles.dayPercent, { color: colors.textSecondary }]}>remaining</Text>

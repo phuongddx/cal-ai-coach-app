@@ -13,11 +13,17 @@ export type ScaledNumberProps = {
   text: string;
   role: ScaledNumberRole;
   style?: StyleProp<TextStyle>;
+  /** One line, shrunk to fit its container (SwiftUI minimumScaleFactor) instead of wrapping digits. */
+  fitWidth?: boolean;
 };
 
-export function ScaledNumber({ text, role, style }: ScaledNumberProps) {
+export function ScaledNumber({ text, role, style, fitWidth = false }: ScaledNumberProps) {
   return (
-    <Text allowFontScaling style={[styles.number, { fontSize: scaledNumberSize[role] }, style]}>
+    <Text
+      allowFontScaling
+      {...(fitWidth ? { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.5 } : null)}
+      style={[styles.number, { fontSize: scaledNumberSize[role] }, style]}
+    >
       {text}
     </Text>
   );
