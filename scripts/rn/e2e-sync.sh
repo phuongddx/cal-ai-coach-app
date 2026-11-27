@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # End-to-end sync scenario, curl-only steps (spec Testing "End-to-end").
-# Prerequisite: scripts/start-api.sh is running (PostgreSQL 17 on 5433, API on 8787).
+# Prerequisite: scripts/rn/start-api.sh is running on a FRESH cluster (PostgreSQL 17 on 5433, API on
+# 8787). The server numbers every applied operation of a user from one global sequence, so the first
+# two operations get versions 1 and 2 only on an empty database: run `start-api.sh stop` then
+# `start-api.sh` again before a second run.
 #
 #   bash scripts/rn/e2e-sync.sh 2>&1 | tee docs/rn-migration/evidence/spike/item4/e2e-transcript.txt
 #
@@ -75,13 +78,13 @@ PUSH_BODY='{
 echo "CoachCal RN spike — e2e sync (curl-only steps)"
 echo "API: $BASE"
 
-step "1. Push meals A and C (user 1) — both applied with serverVersion 1"
+step "1. Push meals A and C (user 1) — both applied, numbered 1 and 2 from the one global sequence"
 RESPONSE="$(post /v1/sync/push "$T1" "$PUSH_BODY")"
 echo "$RESPONSE"
 expect "A status"        "applied" "$(json_get accepted.0.status <<<"$RESPONSE")"
 expect "A serverVersion" "1"       "$(json_get accepted.0.record.serverVersion <<<"$RESPONSE")"
 expect "C status"        "applied" "$(json_get accepted.1.status <<<"$RESPONSE")"
-expect "C serverVersion" "1"       "$(json_get accepted.1.record.serverVersion <<<"$RESPONSE")"
+expect "C serverVersion" "2"       "$(json_get accepted.1.record.serverVersion <<<"$RESPONSE")"
 
 step "2. Pull with cursor 0 (user 1) — 2 rows, hasMore false"
 RESPONSE="$(post /v1/sync/pull "$T1" '{"cursor": 0}')"
