@@ -17,17 +17,17 @@
  * this file maps between the meal wire shape and the Swift tables. The
  * `SyncStore` interface itself is unchanged, so the engine keeps working.
  */
-import { asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, lte, or, sql } from 'drizzle-orm';
 
 import type { Meal, MealRecord, PullResponse, SyncOperation } from '@coachcal/api-contract';
-import type { PullResponse as MergePullResponse } from '@coachcal/core';
+import { decodeDiaryEntrySnapshot, type PullResponse as MergePullResponse } from '@coachcal/core';
 import type { DiaryEntry, DiaryEntryDetail } from '../repos/diaryEntryRepository';
 
 import { diaryEntryDetails, diaryEntries, pendingOps, syncState } from '../db/schema';
 import { entryToRow, rowToEntry, rowToDetail } from '../repos/diaryEntryRepository';
 import { applyAcknowledgedRecord, applyPulledRow, enqueueDiaryOp } from '../repos/syncMergeRepository';
 import { fromIso, inTransaction, toIso, type SqlDb } from '../repos/sqlDb';
-import type { LocalMeal, OutboxEntry, SyncStore } from './types';
+import type { DueBatch, LocalMeal, OutboxEntry, SyncStore, UndecodableOperation } from './types';
 
 type Db = SqlDb;
 
@@ -188,10 +188,7 @@ export function createSqliteSyncStore(db: Db, options: SqliteSyncStoreOptions = 
       return rows[0]?.pullCursor ?? 0;
     },
 
-    /**
-     * FIFO by created_at then op_id, not quarantined — the outbox's due batch
-     * (engine batches are already ≤ 50, the Swift cap).
-     */
+    /** FIFO by created_at then op_id, not quarantined (whatever the retry time). */
     async pendingOperations(limit) {
       const rows = await db
         .select()
@@ -199,24 +196,47 @@ export function createSqliteSyncStore(db: Db, options: SqliteSyncStoreOptions = 
         .where(eq(pendingOps.quarantined, false))
         .orderBy(asc(pendingOps.createdAt), asc(pendingOps.opId))
         .limit(limit);
-      const entries: OutboxEntry[] = [];
-      for (const row of rows) {
-        entries.push(await outboxEntryForRow(db, row));
-      }
-      return entries;
+      return decodableEntries(db, rows);
     },
 
+    /**
+     * Swift `dueOps`: FIFO, not quarantined, retry time passed or never set, at most `limit` rows. A row
+     * whose snapshot does not decode (or whose table or kind is unsupported) is reported as
+     * undecodable instead of being turned into a wire operation.
+     */
+    async dueOperations(limit, dueAt): Promise<DueBatch> {
+      const rows = await db
+        .select()
+        .from(pendingOps)
+        .where(
+          and(
+            eq(pendingOps.quarantined, false),
+            or(isNull(pendingOps.nextRetryAt), lte(pendingOps.nextRetryAt, toIso(new Date(dueAt)))),
+          ),
+        )
+        .orderBy(asc(pendingOps.createdAt), asc(pendingOps.opId))
+        .limit(limit);
+      const operations: OutboxEntry[] = [];
+      const undecodable: UndecodableOperation[] = [];
+      for (const row of rows) {
+        const reason = undecodableReason(row);
+        if (reason === null) {
+          operations.push(await outboxEntryForRow(db, row));
+        } else {
+          undecodable.push({ opId: row.opId, attempts: row.dispatchAttempts, reason });
+        }
+      }
+      return { operations, undecodable };
+    },
+
+    /** Quarantined operations (rows that do not decode are left out: they have no wire shape). */
     async quarantinedOperations() {
       const rows = await db
         .select()
         .from(pendingOps)
         .where(eq(pendingOps.quarantined, true))
         .orderBy(asc(pendingOps.createdAt), asc(pendingOps.opId));
-      const entries: OutboxEntry[] = [];
-      for (const row of rows) {
-        entries.push(await outboxEntryForRow(db, row));
-      }
-      return entries;
+      return decodableEntries(db, rows);
     },
 
     /** The mirror row + its detail row, as the wire LocalMeal. */
@@ -298,13 +318,14 @@ export function createSqliteSyncStore(db: Db, options: SqliteSyncStoreOptions = 
       });
     },
 
-    /** Failed attempt: bump the attempt counter, retry time stays open. */
-    async markAttempts(opIds, lastError) {
+    /** Failed attempt (Swift `markFailed`): bump the attempt counter, set when the op is due again. */
+    async markAttempts(opIds, lastError, retryAt) {
       if (opIds.length === 0) return;
+      const retry = retryAt === null ? null : toIso(new Date(retryAt));
       for (const opId of opIds) {
         await db
           .update(pendingOps)
-          .set({ dispatchAttempts: sql`${pendingOps.dispatchAttempts} + 1` })
+          .set({ dispatchAttempts: sql`${pendingOps.dispatchAttempts} + 1`, nextRetryAt: retry })
           .where(eq(pendingOps.opId, opId));
       }
       void lastError; // pending_ops has no error column (Swift parity)
@@ -364,6 +385,26 @@ function mealFromRecord(record: MealRecord): Meal {
   };
 }
 
+/** Why a stored op cannot become a wire operation, or null when it can (Swift: the snapshot decode). */
+function undecodableReason(row: typeof pendingOps.$inferSelect): string | null {
+  if (row.tableName !== 'diary_entries') return `unsupported sync table ${row.tableName}`;
+  if (row.kind !== 'upsert' && row.kind !== 'tombstone') return `unsupported mutation kind ${row.kind}`;
+  try {
+    decodeDiaryEntrySnapshot(JSON.parse(row.snapshot));
+  } catch (error) {
+    return error instanceof Error ? error.message : 'the snapshot does not decode';
+  }
+  return null;
+}
+
+async function decodableEntries(db: Db, rows: Array<typeof pendingOps.$inferSelect>): Promise<OutboxEntry[]> {
+  const entries: OutboxEntry[] = [];
+  for (const row of rows) {
+    if (undecodableReason(row) === null) entries.push(await outboxEntryForRow(db, row));
+  }
+  return entries;
+}
+
 /**
  * Rebuilds the wire operation from the Swift tables: the op's meal fields
  * come from the mirror row + its detail row (the snapshot column carries the
@@ -387,6 +428,7 @@ async function outboxEntryForRow(db: Db, row: typeof pendingOps.$inferSelect): P
     state: row.quarantined ? 'quarantined' : 'pending',
     lastError: null,
     createdAt: fromIso(row.createdAt).getTime(),
+    nextRetryAt: row.nextRetryAt === null ? null : fromIso(row.nextRetryAt).getTime(),
   };
 }
 
