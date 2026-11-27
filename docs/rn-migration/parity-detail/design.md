@@ -1,61 +1,76 @@
-# Design parity detail (U-22)
+# Design parity detail (U-22, restyled to Ember in U-71)
 
-Per-component record of the CoachCalDesignSystem port (`apps/mobile/src/design`). Source of truth:
-`native/Modules/CoachCalDesignSystem/Sources/CoachCalDesignSystem/` (read in full). Test evidence:
-`apps/mobile/src/design/**/*.test.tsx`, run by `npm test`.
+Per-component record of the design system (`apps/mobile/src/design`). U-22 ported
+`native/Modules/CoachCalDesignSystem/Sources/CoachCalDesignSystem/` (read in full); U-71 restyled it to
+Ember: values come from `docs/design/ember/tokens.css`, the component mapping from
+`docs/design/ember/design-system.md`. Test evidence: `apps/mobile/src/design/**/*.test.tsx`, run by
+`npm test`. Findings: `docs/rn-migration/findings/U-71.md`.
+
+Ember canvas sections (`docs/design/ember/index.html` anchors): **#system** Design system, **#scan**
+Viewfinder / Analyzing / Review / Saved, **#core** Today / Diary / Progress / Coach, **#profile**
+Profile / Settings, **#billing** Quota / Plans / Cancel, **#onboarding** 9 steps, **#glance** Widgets and
+Live Activity. The PNG frames (`docs/design/ember/frames/`) are not in this branch: the column below
+names the canvas section and frame of the README table.
 
 ## Tokens and ED-safe (parity rows PL-06, PL-08)
 
 | Item | Swift source | RN file | Notes |
 |---|---|---|---|
-| CCSpace | Tokens.swift | `tokens.ts` `space` | 4-pt grid, exact |
-| CCRadius | Tokens.swift | `tokens.ts` `radius` | sm 8 / md 12 / lg 16 / xl 20 / full 9999 |
-| CCSize | Tokens.swift | `tokens.ts` `size` | tapTarget 44 … macroBarHeight 6 |
+| CCSpace | Tokens.swift | `tokens.ts` `space` | `--s1`..`--s12` as `space[1]`..`space[12]` (4-pt grid); earlier `xs`..`xl5` kept |
+| CCRadius | Tokens.swift | `tokens.ts` `radius` | Ember `--r-*`: sm 10 / md 14 / lg 20 / xl 28 / pill 999 (+ `full` 999, `button` 18) |
+| CCSize | Tokens.swift | `tokens.ts` `size` | `--tap` 44, `--btn` 56, `--shutter` 76, `--ring` 184, `--ring-stroke` 16; earlier keys kept (findings section 2); macroBarHeight 8 |
 | CCTypography | Tokens.swift | `tokens.ts` `typography` | roles → system text style points/weights (title 34/600 … tabLabel 11/500) |
-| 23 catalog colors | Colors.xcassets | `tokens.ts` `lightColors`/`darkColors` | light = "any", dark = "dark"; high-contrast not ported (findings) |
+| 38 Ember colors | `docs/design/ember/tokens.css` (`:root` / `.dark`) | `tokens.ts` `lightColors`/`darkColors` | every variable, light and dark; earlier keys are aliases (`legacyColorAliases`); high-contrast not ported (findings) |
 | CCScaledNumber | Tokens.swift | `components/ScaledNumber.tsx` | hero 56 / plan 64 bold, tabular-nums, allowFontScaling |
 | EdSafe.swift | EdSafe.swift | `edSafe.ts` | `edSafeMode()`, `edSafeHidden()`, `setEdSafeMode()`, `useEdSafeMode()`, `useEdSafeHidden()`; the only file exporting ED-safe functions (I7) |
 
-Token parity evidence: `src/design/__tests__/tokens.test.ts` (the value table read by hand from
-Tokens.swift and the colorsets, light and dark) and `src/design/__tests__/useTokens.test.tsx`
+Token parity evidence: `src/design/__tests__/tokens.test.ts` (reads `docs/design/ember/tokens.css`,
+compares every variable with `tokens.ts` light and dark; mutation-proven in both directions, findings
+section 7) and `src/design/__tests__/useTokens.test.tsx`
 (hook follows the scheme: light default, dark, null→light).
 ED-safe evidence: `src/design/__tests__/edSafe.test.ts` (off by default; flip → `edSafeHidden()`
 true; rendered component re-renders through `act`; no re-render on same-value set).
 
 ## Components (parity row PL-07)
 
-| Component (RN) | Swift type | Variants | ED-safe behavior | accessibility identifiers / labels | Test file |
-|---|---|---|---|---|---|
-| PrimaryButton | CCPrimaryButton + CCPrimaryButtonStyle | — (one style) | none | a11y role button, state disabled | `components/PrimaryButton.test.tsx` |
-| SecondaryButton | CCSecondaryButton + CCSecondaryButtonStyle | bordered | none | a11y role button | `components/SecondaryButton.test.tsx` |
-| DashedAddButton | CCDashedAddButton | — | none | default title "Add food" | `components/DashedAddButton.test.tsx` |
-| Card | CCCard | — | none | — | `components/Card.test.tsx` |
-| MacroBar | CCMacroBar | protein/carbs/fat/fiber | none (a11y-hidden, as in Swift) | hidden | `components/MacroBar.test.tsx` |
-| MacroMiniCard | CCMacroMiniCard | 4 macros | none | label "Protein 82 of 130 grams" | `components/MacroMiniCard.test.tsx` |
-| InsightCard | CCInsightCard | accent / info | none | — | `components/InsightCard.test.tsx` |
-| BadgeTile | CCBadgeTile | locked / earned | none | label "On fire, earned" / "Marathon, locked, 30-day streak" | `components/BadgeTile.test.tsx` |
-| StreakCard | CCStreakCard | — | none | label "12 day streak, 2 freezes left" | `components/StreakCard.test.tsx` |
-| SettingsRow | CCSettingsRow | with/without value | none | label "Daily target, 2,150" / label | `components/SettingsRow.test.tsx` |
-| SettingsGroup | CCSettingsGroup | — | none | — | `components/SettingsGroup.test.tsx` |
-| BannerNote | CCBannerNote | neutral / success / info; plain / markdown | none | — | `components/BannerNote.test.tsx` |
-| FoodRow | CCFoodRow | meta/kcal/compactBadge/syncPending | **hides the kcal value** while the mode is on (`useEdSafeMode`) | — | `components/FoodRow.test.tsx` |
-| SectionHeader | CCSectionHeader | — | none | a11y role header, uppercase + 0.55 spacing | `components/SectionHeader.test.tsx` |
-| ConfidenceBadge | CCConfidenceBadge | regular / compact | **keeps the badge** (AI accuracy is not food morality) | label "Confidence Low — review needed"; tiers High ≥0.85 / Medium ≥0.70 / Low <0.70 with exact label strings | `components/ConfidenceBadge.test.tsx` |
-| WarningChip | CCWarningChip | with/without addedKcal | **drops the kcal clause**: "Dressing not visible — review portion" instead of "— +160 kcal added (editable)" (`useEdSafeMode`) | label = the visible text | `components/WarningChip.test.tsx` |
-| Toast | CCToast | kcalText/undo/dismiss | **drops the kcal line** (`useEdSafeMode`) | a11y role alert; `toast:undo` pressable; auto-dismiss 4 s | `components/Toast.test.tsx` |
-| Sheet | CCSheet | — | none | grab-handle chrome only (presentation stays with the route) | `components/Sheet.test.tsx` |
-| ChartCard | CCChartCard + CCChartDescriptor | title/no-title | none | label "Trend. Day 0: 82.4, …" from `makeChartDescriptor` (no AXChartDescriptor in RN) | `components/ChartCard.test.tsx` |
-| OfflineBadge | CCOfflineBadge | — | none | label "Offline — syncs later" | `components/OfflineBadge.test.tsx` |
-| OptionCard | CCOptionCard | selected / unselected | none | label "Lose weight, A mild deficit, selected"; state selected | `components/OptionCard.test.tsx` |
-| ChipOption | CCChipOption | selected / unselected | none | state selected | `components/ChipOption.test.tsx` |
-| ProgressRail | CCProgressRail | — | none | label "58 percent complete" | `components/ProgressRail.test.tsx` |
-| WheelField | CCWheelField | generic items | none | label/value texts | `components/WheelField.test.tsx` |
-| Stepper | CCStepper | step/minimum | none | **identifiers `ccstepper.decrement` and `ccstepper.increment`** (identical to Swift); label = name; value "180 grams" | `components/Stepper.test.tsx` |
-| SearchField | CCSearchField | — | none | label = placeholder | `components/SearchField.test.tsx` |
-| QuickActionTile | CCQuickActionTile | highlighted / plain | none | label = title | `components/QuickActionTile.test.tsx` |
-| CalorieRing | CCCalorieRing | hero / compact / goal | **ring shows fraction-of-day** ("On track", "58% of day", label "On track") while the mode is on; otherwise remaining + "N calories remaining of M goal" (`useEdSafeMode`) | testID `calorie-ring:<variant>` | `components/CalorieRing.test.tsx` |
-| WeeklyReviewStats | CCWeeklyReviewStats | — | **swaps "% on target" and "kg this week" for "Weeks with all meals logged"** (`useEdSafeMode`); `visibleStats` and `kgValue` ported as pure functions | — | `components/WeeklyReviewStats.test.tsx` |
-| ScaledNumber | CCScaledNumber (Tokens.swift) | hero / planNumber | none | — | `components/ScaledNumber.test.tsx` |
+| Component (RN) | Swift type | Variants | ED-safe behavior | accessibility identifiers / labels | Test file | Ember section |
+|---|---|---|---|---|---|---|
+| PrimaryButton | CCPrimaryButton + CCPrimaryButtonStyle | — (one style) | none | a11y role button, state disabled | `components/PrimaryButton.test.tsx` | #system (`.btn.primary`, 56 pt, radius 18); used in #scan Review/Saved, #onboarding, #billing Plans |
+| SecondaryButton | CCSecondaryButton + CCSecondaryButtonStyle | bordered | none | a11y role button | `components/SecondaryButton.test.tsx` | #system (`.btn` secondary / bordered); #profile Settings detail |
+| DashedAddButton | CCDashedAddButton | — | none | default title "Add food" | `components/DashedAddButton.test.tsx` | #core Diary day (add food row) |
+| Card | CCCard | — | none | — | `components/Card.test.tsx` | #system (card, radius `--r-lg`); #core Today / Progress cards |
+| MacroBar | CCMacroBar | protein/carbs/fat/fiber | none (a11y-hidden, as in Swift) | hidden | `components/MacroBar.test.tsx` | #system (`.bar`, 8 pt); #core Today macros, #scan Review |
+| MacroMiniCard | CCMacroMiniCard | 4 macros | none | label "Protein 82 of 130 grams" | `components/MacroMiniCard.test.tsx` | #core Today (macro cards), #scan Saved |
+| InsightCard | CCInsightCard | accent / info | none | — | `components/InsightCard.test.tsx` | #core Today (insight edge), Coach |
+| BadgeTile | CCBadgeTile | locked / earned | none | label "On fire, earned" / "Marathon, locked, 30-day streak" | `components/BadgeTile.test.tsx` | #core Progress (achievements) |
+| StreakCard | CCStreakCard | — | none | label "12 day streak, 2 freezes left" | `components/StreakCard.test.tsx` | #core Today / Progress (streak) |
+| SettingsRow | CCSettingsRow | with/without value | none | label "Daily target, 2,150" / label | `components/SettingsRow.test.tsx` | #profile Profile, Settings |
+| SettingsGroup | CCSettingsGroup | — | none | — | `components/SettingsGroup.test.tsx` | #profile Profile, Settings |
+| BannerNote | CCBannerNote | neutral / success / info; plain / markdown | none | — | `components/BannerNote.test.tsx` | #profile (ED-Safe notes), #billing Quota reached |
+| FoodRow | CCFoodRow | meta/kcal/compactBadge/syncPending | **hides the kcal value** while the mode is on (`useEdSafeMode`) | — | `components/FoodRow.test.tsx` | #core Today (meals), Diary day; #profile Food search (ED-Safe) |
+| SectionHeader | CCSectionHeader | — | none | a11y role header, uppercase + 0.55 spacing | `components/SectionHeader.test.tsx` | #core Diary day, #profile Settings |
+| ConfidenceBadge | CCConfidenceBadge | regular / compact | **keeps the badge** (AI accuracy is not food morality) | label "Confidence Low — review needed"; tiers High ≥0.85 / Medium ≥0.70 / Low <0.70 with exact label strings | `components/ConfidenceBadge.test.tsx` | #system (`.badge`, own row); #scan Review (light, dark item needs review, ED-Safe) |
+| WarningChip | CCWarningChip | with/without addedKcal | **drops the kcal clause**: "Dressing not visible — review portion" instead of "— +160 kcal added (editable)" (`useEdSafeMode`) | label = the visible text | `components/WarningChip.test.tsx` | #scan Review (dark, item needs review) |
+| Toast | CCToast | kcalText/undo/dismiss | **drops the kcal line** (`useEdSafeMode`) | a11y role alert; `toast:undo` pressable; auto-dismiss 4 s | `components/Toast.test.tsx` | #core Today (undo toast), #scan Saved |
+| Sheet | CCSheet | — | none | grab-handle chrome only (presentation stays with the route) | `components/Sheet.test.tsx` | #system (sheets: medium/large detent, drag indicator); #core Diary day (large detent), #scan Review / Describe, #billing Quota reached |
+| ChartCard | CCChartCard + CCChartDescriptor | title/no-title | none | label "Trend. Day 0: 82.4, …" from `makeChartDescriptor` (no AXChartDescriptor in RN) | `components/ChartCard.test.tsx` | #core Progress (weight trend, weekly energy) |
+| OfflineBadge | CCOfflineBadge | — | none | label "Offline — syncs later" | `components/OfflineBadge.test.tsx` | #core Today (dark, offline) |
+| OptionCard | CCOptionCard | selected / unselected | none | label "Lose weight, A mild deficit, selected"; state selected | `components/OptionCard.test.tsx` | #onboarding (goal / option steps) |
+| ChipOption | CCChipOption | selected / unselected | none | state selected | `components/ChipOption.test.tsx` | #system (`.chip`, selected = accent fill); #onboarding, #scan serving chips |
+| ProgressRail | CCProgressRail | — | none | label "58 percent complete" | `components/ProgressRail.test.tsx` | #onboarding (step progress) |
+| WheelField | CCWheelField | generic items | none | label/value texts | `components/WheelField.test.tsx` | #onboarding (height / weight / age steps) |
+| Stepper | CCStepper | step/minimum | none | **identifiers `ccstepper.decrement` and `ccstepper.increment`** (identical to Swift); label = name; value "180 grams" | `components/Stepper.test.tsx` | #system (controls); #scan Review grams (identifiers kept) |
+| SearchField | CCSearchField | — | none | label = placeholder | `components/SearchField.test.tsx` | #profile Food search (ED-Safe) |
+| QuickActionTile | CCQuickActionTile | highlighted / plain | none | label = title | `components/QuickActionTile.test.tsx` | #core Today (quick actions) |
+| CalorieRing | CCCalorieRing | hero / compact / goal | **ring shows fraction-of-day** ("On track", "58% of day", label "On track") while the mode is on; otherwise remaining + "N calories remaining of M goal" (`useEdSafeMode`) | testID `calorie-ring:<variant>` | `components/CalorieRing.test.tsx` | #core Today (light, dark, ED-Safe): 184 pt ring, 16 pt stroke; #system rings |
+| WeeklyReviewStats | CCWeeklyReviewStats | — | **swaps "% on target" and "kg this week" for "Weeks with all meals logged"** (`useEdSafeMode`); `visibleStats` and `kgValue` ported as pure functions | — | `components/WeeklyReviewStats.test.tsx` | #core Progress / Coach (weekly review, ED-Safe variant) |
+| ScaledNumber | CCScaledNumber (Tokens.swift) | hero / planNumber | none | — | `components/ScaledNumber.test.tsx` | #system (type: hero number); #core Today ring center |
+| DestructiveButton | `Button(role: .destructive)` on `ccErrorTint` (new in U-71) | — | none | a11y role button; `action` required | `components/DestructiveButton.test.tsx` | #system (`.btn.destructive`); #billing Cancel flow ("Cancel subscription" in the dock) |
+| EmberCard | the signature dark hero card, `--cc-ember` (new in U-71) | glow on / off | none | testID `ember-card`, `ember-card:glow` | `components/EmberCard.test.tsx` | #system (ember tokens), #core Today (hero card, light, dark, ED-Safe) |
+| GramsField | `GramsField` of the component mapping (new in U-71) | with / without serving chips | none | testIDs `scan.grams.<id>`, `.decrement`, `.increment`, `.field` | `components/GramsField.test.tsx` | #system (Grams control), #scan Review (light, dark, ED-Safe) |
+
+All rows above also read colors only from `useTokens()` (no hex under `components/`; `EmberRestyle.test.tsx`
+checks the restyled set against the Ember values in light and dark).
 
 ## Not ported
 
@@ -64,6 +79,10 @@ true; rendered component re-renders through `act`; no re-render on same-value se
 | CCTabBar | NativeTabs (expo-router) renders the tab bar in the app shell; the UITabBarAppearance modifier has no RN equivalent to port |
 | ScanFAB (Shell.swift) | App-shell component, not this unit (per brief) |
 | high-contrast colorsets | No RN increased-contrast trigger wired; light/dark ported (findings) |
+| SF Pro Rounded (`--cc-font-round`) | not expressible by RN `fontFamily`; exported as a string only |
+| optional ruler `Slider` of the Grams control | no slider package; stepper + field + chips cover it |
+| `.sensoryFeedback` haptics | no haptics package installed; follow-up |
+| Sheet native detents | the route passes `sheetAllowedDetents`; `Sheet` has an in-view `detent` cap (`medium` 0.5, `large` 0.92) |
 
 ## Helper types
 
@@ -84,13 +103,24 @@ true; rendered component re-renders through `act`; no re-render on same-value se
 
 Every `accessibilityIdentifier` in the Swift design system: `ccstepper.decrement`,
 `ccstepper.increment` (Controls.swift). Both are `testID` on the RN Stepper buttons, identical
-strings. (`shell.fab` in MainShell.swift belongs to the app shell.) All other identifiers in the
-old app are set on screens, not on DS components.
+strings, unchanged by U-71. (`shell.fab` in MainShell.swift belongs to the app shell.) All other
+identifiers in the old app are set on screens, not on DS components.
+
+Added by U-71 (new testIDs, no existing one changed): `scan.grams.<id>`, `scan.grams.<id>.decrement`,
+`scan.grams.<id>.increment`, `scan.grams.<id>.field` (GramsField); `ember-card`, `ember-card:glow`
+(EmberCard); `sheet:grabber` (Sheet); `confidence-badge-row` and `confidence-badge-row:compact`
+(ConfidenceBadge, next to the unchanged `confidence-badge` / `confidence-badge:compact`).
 
 ## ED-safe sweep (I7)
 
 `grep -rniE 'kcal|calorie' apps/mobile/src/design/components -l`:
 FoodRow.{tsx,test.tsx}, WarningChip.{tsx,test.tsx}, Toast.{tsx,test.tsx}, CalorieRing.{tsx,test.tsx},
-WeeklyReviewStats.tsx — every one of the five source files calls `useEdSafeMode()`.
-`grep -rln 'edSafe' apps/mobile/src --include='*.ts' --include='*.tsx'` outside `src/design`
-prints nothing.
+WeeklyReviewStats.tsx — every one of the five source files calls `useEdSafeMode()`. Since U-71 the same
+grep also matches `EmberCard.tsx`, `GramsField.tsx` and `EdSafeCollapse.tsx`, on comment lines only
+(none renders a calorie number; `EdSafeCollapse` is the wrapper features use).
+Outside `src/design`, `grep -rln edSafe apps/mobile/src` now lists `app/settings.tsx`, `app/debug.tsx`
+and `app/scan/index.tsx`: they import the design module's API (wiring from other units, untouched by
+U-71). The policy itself still lives only in `edSafe.ts` and the components. U-71 added no ED-safe
+logic: EmberCard, GramsField and DestructiveButton show no calorie number, ConfidenceBadge still
+stays on in the mode, and CalorieRing keeps its fraction-of-day branch (the `onEmber` option only
+changes colors).
