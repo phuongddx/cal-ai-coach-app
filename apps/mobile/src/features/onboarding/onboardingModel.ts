@@ -10,9 +10,10 @@
  * subscribe with `useSyncExternalStore(model.subscribe, model.getRevision)`
  * and read the fields directly — the RN counterpart of Swift's `@Observable`.
  *
- * U-73: the generating step no longer runs a timed window or a percent
- * readout (the Ember frame shows the real formula lines — no fake progress),
- * so generation computes and lands the reveal synchronously. The step-7
+ * U-73: the generating step shows the real formula lines — no fake progress —
+ * and, since stage A2, it HOLDS until the user taps its primary button
+ * ("See your plan"): `finishGeneration` computes and stores but no longer
+ * pushes the reveal, `seePlan()` is the only way past the step. The step-7
  * ED-Safe switch writes the app-wide stored policy through the injected key
  * and writer, then applies the design flag — the Settings wellness toggle's
  * exact order, with the key literal owned by the route file (invariant I7:
@@ -114,6 +115,12 @@ export class OnboardingModel {
   birthYear = DEFAULT_BIRTH_YEAR;
   dietStyle = 'Standard';
   path: OnboardingStep[] = ['valueHero'];
+  /**
+   * The raw pace the user last asked for, before the engine's clamp — the pace
+   * segment's selection reads this (the stored `requestedPaceKgPerWeek` holds
+   * the engine's clamped result, which can match no segment option).
+   */
+  requestedPaceRaw: number | null = 0.5;
 
   private readonly now: () => Date;
   private readonly saveTarget: (target: UserTarget) => Promise<void>;
@@ -251,12 +258,13 @@ export class OnboardingModel {
     this.draft.goal = goal;
     if (goal === 'maintain' || goal === 'habit') {
       this.draft.requestedPaceKgPerWeek = null;
+      this.requestedPaceRaw = null;
       this.paceClampedState = false;
     } else {
       // Always land on an engine-clamped value — re-clamping only when set
       // let the maintain→lose roundtrip keep nil, so the slider displayed
       // 0.50 while the engine computed (and persisted) pace 0.
-      this.setPace(this.draft.requestedPaceKgPerWeek ?? 0.5);
+      this.setPace(this.requestedPaceRaw ?? 0.5);
     }
     this.touch();
   }
@@ -300,9 +308,11 @@ export class OnboardingModel {
     this.touch();
   }
 
-  // The slider value always lands on the engine's clamped result, so the knob
-  // snaps back when the requested pace is unsafe.
+  // The stored value always lands on the engine's clamped result; the raw
+  // request is kept for the pace segment's selection (stage A2), which shows
+  // the option the user picked even when the engine clamps it.
   setPace(requested: number): void {
+    this.requestedPaceRaw = requested;
     this.draft.requestedPaceKgPerWeek = requested;
     const computed = TargetsEngine.targets(this.draft);
     this.draft.requestedPaceKgPerWeek = computed.paceKgPerWeek;
@@ -363,6 +373,18 @@ export class OnboardingModel {
       fatG: computed.fatG,
       floored: computed.floorsApplied,
     };
+    // The step holds: the reveal lands only when the user taps the step's
+    // primary button (seePlan, stage-A2 decision 2) — no auto-advance.
+    this.touch();
+  }
+
+  /**
+   * The generating step's primary button ("See your plan"): the only way past
+   * the step. A no-op anywhere else and before the plan is computed.
+   */
+  seePlan(): void {
+    if (this.currentStep !== 'generating') return;
+    if (this.revealState === null) return;
     this.path.push('planReveal');
     this.touch();
   }

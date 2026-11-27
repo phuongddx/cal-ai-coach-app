@@ -16,8 +16,8 @@ in `apps/mobile`.
 | OnboardingCopy (in OnboardingModel.swift) | `features/onboarding/onboardingCopy.ts` | Locked strings verbatim; key names deliberately avoid the DS policy API names (I7 / findings §5) |
 | ValueHeroView.swift (48) | `features/onboarding/ValueHeroScreen.tsx` | OB-02 |
 | GoalPickerView.swift (40) | `features/onboarding/GoalPickerScreen.tsx` | OB-04; selection state lives in the model |
-| BodyMetricsView.swift (83) | `features/onboarding/BodyMetricsScreen.tsx` | OB-06; unit toggle is absent in Swift too (kg/cm fixed); clamps via the wheel ranges |
-| GoalWeightPaceView.swift (110) | `features/onboarding/GoalWeightPaceScreen.tsx` + `PaceSlider.tsx` | OB-07; pace options always engine-clamped |
+| BodyMetricsView.swift (83) | `features/onboarding/BodyMetricsScreen.tsx` | OB-06; U-73 A2: height/weight are the design system's typed FillFields; the DOB wheel stays with the gate; unit toggle is absent in Swift too (kg/cm fixed) |
+| GoalWeightPaceView.swift (110) | `features/onboarding/GoalWeightPaceScreen.tsx` | OB-07; U-73 A2: typed goal-weight field, the pace segment (0.25/0.50/1.00, engine-clamped on write) replaced `PaceSlider.tsx` (removed) |
 | ActivityDietView.swift (73) | `features/onboarding/ActivityDietScreen.tsx` | OB-05 |
 | ProjectionView.swift (218) | `features/onboarding/ProjectionScreen.tsx` | OB-10; kg + weeks only |
 | PrivacyHealthView.swift (59) | `features/onboarding/PrivacyHealthScreen.tsx` | OB-03; the button runs the injected JIT request |
@@ -32,12 +32,12 @@ in `apps/mobile`.
 |---|---|---|---|---|
 | OB-01 | Flow + model: step order, locked copy, generation, persist | OnboardingModel.swift, OnboardingFlowView.swift | onboardingModel.ts, OnboardingFlowView.tsx, index.tsx | `onboardingModel.test.tsx` (twin + extras), `OnboardingFlowView.test.tsx` (UI-test walk) |
 | OB-02 | Value hero copy incl. ED-safe line, "Get started" CTA | ValueHeroView.swift | ValueHeroScreen.tsx | `ValueHeroScreen.test.tsx` (+ twin case 2) |
-| OB-03 | JIT HealthKit ask; denial shows footnote, grant silent; "Skip for now" CTA; U-73 adds the ED-Safe switch (stored '1'/'0', applied at once) | PrivacyHealthView.swift | PrivacyHealthScreen.tsx, healthAccess.ts | `PrivacyHealthScreen.test.tsx` (granted/denied + the switch), twin cases |
+| OB-03 | JIT HealthKit ask; denial shows footnote, grant silent; "Skip for now" CTA; U-73 adds the ED-Safe switch (stored '1'/'0', applied at once; a failed write shows a banner) | PrivacyHealthView.swift | PrivacyHealthScreen.tsx, healthAccess.ts | `PrivacyHealthScreen.test.tsx` (granted/denied + the switch + the failed write), twin cases |
 | OB-04 | Goal picker, single select, selection in the model | GoalPickerView.swift | GoalPickerScreen.tsx | `GoalPickerScreen.test.tsx` (+ twin case 1) |
 | OB-05 | Activity level cards + diet chips, copy verbatim | ActivityDietView.swift | ActivityDietScreen.tsx | `ActivityDietScreen.test.tsx` |
 | OB-06 | Body metrics: sex chips, three wheels, under-18 gate | BodyMetricsView.swift | BodyMetricsScreen.tsx | `BodyMetricsScreen.test.tsx` (+ twin cases 3–4) |
-| OB-07 | Goal weight hero + wheel; pace slider clamped by the engine; safety-floor banner on the caution tokens (U-73) | GoalWeightPaceView.swift | GoalWeightPaceScreen.tsx, PaceSlider.tsx | `GoalWeightPaceScreen.test.tsx` (+ twin cases 5–7) |
-| OB-08 | U-73: indeterminate ring + formula lines the engine computed (no percent, no window); card collapses under ED-safe; instant reveal | GeneratingPlanView.swift | GeneratingPlanScreen.tsx | `GeneratingPlanScreen.test.tsx` |
+| OB-07 | Goal weight hero + typed field; pace segment (Relaxed 0.25 / Steady 0.50 / Faster 1.00, engine-clamped on write, the card prints the engine's pace); safety-floor banner on the caution tokens | GoalWeightPaceView.swift | GoalWeightPaceScreen.tsx | `GoalWeightPaceScreen.test.tsx` (+ twin cases 5–7) |
+| OB-08 | U-73: indeterminate ring + formula lines the engine computed (no percent, no window); stage A2: the step HOLDS until "See your plan"; card collapses under ED-safe and the design system's balancing note shows | GeneratingPlanView.swift | GeneratingPlanScreen.tsx | `GeneratingPlanScreen.test.tsx` |
 | OB-09 | Plan reveal: kcal hero on the ember card (U-73), macro rings, weekly range, edit panel, persist; ED-safe collapses hero card and range | PlanRevealView.swift | PlanRevealScreen.tsx, MacroRing.tsx | `PlanRevealScreen.test.tsx` (+ twin case 8, finish cases, ED-safe case) |
 | OB-10 | Projection: kg + weeks only, no calorie strings; labeled gridlines + 35% band (U-73) | ProjectionView.swift | ProjectionScreen.tsx | `ProjectionScreen.test.tsx` (renders every string and keeps the unit out) |
 
@@ -68,12 +68,13 @@ Static identifiers:
 |---|---|---|
 | `onboarding.getStarted` | hero CTA (View wrapper over the DS PrimaryButton) | value hero |
 | `onboarding.sexFemale` / `onboarding.sexMale` | sex chips (View wrappers over DS ChipOption) | body metrics |
-| `onboarding.heightField` / `onboarding.weightField` / `onboarding.dobField` | wheel fields (View wrappers over DS WheelField) | body metrics |
+| `onboarding.heightField` / `onboarding.weightField` / `onboarding.dobField` | U-73 A2: the two typed fields carry them on the design system's FillField (input, `.label`, `.unit`); the DOB wheel keeps its View wrapper | body metrics |
 | `onboarding.dobGate` | under-18 footnote Text | body metrics |
 | `onboarding.goalWeightHero` | goal weight hero row (a11y label "Goal weight N kilograms") | goal weight & pace |
-| `onboarding.goalWeightField` | goal weight wheel | goal weight & pace |
-| `onboarding.paceValue` | pace value Text ("0.50 kg/wk") | goal weight & pace |
-| `onboarding.paceSlider` | PaceSlider (`adjustable`; a11y value "N kilograms per week") | goal weight & pace |
+| `onboarding.goalWeightField` | goal weight typed field (U-73 A2: the design system's FillField) | goal weight & pace |
+| `onboarding.paceValue` | pace value Text (the engine's returned pace, "0.45 kg/wk") | goal weight & pace |
+| `onboarding.paceSegment` (+ `.relaxed` / `.steady` / `.faster`) | the pace segment (U-73 A2; replaced `onboarding.paceSlider`) | goal weight & pace |
+| `onboarding.edSafeError` | the failed ED-Safe policy write's banner (U-73 A2) | privacy & health |
 | `onboarding.safetyFloor` | safety-floor BannerNote (success, markdown) | goal weight & pace, plan reveal |
 | `onboarding.activityHeader` / `onboarding.dietHeader` | section headline Texts | activity & diet |
 | `onboarding.privacyPromise` | privacy promise BannerNote (success) | privacy & health |
@@ -101,15 +102,17 @@ Templated identifiers (same strings as Swift):
 | Pattern | Values | Screen |
 |---|---|---|
 | `onboarding.title.<title>` | the scaffold title of each step ("Track calories with a photo", "What's your goal?", "About you", "Your target", "Lifestyle", "Your projection", "Privacy & Health") | every scaffold step |
-| `onboarding.continue` | the pinned CTA of every step ("Continue"; "Skip for now" on privacy & health) | every step |
+| `onboarding.continue` | the pinned CTA of every step ("Continue"; "Skip for now" on privacy & health; "See your plan" on generating — U-73 A2) | every step |
 | `onboarding.goalCard.<goal>` | lose, maintain, gain, habit | goal picker |
 | `onboarding.activityCard.<level>` | sedentary, light, moderate, active, athlete | activity & diet |
 | `onboarding.dietChip.<lowercased style without spaces>` | standard, highprotein, vegetarian, vegan, keto | activity & diet |
 | `onboarding.genStep.<index>` | **removed in U-73** (the timed checklist is gone; the formula lines replaced it) | — |
 
 DS-owned identifiers riding along (not onboarding's, but on these screens):
-`option-card:<title>`, `chip-option:<title>`, `wheel-field:<label>`,
-`wheel-value:<label>`, `wheel-scroll:<label>`, `banner:<variant>`,
+`option-card:<title>` (+ the U-71b `option-card:<title>:check` on the goal
+cards), `chip-option:<title>`, `wheel-field:<label>`, `wheel-value:<label>`,
+`wheel-scroll:<label>` (the DOB wheel), `banner:<variant>`,
+`ed-safe-note` (the generating step's ED-safe variant, U-73 A2),
 `progress-rail`, `settings-row:<label>`, `ccstepper.*` (not used here).
 U-73 note: step 4's floor banner is no longer a `BannerNote`, so `banner:success`
 no longer renders there — the banner is the feature's caution surface under the
@@ -125,10 +128,13 @@ the projection disclaimer and the reveal banners.
    caption stay). Test: `PlanRevealScreen.test.tsx` "renders neither the kcal
    hero nor the weekly range in ED-safe mode". See
    findings/U-41.md §OB-09.
-2. **A11y-hidden caption rows** (pace axis captions, "Today / 12 weeks"):
+2. **A11y-hidden caption rows** (projection "Today / 12 weeks"):
    RNTL v14 queries mirror the accessibility tree, so the hiding flag makes
-   the locked copy unassertable; both rows render without it. VoiceOver reads
-   them where the Swift app stayed silent. See findings/U-31.md §4.
+   the locked copy unassertable; the projection row renders without it.
+   VoiceOver reads it where the Swift app stayed silent. The pace axis
+   captions (Slow / Recommended / Fast) are gone with the slider — the pace
+   segment replaced them in U-73 A2. See findings/U-31.md §4 and
+   findings/U-73.md §9.
 3. **Projection chart axis labels**: the Swift automatic axis value labels
    are not drawn; the same numbers appear in the start/goal header and the
    "Today / 12 weeks" caption. Band, line, endpoints and gridlines port.

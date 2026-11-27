@@ -52,8 +52,9 @@ describe('onboarding flow (OnboardingFlowTests twin)', () => {
     expect(await screen.findByTestId('onboarding.dobField')).toBeOnTheScreen();
     await pressContinue();
 
-    // 4. Goal Weight & Pace — the slider renders; clamping stays engine-owned.
-    expect(await screen.findByTestId('onboarding.paceSlider')).toBeOnTheScreen();
+    // 4. Goal Weight & Pace — the pace segment renders (stage A2 swapped the
+    //    slider for it); clamping stays engine-owned.
+    expect(await screen.findByTestId('onboarding.paceSegment')).toBeOnTheScreen();
     await pressContinue();
 
     // 5. Activity & Diet
@@ -72,7 +73,14 @@ describe('onboarding flow (OnboardingFlowTests twin)', () => {
     expect(await screen.findByTestId('onboarding.healthConnectNote')).toBeOnTheScreen();
     await pressContinue('Skip for now');
 
-    // 8. Generating → Plan Reveal (animations disabled: instant flip).
+    // 8. Generating — the step HOLDS: the formula card shows, the path stays,
+    //    and only "See your plan" (stage A2, decision 2) advances to step 9.
+    expect(await screen.findByTestId('onboarding.generating')).toBeOnTheScreen();
+    expect(screen.getByText('Resting energy (Mifflin-St Jeor)')).toBeOnTheScreen();
+    expect(model.path[model.path.length - 1]).toBe('generating');
+    await userEvent.press(screen.getByRole('button', { name: 'See your plan' }));
+
+    // 9. Plan Reveal.
     expect(await screen.findByTestId('plan.reveal')).toBeOnTheScreen();
 
     // Handoff: targets persisted through saveTarget → the flow calls onFinished.

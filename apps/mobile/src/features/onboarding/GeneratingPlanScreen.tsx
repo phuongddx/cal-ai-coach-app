@@ -1,13 +1,13 @@
 /**
- * GeneratingPlanView.swift — the Ember frame's honest step: the indeterminate
- * ring over the locked title, and the formula lines the engine just computed —
- * Mifflin-St Jeor resting energy, the activity multiplier, the pace
- * adjustment, the floored daily target. No percent readout and no minimum
- * window (both were numbers the app invented): the engine computes
- * synchronously and the flow lands the reveal at once. The card collapses
- * under ED-safe mode through the design system's EdSafeCollapse (invariant
- * I7); the frame's ED-safe-only "Balancing your meals" line waits for the
- * design system's note component (findings U-73, batch-2 swap).
+ * GeneratingPlanView.swift — the Ember frame's honest step, and since stage A2
+ * it HOLDS: the indeterminate ring over the locked title, the formula lines
+ * the engine just computed, and a pinned primary button — "See your plan" —
+ * that is the only way to the reveal (`model.seePlan`; no auto-advance, the
+ * owner's decision 2). No percent readout and no minimum window: both were
+ * numbers the app invented. The formula card collapses under ED-safe mode
+ * through the design system's `EdSafeCollapse`, and the step's ED-safe variant
+ * is the design system's `EdSafeNote` ("Balancing your meals") plus the same
+ * button — the branch lives in the design components (invariant I7).
  */
 
 import { useEffect } from 'react';
@@ -17,7 +17,16 @@ import { SymbolView } from 'expo-symbols';
 
 import { ACTIVITY_MULTIPLIER, TargetsEngine } from '@coachcal/core';
 
-import { EdSafeCollapse, ProgressRail, size, space, typography, useTokens } from '../../design';
+import {
+  EdSafeCollapse,
+  EdSafeNote,
+  PrimaryButton,
+  ProgressRail,
+  size,
+  space,
+  typography,
+  useTokens,
+} from '../../design';
 
 import { LEVELS } from './ActivityDietScreen';
 import { grouped } from './format';
@@ -115,6 +124,17 @@ export function GeneratingPlanScreen({ model }: { model: OnboardingModel }) {
             <FormulaRow label="Daily target" value={`${grouped(targets.dailyKcal)} kcal`} accent />
           </View>
         </EdSafeCollapse>
+        {/* The ED-safe variant: the design component renders only while the mode
+            is on (its own branch and its own `ed-safe-note` identifier), and the
+            feature holds no branch. */}
+        <EdSafeNote title="ED-Safe mode" body="Balancing your meals" />
+      </View>
+      <View style={styles.ctaWrap}>
+        {/* This step's pinned CTA carries the scaffold's continue identifier; it
+            is the only way to the reveal (decision 2: no auto-advance). */}
+        <View testID="onboarding.continue">
+          <PrimaryButton title="See your plan" action={() => model.seePlan()} />
+        </View>
       </View>
     </View>
   );
@@ -184,4 +204,10 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   separator: { height: StyleSheet.hairlineWidth, alignSelf: 'stretch' },
+  ctaWrap: {
+    gap: space.sm,
+    paddingHorizontal: space.lg,
+    paddingTop: space.sm,
+    paddingBottom: space.xl3,
+  },
 });

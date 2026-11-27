@@ -176,8 +176,8 @@ describe('OnboardingContractTests (twin)', () => {
   });
 });
 
-// Brief additions beyond the 8 Swift twins: the step order over the typed list,
-// and the granted / denied HealthKit paths of the privacy screen.
+  // Brief additions beyond the 8 Swift twins: the step order over the typed list,
+  // and the granted / denied HealthKit paths of the privacy screen.
 describe('onboarding model (brief additions)', () => {
   it('advances through the nine steps in the locked order and lands on plan reveal', () => {
     const model = makeModel();
@@ -204,10 +204,38 @@ describe('onboarding model (brief additions)', () => {
       'generating',
     ]);
     model.finishGenerationForTesting();
+    // Stage A2 (decision 2): the generating step holds — the computed reveal
+    // does not advance the path by itself.
+    expect(model.path[model.path.length - 1]).toBe('generating');
+    expect(model.reveal).not.toBeNull();
+    // seePlan is the only way past: it lands the reveal and is a no-op after.
+    model.seePlan();
     expect(model.path[model.path.length - 1]).toBe('planReveal');
+    model.seePlan();
+    expect(model.path).toHaveLength(9);
     // advance() past the reveal is a no-op: the flow ends there.
     model.advance();
     expect(model.path).toHaveLength(9);
+  });
+
+  it('the pace segment keeps the picked option and stores the engine value', () => {
+    const model = makeModel();
+    // The default request is Steady (0.5), today's default.
+    expect(model.requestedPaceRaw).toBe(0.5);
+    // The engine clamps 0.5 to 0.45 for the default draft, and the stored
+    // value is the engine's — one of today's values.
+    model.setPace(0.5);
+    expect(model.requestedPaceRaw).toBe(0.5);
+    expect(model.draft.requestedPaceKgPerWeek).toBe(0.45);
+    expect(model.paceClamped).toBe(true);
+    // The other two options store their engine values too.
+    model.setPace(0.25);
+    expect(model.requestedPaceRaw).toBe(0.25);
+    expect(model.draft.requestedPaceKgPerWeek).toBe(0.25);
+    model.setPace(1.0);
+    expect(model.requestedPaceRaw).toBe(1.0);
+    // 1.0 clamps to the safe supported pace for the default draft.
+    expect(model.draft.requestedPaceKgPerWeek).toBe(0.45);
   });
 
   it('the granted HealthKit path shows no footnote and lets the user continue', async () => {

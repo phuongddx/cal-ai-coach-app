@@ -112,4 +112,23 @@ describe('privacy and health screen', () => {
     // The design flag applied at once: the switch's value follows the live flag.
     await waitFor(() => expect(edSafeSwitch.props.value).toBe(true));
   });
+
+  it('a failed policy write shows the banner and the switch stays where it was', async () => {
+    const writeSetting = jest.fn(async () => {
+      throw new Error('disk full');
+    });
+    const model = makeModel(async () => 'denied', { writeSetting });
+    await render(<PrivacyHealthScreen model={model} />);
+
+    expect(screen.queryByTestId('onboarding.edSafeError')).toBeNull();
+    const edSafeSwitch = screen.getByTestId('onboarding.edSafeToggle');
+    await act(async () => {
+      fireEvent(edSafeSwitch, 'valueChange', true);
+    });
+    // The write failed: the banner says so and the flag never applied, so the
+    // switch shows the state that is really applied (off).
+    expect(await screen.findByTestId('onboarding.edSafeError')).toBeOnTheScreen();
+    expect(screen.getByText('disk full')).toBeOnTheScreen();
+    expect(edSafeSwitch.props.value).toBe(false);
+  });
 });

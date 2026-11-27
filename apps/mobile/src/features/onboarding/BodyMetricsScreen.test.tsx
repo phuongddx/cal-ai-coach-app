@@ -16,7 +16,7 @@ jest.mock('react/jsx-runtime', () => {
   return jest.requireActual(`${root}/react/jsx-runtime`);
 });
 
-import { render, screen, userEvent } from '@testing-library/react-native';
+import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
 
 import { BodyMetricsScreen } from './BodyMetricsScreen';
 import { createOnboardingModel } from './onboardingModel';
@@ -37,26 +37,39 @@ function makeModel(birthYear = 1995) {
 }
 
 describe('body metrics screen', () => {
-  it('shows the locked copy, the sex chips and the three wheel fields with identifiers', async () => {
+  it('shows the locked copy, the sex chips, the typed fields and the DOB wheel with identifiers', async () => {
     await render(<BodyMetricsScreen model={makeModel()} />);
 
     expect(screen.getByText('About you')).toBeOnTheScreen();
     expect(screen.getByText('Used to calculate your targets')).toBeOnTheScreen();
     expect(screen.getByTestId('onboarding.sexFemale')).toBeOnTheScreen();
     expect(screen.getByTestId('onboarding.sexMale')).toBeOnTheScreen();
-    expect(screen.getByTestId('onboarding.heightField')).toBeOnTheScreen();
-    expect(screen.getByTestId('onboarding.weightField')).toBeOnTheScreen();
+    // The typed fields hold the draft's values with their units (165 cm / 70 kg).
+    expect(screen.getByTestId('onboarding.heightField')).toHaveDisplayValue('165');
+    expect(screen.getByTestId('onboarding.heightField.label')).toBeOnTheScreen();
+    expect(screen.getByTestId('onboarding.heightField.unit')).toHaveTextContent('cm');
+    expect(screen.getByTestId('onboarding.weightField')).toHaveDisplayValue('70');
+    expect(screen.getByTestId('onboarding.weightField.label')).toBeOnTheScreen();
+    expect(screen.getByTestId('onboarding.weightField.unit')).toHaveTextContent('kg');
+    // The DOB wheel stays with the under-18 gate (behavior the brief keeps).
     expect(screen.getByTestId('onboarding.dobField')).toBeOnTheScreen();
-    // Wheel labels and default selections (draft 165 cm / 70 kg, born 1995);
-    // each value shows twice: the wheel's value line and its selected row.
-    expect(screen.getByText('Height')).toBeOnTheScreen();
-    expect(screen.getByText('Current weight')).toBeOnTheScreen();
     expect(screen.getByText('Date of birth')).toBeOnTheScreen();
-    expect(screen.getAllByText('165 cm').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('70 kg').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('1995').length).toBeGreaterThanOrEqual(1);
     // No gate footnote for an adult.
     expect(screen.queryByText('Must be 18+ to use CoachCal')).toBeNull();
+  });
+
+  it('the typed height and weight write through the model', async () => {
+    const model = makeModel();
+    await render(<BodyMetricsScreen model={model} />);
+
+    await fireEvent.changeText(screen.getByTestId('onboarding.heightField'), '172');
+    expect(model.draft.heightCm).toBe(172);
+    await fireEvent.changeText(screen.getByTestId('onboarding.weightField'), '80.6');
+    expect(model.draft.weightKg).toBe(80.6);
+    // The fields show exactly what was typed.
+    expect(screen.getByTestId('onboarding.heightField')).toHaveDisplayValue('172');
+    expect(screen.getByTestId('onboarding.weightField')).toHaveDisplayValue('80.6');
   });
 
   it('the sex chips write through the model', async () => {

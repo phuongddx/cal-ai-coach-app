@@ -79,7 +79,9 @@ export function PrivacyHealthScreen({ model }: { model: OnboardingModel }) {
             </View>
             {/* The stored write happens first (the model records a failure and
                 rethrows; this catch is the handler's guard so no rejection is
-                ever unhandled), then the design flag applies at once. */}
+                ever unhandled), then the design flag applies at once. The
+                switch's value IS the design flag, so it shows the state that
+                is really applied. */}
             <Switch
               value={safePolicyOn}
               onValueChange={(on) => {
@@ -90,6 +92,14 @@ export function PrivacyHealthScreen({ model }: { model: OnboardingModel }) {
             />
           </View>
         </SettingsGroup>
+        {model.safePolicyWriteError !== null && (
+          <View testID="onboarding.edSafeError">
+            {/* RN-only, as in Settings: the stored write is an async database
+                write that can fail, and the screen says so instead of silently
+                keeping a dead switch. */}
+            <BannerNote text={model.safePolicyWriteError} />
+          </View>
+        )}
         <View style={styles.promise}>
           <SectionHeader title="Privacy promise" />
           <View testID="onboarding.privacyPromise">
