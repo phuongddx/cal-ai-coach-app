@@ -6,9 +6,8 @@
  * Today surface (U-33); owned here by DY-07.
  */
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
 
-import { Sheet, size, space, useTokens } from '../../../design';
+import { Icon, Sheet, SheetHeader, size, space, useTokens } from '../../../design';
 
 import { glassesLogged, GLASS_ML } from '../waterModel';
 
@@ -31,7 +30,7 @@ export function WaterDropletTile() {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <SymbolView name="drop.fill" size={16} tintColor={colors.infoInk} />
+      <Icon name="drop" size={16} color={colors.infoInk} />
     </View>
   );
 }
@@ -63,13 +62,12 @@ export function WaterCard({ waterMl, glasses, onTap }: WaterCardProps) {
           {`${logged} of ${glasses} glasses`}
         </Text>
       </View>
-      <SymbolView name="chevron.right" size={12} weight="semibold" tintColor={colors.textTertiary} />
+      <Icon name="chev" size={12} color={colors.textTertiary} />
     </Pressable>
   );
 }
 
-export type WaterLogSheetProps = {
-  totalMl: number;
+export type WaterLogSheetProps = {  totalMl: number;
   glasses: number;
   onQuickAdd: (deltaMl: number) => void;
   onDismiss: () => void;
@@ -80,18 +78,7 @@ export function WaterLogSheet({ totalMl, glasses, onQuickAdd, onDismiss }: Water
   const logged = glassesLogged(totalMl);
   return (
     <Sheet>
-      <View style={styles.header}>
-        <Text style={[typography.heading, { color: colors.textPrimary }]}>Water</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          testID="water.close"
-          onPress={onDismiss}
-          style={styles.closeButton}
-        >
-          <SymbolView name="xmark" size={14} weight="semibold" tintColor={colors.textSecondary} />
-        </Pressable>
-      </View>
+      <SheetHeader title="Water" onClose={onDismiss} testID="water" />
 
       <View style={styles.summaryRow}>
         <WaterDropletTile />
@@ -146,7 +133,7 @@ function QuickAddTile({
       onPress={() => onQuickAdd(delta)}
       style={[styles.tile, { backgroundColor: colors.fill, borderRadius: radius.md }]}
     >
-      <SymbolView name={symbol} size={15} weight="semibold" tintColor={colors.textPrimary} />
+      <Icon name={symbol} size={15} color={colors.textPrimary} />
       <Text style={styles.tileTitle}>{title}</Text>
     </Pressable>
   );
@@ -155,8 +142,6 @@ function QuickAddTile({
 const styles = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: space.lg, borderWidth: 1, padding: space.lg },
   cardText: { flex: 1, gap: 2 },
-  header: { flexDirection: 'row', alignItems: 'center' },
-  closeButton: { marginLeft: 'auto', width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   summaryRow: { flexDirection: 'row', alignItems: 'center', gap: space.lg, paddingVertical: space.sm },
   summaryText: { gap: 4 },
   tileRow: { flexDirection: 'row', gap: space.sm },

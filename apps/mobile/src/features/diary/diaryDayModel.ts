@@ -9,7 +9,7 @@
 import { fetchDiaryEntry } from '../../data/repos/diaryEntryRepository';
 
 import type { DiaryDeps } from './deps';
-import { dayString } from './diaryMath';
+import { dayString, manualKcal } from './diaryMath';
 import { createDiaryDayLoader, type DiaryDayExercise, type DiaryDaySection, type DiaryDaySnapshotData } from './diarySnapshot';
 
 export type DiaryDaySnapshot = DiaryDaySnapshotData;
@@ -35,6 +35,11 @@ export type DiaryDayModel = {
   items(slot: string): DiaryDaySnapshot['sections'][number]['items'];
   /** Tombstone + detail delete — the delete of the food row. */
   delete(item: DiaryDaySnapshot['sections'][number]['items'][number]): Promise<void>;
+  /**
+   * The edit sheet's write: new grams, the kcal recomputed from the stored
+   * per-100g basis (KcalArithmetic), mirror + detail + one op in ONE batch.
+   */
+  updateEntry(item: DiaryDaySnapshot['sections'][number]['items'][number], grams: number): Promise<void>;
   /** Undo path: tombstone by id without needing the observed item. */
   deleteEntry(id: string): Promise<void>;
   /** Local-only exercise write (I4), then notify so Today re-reads. */
@@ -121,6 +126,27 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
       }
       await deps.diaryEntries.recordTombstone(entry, { now: deps.now() });
       await deps.diaryDetails.delete(id);
+      deps.notify();
+      await refresh();
+    },
+    async updateEntry(item, grams) {
+      // The recomputed kcal comes from the entry's own per-100g basis, the
+      // same KcalArithmetic rule the review sheet uses; without a basis
+      // (no stored grams) the stored kcal is kept.
+      const basis =
+        item.kcal !== null && item.grams !== null && item.grams > 0
+          ? (item.kcal / item.grams) * 100
+          : null;
+      const stamp = deps.now();
+      await deps.diaryEntries.recordUpserts(
+        [
+          {
+            entry: { ...item.entry, updatedAt: stamp },
+            detail: { ...item.detail, grams, kcal: basis === null ? item.kcal : manualKcal(basis, grams) },
+          },
+        ],
+        stamp,
+      );
       deps.notify();
       await refresh();
     },

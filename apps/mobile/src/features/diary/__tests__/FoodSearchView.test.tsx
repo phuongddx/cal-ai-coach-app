@@ -11,6 +11,7 @@ import { setEdSafeMode } from '../../../design';
 import type { CatalogRepository, CustomFood, Food } from '../../../data/repos/catalogRepository';
 import type { DiaryEntryDetail } from '../../../data/repos/diaryEntryRepository';
 import type { DiaryDeps } from '../deps';
+import type { FoodSearchRow } from '../foodSearchModel';
 import { FoodSearchView } from '../screens/FoodSearchView';
 
 const NOON = new Date(2026, 8, 12, 9, 0, 0, 0);
@@ -78,7 +79,13 @@ function makeDeps(overrides: Partial<DiaryDeps> = {}): DiaryDeps {
   };
 }
 
-async function renderSearch(deps: DiaryDeps, onSaved = jest.fn(), onDismiss = jest.fn(), onDescribe = jest.fn()) {
+async function renderSearch(
+  deps: DiaryDeps,
+  onSaved = jest.fn(),
+  onDismiss = jest.fn(),
+  onDescribe = jest.fn(),
+  onPickRow?: (row: FoodSearchRow) => void,
+) {
   return await render(
     <FoodSearchView
       mealSlot="breakfast"
@@ -89,6 +96,7 @@ async function renderSearch(deps: DiaryDeps, onSaved = jest.fn(), onDismiss = je
       notify={deps.notify}
       now={deps.now}
       newId={deps.newId}
+      onPickRow={onPickRow}
       onDescribe={onDescribe}
       onSaved={onSaved}
       onDismiss={onDismiss}
@@ -159,6 +167,19 @@ describe('FoodSearchView screen', () => {
 
     await userEvent.press(await screen.findByTestId('search.addRow.food-1'));
     expect(await screen.findByText('Log Overnight Oats')).toBeOnTheScreen();
+  });
+
+  it('in picker mode the row tap and its add button hand the row to the caller', async () => {
+    const onPickRow = jest.fn();
+    await renderSearch(makeDeps(), jest.fn(), jest.fn(), jest.fn(), onPickRow);
+
+    await userEvent.press(await screen.findByLabelText('Add food, Overnight Oats'));
+    expect(onPickRow).toHaveBeenCalledWith(expect.objectContaining({ id: 'food-1', name: 'Overnight Oats' }));
+    // The picker does not open the manual-log sheet.
+    expect(screen.queryByText('Log Overnight Oats')).toBeNull();
+
+    await userEvent.press(await screen.findByTestId('search.addRow.food-1'));
+    expect(onPickRow).toHaveBeenCalledTimes(2);
   });
 
   it('the escape card hands over to the describe flow and to the manual entry', async () => {

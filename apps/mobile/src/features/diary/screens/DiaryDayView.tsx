@@ -7,25 +7,28 @@
  */
 import { useState, useSyncExternalStore } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
 
 import {
   ConfidenceBadge,
   DashedAddButton,
   EdSafeCollapse,
   FoodRow,
+  GlassIconButton,
+  Icon,
   Toast,
-  useEdSafeMode,
+  glassIconButtonColors,
   useTokens,
   withAlpha,
+  type IconName,
 } from '../../../design';
 
 import type { DiaryDeps } from '../deps';
-import { mealName, slotEmoji } from '../diaryMath';
+import { mealName } from '../diaryMath';
 import type { DiaryDayExercise, DiaryDayItem } from '../diarySnapshot';
 import type { DiaryDayModel } from '../diaryDayModel';
 import type { ScanMode, SavedReceipt } from '../addFoodModel';
 import { AddFoodSheetRoute } from './AddFoodSheet';
+import { DiaryEditSheet } from './DiaryEditSheet';
 import { ExerciseLogSheet } from './ExerciseLogSheet';
 
 export type DiaryDayViewProps = {
@@ -37,11 +40,20 @@ export type DiaryDayViewProps = {
 
 const DAY_MS = 86_400_000;
 
+/** The canvas's meal icons (no emoji); the 51-icon set carries no carrot, so snacks draws the apple. */
+const SLOT_ICONS: Record<string, IconName> = {
+  breakfast: 'sunrise',
+  lunch: 'sun',
+  dinner: 'moon',
+  snacks: 'apple',
+};
+
 export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
   const { colors, radius, space, typography } = useTokens();
   useSyncExternalStore(model.subscribe, model.getSnapshot, model.getSnapshot);
 
   const [pendingDelete, setPendingDelete] = useState<DiaryDayItem | null>(null);
+  const [editItem, setEditItem] = useState<DiaryDayItem | null>(null);
   const [isExerciseSheetPresented, setIsExerciseSheetPresented] = useState(false);
   const [addFoodSlot, setAddFoodSlot] = useState<string | null>(null);
   const [savedToast, setSavedToast] = useState<SavedReceipt | null>(null);
@@ -69,20 +81,17 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
     <View style={[styles.root, { backgroundColor: colors.grouped }]}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.datePager}>
-          <PagerButton
-            symbol="chevron.left"
-            label="Previous day"
-            identifier="diary.previousDay"
+          <GlassIconButton
+            icon="back"
+            accessibilityLabel="Previous day"
+            testID="diary.previousDay"
             onPress={() => shiftDay(model, -1)}
           />
           <Text style={[typography.heading, { color: colors.textPrimary }]}>{model.dayHeading()}</Text>
-          <PagerButton
-            symbol="chevron.right"
-            label="Next day"
-            identifier="diary.nextDay"
-            onPress={() => shiftDay(model, 1)}
-            disabled={model.isToday()}
-          />
+          {/* GlassIconButton cannot express `disabled`, which the next-day
+              pager needs on today: the same DS glass tokens style a feature
+              Pressable that carries the state (findings, U-74 §3). */}
+          <NextDayGlassButton isToday={model.isToday()} onPress={() => shiftDay(model, 1)} />
         </View>
 
         <EdSafeCollapse>
@@ -105,9 +114,12 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
         {snapshot.sections.map((section) => (
           <View key={section.slot}>
             <View style={styles.sectionHeader}>
-              <Text accessibilityRole="header" style={[typography.headline, { color: colors.textPrimary }]}>
-                {`${slotEmoji(section.slot)} ${mealName(section.slot)}`}
-              </Text>
+              <View style={styles.sectionTitle}>
+                <Icon name={SLOT_ICONS[section.slot] ?? 'fork'} size={16} color={colors.textPrimary} />
+                <Text accessibilityRole="header" style={[typography.headline, { color: colors.textPrimary }]}>
+                  {mealName(section.slot)}
+                </Text>
+              </View>
               <EdSafeCollapse>
                 <Text style={[typography.subhead, { color: colors.textSecondary }]}>
                   {`${model.sectionKcal(section)} kcal`}
@@ -117,7 +129,12 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
             {section.items.length > 0 && (
               <View style={[styles.sectionCard, { backgroundColor: colors.card, borderRadius: radius.lg }]}>
                 {section.items.map((item) => (
-                  <FoodItemRow key={item.id} item={item} onDelete={() => setPendingDelete(item)} />
+                  <FoodItemRow
+                    key={item.id}
+                    item={item}
+                    onEdit={() => setEditItem(item)}
+                    onDelete={() => setPendingDelete(item)}
+                  />
                 ))}
               </View>
             )}
@@ -204,6 +221,19 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
       </Modal>
 
       <Modal
+        visible={editItem !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setEditItem(null)}
+      >
+        <View style={[styles.sheetBackdrop, { backgroundColor: colors.background }]}>
+          {editItem !== null && (
+            <DiaryEditSheet item={editItem} model={model} onDismiss={() => setEditItem(null)} />
+          )}
+        </View>
+      </Modal>
+
+      <Modal
         visible={addFoodSlot !== null}
         animationType="slide"
         onRequestClose={() => setAddFoodSlot(null)}
@@ -228,31 +258,24 @@ function shiftDay(model: DiaryDayModel, days: number): void {
   model.selectDay(new Date(day.getFullYear(), day.getMonth(), day.getDate() + days, day.getHours(), day.getMinutes()));
 }
 
-function PagerButton({
-  symbol,
-  label,
-  identifier,
-  onPress,
-  disabled = false,
-}: {
-  symbol: 'chevron.left' | 'chevron.right';
-  label: string;
-  identifier: string;
-  onPress: () => void;
-  disabled?: boolean;
-}) {
-  const { colors } = useTokens();
+/** The next-day pager: the DS glass look with the `disabled` state GlassIconButton cannot carry. */
+function NextDayGlassButton({ isToday, onPress }: { isToday: boolean; onPress: () => void }) {
+  const { colors, isDark } = useTokens();
+  const glass = glassIconButtonColors(colors, isDark, 'onSurface');
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
+      accessibilityLabel="Next day"
+      accessibilityState={{ disabled: isToday }}
+      disabled={isToday}
       onPress={onPress}
-      testID={identifier}
-      style={[styles.pagerButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+      testID="diary.nextDay"
+      style={[
+        styles.pagerGlass,
+        { backgroundColor: glass.background, borderColor: glass.border },
+      ]}
     >
-      <SymbolView name={symbol} size={14} weight="semibold" tintColor={colors.textSecondary} />
+      <Icon name="chev" size={22} color={glass.glyph} />
     </Pressable>
   );
 }
@@ -267,7 +290,15 @@ function SummaryColumn({ title, kcal, color }: { title: string; kcal: number; co
   );
 }
 
-function FoodItemRow({ item, onDelete }: { item: DiaryDayItem; onDelete: () => void }) {
+function FoodItemRow({
+  item,
+  onEdit,
+  onDelete,
+}: {
+  item: DiaryDayItem;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const { colors, typography } = useTokens();
   // The frame's row caption: the grams, then the source when the detail has
   // one and no confidence badge takes the slot. Show what the row has.
@@ -282,42 +313,34 @@ function FoodItemRow({ item, onDelete }: { item: DiaryDayItem; onDelete: () => v
   }
   const time = item.loggedAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`Delete, ${item.title}`}
-      testID="diary.foodRow"
-      onLongPress={onDelete}
-    >
-      <FoodRow
-        title={item.title}
-        meta={metaParts.length > 0 ? metaParts.join(' · ') : time}
-        kcal={item.kcal ?? undefined}
-        compactBadge={
-          item.confidence !== null ? <ConfidenceBadge confidence={item.confidence} compact /> : undefined
-        }
-        syncPending={!item.isSynced}
-      />
-    </Pressable>
+    <View testID={`diary.editFood.${item.id}`}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Edit, ${item.title}`}
+        testID="diary.foodRow"
+        onPress={onEdit}
+        onLongPress={onDelete}
+      >
+        <FoodRow
+          title={item.title}
+          meta={metaParts.length > 0 ? metaParts.join(' · ') : time}
+          kcal={item.kcal ?? undefined}
+          compactBadge={
+            item.confidence !== null ? <ConfidenceBadge confidence={item.confidence} compact /> : undefined
+          }
+          syncPending={!item.isSynced}
+        />
+      </Pressable>
+    </View>
   );
 }
 
 function ExerciseRowView({ exercise }: { exercise: DiaryDayExercise }) {
   const { colors, typography } = useTokens();
-  const edSafe = useEdSafeMode();
-  const showsKcal = exercise.kcalBurned !== null && !edSafe;
   return (
-    <View
-      accessible
-      testID="diary.exerciseRow"
-      style={styles.exerciseRow}
-      accessibilityLabel={
-        showsKcal
-          ? `${exercise.type}, ${exercise.durationMin} minutes, ${exercise.kcalBurned} kcal`
-          : `${exercise.type}, ${exercise.durationMin} minutes`
-      }
-    >
+    <View accessible testID="diary.exerciseRow" style={styles.exerciseRow}>
       <View style={[styles.exerciseTile, { backgroundColor: colors.fill, borderRadius: 10 }]}>
-        <SymbolView name="figure.run" size={14} tintColor={colors.textTertiary} />
+        <Icon name="run" size={16} color={colors.textTertiary} />
       </View>
       <View style={styles.exerciseText}>
         <Text style={[typography.headline, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -329,7 +352,10 @@ function ExerciseRowView({ exercise }: { exercise: DiaryDayExercise }) {
       </View>
       <EdSafeCollapse>
         {exercise.kcalBurned !== null && (
-          <Text style={[styles.exerciseKcal, typography.body, { color: colors.textSecondary }]}>
+          <Text
+            style={[styles.exerciseKcal, typography.body, { color: colors.textSecondary }]}
+            accessibilityLabel={`${exercise.kcalBurned} kcal`}
+          >
             {`${exercise.kcalBurned}`}
           </Text>
         )}
@@ -346,11 +372,11 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32, gap: 16 },
   datePager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  pagerButton: {
+  pagerGlass: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -359,6 +385,7 @@ const styles = StyleSheet.create({
   summaryValue: { fontSize: 20, fontWeight: '600', fontVariant: ['tabular-nums'] },
   divider: { width: StyleSheet.hairlineWidth, height: 36 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionTitle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   sectionCard: { overflow: 'hidden', paddingHorizontal: 12 },
   exerciseHeader: { marginTop: 8 },
   exerciseRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },

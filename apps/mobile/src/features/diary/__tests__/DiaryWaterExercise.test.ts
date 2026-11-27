@@ -186,6 +186,30 @@ describe('DiaryWaterExerciseTests twins', () => {
     expect(model.eatenKcal()).toBe(dinner.kcal as number); // today carries exactly one seeded meal
   });
 
+  // DY-08 (Ember edit sheet): the edit recomputes the kcal from the entry's
+  // own per-100g basis and writes mirror + detail + exactly one pending op in
+  // one batch, then notifies.
+  it('editing a food recomputes the kcal and writes one batch with one pending op', async () => {
+    const harness = await makeHarness();
+    const model = await makeDiaryModel(harness);
+    const dinner = model.items('dinner')[0];
+    expect(dinner.kcal).toBe(roundKcal(155, 350)); // the seeded basis is 155 per100g
+
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(0); // the seed enqueues no ops
+
+    await model.updateEntry(dinner, 300);
+
+    const stored = await fetchDiaryEntryDetail(harness.deps.db, dinner.id);
+    expect(stored?.grams).toBe(300);
+    expect(stored?.kcal).toBe(roundKcal(155, 300)); // 155 × 300 / 100 → 465
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(1); // exactly one outbox op
+    expect(harness.notifyCount()).toBeGreaterThan(0); // the notify fans out after the write
+
+    // The model re-read itself: the day query returns the edited row.
+    expect(model.items('dinner')[0]?.kcal).toBe(roundKcal(155, 300));
+    expect(model.items('dinner')[0]?.grams).toBe(300);
+  });
+
   // testManualLogKcalMatchesKcalArithmeticAtEveryStepperValue — manual-log
   // kcal must equal round(per100g × grams / 100) at every stepper value,
   // never a user-typed or stored display value (T-P04-01).

@@ -36,6 +36,22 @@ function makeItem(overrides: Partial<DiaryDayItem> = {}): DiaryDayItem {
       acceptedOpId: null,
       serverUpdatedAt: NOON,
     },
+    detail: {
+      entryId: 'entry-1',
+      mealSlot: 'breakfast',
+      title: 'Overnight Oats',
+      grams: 250,
+      kcal: 320,
+      proteinG: null,
+      carbsG: null,
+      fatG: null,
+      fiberG: null,
+      confidence: 0.92,
+      hiddenFatLikely: false,
+      source: null,
+      unresolved: false,
+      scanId: null,
+    },
     ...overrides,
   };
 }
@@ -94,6 +110,7 @@ function makeModel(
     items: (slot) => snapshot.sections.find((section) => section.slot === slot)?.items ?? [],
     delete: async () => undefined,
     deleteEntry: async () => undefined,
+    updateEntry: async () => undefined,
     addExercise: async () => undefined,
     ...overrides,
   };
@@ -141,10 +158,10 @@ describe('DiaryDayView screen', () => {
     expect(screen.getByTestId('diary.previousDay')).toBeOnTheScreen();
     expect(screen.getByTestId('diary.nextDay')).toBeOnTheScreen();
     expect(screen.getByLabelText('Eaten 320 of 2150, 1830 remaining')).toBeOnTheScreen();
-    expect(screen.getByText('☀️ Breakfast')).toBeOnTheScreen();
-    expect(screen.getByText('🌤️ Lunch')).toBeOnTheScreen();
-    expect(screen.getByText('🌙 Dinner')).toBeOnTheScreen();
-    expect(screen.getByText('🍎 Snacks')).toBeOnTheScreen();
+    expect(screen.getByText('Breakfast')).toBeOnTheScreen();
+    expect(screen.getByText('Lunch')).toBeOnTheScreen();
+    expect(screen.getByText('Dinner')).toBeOnTheScreen();
+    expect(screen.getByText('Snacks')).toBeOnTheScreen();
     for (const slot of ['breakfast', 'lunch', 'dinner', 'snacks']) {
       expect(screen.getByTestId(`diary.addFood.${slot}`)).toBeOnTheScreen();
     }
@@ -207,7 +224,9 @@ describe('DiaryDayView screen', () => {
   it('the next day pager button is disabled on today', async () => {
     await renderDay(makeModel(makeSnapshot(), { isToday: () => true }));
     expect(screen.getByTestId('diary.nextDay').props.accessibilityState.disabled).toBe(true);
-    expect(screen.getByTestId('diary.previousDay').props.accessibilityState.disabled).toBe(false);
+    // GlassIconButton (the previous-day button) carries no disabled state; it
+    // is never disabled.
+    expect(screen.getByTestId('diary.previousDay').props.accessibilityState?.disabled ?? false).toBe(false);
   });
 
   it('a long press on the food row opens the delete confirmation and Delete tombstones', async () => {
@@ -309,6 +328,57 @@ describe('DiaryDayView screen', () => {
     expect(screen.queryByText('−300 kcal')).toBeNull();
     expect(screen.queryByText('300')).toBeNull();
     // The water-independent surfaces stay.
-    expect(screen.getByText('☀️ Breakfast')).toBeOnTheScreen();
+    expect(screen.getByText('Breakfast')).toBeOnTheScreen();
+  });
+
+  it('a tap on the food row opens the edit sheet of the entry', async () => {
+    const updateEntry = jest.fn(async () => undefined);
+    const model = makeModel(makeSnapshot(), { updateEntry });
+    await renderDay(model);
+
+    await userEvent.press(screen.getByTestId('diary.foodRow'));
+    expect(await screen.findByTestId('diary.edit')).toBeOnTheScreen();
+    expect(screen.getByTestId('diary.edit.close')).toBeOnTheScreen();
+    expect(screen.getByTestId('diary.edit.grams.entry-1')).toBeOnTheScreen();
+    expect(screen.getByTestId('diary.edit.save')).toBeOnTheScreen();
+    // The kcal figure of the stored pair, and the stored grams in the field.
+    const kcalRow = screen.getByText('kcal').parent as unknown as ReturnType<typeof screen.getByTestId>;
+    expect(within(kcalRow).getByText('320')).toBeOnTheScreen();
+
+    // A gram change recomputes the kcal from the entry's per-100g basis:
+    // 320/250 × 100 = 128 per100g → 128 × 260 / 100 → 333.
+    await userEvent.press(within(screen.getByTestId('diary.edit.grams.entry-1')).getByTestId('ccstepper.increment'));
+    await waitFor(() => expect(within(kcalRow).getByText('333')).toBeOnTheScreen());
+
+    await userEvent.press(within(screen.getByTestId('diary.edit.save')).getByRole('button'));
+    await waitFor(() => expect(updateEntry).toHaveBeenCalledWith(expect.objectContaining({ id: 'entry-1' }), 260));
+    await waitFor(() => expect(screen.queryByTestId('diary.edit')).toBeNull());
+  });
+
+  it('the edit sheet Close changes nothing', async () => {
+    const updateEntry = jest.fn(async () => undefined);
+    const model = makeModel(makeSnapshot(), { updateEntry });
+    await renderDay(model);
+
+    await userEvent.press(screen.getByTestId('diary.foodRow'));
+    await userEvent.press(await screen.findByTestId('diary.edit.close'));
+    expect(updateEntry).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByTestId('diary.edit')).toBeNull());
+  });
+
+  it('the edit sheet kcal hides in the ED-safe mode and returns when it is off', async () => {
+    await renderDay();
+    await userEvent.press(screen.getByTestId('diary.foodRow'));
+    expect(await screen.findByTestId('diary.edit')).toBeOnTheScreen();
+    expect(screen.getByText('kcal')).toBeOnTheScreen();
+
+    setEdSafeMode(true);
+    await waitFor(() => expect(screen.queryByText('kcal')).toBeNull());
+    // Grams and Save stay.
+    expect(screen.getByTestId('diary.edit.grams.entry-1')).toBeOnTheScreen();
+    expect(screen.getByTestId('diary.edit.save')).toBeOnTheScreen();
+
+    setEdSafeMode(false);
+    await waitFor(() => expect(screen.getByText('kcal')).toBeOnTheScreen());
   });
 });

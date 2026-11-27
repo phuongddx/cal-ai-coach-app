@@ -4,11 +4,10 @@
  */
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
 
 import type { CatalogRepository } from '../../../data/repos/catalogRepository';
 import type { Clock, IdGenerator } from '../../../data/repos/sqlDb';
-import { ChipOption, PrimaryButton, Sheet, useEdSafeMode, useTokens, space } from '../../../design';
+import { ChipOption, EdSafeNote, Icon, PrimaryButton, Sheet, SheetHeader, space, useEdSafeMode, useTokens } from '../../../design';
 
 import {
   canSaveCustomFood,
@@ -80,18 +79,7 @@ export function CustomFoodSheet({
 
   return (
     <Sheet>
-      <View style={styles.header}>
-        <Text style={[typography.heading, { color: colors.textPrimary }]}>Create custom food</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          testID="custom.close"
-          onPress={onDismiss}
-          style={styles.closeButton}
-        >
-          <SymbolView name="xmark" size={14} weight="semibold" tintColor={colors.textSecondary} />
-        </Pressable>
-      </View>
+      <SheetHeader title="Create custom food" onClose={onDismiss} testID="custom" />
 
       <Field
         title="Name"
@@ -113,12 +101,12 @@ export function CustomFoodSheet({
       </View>
 
       {edSafe && (
-        <View style={[styles.noteCard, { backgroundColor: colors.accentTint, borderRadius: radius.md }]}>
-          <SymbolView name="eye.slash" size={16} tintColor={colors.accentInk} />
-          <Text style={[typography.footnote, { color: colors.textSecondary, flex: 1 }]}>
-            {'Name and serving only. Nutrition fields fold into \u201CAdvanced\u201D, collapsed and blurred.'}
-          </Text>
-        </View>
+        <EdSafeNote
+          title="Name and serving only."
+          // The fold collapses without a blur: no blur package exists, so the
+          // note must not promise one (stage A2 owner decision).
+          body={`Nutrition fields fold into \u201CAdvanced\u201D, collapsed.`}
+        />
       )}
 
       {edSafe ? (
@@ -130,12 +118,7 @@ export function CustomFoodSheet({
             style={styles.advancedHeader}
           >
             <Text style={[typography.subhead, { color: colors.textPrimary, fontWeight: '600' }]}>Advanced</Text>
-            <SymbolView
-              name={advancedExpanded ? 'chevron.down' : 'chevron.right'}
-              size={12}
-              weight="semibold"
-              tintColor={colors.textSecondary}
-            />
+            <Icon name={advancedExpanded ? 'minus' : 'chev'} size={12} color={colors.textSecondary} />
           </Pressable>
           {advancedExpanded && (
             <>
@@ -272,10 +255,7 @@ function Field({
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center' },
-  closeButton: { marginLeft: 'auto', width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   basisRow: { flexDirection: 'row', gap: 8 },
-  noteCard: { flexDirection: 'row', gap: space.md, padding: space.lg, alignItems: 'flex-start' },
   advancedHeader: {
     flexDirection: 'row',
     alignItems: 'center',

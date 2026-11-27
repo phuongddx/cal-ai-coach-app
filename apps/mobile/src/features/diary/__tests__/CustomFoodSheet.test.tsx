@@ -65,9 +65,8 @@ describe('CustomFoodSheet screen', () => {
     expect(screen.queryByTestId('custom.proteinField')).toBeNull();
     expect(screen.getByTestId('custom.nameField')).toBeOnTheScreen();
     expect(screen.getByText('Advanced')).toBeOnTheScreen();
-    expect(
-      screen.getByText('Name and serving only. Nutrition fields fold into \u201CAdvanced\u201D, collapsed and blurred.'),
-    ).toBeOnTheScreen();
+    expect(screen.getByText('Name and serving only.')).toBeOnTheScreen();
+    expect(screen.getByText('Nutrition fields fold into \u201CAdvanced\u201D, collapsed.')).toBeOnTheScreen();
 
     // Unfolding reveals the fields; the identifiers stay on them.
     await userEvent.press(screen.getByText('Advanced'));

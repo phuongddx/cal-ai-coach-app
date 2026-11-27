@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
-import { EdSafeCollapse, QuickActionTile, SectionHeader, Sheet, useTokens } from '../../../design';
+import { EdSafeCollapse, QuickActionTile, SectionHeader, Sheet, SheetHeader, useTokens } from '../../../design';
 
 import { mealName } from '../diaryMath';
 import type { ScanMode } from '../addFoodModel';
@@ -48,23 +48,10 @@ export function AddFoodSheet({
 
   return (
     <Sheet>
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={[typography.heading, { color: colors.textPrimary }]}>Add food</Text>
-          <Text style={[typography.footnote, { color: colors.textSecondary }]}>
-            {`to ${mealName(mealSlot)}`}
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          testID="addfood.close"
-          onPress={onDismiss}
-          style={styles.closeButton}
-        >
-          <SymbolView name="xmark" size={14} weight="semibold" tintColor={colors.textSecondary} />
-        </Pressable>
-      </View>
+      <SheetHeader title="Add food" onClose={onDismiss} testID="addfood" />
+      <Text style={[typography.footnote, { color: colors.textSecondary }]}>
+        {`to ${mealName(mealSlot)}`}
+      </Text>
 
       <View style={styles.tileGrid}>
         {TILES.map((tile) => (
@@ -238,9 +225,6 @@ export function AddFoodSheetRoute({
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'flex-start' },
-  headerText: { flex: 1, gap: 2 },
-  closeButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tileCell: { width: '31%', flexGrow: 1 },
   emptyCard: {

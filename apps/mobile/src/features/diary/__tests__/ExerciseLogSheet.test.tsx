@@ -28,6 +28,7 @@ function makeModel(addExercise = jest.fn(async () => undefined)): DiaryDayModel 
     items: () => [],
     delete: async () => undefined,
     deleteEntry: async () => undefined,
+    updateEntry: async () => undefined,
     addExercise,
   };
 }
@@ -52,7 +53,8 @@ describe('ExerciseLogSheet screen', () => {
     expect(screen.getByTestId('ccstepper.increment')).toBeOnTheScreen();
     expect(screen.getByText('30 min')).toBeOnTheScreen();
     expect(screen.getByTestId('exercise.kcalField')).toBeOnTheScreen();
-    expect(screen.queryByText('Activity and minutes only. Burned kcal is hidden.')).toBeNull();
+    expect(screen.queryByText('Activity and minutes only.')).toBeNull();
+    expect(screen.queryByText('Burned kcal is hidden.')).toBeNull();
     expect(screen.getByTestId('exercise.save')).toBeOnTheScreen();
   });
 
@@ -61,14 +63,16 @@ describe('ExerciseLogSheet screen', () => {
     await renderSheet();
 
     expect(screen.queryByTestId('exercise.kcalField')).toBeNull();
-    expect(screen.getByText('Activity and minutes only. Burned kcal is hidden.')).toBeOnTheScreen();
+    expect(screen.getByText('Activity and minutes only.')).toBeOnTheScreen();
+    expect(screen.getByText('Burned kcal is hidden.')).toBeOnTheScreen();
     // The activity fields and Save stay.
     expect(screen.getByTestId('exercise.typeField')).toBeOnTheScreen();
     expect(screen.getByTestId('exercise.save')).toBeOnTheScreen();
 
     setEdSafeMode(false);
     await waitFor(() => expect(screen.getByTestId('exercise.kcalField')).toBeOnTheScreen());
-    expect(screen.queryByText('Activity and minutes only. Burned kcal is hidden.')).toBeNull();
+    expect(screen.queryByText('Activity and minutes only.')).toBeNull();
+    expect(screen.queryByText('Burned kcal is hidden.')).toBeNull();
   });
 
   it('Save stays disabled while the type is empty', async () => {

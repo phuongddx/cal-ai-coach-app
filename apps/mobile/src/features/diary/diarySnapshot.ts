@@ -7,7 +7,12 @@
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 
 import { diaryEntries, diaryEntryDetails } from '../../data/db/schema';
-import { rowToEntry, type DiaryEntry } from '../../data/repos/diaryEntryRepository';
+import {
+  rowToDetail,
+  rowToEntry,
+  type DiaryEntry,
+  type DiaryEntryDetail,
+} from '../../data/repos/diaryEntryRepository';
 import type { SqlDb } from '../../data/repos/sqlDb';
 import type { TargetRepository, UserTarget } from '../../data/repos/targetRepository';
 import { rowToExerciseLog, type TrackingRepository } from '../../data/repos/trackingRepository';
@@ -28,6 +33,8 @@ export type DiaryDayItem = {
   loggedAt: Date;
   /** The full mirror row, so the delete path can tombstone without a re-read. */
   entry: DiaryEntry;
+  /** The full detail row, so the edit sheet can rewrite grams and kcal in one batch. */
+  detail: DiaryEntryDetail;
 };
 
 export type DiaryDaySection = { slot: string; items: DiaryDayItem[] };
@@ -88,6 +95,7 @@ export function createDiaryDayLoader(
         isSynced: entry.acceptedOpId !== null,
         loggedAt: entry.createdAt,
         entry,
+        detail: rowToDetail(row.detail),
       };
       const slotItems = bySlot.get(item.mealSlot) ?? [];
       slotItems.push(item);
