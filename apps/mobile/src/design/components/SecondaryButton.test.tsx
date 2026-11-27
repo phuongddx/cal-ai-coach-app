@@ -19,6 +19,11 @@ import { SecondaryButton, secondaryButtonStyle } from './SecondaryButton';
 import { lightColors } from '../tokens';
 
 describe('SecondaryButton', () => {
+  it('passes testID to the Pressable', async () => {
+    await render(<SecondaryButton title="Skip" testID="scan.skip" />);
+    expect(screen.getByTestId('scan.skip')).toBe(screen.getByRole('button'));
+  });
+
   it('renders its title and fires its action', async () => {
     const action = jest.fn();
     await render(<SecondaryButton title="Skip" action={action} />);

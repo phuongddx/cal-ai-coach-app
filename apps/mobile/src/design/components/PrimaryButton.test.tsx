@@ -25,6 +25,11 @@ describe('PrimaryButton', () => {
     expect(screen.getByText('Save entry')).toBeOnTheScreen();
   });
 
+  it('passes testID to the Pressable', async () => {
+    await render(<PrimaryButton title="Save entry" testID="scan.save" />);
+    expect(screen.getByTestId('scan.save')).toBe(screen.getByRole('button'));
+  });
+
   it('fires its action on press', async () => {
     const action = jest.fn();
     await render(<PrimaryButton title="Save entry" action={action} />);
