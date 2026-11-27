@@ -28,6 +28,9 @@ export const settingsCopy = {
   /** Export states (round-3 frames x-write / x-nodata / x-cancel). */
   exportRowTitle: 'Export diary as CSV',
   exportFailedTitle: "Couldn't create the file",
+  /** The write-failure code the frame carries (x-write-*). */
+  exportFailedCode: 'Error EXP-WRITE',
+  exportContact: 'Contact us',
   exportCancelledTitle: 'Not shared',
   exportCancelledBody:
     'Your file is still ready. Share it again, or choose "Save to Files" in the share sheet.',

@@ -23,18 +23,20 @@ import { PaywallView } from './PaywallView';
 import { createPaywallModel, type PaywallModelDeps, type PlanOption } from './paywallModel';
 
 
-/** The store's answer shape — every field store-sourced, none invented. */
+/** The store's answer shape — every field store-sourced, none invented. The
+    strings are deliberately not the frame's sample prices: no sample price
+    exists anywhere in the app or its tests (owner handoff, D13). */
 function makeOptions(overrides: Partial<PlanOption> = {}): PlanOption[] {
   return [
     {
       id: 'yearly',
       title: 'Yearly',
-      detail: '7 days free, then $39.99 / year',
-      price: '$3.33',
+      detail: '1 week free, then US$52.00 / year',
+      price: 'US$52.00',
       trial: true,
       ...overrides,
     },
-    { id: 'monthly', title: 'Monthly', detail: '$7.99 / month, no trial', price: '$7.99', trial: false },
+    { id: 'monthly', title: 'Monthly', detail: 'US$9.49 / month, no trial', price: 'US$9.49', trial: false },
   ];
 }
 
@@ -57,8 +59,8 @@ describe('paywall', () => {
     expect(screen.getByText('Yearly')).toBeOnTheScreen();
     expect(screen.getByText('Monthly')).toBeOnTheScreen();
     // The price lines are exactly the store's own strings — never a sample.
-    expect(screen.getByTestId('plans.option.yearly.price')).toHaveTextContent('$3.33');
-    expect(screen.getByTestId('plans.option.monthly.price')).toHaveTextContent('$7.99');
+    expect(screen.getByTestId('plans.option.yearly.price')).toHaveTextContent('US$52.00');
+    expect(screen.getByTestId('plans.option.monthly.price')).toHaveTextContent('US$9.49');
     // Nothing is selected apart from the plan choice: the first plan starts selected.
     expect(screen.getByTestId('option-card:Yearly').props.accessibilityState?.selected).toBe(true);
     expect(screen.getByTestId('option-card:Monthly').props.accessibilityState?.selected).toBe(false);

@@ -209,7 +209,7 @@ describe('settings screen', () => {
     await view.unmount();
   });
 
-  it('shows the write failure with its reason and a retry when the export fails', async () => {
+  it('shows the write failure with its reason, the EXP-WRITE code, a retry and Contact us', async () => {
     const { model, deps } = makeModel({
       shareExport: jest.fn(async () => {
         throw new Error('The file could not be written.');
@@ -222,12 +222,31 @@ describe('settings screen', () => {
     await waitFor(() => expect(screen.getByTestId('settings.exportError')).toBeOnTheScreen());
     expect(screen.getByText("Couldn't create the file.")).toBeOnTheScreen();
     expect(screen.getByText('The file could not be written.')).toBeOnTheScreen();
+    expect(screen.getByText(settingsCopy.exportFailedCode)).toBeOnTheScreen();
 
     // The retry calls the binding again; a good attempt clears the row.
     (deps.shareExport as jest.Mock).mockResolvedValueOnce('shared');
     await userEvent.press(screen.getByTestId('settings.exportRetry'));
     await waitFor(() => expect(deps.shareExport).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.queryByTestId('settings.exportError')).toBeNull());
+  });
+
+  it('renders Contact us on the failed row inert: no support path exists in the app', async () => {
+    const { model } = makeModel({
+      shareExport: jest.fn(async () => {
+        throw new Error('disk full');
+      }),
+    });
+    await render(<SettingsDetailView model={model} planName="Free" />);
+    await model.loadExport();
+    await userEvent.press(screen.getByTestId('settings.row.export'));
+
+    // No support e-mail address exists in the app (Swift included) and the
+    // contact row has no action, so the button is present and inert — it
+    // neither opens anything nor prints an invented address.
+    const contact = screen.getByTestId('settings.exportContact');
+    expect(contact.props.accessibilityState?.disabled).toBe(true);
+    expect(screen.queryByText(/@\w+\.\w+/)).toBeNull();
   });
 
   it('says so and keeps the row disabled when there is nothing to export', async () => {

@@ -171,11 +171,24 @@ export function SettingsDetailView({ model, planName }: SettingsDetailViewProps)
                 variant="error"
                 text={`**${settingsCopy.exportFailedTitle}.** ${model.exportShare.reason}`}
               />
-              <PrimaryButton
-                title={settingsCopy.exportRetry}
-                testID="settings.exportRetry"
-                action={() => void model.shareExport()}
-              />
+              {/* The frame's error code line (x-write-*). */}
+              <Text style={[typography.caption, { color: colors.textTertiary }]}>
+                {settingsCopy.exportFailedCode}
+              </Text>
+              <View style={styles.exportButtons}>
+                <PrimaryButton
+                  title={settingsCopy.exportRetry}
+                  testID="settings.exportRetry"
+                  action={() => void model.shareExport()}
+                />
+                {/* The contact path of settings.row.contact, which has no
+                    action today and no support address exists in the app
+                    (Swift included) — the button stays inert (findings). */}
+                <SecondaryButton
+                  title={settingsCopy.exportContact}
+                  testID="settings.exportContact"
+                />
+              </View>
             </View>
           )}
           {model.exportShare.kind === 'cancelled' && (
