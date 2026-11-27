@@ -21,3 +21,7 @@ ts	unit	state	branch	pr	head	by	evidence
 2026-11-27T06:13:09Z	U-14	landed	-	13	9705058	CoachCal (owner)	merge f1c3583; review clean (nine screenshots under 700 KB, traps on Metro, nothing under apps or packages)
 2026-11-27T06:13:09Z	U-20	landed	-	11	6607fc6	CoachCal (owner)	merge 8223f60; owner re-ran the 392 mobile tests on the integrated tree; the security review found the Math.random fallback of newUuid on Hermes, assigned to U-23
 2026-11-27T06:13:09Z	U-21	landed	-	14	65dcb1c	CoachCal (owner)	merge 021bc0f; owner re-ran the 249 API tests on PostgreSQL 17 and both smokes on the integrated tree; security review clean apart from four notes parked in plan.md
+2026-11-27T06:32:29Z	U-23	running	rn/u-23-sync-engine	-	bccca54	Worker-S1	docs/rn-migration/briefs/U-23.md
+2026-11-27T06:32:29Z	U-30	running	rn/u-30-scan-flow	-	bccca54	Worker-S2	docs/rn-migration/briefs/U-30.md
+2026-11-27T06:32:29Z	U-31	running	rn/u-31-onboarding	-	bccca54	Worker-G1	docs/rn-migration/briefs/U-31.md
+2026-11-27T06:32:29Z	U-32	running	rn/u-32-diary	-	bccca54	Worker-G2	docs/rn-migration/briefs/U-32.md
