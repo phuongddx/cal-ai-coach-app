@@ -16,7 +16,9 @@ set -uo pipefail
 PG_BIN="${PG_BIN:-/opt/homebrew/opt/postgresql@17/bin}"
 API_PORT="${API_PORT:-8787}"
 BASE="http://127.0.0.1:$API_PORT"
-ENV_FILE="${RN_API_ENV_FILE:-${TMPDIR:-/tmp}/coachcal-rn-api.env}"
+# shellcheck source=api-env-file.sh
+source "$(dirname "${BASH_SOURCE[0]}")/api-env-file.sh"
+ENV_FILE="$(api_env_file)"
 EMAIL="smoke-auth-$RANDOM$RANDOM@example.test"
 
 if [ ! -f "$ENV_FILE" ]; then
