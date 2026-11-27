@@ -145,9 +145,27 @@ require_title() {
 # Open the dev client pointed at Metro and wait for a screen title in the content area
 # (not the tab bar). Default: "Today" within 90 s on the second attempt. Fatal: the app never
 # became usable. The first attempt allows 45 s; a retry covers a slow dialog or a cold dev client.
+#
+#   app_open [title] [seconds] [launch argument ...]
+#
+# Launch arguments (U-79, PL-05) are the Swift app's `--cc*` flags: when any follow the two positional
+# parameters the app is terminated and launched with `xcrun simctl launch <udid> <bundle id> <args>`, so
+# the process arguments reach the native module that reads them, and only then is the dev client URL
+# opened (the running process keeps its arguments). A value belongs in its own argument, as in Swift:
+#   app_open Today 90 --ccEDSafe --ccFixedClock 2026-11-27T09:00:00Z --ccScanScenario 402
+# Without launch arguments nothing changes: the app is opened through the dev client URL only.
 app_open() {
   local text="${1:-Today}" sec="${2:-90}" wait_sec
-  step "opening the app via the dev client URL"
+  local launch_args=()
+  if [ "$#" -gt 2 ]; then launch_args=("${@:3}"); fi
+  step "opening the app via the dev client URL${launch_args[*]:+ with launch arguments: ${launch_args[*]}}"
+  if [ "${#launch_args[@]}" -gt 0 ]; then
+    xcrun simctl terminate "$UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
+    sleep 1
+    xcrun simctl launch "$UDID" "$BUNDLE_ID" "${launch_args[@]}" >/dev/null \
+      || fatal "simctl launch with arguments failed: ${launch_args[*]}"
+    ok "launched $BUNDLE_ID with: ${launch_args[*]}"
+  fi
   for attempt in 1 2; do
     xcrun simctl openurl "$UDID" "$DEV_CLIENT_URL" || bad "simctl openurl failed (attempt $attempt)"
     dismiss_open_dialog || true
