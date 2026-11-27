@@ -35,6 +35,8 @@ const HIDDEN_CHIPS = [
   'calories,',
   'kilojoule',
   'About 300 cal',
+  'About 500 kilocalories',
+  'kilocalorie',
 ];
 const SHOWN_CHIPS = [
   'Changes saved',
