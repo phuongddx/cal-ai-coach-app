@@ -57,7 +57,7 @@ if (norm(scal.f[1]) !== norm(tokens.font.rounded)) { mism++; out.tokens["font.ro
 console.log(`TOKENS: ${checked} values checked, ${mism} mismatches`);
 
 /* ---------- 2. contrast ---------- */
-const scopes = (process.env.SCOPES || "#diaryEditRow,#exportRow,#onbDark,#billingDarkRow,#hcRow .phone,#authRow,#targetRow,#scanSheetsRow,#paywallStateRow,#darkMoreRow").split(",");
+const scopes = (process.env.SCOPES || "#diaryEditRow,#exportRow,#onbDark,#billingDarkRow,#hcRow .phone,#authRow,#authCodeRow,#targetRow,#scanSheetsRow,#paywallStateRow,#darkMoreRow").split(",");
 const phoneHandles = await page.$$(scopes.map((s) => s.trim().includes(".phone") ? s.trim() : `${s.trim()} .phone`).join(","));
 let worst = 99, n = 0;
 for (const ph of phoneHandles) {
