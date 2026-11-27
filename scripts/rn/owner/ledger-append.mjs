@@ -1,16 +1,22 @@
 #!/usr/bin/env node
 // Owner tool: appends the rows of one drain to ledger.tsv and trail.tsv on rn/orchestrate.
-// Usage: node ledger-append.mjs <docs/rn-migration dir> <drain id>
-import { appendFileSync, readFileSync } from 'node:fs';
+// Usage: node ledger-append.mjs <docs/rn-migration dir> <drain id> [<json dir>]
+// Reads ledger-<drain>.json and trail-<drain>.json; a missing file means no rows of that kind.
+import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const dir = process.argv[2];
 const drain = process.argv[3] ?? 'drain';
+const jsonDir = process.argv[4] ?? new URL('.', import.meta.url).pathname;
 const ts = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 const cell = (text) => String(text).replaceAll('\t', ' ').replaceAll('\n', ' ');
+const rows = (kind) => {
+  const file = join(jsonDir, `${kind}-${drain}.json`);
+  return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : [];
+};
 
-const ledger = JSON.parse(readFileSync(new URL(`./ledger-${drain}.json`, import.meta.url), 'utf8'));
-const trail = JSON.parse(readFileSync(new URL(`./trail-${drain}.json`, import.meta.url), 'utf8'));
+const ledger = rows('ledger');
+const trail = rows('trail');
 
 const ledgerHeader = readFileSync(join(dir, 'ledger.tsv'), 'utf8').split('\n')[0].split('\t');
 const trailHeader = readFileSync(join(dir, 'trail.tsv'), 'utf8').split('\n')[0].split('\t');
