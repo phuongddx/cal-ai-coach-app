@@ -15,7 +15,7 @@ import { useColorScheme } from 'react-native';
 
 import { darkColors, lightColors, withAlpha } from '../tokens';
 
-import { glassIconButtonColors, GlassIconButton } from './GlassIconButton';
+import { glassDisabledGlyphAlpha, glassIconButtonColors, GlassIconButton } from './GlassIconButton';
 
 const mockUseColorScheme = useColorScheme as jest.MockedFunction<typeof useColorScheme>;
 
@@ -46,18 +46,45 @@ describe('GlassIconButton', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('draws the dark glass with a light glyph over media, in both schemes', async () => {
+  it('draws mediaScrim with an onMedia glyph over media, in both schemes', async () => {
     for (const scheme of ['light', 'dark'] as const) {
       mockUseColorScheme.mockReturnValue(scheme);
       await render(
         <GlassIconButton icon="x" tone="overMedia" accessibilityLabel="Close" testID={`media-${scheme}`} />,
       );
       expect(screen.getByTestId(`media-${scheme}`)).toHaveStyle({
-        backgroundColor: withAlpha(darkColors.bg, 0.45),
+        backgroundColor: (scheme === 'dark' ? darkColors : lightColors).mediaScrim,
       });
     }
-    const colors = glassIconButtonColors(lightColors, false, 'overMedia');
-    expect(colors.glyph).toBe(lightColors.emberText);
+    for (const [palette, dark] of [[lightColors, false], [darkColors, true]] as const) {
+      expect(glassIconButtonColors(palette, dark, 'overMedia')).toEqual({
+        background: palette.mediaScrim,
+        border: 'transparent',
+        glyph: palette.onMedia,
+      });
+    }
+  });
+
+  describe('disabled', () => {
+    it('reports its state, ignores presses and dims the glyph', async () => {
+      const onPress = jest.fn();
+      await render(
+        <GlassIconButton icon="flash" accessibilityLabel="Flash" testID="off" onPress={onPress} disabled />,
+      );
+      const button = screen.getByTestId('off');
+      expect(button).toHaveProp('accessibilityState', { disabled: true });
+      await userEvent.press(button);
+      expect(onPress).not.toHaveBeenCalled();
+      expect(glassDisabledGlyphAlpha).toBe(0.4);
+    });
+
+    it('is enabled by default and reports that', async () => {
+      const onPress = jest.fn();
+      await render(<GlassIconButton icon="flash" accessibilityLabel="Flash" testID="on" onPress={onPress} />);
+      expect(screen.getByTestId('on')).toHaveProp('accessibilityState', { disabled: false });
+      await userEvent.press(screen.getByTestId('on'));
+      expect(onPress).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('draws the surface glass of the canvas on a surface: card at 78% light, text at 10% dark', async () => {
