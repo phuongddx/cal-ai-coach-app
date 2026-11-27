@@ -18,6 +18,68 @@ import { setEdSafeMode } from '../edSafe';
 
 beforeEach(() => setEdSafeMode(false));
 
+/** The table of the U-71f brief, the same rows as Toast.test.tsx and calorieFigure.test.ts. */
+const HIDDEN_CHIPS = [
+  'Calories today: 1,850',
+  '640 kcal',
+  'kJ',
+  '220 cals',
+  '5 kilojoules',
+  '640kJs',
+  '220cals',
+  '1,850 Calories',
+  '6CAL',
+  'Cal 640',
+  '640kcal',
+  'kcal.',
+  'calories,',
+  'kilojoule',
+  'About 300 cal',
+];
+const SHOWN_CHIPS = [
+  'Changes saved',
+  'Chicken · 180 g',
+  'Edited',
+  'Calm bowl',
+  'calcium 220 mg',
+  'December',
+  'escalate',
+  'scalable',
+  'Calzone',
+  '150 g · 2 pieces',
+];
+
+describe('FoodRow ED-safe screen of the chip, every form of the calorie words', () => {
+  it.each(HIDDEN_CHIPS)('draws the chip %j in every mode and drops the chip and its testID under ED-safe', async (text) => {
+    expect(foodRowVisibleChip(text, true)).toBeUndefined();
+    expect(foodRowVisibleChip(text, false)).toBe(text);
+    await render(<FoodRow title="Oats" chip={text} />);
+    expect(screen.getByTestId('food-row-chip:Oats', { includeHiddenElements: true })).toHaveTextContent(text);
+    await act(async () => {
+      setEdSafeMode(true);
+    });
+    expect(screen.queryByTestId('food-row-chip:Oats', { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByText(text, { includeHiddenElements: true })).toBeNull();
+  });
+
+  it.each(SHOWN_CHIPS)('keeps the chip %j under ED-safe', async (text) => {
+    expect(foodRowVisibleChip(text, true)).toBe(text);
+    await render(<FoodRow title="Oats" chip={text} />);
+    await act(async () => {
+      setEdSafeMode(true);
+    });
+    expect(screen.getByTestId('food-row-chip:Oats', { includeHiddenElements: true })).toHaveTextContent(text);
+  });
+
+  it('drops the chip of a caller identifier too when the chip is hidden', async () => {
+    await render(<FoodRow title="Oats" chip="220 cals" chipTestID="diary.editedChip.7" />);
+    await act(async () => {
+      setEdSafeMode(true);
+    });
+    expect(screen.queryByTestId('diary.editedChip.7', { includeHiddenElements: true })).toBeNull();
+  });
+});
+
 describe('FoodRow', () => {
   it('renders title, meta and the kcal value', async () => {
     await render(<FoodRow title="Chicken Rice" meta="Lunch · 320 g" kcal={464} />);
