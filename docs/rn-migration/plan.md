@@ -475,6 +475,9 @@ the owner. `apps/mobile/src/app/(tabs)/_layout.tsx` belongs to U-76.
 
 Evidence of phase 4: for every frame, a Simulator screenshot of the RN screen next to the Ember
 frame (light, dark and ED-Safe where the design has them), and a list of deviations with reasons.
+Each restyle unit writes its rows with `node scripts/rn/evidence/side-by-side.mjs` into
+`docs/rn-migration/evidence/ember/<unit>.md` (the tool refuses a missing frame or a screenshot over
+700 KB); the final report gathers those pages.
 
 ## Waves 5 to 7 (outline; scoped at the drain before each)
 

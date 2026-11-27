@@ -16,6 +16,7 @@ that were ported stay. Only the look changes.
 | `index.html` with `screens.js` and `app.css` | The canvas with every frame. Open `index.html` in a browser; it needs no server |
 | `research.md` | The references the design was built from |
 | `icon/` | The "Ember ring" app icon as layers and as flattened PNG |
+| `frames/` | Every frame as a PNG with a manifest (see below) |
 
 The handoff notes in `design-system.md` are written for SwiftUI (`Colors.xcassets`,
 `ConcentricRectangle`, `.manageSubscriptionsSheet`). Each unit decides the React Native equivalent,
@@ -53,3 +54,16 @@ its findings and in the parity table (`derived`).
   `settings.edSafeToggle`, ...). The evidence harness and the tests address screens by them.
 - The kcal parity test of the scan review: 464 kcal becomes 508 kcal after three taps on `+`.
 - The ED-safe policy stays in the design system (invariant I7 of `docs/rn-migration/spec.md`).
+
+## Frame images
+
+`frames/` holds every frame as a PNG at 2x (a phone screen is 780 by 1690) with `frames/manifest.json`. A unit that restyles a screen puts its Simulator screenshot next to the frame of the same name. Regenerate them with `scripts/rn/ember-frames.cjs` when the canvas changes.
+
+| Section | Images |
+|---|---|
+| Scan loop | `01-scan-viewfinder.png` `02-scan-analyzing.png` `03-scan-review-light.png` `04-scan-review-dark-item-needs-review.png` `05-scan-review-ed-safe.png` `06-scan-saved.png` |
+| Today, Diary, Progress, Coach | `07-core-today-light.png` `08-core-today-dark-offline.png` `09-core-today-ed-safe.png` `10-core-diary-day-sheet-large-detent.png` `11-core-progress.png` `12-core-coach.png` |
+| Profile, Settings | `13-profile-profile.png` `14-profile-settings.png` `15-profile-food-search-ed-safe.png` `16-profile-manual-log-ed-safe.png` |
+| Quota, Plans, Cancel | `17-billing-quota-reached-sheet.png` `18-billing-plans-paywall.png` `19-billing-cancel-flow.png` |
+| Onboarding | `20-onboarding-1-welcome.png` `21-onboarding-2-goal.png` `22-onboarding-3-about-you.png` `23-onboarding-4-goal-weight-and-pace.png` `24-onboarding-5-activity-and-diet.png` `25-onboarding-6-projection.png` `26-onboarding-7-privacy-health-and-ed-safe.png` `27-onboarding-8-building-your-plan.png` `28-onboarding-9-your-plan.png` |
+| Widgets and Live Activity | `29-glance-small-widget.png` `30-glance-small-widget-ed-safe.png` `31-glance-medium-widget.png` `32-glance-lock-screen-widgets.png` `33-glance-live-activity-lock-screen.png` `34-glance-dynamic-island.png` `35-glance-live-activity-ed-safe.png` |
