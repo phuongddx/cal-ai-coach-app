@@ -1,17 +1,21 @@
 /**
  * SettingsDetailView.swift — the settings screen (model-driven; the route binds
  * the model's real seams). The locked copy lives in settingsCopy so the
- * verbatim strings are test-asserted. The subscription card is display-only
- * with inert buttons (the old app has no store code); the wellness switch
+ * verbatim strings are test-asserted. The subscription card stays display-only
+ * — the plan buttons are visibly disabled and the billing note says why (no
+ * store in this build) — and the export row opens the share sheet with the file
+ * on tap (U-77): the three round-3 states (write failed, nothing logged,
+ * cancelled share) render as rows under the export row. The wellness switch
  * stores the policy through the model and every screen re-renders through the
  * design hooks (invariant I7).
  */
 import { useState, useSyncExternalStore } from 'react';
-import { Pressable, ScrollView, StyleSheet, Share, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
 import {
   BannerNote,
+  PrimaryButton,
   SecondaryButton,
   SectionHeader,
   SettingsGroup,
@@ -26,12 +30,15 @@ import {
 
 import { settingsCopy, wellnessAnnouncement } from './settingsCopy';
 import type { SettingsModel } from './settingsModel';
+import { StateNote } from './StateNote';
 
 export type SettingsDetailViewProps = {
   model: SettingsModel;
+  /** The injected plan name of the display-only entitlement state (the route passes "Free"). */
+  planName: string;
 };
 
-export function SettingsDetailView({ model }: SettingsDetailViewProps) {
+export function SettingsDetailView({ model, planName }: SettingsDetailViewProps) {
   useSyncExternalStore(model.subscribe, model.getRevision);
   const { colors } = useTokens();
   const [showsDeleteConfirmation, setShowsDeleteConfirmation] = useState(false);
@@ -39,13 +46,38 @@ export function SettingsDetailView({ model }: SettingsDetailViewProps) {
   // re-renders every screen through the design hooks (I7).
   const policyOn = useEdSafeMode();
 
+  const exportLoaded = model.exportedCsv !== null && !model.exportEmpty;
+
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         bounces={false}
       >
-        <SectionHeader title="Wellness" />
+        <SectionHeader title="Subscription" />
+        <View
+          testID="settings.subscriptionCard"
+          style={[styles.subscriptionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
+          <Text testID="settings.planValue" style={[typography.headline, { color: colors.textPrimary }]}>
+            {`${planName} plan`}
+          </Text>
+          <View style={styles.subscriptionButtons}>
+            {/* Display-only (no store in this build): the buttons stay visibly
+                disabled — no action, dimmed — and the note says why. */}
+            <View style={styles.inertButton} pointerEvents="none">
+              <SecondaryButton title="Change plan" testID="settings.changePlan" />
+            </View>
+            <View style={styles.inertButton} pointerEvents="none">
+              <SecondaryButton title="Cancel subscription" bordered testID="settings.cancelSubscription" />
+            </View>
+          </View>
+          <View testID="settings.billingNote">
+            <BannerNote text={settingsCopy.billingNote} />
+          </View>
+        </View>
+
+        <SectionHeader title="Wellbeing" />
         <View
           testID="settings.wellnessCard"
           style={[
@@ -95,43 +127,80 @@ export function SettingsDetailView({ model }: SettingsDetailViewProps) {
             </View>
           )}
         </View>
-
-        <SectionHeader title="Health" />
-        <View>
-          <SettingsGroup>
-            <View style={styles.burnRow}>
-              <SymbolView name="flame" size={20} tintColor={colors.textSecondary} />
-              <Text style={[typography.subhead, { color: colors.textPrimary, flex: 1 }]}>
-                {settingsCopy.burnAddBackTitle}
-              </Text>
-              <Switch
-                value={model.burnAddBackOn}
-                onValueChange={(on) => void model.setBurnAddBack(on)}
-                testID="settings.burnAddBackToggle"
-              />
-            </View>
-          </SettingsGroup>
-          {/* IN-01: the toggle persists but nothing reads it yet — the row must
-              not present as a working, descriptive control until the consumer lands. */}
-          <View testID="settings.burnAddBackNote">
-            <BannerNote text={settingsCopy.burnAddBackNote} />
+        <SettingsGroup>
+          <View style={styles.burnRow}>
+            <SymbolView name="flame" size={20} tintColor={colors.textSecondary} />
+            <Text style={[typography.subhead, { color: colors.textPrimary, flex: 1 }]}>
+              {settingsCopy.burnAddBackTitle}
+            </Text>
+            <Switch
+              value={model.burnAddBackOn}
+              onValueChange={(on) => void model.setBurnAddBack(on)}
+              testID="settings.burnAddBackToggle"
+            />
           </View>
+        </SettingsGroup>
+        {/* IN-01: the toggle persists but nothing reads it yet — the row must
+            not present as a working, descriptive control until the consumer lands. */}
+        <View testID="settings.burnAddBackNote">
+          <BannerNote text={settingsCopy.burnAddBackNote} />
         </View>
 
-        <SectionHeader title="Data & privacy" />
+        <SectionHeader title="Your data" />
         <SettingsGroup>
           <Pressable
             accessibilityRole="button"
             testID="settings.row.export"
-            disabled={model.exportedCsv === null}
-            onPress={() => {
-              if (model.exportedCsv !== null) {
-                void Share.share({ title: 'CoachCal Data.csv', message: model.exportedCsv });
-              }
-            }}
+            disabled={!exportLoaded}
+            onPress={() => void model.shareExport()}
           >
-            <SettingsRow icon="square.and.arrow.up" label="Export CSV" />
+            <SettingsRow icon="square.and.arrow.up" label={settingsCopy.exportRowTitle} />
           </Pressable>
+          {model.exportEmpty && (
+            <View style={styles.exportRow} testID="settings.exportEmpty">
+              <BannerNote
+                text={`**${settingsCopy.exportEmptyTitle}.** ${settingsCopy.exportEmptyBody}`}
+                variant="info"
+                markdown
+              />
+            </View>
+          )}
+          {model.exportShare.kind === 'failed' && (
+            <View style={styles.exportRow} testID="settings.exportError">
+              <StateNote
+                variant="error"
+                text={`**${settingsCopy.exportFailedTitle}.** ${model.exportShare.reason}`}
+              />
+              <PrimaryButton
+                title={settingsCopy.exportRetry}
+                testID="settings.exportRetry"
+                action={() => void model.shareExport()}
+              />
+            </View>
+          )}
+          {model.exportShare.kind === 'cancelled' && (
+            <View style={styles.exportRow} testID="settings.exportCancelled">
+              {/* A cancelled share is not an error: the file stays, the row
+                  offers "Share again" and "Done" (frame x-cancel). */}
+              <BannerNote
+                text={`**${settingsCopy.exportCancelledTitle}.** ${settingsCopy.exportCancelledBody}`}
+                variant="info"
+                markdown
+              />
+              <View style={styles.exportButtons}>
+                <SecondaryButton
+                  title={settingsCopy.exportShareAgain}
+                  testID="settings.exportRetry"
+                  action={() => void model.shareExport()}
+                />
+                <SecondaryButton
+                  title={settingsCopy.exportDone}
+                  testID="settings.exportDone"
+                  action={() => model.dismissExportShare()}
+                />
+              </View>
+            </View>
+          )}
           <Pressable
             accessibilityRole="button"
             testID="settings.row.deleteAccount"
@@ -141,33 +210,10 @@ export function SettingsDetailView({ model }: SettingsDetailViewProps) {
           </Pressable>
         </SettingsGroup>
 
-        <View
-          testID="settings.subscriptionCard"
-          style={[styles.subscriptionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-        >
-          <View style={styles.subscriptionHeadline}>
-            <Text style={[typography.headline, { color: colors.textPrimary }]}>Subscription</Text>
-            <View style={[styles.activeChip, { backgroundColor: withAlpha(colors.accentLime, 0.15) }]}>
-              <Text style={[typography.caption, { color: colors.textPrimary }]}>Active</Text>
-            </View>
-          </View>
-          <Text testID="settings.planValue" style={[typography.subhead, { color: colors.textPrimary }]}>
-            Free
-          </Text>
-          <View style={styles.subscriptionButtons}>
-            {/* Display-only (T-P07-05): no purchase code exists; the buttons are present but inert. */}
-            <SecondaryButton title="Change plan" testID="settings.changePlan" />
-            <SecondaryButton title="Cancel subscription" bordered testID="settings.cancelSubscription" />
-          </View>
-          <View testID="settings.billingNote">
-            <BannerNote text={settingsCopy.billingNote} />
-          </View>
-        </View>
-
         <SectionHeader title="Support" />
         <SettingsGroup>
           <Pressable accessibilityRole="button" testID="settings.row.help" onPress={() => undefined}>
-            <SettingsRow icon="questionmark.circle" label="Help & FAQ" />
+            <SettingsRow icon="questionmark.circle" label={settingsCopy.supportRowTitle} />
           </Pressable>
           <Pressable accessibilityRole="button" testID="settings.row.contact" onPress={() => undefined}>
             <SettingsRow icon="envelope" label="Contact us" />
@@ -261,17 +307,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
   },
-  subscriptionHeadline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  activeChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
   subscriptionButtons: {
+    flexDirection: 'row',
+    gap: space.sm,
+  },
+  /** The inert plan buttons read visibly disabled: dimmed and untouchable. */
+  inertButton: { flex: 1, opacity: 0.5 },
+  exportRow: { gap: space.sm, paddingHorizontal: space.lg, paddingVertical: space.sm },
+  exportButtons: {
     flexDirection: 'row',
     gap: space.sm,
   },

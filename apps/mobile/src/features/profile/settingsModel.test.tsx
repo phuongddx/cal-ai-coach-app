@@ -95,6 +95,7 @@ function makeSettingsModel(overrides: Partial<SettingsModelDeps> = {}) {
       order.push('# export');
       return '# user_targets\nid\n';
     },
+    shareExport: async () => 'shared' as const,
     ...overrides,
   };
   return { model: createSettingsModel(deps), deps, writes, order };
@@ -135,7 +136,7 @@ describe('settings (SettingsTests twin)', () => {
     expect(wellnessAnnouncement(false)).toBe('ED-Safe Mode, off');
 
     const { model } = makeSettingsModel();
-    await render(<SettingsDetailView model={model} />);
+    await render(<SettingsDetailView model={model} planName="Free" />);
     const toggle = screen.getByTestId('settings.edSafeToggle');
     expect(toggle.props.accessibilityLabel).toBe('ED-Safe Mode, off');
   });
@@ -146,7 +147,7 @@ describe('settings (SettingsTests twin)', () => {
     expect(model.burnAddBackOn).toBe(false);
 
     const { model: screenModel } = makeSettingsModel();
-    await render(<SettingsDetailView model={screenModel} />);
+    await render(<SettingsDetailView model={screenModel} planName="Free" />);
     expect(screen.getByTestId('settings.burnAddBackToggle')).toBeOnTheScreen();
 
     await model.setBurnAddBack(true);
@@ -203,16 +204,21 @@ describe('settings (SettingsTests twin)', () => {
   // testSubscriptionCardRendersDisplayOnly
   it('the subscription card renders display only', async () => {
     const { model } = makeSettingsModel();
-    await render(<SettingsDetailView model={model} />);
+    await render(<SettingsDetailView model={model} planName="Free" />);
 
     expect(screen.getByText('Subscription')).toBeOnTheScreen();
-    expect(screen.getByText('Free')).toBeOnTheScreen();
-    expect(screen.getByText('Active')).toBeOnTheScreen();
+    expect(screen.getByText('Free plan')).toBeOnTheScreen();
     expect(screen.getByText('Change plan')).toBeOnTheScreen();
     expect(screen.getByText('Cancel subscription')).toBeOnTheScreen();
     expect(screen.getByText(settingsCopy.billingNote)).toBeOnTheScreen();
     expect(screen.getByText(settingsCopy.versionCaption)).toBeOnTheScreen();
     expect(screen.getByText(settingsCopy.wellnessDescription)).toBeOnTheScreen();
+
+    // The buttons are disabled (no store in this build) and no "Active" badge
+    // is drawn on a Free plan.
+    expect(screen.getByTestId('settings.changePlan').props.accessibilityState?.disabled).toBe(true);
+    expect(screen.getByTestId('settings.cancelSubscription').props.accessibilityState?.disabled).toBe(true);
+    expect(screen.queryByText('Active')).toBeNull();
   });
 
   // testExportCsvPresentsShareLink
@@ -225,7 +231,7 @@ describe('settings (SettingsTests twin)', () => {
     expect(model.exportedCsv).toBe(expectedCsv);
 
     const { model: screenModel } = makeSettingsModel({ csvExportAction: async () => expectedCsv });
-    const view = await render(<SettingsDetailView model={screenModel} />);
+    const view = await render(<SettingsDetailView model={screenModel} planName="Free" />);
     const exportRow = screen.getByTestId('settings.row.export');
     expect(exportRow.props.accessibilityState?.disabled).toBe(true);
     await screenModel.loadExport();
@@ -262,27 +268,27 @@ describe('settings (SettingsTests twin)', () => {
       <ProfileView
         stats={{ target: makeTarget(), latestKg: 80.0, daysLogged: 21, memberSince: FIXED_NOW }}
         planName="Free"
+        accountName="minh@example.com"
+        healthConnected={false}
         onEditTargets={() => undefined}
         onOpenSettings={() => undefined}
       />,
     );
 
-    expect(screen.getByText('Alex')).toBeOnTheScreen();
+    // The account's name replaces the hard-coded "Alex"; the plan line follows
+    // the display-only entitlement state.
+    expect(screen.getByText('minh@example.com')).toBeOnTheScreen();
     expect(screen.getByText('Free · Since Sep 2026')).toBeOnTheScreen();
-    expect(screen.getByText('Days logged')).toBeOnTheScreen();
-    expect(screen.getByText('Weight, kg')).toBeOnTheScreen();
     expect(screen.getByText('kcal / day')).toBeOnTheScreen();
-    expect(screen.getByText('Goals & targets')).toBeOnTheScreen();
+    expect(screen.getByText('kg now')).toBeOnTheScreen();
+    expect(screen.getByText('kg goal')).toBeOnTheScreen();
+    expect(screen.getByText('Plan')).toBeOnTheScreen();
     expect(screen.getByText('Daily target')).toBeOnTheScreen();
     expect(screen.getByText('Macro ratios')).toBeOnTheScreen();
     expect(screen.getByText('Goal weight')).toBeOnTheScreen();
-    expect(screen.getByText('Integrations')).toBeOnTheScreen();
+    expect(screen.getByText('App')).toBeOnTheScreen();
     expect(screen.getByText('Apple Health')).toBeOnTheScreen();
     expect(screen.getByText('Not connected')).toBeOnTheScreen();
-    expect(screen.getByText('Preferences')).toBeOnTheScreen();
-    expect(screen.getByText('Reminders')).toBeOnTheScreen();
-    expect(screen.getByText('Appearance')).toBeOnTheScreen();
-    expect(screen.getByText('System')).toBeOnTheScreen();
     expect(screen.getByText('Units')).toBeOnTheScreen();
     expect(screen.getByText('Metric')).toBeOnTheScreen();
     expect(screen.getByText('Settings')).toBeOnTheScreen();
@@ -309,7 +315,13 @@ describe('settings (SettingsTests twin)', () => {
   it('the apple health tap shows the phase 4 footnote', async () => {
     const stats = { target: null, latestKg: null, daysLogged: 0, memberSince: null };
     const view = await render(
-      <ProfileView stats={stats} planName="Free" onOpenSettings={() => undefined} />,
+      <ProfileView
+        stats={stats}
+        planName="Free"
+        accountName="minh@example.com"
+        healthConnected={false}
+        onOpenSettings={() => undefined}
+      />,
     );
     expect(screen.queryByText(onboardingCopy.healthConnectNote)).toBeNull();
 
@@ -319,7 +331,15 @@ describe('settings (SettingsTests twin)', () => {
     await view.unmount();
 
     // A second render without the tap keeps the footnote hidden.
-    await render(<ProfileView stats={stats} planName="Free" onOpenSettings={() => undefined} />);
+    await render(
+      <ProfileView
+        stats={stats}
+        planName="Free"
+        accountName="minh@example.com"
+        healthConnected={false}
+        onOpenSettings={() => undefined}
+      />,
+    );
     expect(screen.queryByText(onboardingCopy.healthConnectNote)).toBeNull();
   });
 });

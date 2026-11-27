@@ -110,6 +110,7 @@ describe('the settings deletion entry (the route binding)', () => {
       deleteAccount: async () => {
         order.push('remote');
       },
+      shareExport: async () => 'shared' as const,
       resetLocalData: async () => {
         order.push('localReset');
         await resetAccount(

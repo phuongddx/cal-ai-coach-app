@@ -114,3 +114,32 @@ does (the switch reads the mode with `useEdSafeMode()`). Two RN-added rows are m
 |---|---|---|---|
 | `edSafeMode` | `'1'` / `'0'` | `app/settings.tsx` → writeAppSetting over the data environment (through the model's injected writer) | U-51 at launch (same key and format) |
 | `burnAddBackEnabled` | `'1'` / `'0'` | same path | no consumer yet (IN-01), as in the Swift app |
+
+## U-77 — the Ember restyle (2026-11-27)
+
+Restyled against frames `13`/`14`/`18`/`19` plus the round-3 previews (`p-profile-dark`,
+`p-settings-dark`, `p-target-*`, `x-write/nodata/cancel-*`, `b-paywall-*`, `b-cancel-dark`).
+Behavior, sentences and the identifier table above are unchanged except as listed; the full
+decision record is `findings/U-77.md`.
+
+| Behavior | Frame | RN file | Jest evidence |
+|---|---|---|---|
+| The name is the account's (session e-mail; no display-name field on `SessionUserSchema`), never hard-coded | 13 | `ProfileView.tsx` `accountName` prop + `avatarInitial`; route `(tabs)/profile.tsx` derives it from the session | ProfileView.test "renders the account name…" + `avatarInitial` case |
+| The plan line stays the display-only "Free · Since <month> <year>"; "Plus · renews…" waits for the store | 13 | unchanged `planLine()` | unchanged verbatim assertion |
+| Quick stats: kcal/day · kg now · kg goal; `profile.stat.daysLogged` removed | 13 | `ProfileView.tsx` (goal stat reads `target.goalWeightKg ?? weightKg`) | ProfileView.test (identifiers + labels) |
+| Apple Health row's value is the real step-authorization status | 13 | route `(tabs)/profile.tsx` `readHealthConnected()` (route-level HealthKit port read, `sharingAuthorized → Connected`) | ProfileView.test "shows the real Health status…" |
+| The frame's kg/lb segment is not built (new feature); the Units row shows the unit | 13 | `ProfileView.tsx` (inert row) | inventory case (no switch exists) |
+| Billing buttons visibly disabled + `settings.billingNote` says why; plan line "Free plan"; no Active badge, no Billing history/Restore | 14 | `SettingsDetailView.tsx` (dimmed inert wrappers; copy) | SettingsDetailView.test "keeps the two billing buttons visibly disabled…"; twin "the subscription card renders display only" |
+| ED-Safe subtitle keeps today's copy (U-78 wires widgets/Live Activity); burn add-back subtitle states its effect, IN-01 note stays | 14 | unchanged `settingsCopy` | unchanged verbatim assertions |
+| Export tap → `exportCsvAndShare` (the file), never on open; empty diary detected from the prepared text | 14 + x-* | route `app/settings.tsx` (RN `Share.share` port — expo-sharing resolves void and cannot report dismissal) + `settingsModel.ts` `shareExport`/`hasExportRows` | SettingsDetailView.test "opens the share sheet only on tap", "nothing to export" |
+| Export states: write failed (reason + retry), nothing logged (info row, row disabled), cancelled (not an error: "Not shared", Share again, Done) | x-write/nodata/cancel | `settingsModel.ts` `ExportShareState` + `SettingsDetailView.tsx` rows (`settings.exportError/Empty/Cancelled/Retry/Done`) | SettingsDetailView.test (three new cases) |
+| Target sheet: title "Edit goal" + close glass button; save names the goal; "Past days in your diary don't change." | p-target-light/dark | `TargetEditSheet.tsx` (SheetHeader row; wheel and ±50 steps kept — today's logic) | TargetEditSheet.test first case + "closes from the close glass button" |
+| Goal-floor caution card with the engine's flat clamp; the button names the clamped value; no height claim, no "BMI" (height-based floor = engine follow-up) | p-target-floor | `targetEditModel.ts` `clampedGoalWeightKg`/`goalClamped` + `settingsCopy.goalFloorCopy` + `StateNote` caution | TargetEditSheet.test "shows the caution card and names the clamped value…", "clears the caution card…" |
+| ED-safe hides the kcal section, keeps the weight and the save | p-target-ed | unchanged `EdSafeCollapse` placement | unchanged ED-safe case |
+| Paywall shell (hero, feature rows, option cards, Restore/Close, terms note) in three states; no price anywhere in this build (loader always rejects → failed) | 18 + b-paywall-loading/failed | `features/billing/paywallModel.ts` + `PaywallView.tsx` + route `app/plans.tsx` | PaywallView.test (three states, no `$` text, retry, Restore/Close) |
+| Cancel flow: three check rows (no `{expiryDate}` — no source), Apple note, equal-weight exits; primary opens the App Store subscriptions page (D14, `Linking`) | 19 + b-cancel-dark | `features/billing/CancelFlowView.tsx` + route `app/cancel-flow.tsx` | CancelFlowView.test (rows, primary → injected opener, Keep Plus) |
+| New routes `plans` / `cancel-flow` (file-based registration; `_layout.tsx` out of scope) | 18/19 | `app/plans.tsx`, `app/cancel-flow.tsx` | routes.test (file list + two deep links) |
+
+New identifiers: see `findings/U-77.md` §3 (the five `settings.export*` ids of the brief, the
+billing set `plans.*` / `cancelFlow.*`, `profile.stat.goalWeight`,
+`settings.targetEdit.close`, `settings.targetEdit.goalFloor`). Removed: `profile.stat.daysLogged`.

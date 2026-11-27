@@ -1,13 +1,17 @@
 /**
  * ProfileView.swift — the profile tab screen (props-driven; the route holds the
- * environment). The plan line derives from the display-only subscription state
- * (the plan name is injected; Phase 3 is Free-only), the daily-target framing
- * collapses under ED-safe mode through the design system's EdSafeCollapse, and
- * the Apple Health row reveals an honest footnote — never a permission prompt.
+ * environment). The name is the account's (the route derives it from the
+ * session — never a hard-coded name), the plan line derives from the
+ * display-only subscription state, the quick stats are the frame's three
+ * (kcal/day · kg now · kg goal) and the Apple Health row shows the real
+ * connection status as its value. The daily-target framing collapses under
+ * ED-safe mode through the design system's EdSafeCollapse, and the Apple Health
+ * tap still reveals the honest footnote (`profile.healthNote`). The frame's
+ * kg / lb switch is not built: unit conversion across the app is a new feature
+ * (the row shows the unit; see findings/U-77.md).
  */
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 
 import {
@@ -31,16 +35,35 @@ export type ProfileViewProps = {
   stats: ProfileStats;
   /** The injected plan name (display-only entitlement state; the route passes "Free"). */
   planName: string;
+  /** The account's name: the display name when the sign-in gave one, else the e-mail. */
+  accountName: string;
+  /** The real Apple Health connection status (the route reads the step-type authorization). */
+  healthConnected: boolean;
   /** Present only when a target exists to edit. */
   onEditTargets?: (() => void) | null;
   onOpenSettings: () => void;
 };
 
-export function ProfileView({ stats, planName, onEditTargets, onOpenSettings }: ProfileViewProps) {
+/** The avatar's initial: the name's first grapheme, uppercased; '—' when unknown. */
+export function avatarInitial(accountName: string): string {
+  const first = accountName.trim().charAt(0);
+  return first === '' ? '—' : first.toUpperCase();
+}
+
+export function ProfileView({
+  stats,
+  planName,
+  accountName,
+  healthConnected,
+  onEditTargets,
+  onOpenSettings,
+}: ProfileViewProps) {
   const { colors } = useTokens();
   const [showsHealthNote, setShowsHealthNote] = useState(false);
   const line = planLine(planName, stats.memberSince);
   const editTargets = onEditTargets ?? null;
+  const name = accountName.trim() === '' ? '—' : accountName;
+  const goalWeightKg = stats.target?.goalWeightKg ?? stats.target?.weightKg ?? null;
 
   return (
     <ScrollView
@@ -51,26 +74,26 @@ export function ProfileView({ stats, planName, onEditTargets, onOpenSettings }: 
       <View
         testID="profile.userCard"
         accessible
-        accessibilityLabel={`Alex, ${line}`}
+        accessibilityLabel={`${name}, ${line}`}
         style={[styles.userCard, { backgroundColor: colors.card, borderColor: colors.border }]}
       >
         <View style={styles.avatar}>
           <Svg width={56} height={56}>
             <Defs>
               <SvgGradient id="profileAvatar" x1="0" y1="0" x2="1" y2="1">
-                <Stop offset="0" stopColor={withAlpha(colors.accentLime, 0.9)} />
-                <Stop offset="1" stopColor={withAlpha(colors.accentLime, 0.55)} />
+                <Stop offset="0" stopColor={withAlpha(colors.accent, 0.9)} />
+                <Stop offset="1" stopColor={withAlpha(colors.accent, 0.55)} />
               </SvgGradient>
             </Defs>
             <Circle cx={28} cy={28} r={28} fill="url(#profileAvatar)" />
           </Svg>
-          {/* The Swift initial renders Color.black on the lime gradient. */}
+          {/* The Swift initial renders Color.black on the accent gradient. */}
           <Text aria-hidden style={styles.avatarInitial}>
-            A
+            {avatarInitial(name)}
           </Text>
         </View>
         <View style={styles.userName}>
-          <Text style={[typography.headline, { color: colors.textPrimary }]}>Alex</Text>
+          <Text style={[typography.headline, { color: colors.textPrimary }]}>{name}</Text>
           <Text style={[typography.footnote, { color: colors.textSecondary }]}>{line}</Text>
         </View>
       </View>
@@ -85,15 +108,19 @@ export function ProfileView({ stats, planName, onEditTargets, onOpenSettings }: 
             caption="kcal / day"
           />
         </EdSafeCollapse>
-        <StatCard identifier="profile.stat.daysLogged" value={`${stats.daysLogged}`} caption="Days logged" />
         <StatCard
           identifier="profile.stat.weight"
           value={stats.latestKg === null ? '—' : stats.latestKg.toFixed(1)}
-          caption="Weight, kg"
+          caption="kg now"
+        />
+        <StatCard
+          identifier="profile.stat.goalWeight"
+          value={goalWeightKg === null ? '—' : `${Math.round(goalWeightKg)}`}
+          caption="kg goal"
         />
       </View>
 
-      <SectionHeader title="Goals & targets" />
+      <SectionHeader title="Plan" />
       <SettingsGroup>
         <EdSafeCollapse>
           <Pressable
@@ -134,24 +161,29 @@ export function ProfileView({ stats, planName, onEditTargets, onOpenSettings }: 
           <SettingsRow
             icon="scalemass"
             label="Goal weight"
-            value={
-              stats.target === null
-                ? '—'
-                : `${Math.round(stats.target.goalWeightKg ?? stats.target.weightKg ?? 0)} kg`
-            }
+            value={goalWeightKg === null ? '—' : `${Math.round(goalWeightKg)} kg`}
           />
         </Pressable>
       </SettingsGroup>
 
-      <SectionHeader title="Integrations" />
+      <SectionHeader title="App" />
       <SettingsGroup>
         <Pressable
           accessibilityRole="button"
           testID="profile.row.appleHealth"
           onPress={() => setShowsHealthNote(true)}
         >
-          <SettingsRow icon="heart.fill" label="Apple Health" value="Not connected" />
+          {/* The real connection status is the row's value (the frame's
+              "Connected"); the tap still reveals the honest footnote. */}
+          <SettingsRow
+            icon="heart.fill"
+            label="Apple Health"
+            value={healthConnected ? 'Connected' : 'Not connected'}
+          />
         </Pressable>
+        {/* The frame's kg / lb segment is app-wide unit conversion — a new
+            feature, not built. The row shows the unit (findings/U-77.md). */}
+        <SettingsRow icon="globe" label="Units" value="Metric" />
       </SettingsGroup>
       {showsHealthNote && (
         <View testID="profile.healthNote">
@@ -160,12 +192,6 @@ export function ProfileView({ stats, planName, onEditTargets, onOpenSettings }: 
         </View>
       )}
 
-      <SectionHeader title="Preferences" />
-      <SettingsGroup>
-        <SettingsRow icon="bell" label="Reminders" value="Off" />
-        <SettingsRow icon="sun.max" label="Appearance" value="System" />
-        <SettingsRow icon="globe" label="Units" value="Metric" />
-      </SettingsGroup>
       <SettingsGroup>
         <Pressable accessibilityRole="button" testID="profile.row.settings" onPress={onOpenSettings}>
           <SettingsRow icon="gearshape" label="Settings" />
