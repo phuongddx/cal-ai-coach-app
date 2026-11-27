@@ -32,3 +32,9 @@ Simulator slot.
 
 - The owner docs pull request is done (PR 52).
 - The U-72 stage A2 (the picker of U-74 on `main`) waits for the merge of PR 37.
+
+## For the next owner pull request
+
+- A gate lock: `scripts/rn/gate.sh` runs the three gates under a lock (one gate on the machine at
+  a time), and rule 10 names it. At 23:30 the load was 43 to 62 on 11 cores while the stage B of
+  U-74 captured evidence.
