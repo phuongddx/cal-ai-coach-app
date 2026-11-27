@@ -67,6 +67,14 @@ export default function TodayRoute() {
   useEffect(() => {
     let mounted = true;
     let built: TodayModel | null = null;
+    let released = false;
+    // Disposes the model once, from whichever of the cleanup and the continuation gets there first: the
+    // route can unmount before the environment resolves, and the model is built after that.
+    const release = () => {
+      if (built === null || released) return;
+      released = true;
+      built.dispose();
+    };
     void (async () => {
       const environment = await getDataEnvironment();
       if (__DEV__ && seedParam === '1') {
@@ -88,10 +96,11 @@ export default function TodayRoute() {
       });
       await built.refresh();
       if (mounted) setModel(built);
+      else release();
     })();
     return () => {
       mounted = false;
-      built?.dispose();
+      release();
     };
   }, [seedParam]);
 
