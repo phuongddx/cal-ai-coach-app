@@ -25,3 +25,8 @@ ts	unit	state	branch	pr	head	by	evidence
 2026-11-27T06:32:29Z	U-30	running	rn/u-30-scan-flow	-	bccca54	Worker-S2	docs/rn-migration/briefs/U-30.md
 2026-11-27T06:32:29Z	U-31	running	rn/u-31-onboarding	-	bccca54	Worker-G1	docs/rn-migration/briefs/U-31.md
 2026-11-27T06:32:29Z	U-32	running	rn/u-32-diary	-	bccca54	Worker-G2	docs/rn-migration/briefs/U-32.md
+2026-11-27T07:59:28Z	U-23	landed	-	17	fe9ab5b	CoachCal (owner)	merge 380d833; owner integrated the four wave 3 branches and ran 1,015 tests with PostgreSQL 17, typecheck, parity 0, the curl sync script 15 of 15 and both smokes 5 of 5; review clean apart from two notes
+2026-11-27T07:59:28Z	U-32	landed	-	18	6e0c8c9	CoachCal (owner)	merge fdfde23; review clean apart from notes (the feature-local write queue is redundant since U-23)
+2026-11-27T07:59:28Z	U-31	landed	-	19	c30880a	CoachCal (owner)	merge c57db8b; review found the ED-safe gap of the plan reveal (OB-09, assigned to U-41) and a broader HealthKit ask than Swift (U-42)
+2026-11-27T07:59:28Z	U-30	fail	rn/u-30-scan-flow	16	9db1bf4	CoachCal (owner)	review found a Flip camera button without an action and a hint promising OCR; rework sent to Worker-S2 in thread ff693640 (receipt 9c331968)
+2026-11-27T07:59:28Z	U-30	running	rn/u-30-scan-flow	16	-	Worker-S2	rework of the two review fixes on PR 16
