@@ -135,3 +135,4 @@ export {
   type WeeklyStat,
 } from './components/WeeklyReviewStats';
 export { ScaledNumber, type ScaledNumberProps } from './components/ScaledNumber';
+export { EdSafeCollapse } from './components/EdSafeCollapse';

@@ -22,7 +22,7 @@ import {
   useTokens,
 } from '../../design';
 import { CorrectionCaptureView } from './CorrectionCaptureView';
-import { EdSafeCollapse } from './EdSafeCollapse';
+import { EdSafeCollapse } from '../../design';
 import { ScanThumb } from './ScanThumb';
 import { mealName } from './scanCopy';
 import type { ScanModel } from './scanModel';
