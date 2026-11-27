@@ -4,9 +4,9 @@
 # Part 1 is the real behavior: a fresh install has no target, so the root gate shows onboarding
 # (U-81 fixed a navigator that showed the Debug console instead). Saves PL-01/fresh-install-after.png.
 #
-# Part 2 brings the app to the seeded Today that flows 02 to 05 need. Onboarding cannot be completed
-# through the UI of this build (saving a target asks for a random id from ExpoCrypto, which the built
-# development client does not hold), so the demo persona is seeded the way the Debug console does it:
+# Part 2 brings the app to the seeded Today that flows 02 to 05 need. The nine onboarding steps are not
+# walked here (stage B of U-73 walks them on the Simulator; the development client holds ExpoCrypto, found
+# by searching its marker string in CoachCal.debug.dylib), so the demo persona is seeded the way the Debug console does it:
 # launch once with --ccSeedNoTargets (the shell without a target), open coachcal:///?seed=1, stop the app.
 # The target is then stored and every later launch shows Today. Saves PL-01/01-first-launch-{light,dark}.png.
 set -uo pipefail
