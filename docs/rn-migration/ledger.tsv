@@ -17,3 +17,7 @@ ts	unit	state	branch	pr	head	by	evidence
 2026-11-27T05:58:00Z	U-14	running	rn/u-14-evidence-harness	-	20699e7	Worker-G2	docs/rn-migration/briefs/U-14.md (base moved to main after PR 10)
 2026-11-27T05:58:00Z	U-20	running	rn/u-20-networking-auth	-	20699e7	Worker-S2	docs/rn-migration/briefs/U-20.md (base moved to main after PR 10)
 2026-11-27T05:58:00Z	U-21	running	rn/u-21-backend-auth	-	20699e7	Worker-S1	docs/rn-migration/briefs/U-21.md (base moved to main after PR 10)
+2026-11-27T06:13:09Z	U-12	landed	-	12	05979b1	CoachCal (owner)	merge 1848844; owner integrated the four branches and ran 775 tests with PostgreSQL 17, typecheck and parity 0; the review found two defects assigned to U-23 (the acknowledgement must apply the server record; overlapping transactions are not serialized)
+2026-11-27T06:13:09Z	U-14	landed	-	13	9705058	CoachCal (owner)	merge f1c3583; review clean (nine screenshots under 700 KB, traps on Metro, nothing under apps or packages)
+2026-11-27T06:13:09Z	U-20	landed	-	11	6607fc6	CoachCal (owner)	merge 8223f60; owner re-ran the 392 mobile tests on the integrated tree; the security review found the Math.random fallback of newUuid on Hermes, assigned to U-23
+2026-11-27T06:13:09Z	U-21	landed	-	14	65dcb1c	CoachCal (owner)	merge 021bc0f; owner re-ran the 249 API tests on PostgreSQL 17 and both smokes on the integrated tree; security review clean apart from four notes parked in plan.md

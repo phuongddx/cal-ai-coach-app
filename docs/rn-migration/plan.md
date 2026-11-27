@@ -63,14 +63,16 @@ Shared files have one writer per wave. "Only" means nobody else edits it in that
 | `package.json`, `package-lock.json`, `apps/*/package.json` | U-13 only | nobody (frozen) | the owner, through a dependency unit |
 | `apps/mobile/app.config.ts`, `apps/mobile/plugins/**` | U-13 only | U-13 follow-ups only | the unit that holds the native slot |
 | `apps/mobile/src/app/**` | U-13 (skeleton) | U-14 adds nothing; U-20 owns `sign-in.tsx` | each feature owns its route file; `_layout.tsx` files belong to U-51 |
-| `apps/mobile/src/design/**` | U-22 only | U-22 follow-ups | component changes need the feature unit to say so in its report |
-| `apps/mobile/src/data/db/**`, `src/data/repos/**` | nobody | U-12 only | the unit named in the brief |
+| `apps/mobile/src/design/**` | U-22 only | U-22 follow-ups | frozen; U-30 adds a `testID` prop to the two buttons |
+| `apps/mobile/src/data/db/**`, `src/data/repos/**` | nobody | U-12 only | frozen, except U-23: `sqlDb.ts`, `syncMergeRepository.ts` and the demo owner constant of `seedDataManager.ts` |
 | `apps/mobile/src/data/sync/**` | nobody | U-12: `store.sqlite.ts`, `repository.ts` only | U-23 |
-| `apps/mobile/src/data/api/**`, `src/data/auth/**` | nobody | U-20 only | U-20 follow-ups |
-| `apps/mobile/src/features/**` | U-22 may fix import paths only | nobody | one feature tree per unit |
+| `apps/mobile/src/data/api/**`, `src/data/auth/**` | nobody | U-20 only | frozen, except U-23: `syncClient.ts` and `syncTransport.test.ts` |
+| `apps/mobile/src/features/**` | U-22 may fix import paths only | nobody | one feature tree per unit: U-30 `scan`, U-31 `onboarding`, U-32 `diary` |
+| `apps/mobile/src/data/environment.ts`, `src/debug/launchArgs.ts` | nobody | nobody | the owner until U-51 |
 | `packages/core/**` | U-10 only | bug fixes through the owner | bug fixes through the owner |
 | `packages/api-contract/**` | nobody (relocated in U-00) | U-21 may add `auth.ts`; `index.ts` gets one export line | the owner |
-| `apps/api/**` | U-11 only | U-21 only (U-11 is merged) | the unit named in the brief |
+| `apps/api/**` | U-11 only | U-21 only (U-11 is merged) | frozen; a server change is a fix unit |
+| `scripts/rn/e2e-sync.sh`, `scripts/rn/e2e-sync-app.sh` | the spike | nobody | U-23 |
 | `docs/rn-migration/parity.tsv` | the owner sets status and evidence after each drain | same | same |
 
 ## Levers (tools every unit uses; do not edit them, report a defect instead)
@@ -79,11 +81,19 @@ Shared files have one writer per wave. "Only" means nobody else edits it in that
 |---|---|---|
 | `scripts/rn/parity-check.mjs` (`npm run parity:check`) | parity gate: inventory coverage, evidence exists, golden drift, no Supabase in `apps/` and `packages/`; `npm run parity:write` regenerates `parity.md` | U-00 |
 | `scripts/rn/clone-node-modules.sh <from> <to>` | gives a worktree `node_modules` as an APFS clone of another worktree's (39 s, no extra disk); refuses when the two lockfiles differ | U-00 |
-| `scripts/rn/start-api.sh [start\|stop]` | throwaway PostgreSQL 17 on 5433 and the API on 8787 | spike, extended by U-11 and U-21 |
+| `scripts/rn/start-api.sh [start\|stop]` | throwaway PostgreSQL 17 on 5433 and the API on 8787; the env file it writes is named after the checkout, so only that checkout's Jest suites find the cluster | spike, extended by U-11 and U-21, isolated by the owner |
 | `scripts/rn/gen-migrations.mjs` | regenerates `apps/mobile/src/data/db/migrations.ts` from Drizzle Kit's SQL so Metro can bundle the migrations; a test fails when the generated file is stale | U-12 |
 | `scripts/rn/native-slot.sh prepare\|release` | prepares the native worktree for a build (disk check, prebuild) and releases it (removes Pods and DerivedData) | U-13 |
 | `scripts/rn/check-artifact-compliance.mjs <path.to.app>` | entitlements, usage strings, privacy manifest and URL scheme of a built `.app` | U-13 |
 | `scripts/rn/evidence/lib.sh` and `flows/*.sh` | boot, launch with `--cc*` arguments, tap, type, screenshot into `docs/rn-migration/evidence/<id>/`, transcript | U-14 |
+
+## Seams (written by the owner after wave 2; feature units consume them, nobody edits them)
+
+| Seam | What it gives a feature |
+|---|---|
+| `getDataEnvironment()` in `apps/mobile/src/data/environment.ts` | the app's one database handle and the repositories over it (the sync runtime opens the handle) |
+| `notifyLocalMutation()` in `apps/mobile/src/data/sync/runtime.ts` | the UI re-reads and a sync is scheduled after a write, as `notifyLocalMutation()` does in the Swift app |
+| `getDebugFlags()` and `setDebugFlags()` in `apps/mobile/src/debug/launchArgs.ts` | the nine `--cc*` flags and the parser the native reader will use (U-51) |
 
 ## Places
 
@@ -320,14 +330,55 @@ Scoped here; each gets a `briefs/U-*.md` with the full CONTEXT at dispatch.
 | U-20 mobile networking and auth client | S2 | NW-01 to NW-04, AU-01 | Typed fetch clients for scan, sync and account over `packages/api-contract`; fixture client over the golden files; `ScanAPIError` from the envelope; session store in `expo-secure-store` with refresh on 401; Sign in with Apple with the SHA256 nonce; Google through `expo-web-browser`; email and OTP; sign-in screen | U-13 (deps), U-22 (components) |
 | U-21 backend auth, account, webhook, sync, deploy | S1 | BE-04 to BE-07, BE-12 | `/v1/auth/*` with jose and scrypt, refresh rotation, `DELETE /v1/account` with Apple token revoke, `POST /webhooks/revenuecat`, sync routes on the ported RPCs with the exact ack-set semantics, Dockerfile, compose with PostgreSQL 17 and Caddy, env template, backup script, `docs/rn-migration/deploy-vps.md` with every step Phương runs and every secret he must create | U-11 |
 
-## Waves 3 to 7 (outline; scoped at the drain before each)
+## State after wave 2 (2026-11-27)
+
+Landed on `main`: PR 14 (U-21, `021bc0f`), PR 12 (U-12, `1848844`), PR 11 (U-20, `8223f60`),
+PR 13 (U-14, `f1c3583`). The owner merged the four on one integration branch and ran everything on
+that tree: 775 tests with PostgreSQL 17 up (api 249, mobile 392, contract 47, core 87), typecheck
+clean, parity gate 0 problems, smoke 10 of 10. Each PR was merged only when its synced tree equaled
+the tested tree. Three independent reviews read the diffs before the merge (auth security, persistence
+against Swift, sync semantics across the three units).
+
+Follow-ups the drain and the reviews found, each with its owner:
+
+| Finding | Owner |
+|---|---|
+| A push acknowledgement stamps only the server version and drops the record the server returns. The server does not number a losing operation, so a device whose push lost keeps its own text under the winner's version and the next pull skips it: a permanent divergence. The acknowledgement must apply the record like a pulled row unless a newer local op is pending | U-23 |
+| `inTransaction` on the one database handle does not serialize overlapping callers; a second `BEGIN` fails and its rollback kills the first caller's transaction, which then autocommits statement by statement. No call site overlaps today | U-23 |
+| `newUuid()` falls back to `Math.random` in a production build: Hermes has no `globalThis.crypto`. The ids are UUID v4 shaped (I11 holds) but the Apple nonce is derived from them, so the bytes must come from `expo-crypto` `getRandomValues` | U-23 |
+| The RN engine quarantines only on a 400 and retries transport and server errors forever; the Swift engine quarantines an op after 5 attempts. `validatePullResponse` is ported but not called | U-23 |
+| `scripts/rn/e2e-sync.sh` pins the spike's per-record counter; the ported SQL numbers operations from one global sequence (the legacy behavior). `scripts/rn/e2e-sync-app.sh` still reads the spike tables | U-23 |
+| Mirror rows and the seed carry a demo owner id. The session user must reach the store and the engine; sign-out and account deletion must reset the local store as the Swift app does | U-23 (owner id), U-51 (reset, route guard, `load()` at launch) |
+| If Apple's revoke fails during account deletion the error is only logged and the token is gone, so it can never be retried (the legacy function never revoked). Keep the encrypted token in a tombstone row until Apple confirms | backend hardening unit before the App Store release |
+| The e-mail OTP throttle answers 429 with the code `VALIDATION_ERROR`; the contract documents 400, 401 and 503. A dedicated code in `packages/api-contract` would be cleaner | the owner, with the next contract change |
+| The design system buttons have no `testID`; U-20 wrapped them in views to tap them in tests | U-30 adds the prop |
+| The generator of the bundled migrations committed a second copy of the schema (Drizzle Kit output under `src/data/db/migrations/`); nothing imported it | done in the drain PR |
+| `clone-node-modules.sh` exited 1 on success (the last workspace has no nested `node_modules`) | done in the drain PR |
+| Three units ran the root `npm test` against a cluster another worktree had migrated, because the SQL suites read one shared env file. The env file is now named after the checkout and the API is a slot (standing-orders rule 17) | done in the drain PR |
+| U-21 ran `docker builder prune -af`, which also deleted the build cache of other projects on the machine | standing-orders rule 18 |
+| Reading process arguments needs a native module and a native build. Until U-51 lands it, flags are set in Jest and by a `__DEV__` query parameter on the route | U-51 |
+| The clamps of 0 to 600 minutes and 0 to 5000 kcal sit in the repository (Swift clamped in the sheet); the diary sheet ports them too | U-32 |
+
+## Units of wave 3
+
+Scoped here; each has a `briefs/U-*.md` with the full CONTEXT. No unit builds natively: the machine
+has about 1 GB free and a build needs 5 GB.
+
+| Unit | Worker | Parity rows | Goal | Holds |
+|---|---|---|---|---|
+| U-23 sync engine, session wiring and triggers | S1 | PL-04, NW-02, DB-02, DB-03, CO-07 | The engine of `CoachCalSync` (500 ms debounce, batches of 50, generation tokens, quarantine at 5), the acknowledgement applies the server record, serialized transactions, random ids from `expo-crypto`, the session user in the store and the runtime, triggers from AppState, NetInfo and `expo-background-task`, the e2e scripts and an integration suite against the real API | API slot |
+| U-30 scan flow | S2 | SC-01 to SC-07, PL-12 (calls) | Reducer with the Swift tests, screens over the design system, `expo-camera` capture seam with the fixture feed on the Simulator, save in one `recordUpserts` then `notifyLocalMutation`, a Live Activity port with a no-op implementation, screenshots of the flow and the first evidence that the store works through `expo-sqlite` | Simulator slot |
+| U-31 onboarding | G1 | OB-01 to OB-10 | Nine steps with the locked copy, the plan through `TargetsEngine`, the just-in-time HealthKit request behind an injected function | nothing |
+| U-32 diary | G2 | DY-01 to DY-07 | Day sheet, add food, local food search, custom food, manual log, exercise log, water card | nothing |
+
+## Waves 4 to 7 (outline; scoped at the drain before each)
 
 | Unit | Rows | Notes |
 |---|---|---|
-| U-23 sync engine and triggers | PL-04 | 500 ms debounce, batches of 50, generation tokens, quarantine at 5, foreground, network and background triggers; port the Sync module tests and the proof scenarios |
-| U-30 scan flow | SC-01 to SC-07, PL-12 (start, update, end) | reducer first with `ScanKcalParityTests` and `ScanSnapshotTests` behaviors, then the screens over U-22 components; fixture capture on the Simulator |
-| U-31 onboarding | OB-01 to OB-10 | locked copy, step model, plan through TargetsEngine, just-in-time HealthKit request |
-| U-32 diary | DY-01 to DY-07 | day sheet, add food, search, custom food, manual log, exercise, water |
+| U-23 sync engine and triggers | PL-04, NW-02, DB-03 | see "Units of wave 3" above |
+| U-30 scan flow | SC-01 to SC-07, PL-12 (start, update, end) | see "Units of wave 3" above |
+| U-31 onboarding | OB-01 to OB-10 | see "Units of wave 3" above |
+| U-32 diary | DY-01 to DY-07 | see "Units of wave 3" above |
 | U-33 today | TD-01 | Ember screen completed; the Scan button moves so no meal's kcal is covered; week strip contrast |
 | U-40 progress and coach | PG-01 to PG-04, CH-01 | charts with react-native-svg and an accessibility description; weekly review |
 | U-41 profile and settings | PR-01 to PR-03 | settings copy, inert subscription card, account deletion entry, target edit |

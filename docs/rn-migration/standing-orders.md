@@ -13,7 +13,9 @@ that has to be repeated in briefs belongs here.
 | Your worktree and branch | named in your brief; already created, `node_modules` already present |
 | Simulator, only for the unit that holds the simulator slot | `iPhone 17 Pro`, iOS 26.4, UDID `85024D2F-71DE-43C0-8E11-CE58F4578FC3` |
 | Metro, only for the simulator slot holder | port 8081 |
-| API and PostgreSQL 17, only when your brief names them | `http://127.0.0.1:8787`, port 5433, through `scripts/rn/start-api.sh` |
+| API and PostgreSQL 17, only when your brief gives you the API slot | `http://127.0.0.1:8787`, port 5433, through `scripts/rn/start-api.sh`; the env file it writes is named after your checkout |
+| The database handle and the repositories | `apps/mobile/src/data/environment.ts` (`getDataEnvironment()`); after a write through a repository call `notifyLocalMutation()` from `apps/mobile/src/data/sync/runtime.ts` |
+| Debug and fixture flags | `apps/mobile/src/debug/launchArgs.ts` (`getDebugFlags()`, `setDebugFlags()`) |
 | Log directory | `/private/var/folders/nn/n6wtxkdd3n10d78wf4xmygrm0000gp/T/opencode/rn-logs/` |
 | App identity | `com.nextlabs.coachcal`, scheme `coachcal`, display name CoachCal |
 
@@ -35,9 +37,10 @@ that has to be repeated in briefs belongs here.
 6. Files you may not edit unless your brief lists them: `apps/mobile/app.config.ts`,
    `apps/mobile/src/app/**`, `apps/mobile/package.json`, `package.json`, `package-lock.json`,
    `packages/api-contract/src/index.ts`, `packages/core/src/index.ts`, `apps/api/src/app.ts`,
-   `docs/rn-migration/parity.tsv` (the owner sets status and evidence). You always may add your
-   findings file `docs/rn-migration/findings/<unit>.md` and your detail file
-   `docs/rn-migration/parity-detail/<area>.md`.
+   `apps/mobile/src/data/environment.ts`, `apps/mobile/src/debug/launchArgs.ts`,
+   `apps/mobile/src/data/sync/runtime.ts`, `docs/rn-migration/parity.tsv` (the owner sets status and
+   evidence). You always may add your findings file `docs/rn-migration/findings/<unit>.md` and your
+   detail file `docs/rn-migration/parity-detail/<area>.md`.
 7. Ids: `apps/mobile/src/data/sync/uuid.ts` is the only id source in the app; never
    `crypto.randomUUID` under `apps/mobile`. `packages/core` imports nothing but its own files.
 8. No Supabase, no EAS, no new accounts, no secrets, no `.env` file edits (`.env.example` files
@@ -60,6 +63,17 @@ that has to be repeated in briefs belongs here.
 15. Timebox: when it expires, push what you have, open or update the pull request, report partial.
 16. Do not change the public preview of the product, do not redesign a screen, do not add a feature
     the old app does not have.
+17. The API and PostgreSQL 17 are a slot, like the native build. Only the unit whose brief gives it
+    the API slot runs `scripts/rn/start-api.sh`, and it runs `stop` before it reports. In every
+    other unit the root `npm test` prints `[sql-skip]` lines for the SQL suites: that is green.
+    Never alter a database or a cluster you did not start.
+18. Other projects build on this machine. Never run `docker system prune`, `docker builder prune`,
+    `docker image prune`, `docker volume prune` or any cleanup that is not limited to a name or tag
+    you created. Remove containers, images and volumes by the name you gave them.
+19. Feature code never opens the database and never reads process arguments. A feature model takes
+    its repositories, its API client, its clock and its flags through the constructor (Jest builds it
+    with test doubles); its route file gets the real ones from `getDataEnvironment()` and
+    `getDebugFlags()`. After a write through a repository, call `notifyLocalMutation()`.
 
 ## Report format
 
