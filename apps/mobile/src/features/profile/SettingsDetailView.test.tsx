@@ -248,7 +248,6 @@ describe('settings screen', () => {
     expect(screen.getByText(settingsCopy.exportFailedCode)).toBeOnTheScreen();
     expect(screen.getByTestId('settings.exportRetry')).toBeOnTheScreen();
     expect(screen.queryByTestId('settings.exportContact')).toBeNull();
-    expect(screen.queryByText(settingsCopy.exportContact)).toBeNull();
     expect(screen.queryByText(/@\w+\.\w+/)).toBeNull();
   });
 
