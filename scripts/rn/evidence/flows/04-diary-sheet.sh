@@ -7,7 +7,8 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib.sh"
 
 sim_boot
 app_open "Today" 90
-link "coachcal://diary" "Diary" 25
+link "coachcal://diary" "" 5
+wait_for_text "Eaten" 25 || true   # the day sheet has no "Diary" title: its header is the date
 sleep 1
 shot DY-01 04-diary-sheet
 

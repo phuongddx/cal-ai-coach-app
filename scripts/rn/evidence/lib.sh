@@ -10,7 +10,7 @@
 # - a failed expectation prints "FAIL", raises FAILS, and the flow goes on;
 # - only a broken Simulator, Metro or app is fatal: exit code 90, run-all stops;
 # - screenshots: full-size file under docs/rn-migration/evidence/tmp/ (git-ignored), a copy
-#   under 2 MB at docs/rn-migration/evidence/<parity-id>/<name>.png;
+#   under 700 KB at docs/rn-migration/evidence/<parity-id>/<name>.png;
 # - safe under `set -euo pipefail` when every call is checked (`if`, `||`, `&&`); the library
 #   itself only sets `set -uo pipefail`.
 
@@ -149,7 +149,11 @@ app_open() {
   local text="${1:-Today}" sec="${2:-90}" wait_sec
   step "opening the app via the dev client URL"
   for attempt in 1 2; do
-    xcrun simctl openurl "$UDID" "$DEV_CLIENT_URL" || bad "simctl openurl failed (attempt $attempt)"
+    # The first openurl after a fresh install can time out (NSPOSIXErrorDomain 60) while the Simulator is
+    # still busy; the retry below is the recovery, so only the last attempt's failure counts as FAIL.
+    if ! xcrun simctl openurl "$UDID" "$DEV_CLIENT_URL"; then
+      if [ "$attempt" -eq 2 ]; then bad "simctl openurl failed (attempt $attempt)"; else echo "  note: simctl openurl timed out (attempt $attempt), retrying"; fi
+    fi
     dismiss_open_dialog || true
     if [ "$attempt" -eq 1 ]; then wait_sec=45; else wait_sec="$sec"; fi
     if _wait_title "$text" "$wait_sec"; then
@@ -159,6 +163,19 @@ app_open() {
     echo "  app did not show '$text' — retrying the dev client URL (attempt $attempt)"
   done
   fatal "the app never showed '$text' — cannot continue"
+}
+
+# Wipe the app's local database (the Simulator copy only) so a flow starts from a known empty state: the
+# demo seed runs once per database and every saved scan stays, so a rerun would otherwise show totals
+# piled up from earlier runs. The app is terminated first and writes a fresh database on launch.
+reset_app_data() {
+  local c
+  step "reset the app's local database"
+  xcrun simctl terminate "$UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
+  sleep 1
+  c="$(xcrun simctl get_app_container "$UDID" "$BUNDLE_ID" data 2>/dev/null)" || { bad "app container not found"; return 1; }
+  rm -f "$c"/Documents/SQLite/coachcal.db "$c"/Documents/SQLite/coachcal.db-wal "$c"/Documents/SQLite/coachcal.db-shm
+  ok "removed Documents/SQLite/coachcal.db*"
 }
 
 # Terminate and relaunch the built app (it reconnects to the last Metro), wait for a title.
@@ -188,8 +205,12 @@ link() {
 # --- accessibility tree ------------------------------------------------------------------------
 
 # Dump the accessibility tree into a file, print the file name. Empty output is an error.
+# axe can hang for minutes when the machine is overloaded; cap every call at 40 s (perl alarm, since
+# macOS has no timeout(1)).
+axe_cap() { perl -e 'alarm shift; exec @ARGV' 40 axe "$@"; }
+
 ui_dump() {
-  axe describe-ui --udid "$UDID" >"$DUMP_FILE" 2>/dev/null || return 1
+  axe_cap describe-ui --udid "$UDID" >"$DUMP_FILE" 2>/dev/null || return 1
   [ -s "$DUMP_FILE" ] || return 1
   echo "$DUMP_FILE"
 }
@@ -220,13 +241,13 @@ require_text() {
 # --- input --------------------------------------------------------------------------------------
 
 tap_label() {
-  axe tap --label "$1" --udid "$UDID" >/dev/null 2>&1 && { ok "tap --label $1"; return 0; }
+  axe_cap tap --label "$1" --udid "$UDID" >/dev/null 2>&1 && { ok "tap --label $1"; return 0; }
   bad "tap --label $1 failed"
   return 1
 }
 
 tap_xy() {
-  axe tap -x "$1" -y "$2" --udid "$UDID" >/dev/null 2>&1 && { ok "tap at ($1, $2)"; return 0; }
+  axe_cap tap -x "$1" -y "$2" --udid "$UDID" >/dev/null 2>&1 && { ok "tap at ($1, $2)"; return 0; }
   bad "tap at ($1, $2) failed"
   return 1
 }
@@ -252,29 +273,30 @@ tap_label_xy() {
 }
 
 type_text() {
-  axe type "$1" --udid "$UDID" >/dev/null 2>&1 && { ok "typed: $1"; return 0; }
+  axe_cap type "$1" --udid "$UDID" >/dev/null 2>&1 && { ok "typed: $1"; return 0; }
   bad "axe type failed"
   return 1
 }
 
 # --- screenshots --------------------------------------------------------------------------------
 
-# shot <parity-id> <name>: full-size PNG into evidence/tmp/ (untracked), a copy under 2 MB at
-# evidence/<parity-id>/<name>.png (the file later units name in parity.tsv).
+# shot <parity-id> <name>: full-size PNG into evidence/tmp/ (untracked), a copy under 700 KB at
+# evidence/<parity-id>/<name>.png (the file later units name in parity.tsv). The copy is resampled
+# step by step (1000 -> 900 -> 800 -> 700 -> 600 px wide) until it fits SHOT_MAX_BYTES.
+SHOT_MAX_BYTES="${SHOT_MAX_BYTES:-716800}"
 shot() {
-  local parity_id="$1" name="$2" full="$TMP_DIR/$1-$2.png" out="$EV_DIR/$1/$2.png" size
+  local parity_id="$1" name="$2" full="$TMP_DIR/$1-$2.png" out="$EV_DIR/$1/$2.png" size width
   mkdir -p "$EV_DIR/$1"
   xcrun simctl io "$UDID" screenshot "$full" >/dev/null 2>&1 || { bad "screenshot failed: $1/$2"; return 1; }
   cp "$full" "$out"
   size="$(stat -f%z "$out")"
-  if [ "$size" -gt 2097152 ]; then
-    sips --resampleWidth 900 "$out" >/dev/null 2>&1
+  for width in 1000 900 800 700 600; do
+    [ "$size" -le "$SHOT_MAX_BYTES" ] && break
+    cp "$full" "$out"
+    sips --resampleWidth "$width" "$out" >/dev/null 2>&1
     size="$(stat -f%z "$out")"
-    if [ "$size" -gt 2097152 ]; then
-      sips --resampleWidth 700 "$out" >/dev/null 2>&1
-      size="$(stat -f%z "$out")"
-    fi
-  fi
+  done
+  if [ "$size" -gt "$SHOT_MAX_BYTES" ]; then bad "screenshot $1/$2 is $((size / 1024)) KB, over $((SHOT_MAX_BYTES / 1024)) KB"; fi
   echo "  screenshot: $out ($((size / 1024)) KB)"
   echo "  full-size (untracked): $full"
 }
