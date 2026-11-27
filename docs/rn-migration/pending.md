@@ -1,31 +1,34 @@
 # Messages the owner could not send
 
-A turn that a worker result started cannot address that worker ("cannot assign work back to an
-ancestor"). The messages below wait here and go out in the next turn another worker starts. A turn
+A turn that a worker result started cannot address that worker without the rework flag and a new
+thread. The messages below wait here and go out in the next turn another worker starts. A turn
 also opens at most five new threads: the sixth call of a turn is refused.
 
-## Pending since 2026-11-27 about 22:58: U-76 stage A to Worker-S2
+## When U-71g is merged (Worker-S1, thread 31cd8275 is the unit's own thread)
 
-Refused as the sixth new thread of its turn. Send it first in the next turn, on a new thread, no
-rework flag (it is a new unit).
+The go for the code step of U-77b, on a new thread with the rework flag. Content: merge `main`;
+swap the two fields onto the text variant of `FillField` with their keyboard props; build the code
+step on frames `112-auth-code-entry-light.png` and `113-auth-code-entry-dark.png` with `CodeField`
+("Enter the code", "We sent a 6-digit code to **address**.", "Can't find it? Look in Junk or
+Promotions.", Verify enabled at six digits, "Resend code in" after 60 seconds, "Use a different
+email"); the e-mail step on `108-auth-email-step-light.png` and `109-auth-email-step-dark.png`
+("Continue with email", "We'll email you a 6-digit code. If you're new, the same code creates your
+account."); the errors on 110, 111, 114 and 115; `SheetHeader` for the header (`auth.emailBack`);
+`SecondaryButton leading` for the three buttons of the entry step. Stage B then waits for the
+Simulator slot.
 
-- Worktree `/Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76`, branch
-  `rn/u-76-today-ember`, from main at `2680208`, `node_modules` present (539 entries).
-- Brief: `docs/rn-migration/briefs/U-76.md` (now with the line that `run-all` rewrites the
-  screenshots of other rows).
-- The message to send: the one drafted at 22:58, in short: a new unit, stage A is JS only; Worker-S2
-  does not hold the Simulator slot (it goes to Worker-G2 for the stage B of U-74 after PR 46 merges);
-  the four points of the build; the fact that the development client of U-79 holds every native
-  module (ExpoCrypto included) so no rebuild is needed; the three gates; the report with
-  `Stage: A done` and `Status: partial`.
-- The correction of U-81 (thread ea675fb2) comes first if the two compete.
+## When a report arrives
 
-## After PR 46 merges
+- PR 50 (U-76 stage A, Worker-S2): drain, then stage B waits for the slot after U-72.
+- PR 37 (U-74 stage B, Worker-G2): read every screenshot, an independent review of the whole pull
+  request, the gates on an integration tree, merge; then the slot to Worker-G1 for the stage B of
+  U-73 (new thread, rework flag).
+- PR 47 (U-77b correction, Worker-S1): read; no merge before the code step.
+- PR of U-71g (Worker-S1): gate, independent review, merge; then the go above.
+- PR of U-61d (Worker-G1): run `node scripts/rn/check-frames-doc.mjs` on the pushed head, read a
+  sample, merge with the tree recipe.
 
-- The go for the stage B of U-74 to Worker-G2, on a new thread: merge `main` first (it holds the
-  harness of U-81), the Simulator slot and Metro 8081 are theirs, restore the screenshots of other
-  rows after `run-all`, the development client holds every native module (the string check, not
-  `ls Frameworks`).
-- The owner docs pull request: standing order 21 with a check script, the line on `run-all`, the
-  stale note of the parity row AU-01, the decisions of U-77b, the three things that wait for
-  Phương, the follow-ups (a direct test of a signed-out deep link to a guarded route).
+## Still open from before
+
+- The owner docs pull request is done (PR 52).
+- The U-72 stage A2 (the picker of U-74 on `main`) waits for the merge of PR 37.
