@@ -13,7 +13,7 @@ jest.mock('react/jsx-runtime', () => {
 import { act, render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
-import { FoodRow } from './FoodRow';
+import { FoodRow, foodRowVisibleChip } from './FoodRow';
 import { setEdSafeMode } from '../edSafe';
 
 beforeEach(() => setEdSafeMode(false));
@@ -79,5 +79,30 @@ describe('FoodRow', () => {
   it('ignores an empty chip', async () => {
     await render(<FoodRow title="Oats" chip="" />);
     expect(screen.queryByTestId('food-row-chip:Oats', { includeHiddenElements: true })).toBeNull();
+  });
+
+  it('hides a chip with a calorie word or figure under ED-safe and keeps a plain one', async () => {
+    const { rerender } = await render(<FoodRow title="Oats" chip="Calories today: 1,850" />);
+    expect(screen.getByTestId('food-row-chip:Oats', { includeHiddenElements: true })).toHaveTextContent('Calories today: 1,850');
+    await act(async () => {
+      setEdSafeMode(true);
+    });
+    for (const hidden of ['Calories today: 1,850', '640 kcal', 'kJ']) {
+      await rerender(<FoodRow title="Oats" chip={hidden} />);
+      expect(screen.queryByTestId('food-row-chip:Oats', { includeHiddenElements: true })).toBeNull();
+      expect(screen.queryByText(hidden, { includeHiddenElements: true })).toBeNull();
+    }
+    for (const shown of ['Changes saved', 'Chicken · 180 g', 'Edited']) {
+      await rerender(<FoodRow title="Oats" chip={shown} />);
+      expect(screen.getByTestId('food-row-chip:Oats', { includeHiddenElements: true })).toHaveTextContent(shown);
+    }
+  });
+
+  it('foodRowVisibleChip: every mode keeps a plain chip, only ED-safe drops a calorie one', () => {
+    expect(foodRowVisibleChip('Edited', true)).toBe('Edited');
+    expect(foodRowVisibleChip('640 kcal', false)).toBe('640 kcal');
+    expect(foodRowVisibleChip('640 kcal', true)).toBeUndefined();
+    expect(foodRowVisibleChip('', false)).toBeUndefined();
+    expect(foodRowVisibleChip(undefined, true)).toBeUndefined();
   });
 });

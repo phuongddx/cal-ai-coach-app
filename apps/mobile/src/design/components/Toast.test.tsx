@@ -79,6 +79,35 @@ describe('Toast message line', () => {
     expect(carriesCalorieFigure('Calm bowl · 250 g')).toBe(false);
   });
 
+  it('hides a calorie word whatever comes before it, and a number followed by one', () => {
+    for (const text of ['Calories today: 1,850', 'Calories: 640', '640 kcal', 'kJ', 'Total cal', '2,400kJ left', 'Calorie goal']) {
+      expect(carriesCalorieFigure(text)).toBe(true);
+      expect(toastVisibleMessage(text, true)).toBeUndefined();
+      expect(toastVisibleMessage(text, false)).toBe(text);
+    }
+    for (const text of ['Changes saved', 'Chicken · 180 g', 'Edited']) {
+      expect(carriesCalorieFigure(text)).toBe(false);
+      expect(toastVisibleMessage(text, true)).toBe(text);
+    }
+  });
+
+  it('renders none of "Calories today: 1,850" under ED-safe and all six cases through the component', async () => {
+    const { rerender } = await render(<Toast title="Saved" message="Calories today: 1,850" />);
+    expect(screen.getByText('Calories today: 1,850', { includeHiddenElements: true })).toBeOnTheScreen();
+    await act(async () => {
+      setEdSafeMode(true);
+    });
+    expect(screen.queryByText('Calories today: 1,850', { includeHiddenElements: true })).toBeNull();
+    for (const hidden of ['640 kcal', 'kJ']) {
+      await rerender(<Toast title="Saved" message={hidden} />);
+      expect(screen.queryByText(hidden, { includeHiddenElements: true })).toBeNull();
+    }
+    for (const shown of ['Changes saved', 'Chicken · 180 g', 'Edited']) {
+      await rerender(<Toast title="Saved" message={shown} />);
+      expect(screen.getByText(shown, { includeHiddenElements: true })).toBeOnTheScreen();
+    }
+  });
+
   it('keeps a plain message in every mode and hides a kcal message only under ED-safe', () => {
     expect(toastVisibleMessage('Chicken salad · 180 g', true)).toBe('Chicken salad · 180 g');
     expect(toastVisibleMessage('Chicken salad · 180 g', false)).toBe('Chicken salad · 180 g');
