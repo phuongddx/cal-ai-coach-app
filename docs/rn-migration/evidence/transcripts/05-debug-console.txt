@@ -7,7 +7,7 @@
 
 === deep link: coachcal://debug ===
   ok: found title 'Debug console' (Heading at y=118.66666666666669)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-05/05-debug-console.png (341 KB)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-05/05-debug-console.png (339 KB)
   full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/PL-05-05-debug-console.png
 
 === flow done — 0 failed ===

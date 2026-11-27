@@ -29,13 +29,13 @@
 === opening the app via the dev client URL ===
   ok: found title 'Today' (Heading at y=92.333335876464844)
   ok: app is showing 'Today' (attempt 1)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-01/01-first-launch-light.png (380 KB)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-01/01-first-launch-light.png (386 KB)
   full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/PL-01-01-first-launch-light.png
 
 === switch to dark ===
   ok: appearance dark
   ok: found text: Today
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-01/01-first-launch-dark.png (371 KB)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-01/01-first-launch-dark.png (373 KB)
   full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/PL-01-01-first-launch-dark.png
   ok: appearance light
 

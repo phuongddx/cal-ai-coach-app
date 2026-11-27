@@ -9,13 +9,6 @@
 
 === opening the app via the dev client URL with launch arguments: --ccForceOffline ===
   ok: launched com.nextlabs.coachcal with: --ccForceOffline
-An error was encountered processing the command (domain=NSPOSIXErrorDomain, code=60):
-Simulator device failed to open exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081.
-Operation timed out
-Underlying error (domain=NSPOSIXErrorDomain, code=60):
-	The operation couldn’t be completed. Operation timed out
-	Operation timed out
-  note: simctl openurl timed out (attempt 1)
   ok: found title 'Today' (Heading at y=92.333335876464844)
   ok: app is showing 'Today' (attempt 1)
 
@@ -52,7 +45,7 @@ Underlying error (domain=NSPOSIXErrorDomain, code=60):
   ok: launched com.nextlabs.coachcal with: --ccRequireSignIn
   ok: found title 'Sign in to CoachCal' (StaticText at y=354)
   ok: app is showing 'Sign in to CoachCal' (attempt 1)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-05/launch-args-require-sign-in.png (118 KB)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-05/launch-args-require-sign-in.png (116 KB)
   full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/PL-05-launch-args-require-sign-in.png
 
 === deep link: coachcal://debug ===
@@ -66,7 +59,7 @@ Underlying error (domain=NSPOSIXErrorDomain, code=60):
   ok: found title 'Track calories with a photo' (StaticText at y=370)
   ok: app is showing 'Track calories with a photo' (attempt 1)
   ok: found text: Get started
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-05/launch-args-fresh-start.png (175 KB)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-05/launch-args-fresh-start.png (174 KB)
   full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/PL-05-launch-args-fresh-start.png
 
 === flow done — 0 failed ===
