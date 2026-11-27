@@ -2,10 +2,9 @@
  * PlanRevealView.swift — the daily target, macro rings, weekly range and the
  * edit panel. Every reveal edit funnels back through the engine (floors
  * re-clamp, macros re-derive); Continue persists and hands off to the Today
- * tab. The Swift view hides the kcal hero and weekly range in its safety
- * mode — see parity-detail/onboarding.md: no design-system component owns
- * that branch yet (invariant I7 keeps the policy out of feature code), so
- * both surfaces render unconditionally (documented gap).
+ * tab. The kcal hero and the weekly range hide in ED-safe mode through the
+ * design system's EdSafeCollapse (invariant I7: the policy branch lives in the
+ * design component, never in the feature).
  */
 
 import { useState } from 'react';
@@ -14,6 +13,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   BannerNote,
   Card,
+  EdSafeCollapse,
   PrimaryButton,
   ScaledNumber,
   SecondaryButton,
@@ -57,12 +57,15 @@ export function PlanRevealScreen({ model, onFinished }: PlanRevealScreenProps) {
           </Text>
           {reveal !== null && (
             <>
-              <View accessible accessibilityLabel={`${reveal.dailyKcal} calories per day`} style={styles.hero}>
-                <View testID="plan.kcalHero">
-                  <ScaledNumber text={`${reveal.dailyKcal}`} role="planNumber" style={{ color: colors.textPrimary }} />
+              {/* The hero collapses under ED-safe mode (the Swift hero is .edSafeHidden()). */}
+              <EdSafeCollapse>
+                <View accessible accessibilityLabel={`${reveal.dailyKcal} calories per day`} style={styles.hero}>
+                  <View testID="plan.kcalHero">
+                    <ScaledNumber text={`${reveal.dailyKcal}`} role="planNumber" style={{ color: colors.textPrimary }} />
+                  </View>
+                  <Text style={[styles.subtitle, { color: colors.textSecondary }]}>calories per day</Text>
                 </View>
-                <Text style={[styles.subtitle, { color: colors.textSecondary }]}>calories per day</Text>
-              </View>
+              </EdSafeCollapse>
               <View style={styles.rings}>
                 <MacroRing
                   color={colors.macroProtein}
@@ -92,12 +95,15 @@ export function PlanRevealScreen({ model, onFinished }: PlanRevealScreenProps) {
               <Card>
                 <View style={styles.weeklyBlock}>
                   <Text style={[styles.headline, { color: colors.textPrimary }]}>Weekly range</Text>
-                  <Text
-                    testID="plan.weeklyRange"
-                    style={[styles.weeklyRange, { color: colors.textPrimary }]}
-                  >
-                    {`${grouped(reveal.dailyKcal * 7 - 250)} – ${grouped(reveal.dailyKcal * 7 + 250)} calories`}
-                  </Text>
+                  {/* The range line collapses under ED-safe mode; the card, headline and caption stay (the Swift .edSafeHidden() sits on the range Text). */}
+                  <EdSafeCollapse>
+                    <Text
+                      testID="plan.weeklyRange"
+                      style={[styles.weeklyRange, { color: colors.textPrimary }]}
+                    >
+                      {`${grouped(reveal.dailyKcal * 7 - 250)} – ${grouped(reveal.dailyKcal * 7 + 250)} calories`}
+                    </Text>
+                  </EdSafeCollapse>
                   <Text style={[styles.footnote, { color: colors.textSecondary }]}>
                     {onboardingCopy.weeklyRangeCaption}
                   </Text>
