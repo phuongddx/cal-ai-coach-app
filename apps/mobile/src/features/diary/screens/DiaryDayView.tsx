@@ -5,8 +5,8 @@
  * food, exercise). The kcal clauses collapse through EdSafeCollapse — the
  * components own that policy (I7); the feature holds no ED-safe branch.
  */
-import { useState, useSyncExternalStore } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { ActionSheetIOS, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
   ConfidenceBadge,
@@ -40,6 +40,9 @@ export type DiaryDayViewProps = {
 
 const DAY_MS = 86_400_000;
 
+/** The undo window of the delete and edit toasts (the d-deleted / d-saved frames: five seconds). */
+const UNDO_WINDOW_MS = 5000;
+
 /** The canvas's meal icons (no emoji); the 51-icon set carries no carrot, so snacks draws the apple. */
 const SLOT_ICONS: Record<string, IconName> = {
   breakfast: 'sunrise',
@@ -48,15 +51,33 @@ const SLOT_ICONS: Record<string, IconName> = {
   snacks: 'apple',
 };
 
+/**
+ * The undo toasts of the frames: the delete's (diary.toast.undo) and the edit
+ * save's (diary.toast.undoEdit). Each stays five seconds; the undo inside the
+ * window is a model write, after the window the toast just leaves.
+ */
+type UndoToast =
+  | { kind: 'delete'; item: DiaryDayItem }
+  | { kind: 'edit'; prev: DiaryDayItem; name: string; grams: number };
+
 export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
   const { colors, radius, space, typography } = useTokens();
   useSyncExternalStore(model.subscribe, model.getSnapshot, model.getSnapshot);
 
-  const [pendingDelete, setPendingDelete] = useState<DiaryDayItem | null>(null);
   const [editItem, setEditItem] = useState<DiaryDayItem | null>(null);
   const [isExerciseSheetPresented, setIsExerciseSheetPresented] = useState(false);
   const [addFoodSlot, setAddFoodSlot] = useState<string | null>(null);
   const [savedToast, setSavedToast] = useState<SavedReceipt | null>(null);
+  const [undoToast, setUndoToast] = useState<UndoToast | null>(null);
+
+  // The five-second window: after it the toast leaves and the action is final.
+  useEffect(() => {
+    if (undoToast === null) {
+      return undefined;
+    }
+    const timer = setTimeout(() => setUndoToast(null), UNDO_WINDOW_MS);
+    return () => clearTimeout(timer);
+  }, [undoToast]);
 
   const snapshot = model.getSnapshot();
 
@@ -67,14 +88,42 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
     }
   };
 
-  const onDeleteConfirm = (item: DiaryDayItem) => {
-    setPendingDelete(null);
-    void model.delete(item);
+  /**
+   * The d-delete confirmation: the system action sheet. The message keeps its
+   * word — the undo of the frames follows the delete.
+   */
+  const confirmDelete = (item: DiaryDayItem) => {
+    const meal = mealName(item.mealSlot);
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        title: `Delete ${item.title}?`,
+        message:
+          item.kcal !== null
+            ? `This removes ${item.kcal} kcal from ${meal}. You can undo for 5 seconds.`
+            : `This will remove it from ${meal}. You can undo for 5 seconds.`,
+        options: ['Delete item', 'Cancel'],
+        destructiveButtonIndex: 0,
+        cancelButtonIndex: 1,
+      },
+      (buttonIndex) => {
+        if (buttonIndex !== 0) {
+          return;
+        }
+        void model.delete(item).then(() => {
+          setUndoToast({ kind: 'delete', item });
+        });
+      },
+    );
   };
 
   const onManualSaved = (receipt: SavedReceipt) => {
     setAddFoodSlot(null);
     setSavedToast(receipt);
+  };
+
+  const onEditSaved = (prev: DiaryDayItem, grams: number, name: string) => {
+    setEditItem(null);
+    setUndoToast({ kind: 'edit', prev, name, grams });
   };
 
   return (
@@ -133,7 +182,7 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
                     key={item.id}
                     item={item}
                     onEdit={() => setEditItem(item)}
-                    onDelete={() => setPendingDelete(item)}
+                    onDelete={() => confirmDelete(item)}
                   />
                 ))}
               </View>
@@ -175,46 +224,31 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
         </View>
       )}
 
-      <Modal
-        visible={pendingDelete !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPendingDelete(null)}
-      >
-        {/* The d-delete confirm: two stacked action-sheet cards over a scrim. */}
-        <View style={[styles.dialogBackdrop, { backgroundColor: withAlpha('#000000', 0.45) }]}>
-          <View style={styles.dialogStack}>
-            <View style={[styles.dialogCard, { backgroundColor: colors.card, borderRadius: radius.lg }]}>
-              <Text style={[typography.headline, { color: colors.textPrimary, textAlign: 'center' }]}>
-                {`Delete ${pendingDelete?.title ?? ''}?`}
-              </Text>
-              <Text style={[typography.subhead, { color: colors.textSecondary, textAlign: 'center' }]}>
-                {pendingDelete === null
-                  ? ''
-                  : pendingDelete.kcal !== null
-                    ? `This removes ${pendingDelete.kcal} kcal from ${mealName(pendingDelete.mealSlot)}.`
-                    : `This will remove it from ${mealName(pendingDelete.mealSlot)}. This can't be undone.`}
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => pendingDelete !== null && onDeleteConfirm(pendingDelete)}
-                style={styles.dialogButton}
-              >
-                <Text style={[typography.body, { color: colors.errorInk, fontWeight: '600' }]}>Delete item</Text>
-              </Pressable>
-            </View>
-            <View style={[styles.dialogCard, { backgroundColor: colors.card, borderRadius: radius.lg }]}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setPendingDelete(null)}
-                style={styles.dialogButton}
-              >
-                <Text style={[typography.body, { color: colors.textPrimary, fontWeight: '600' }]}>Cancel</Text>
-              </Pressable>
-            </View>
-          </View>
+      {undoToast !== null && undoToast.kind === 'delete' && (
+        <View style={styles.toastOverlay} pointerEvents="box-none" testID="diary.toast.undo">
+          <Toast
+            title={`${undoToast.item.title} deleted`}
+            kcalText={`Removed from ${mealName(undoToast.item.mealSlot)}`}
+            onUndo={() => {
+              void model.undoDelete(undoToast.item);
+              setUndoToast(null);
+            }}
+          />
         </View>
-      </Modal>
+      )}
+
+      {undoToast !== null && undoToast.kind === 'edit' && (
+        <View style={styles.toastOverlay} pointerEvents="box-none" testID="diary.toast.undoEdit">
+          <Toast
+            title="Changes saved"
+            kcalText={`${undoToast.name} · ${undoToast.grams} g`}
+            onUndo={() => {
+              void model.writeEntry(undoToast.prev.entry, undoToast.prev.detail);
+              setUndoToast(null);
+            }}
+          />
+        </View>
+      )}
 
       <Modal
         visible={isExerciseSheetPresented}
@@ -239,9 +273,10 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
               item={editItem}
               model={model}
               onDismiss={() => setEditItem(null)}
+              onSaved={onEditSaved}
               onDelete={(item) => {
                 setEditItem(null);
-                setPendingDelete(item);
+                confirmDelete(item);
               }}
             />
           )}
@@ -327,6 +362,10 @@ function FoodItemRow({
     metaParts.push('from search');
   }
   const time = item.loggedAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  // The "Edited" label of the d-saved frames: the entry's local update after
+  // its creation (the only local update path is the edit sheet). Persisted by
+  // the mirror row itself, so it survives a relaunch.
+  const edited = item.entry.updatedAt.getTime() > item.entry.createdAt.getTime();
   return (
     <View testID={`diary.editFood.${item.id}`}>
       <Pressable
@@ -346,6 +385,11 @@ function FoodItemRow({
           syncPending={!item.isSynced}
         />
       </Pressable>
+      {edited && (
+        <View testID={`diary.editedChip.${item.id}`} style={styles.editedChip}>
+          <Text style={[typography.caption, { color: colors.textSecondary }]}>Edited</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -408,9 +452,6 @@ const styles = StyleSheet.create({
   exerciseText: { flex: 1, gap: 2 },
   exerciseKcal: { fontWeight: '500', fontVariant: ['tabular-nums'] },
   toastOverlay: { position: 'absolute', top: 8, left: 16, right: 16 },
-  dialogBackdrop: { flex: 1, justifyContent: 'flex-end', padding: 16 },
-  dialogStack: { width: '100%', gap: 8 },
-  dialogCard: { padding: 16, gap: 8, alignItems: 'center' },
-  dialogButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
+  editedChip: { paddingHorizontal: 12, paddingVertical: 1, alignSelf: 'flex-start', marginTop: -2 },
   sheetBackdrop: { flex: 1, justifyContent: 'flex-end' },
 });

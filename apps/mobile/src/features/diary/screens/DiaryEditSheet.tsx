@@ -38,6 +38,8 @@ export type DiaryEditSheetProps = {
   item: DiaryDayItem;
   model: DiaryDayModel;
   onDismiss: () => void;
+  /** The save's hand-over: the previous item (the undo's restore source), the saved grams and name. */
+  onSaved: (prev: DiaryDayItem, grams: number, name: string) => void;
   /** Hands the entry to the day sheet's delete confirmation (the frame's "Delete item"). */
   onDelete: (item: DiaryDayItem) => void;
 };
@@ -47,7 +49,7 @@ const GRAMS_RANGE = { min: 0, max: 9999 } as const;
 const RULER_RANGE = { min: 0, max: 500 } as const;
 const GRAMS_STEP = 10;
 
-export function DiaryEditSheet({ item, model, onDismiss, onDelete }: DiaryEditSheetProps) {
+export function DiaryEditSheet({ item, model, onDismiss, onSaved, onDelete }: DiaryEditSheetProps) {
   const { colors, radius, space, typography } = useTokens();
   const [name, setName] = useState(item.title);
   const [grams, setGrams] = useState(item.grams ?? 0);
@@ -70,7 +72,9 @@ export function DiaryEditSheet({ item, model, onDismiss, onDelete }: DiaryEditSh
   const clamp = (value: number) => Math.min(Math.max(value, GRAMS_RANGE.min), GRAMS_RANGE.max);
 
   const save = () => {
-    void model.updateEntry(item, clamp(grams), name.trim() === '' ? item.title : name.trim()).then(onDismiss);
+    const finalGrams = clamp(grams);
+    const finalName = name.trim() === '' ? item.title : name.trim();
+    void model.updateEntry(item, finalGrams, finalName).then(() => onSaved(item, finalGrams, finalName));
   };
 
   const time = item.loggedAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });

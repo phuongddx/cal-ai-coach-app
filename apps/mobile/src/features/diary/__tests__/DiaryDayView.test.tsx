@@ -4,6 +4,7 @@
  * the sheet stack. The model is a test double; the ED-safe policy assertions
  * prove the components own the branch (I7).
  */
+import { ActionSheetIOS } from 'react-native';
 import { fireEvent, render, screen, userEvent, waitFor, within } from '@testing-library/react-native';
 import { setEdSafeMode } from '../../../design';
 
@@ -111,6 +112,8 @@ function makeModel(
     delete: async () => undefined,
     deleteEntry: async () => undefined,
     updateEntry: async () => undefined,
+    undoDelete: async () => undefined,
+    writeEntry: async () => undefined,
     addExercise: async () => undefined,
     ...overrides,
   };
@@ -148,6 +151,7 @@ async function renderDay(model = makeModel(), deps = makeDeps()) {
 
 afterEach(() => {
   setEdSafeMode(false);
+  jest.restoreAllMocks();
 });
 
 describe('DiaryDayView screen', () => {
@@ -168,6 +172,8 @@ describe('DiaryDayView screen', () => {
     expect(screen.getByText('Add snacks')).toBeOnTheScreen();
     expect(screen.getByTestId('diary.foodRow')).toBeOnTheScreen();
     expect(screen.getByText('Overnight Oats')).toBeOnTheScreen();
+    // The unedited entry carries no Edited chip.
+    expect(screen.queryByTestId('diary.editedChip.entry-1')).toBeNull();
     // The section header and the food row both show the 320 kcal figure.
     expect(screen.getAllByText('320 kcal')).toHaveLength(2);
     expect(screen.getByText('−300 kcal')).toBeOnTheScreen();
@@ -229,27 +235,85 @@ describe('DiaryDayView screen', () => {
     expect(screen.getByTestId('diary.previousDay').props.accessibilityState?.disabled ?? false).toBe(false);
   });
 
-  it('a long press on the food row opens the delete confirmation and Delete tombstones', async () => {
+  it('a long press on the food row opens the system delete confirmation and Delete item tombstones', async () => {
+    const showActionSheet = jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions').mockImplementation(() => {});
     const model = makeModel(makeSnapshot(), { delete: jest.fn(async () => undefined) });
     await renderDay(model);
 
     fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
-    expect(await screen.findByText('Delete Overnight Oats?')).toBeOnTheScreen();
-    expect(screen.getByText('This removes 320 kcal from Breakfast.')).toBeOnTheScreen();
+    expect(showActionSheet).toHaveBeenCalledTimes(1);
+    const [options, callback] = showActionSheet.mock.calls[0] as unknown as [
+      { title: string; message: string; options: string[]; destructiveButtonIndex: number; cancelButtonIndex: number },
+      (index: number) => void,
+    ];
+    expect(options.title).toBe('Delete Overnight Oats?');
+    // The sheet keeps its word: the message names the undo that follows.
+    expect(options.message).toBe('This removes 320 kcal from Breakfast. You can undo for 5 seconds.');
+    expect(options.options).toEqual(['Delete item', 'Cancel']);
+    expect(options.destructiveButtonIndex).toBe(0);
+    expect(options.cancelButtonIndex).toBe(1);
 
-    await userEvent.press(screen.getByText('Delete item'));
+    callback(0);
     await waitFor(() => expect(model.delete).toHaveBeenCalledWith(expect.objectContaining({ id: 'entry-1' })));
-    await waitFor(() => expect(screen.queryByText('Delete Overnight Oats?')).toBeNull());
+    // The delete undo toast follows the delete (diary.toast.undo).
+    expect(await screen.findByTestId('diary.toast.undo')).toBeOnTheScreen();
+    expect(screen.getByText('Overnight Oats deleted')).toBeOnTheScreen();
+    expect(screen.getByText('Removed from Breakfast')).toBeOnTheScreen();
   });
 
   it('Cancel leaves the entry in place', async () => {
+    const showActionSheet = jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions').mockImplementation(() => {});
     const model = makeModel(makeSnapshot(), { delete: jest.fn(async () => undefined) });
     await renderDay(model);
 
     fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
-    await userEvent.press(await screen.findByText('Cancel'));
+    const [, callback] = showActionSheet.mock.calls[0] as unknown as [(index: number) => void, (index: number) => void];
+    callback(1);
     expect(model.delete).not.toHaveBeenCalled();
-    await waitFor(() => expect(screen.queryByText('Delete Overnight Oats?')).toBeNull());
+  });
+
+  it('the delete undo inside the window restores through the model and dismisses the toast', async () => {
+    const showActionSheet = jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions').mockImplementation(() => {});
+    const undoDelete = jest.fn(async () => undefined);
+    const model = makeModel(makeSnapshot(), { delete: jest.fn(async () => undefined), undoDelete });
+    await renderDay(model);
+
+    fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
+    const [, callback] = showActionSheet.mock.calls[0] as unknown as [(index: number) => void, (index: number) => void];
+    callback(0);
+    const toast = await screen.findByTestId('diary.toast.undo');
+    await userEvent.press(within(toast).getByText('Undo'));
+    expect(undoDelete).toHaveBeenCalledWith(expect.objectContaining({ id: 'entry-1' }));
+    await waitFor(() => expect(screen.queryByTestId('diary.toast.undo')).toBeNull());
+  });
+
+  it('after the five-second window the undo toast leaves and the delete is final', async () => {
+    jest.useFakeTimers();
+    try {
+      const showActionSheet = jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions').mockImplementation(() => {});
+      const undoDelete = jest.fn(async () => undefined);
+      const model = makeModel(makeSnapshot(), { delete: jest.fn(async () => undefined), undoDelete });
+      await renderDay(model);
+
+      fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
+      const [, callback] = showActionSheet.mock.calls[0] as unknown as [(index: number) => void, (index: number) => void];
+      callback(0);
+      // Fake timers fake the macrotasks only: flush the promise's microtasks.
+      for (let tick = 0; tick < 5; tick += 1) {
+        await Promise.resolve();
+      }
+      expect(screen.getByTestId('diary.toast.undo')).toBeOnTheScreen();
+
+      jest.advanceTimersByTime(5000);
+      // The dismissal's render flushes on a real macrotask (React's scheduler
+      // is not faked): hand the loop back first.
+      jest.useRealTimers();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(screen.queryByTestId('diary.toast.undo')).toBeNull();
+      expect(undoDelete).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('Add food opens the add-food sheet with the empty rail', async () => {
@@ -384,11 +448,56 @@ describe('DiaryDayView screen', () => {
     await renderDay(model);
 
     await userEvent.press(screen.getByTestId('diary.foodRow'));
+    const showActionSheet = jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions').mockImplementation(() => {});
     await userEvent.press(await screen.findByText('Delete item'));
-    expect(await screen.findByText('Delete Overnight Oats?')).toBeOnTheScreen();
-    // Cancel leaves the entry in place.
-    await userEvent.press(screen.getByText('Cancel'));
+    expect(showActionSheet).toHaveBeenCalledTimes(1);
+    const [options] = showActionSheet.mock.calls[0] as unknown as [
+      { title: string; message: string },
+      (index: number) => void,
+    ];
+    expect(options.title).toBe('Delete Overnight Oats?');
     expect(model.delete).not.toHaveBeenCalled();
+  });
+
+  it('the edit save shows the changes-saved toast with undo', async () => {
+    const writeEntry = jest.fn(async () => undefined);
+    const updateEntry = jest.fn(async () => undefined);
+    const model = makeModel(makeSnapshot(), { updateEntry, writeEntry });
+    await renderDay(model);
+
+    await userEvent.press(screen.getByTestId('diary.foodRow'));
+    await userEvent.press(within(await screen.findByTestId('diary.edit.save')).getByRole('button'));
+    const toast = await screen.findByTestId('diary.toast.undoEdit');
+    expect(screen.getByText('Changes saved')).toBeOnTheScreen();
+    expect(screen.getByText('Overnight Oats · 250 g')).toBeOnTheScreen(); // the untouched stepper value
+
+    // The undo inside the window restores the previous detail exactly.
+    await userEvent.press(within(toast).getByText('Undo'));
+    expect(writeEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'entry-1' }),
+      expect.objectContaining({ grams: 250, kcal: 320, title: 'Overnight Oats' }),
+    );
+    await waitFor(() => expect(screen.queryByTestId('diary.toast.undoEdit')).toBeNull());
+  });
+
+  it('the edited entry carries the Edited chip', async () => {
+    const item = makeItem();
+    const editedItem: DiaryDayItem = {
+      ...item,
+      entry: { ...item.entry, updatedAt: new Date(NOON.getTime() + 60_000) },
+    };
+    const snapshot = makeSnapshot({
+      sections: [
+        { slot: 'breakfast', items: [editedItem] },
+        { slot: 'lunch', items: [] },
+        { slot: 'dinner', items: [] },
+        { slot: 'snacks', items: [] },
+      ],
+    });
+    await renderDay(makeModel(snapshot));
+
+    expect(screen.getByTestId('diary.editedChip.entry-1')).toBeOnTheScreen();
+    expect(screen.getByText('Edited')).toBeOnTheScreen();
   });
 
   it('the edit sheet Close changes nothing', async () => {

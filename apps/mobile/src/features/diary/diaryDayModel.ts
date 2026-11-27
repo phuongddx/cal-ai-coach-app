@@ -7,10 +7,11 @@
  * write the injected `notify` fans out before the model re-reads itself.
  */
 import { fetchDiaryEntry } from '../../data/repos/diaryEntryRepository';
+import type { DiaryEntry, DiaryEntryDetail } from '../../data/repos/diaryEntryRepository';
 
 import type { DiaryDeps } from './deps';
 import { dayString, manualKcal } from './diaryMath';
-import { createDiaryDayLoader, type DiaryDayExercise, type DiaryDaySection, type DiaryDaySnapshotData } from './diarySnapshot';
+import { cancelPendingOp, createDiaryDayLoader, findPendingTombstoneOp, restoreRowsWithoutOp, type DiaryDayExercise, type DiaryDaySection, type DiaryDaySnapshotData } from './diarySnapshot';
 
 export type DiaryDaySnapshot = DiaryDaySnapshotData;
 export type { DiaryDayExercise, DiaryDaySection };
@@ -45,6 +46,14 @@ export type DiaryDayModel = {
     grams: number,
     title?: string,
   ): Promise<void>;
+  /**
+   * The undo of a delete inside the five-second window: while the tombstone's
+   * op still waits in the outbox, cancel it and restore the rows silently;
+   * once the sync has taken it, re-record the entry as a new change.
+   */
+  undoDelete(item: DiaryDaySnapshot['sections'][number]['items'][number]): Promise<void>;
+  /** One-batch rewrite of the entry and its detail exactly as given (the edit's undo). */
+  writeEntry(entry: DiaryEntry, detail: DiaryEntryDetail): Promise<void>;
   /** Undo path: tombstone by id without needing the observed item. */
   deleteEntry(id: string): Promise<void>;
   /** Local-only exercise write (I4), then notify so Today re-reads. */
@@ -157,6 +166,26 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
         ],
         stamp,
       );
+      deps.notify();
+      await refresh();
+    },
+    async undoDelete(item) {
+      const opId = await findPendingTombstoneOp(deps.db, item.id);
+      if (opId !== null) {
+        // The delete has not left the device: cancel the op, restore the rows
+        // silently — the device keeps no trace of the delete.
+        await cancelPendingOp(deps.db, opId);
+        await restoreRowsWithoutOp(deps.db, item.entry, item.detail);
+      } else {
+        // The sync has taken the tombstone: the entry comes back the way a
+        // save records it — one batch, one new op.
+        await deps.diaryEntries.recordUpserts([{ entry: item.entry, detail: item.detail }], deps.now());
+      }
+      deps.notify();
+      await refresh();
+    },
+    async writeEntry(entry, detail) {
+      await deps.diaryEntries.recordUpserts([{ entry, detail }], deps.now());
       deps.notify();
       await refresh();
     },

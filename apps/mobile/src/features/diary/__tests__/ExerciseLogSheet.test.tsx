@@ -29,6 +29,8 @@ function makeModel(addExercise = jest.fn(async () => undefined)): DiaryDayModel 
     delete: async () => undefined,
     deleteEntry: async () => undefined,
     updateEntry: async () => undefined,
+    undoDelete: async () => undefined,
+    writeEntry: async () => undefined,
     addExercise,
   };
 }
