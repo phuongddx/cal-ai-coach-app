@@ -2,7 +2,7 @@
   "name": "@coachcal/api",
   "version": "0.0.0",
   "private": true,
-  "description": "Minimal local sync API (Node + Hono) for spike item 4. Not the production backend.",
+  "description": "CoachCal API (Node + Hono + PostgreSQL 17): scan, lookup, sync, account, auth, webhooks. Replaces the Supabase edge functions.",
   "type": "commonjs",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@coachcal/api-contract": "*",
+    "@coachcal/core": "*",
     "@hono/node-server": "^2.1.11",
     "@hono/zod-validator": "^0.9.1",
     "hono": "^4.13.22",
