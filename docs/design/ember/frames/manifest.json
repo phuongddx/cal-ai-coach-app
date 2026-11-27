@@ -1,0 +1,212 @@
+[
+  {
+    "file": "01-scan-viewfinder.png",
+    "kind": "screen",
+    "section": "scan",
+    "caption": "Viewfinder"
+  },
+  {
+    "file": "02-scan-analyzing.png",
+    "kind": "screen",
+    "section": "scan",
+    "caption": "Analyzing"
+  },
+  {
+    "file": "03-scan-review-light.png",
+    "kind": "screen",
+    "section": "scan",
+    "caption": "Review (light)"
+  },
+  {
+    "file": "04-scan-review-dark-item-needs-review.png",
+    "kind": "screen",
+    "section": "scan",
+    "caption": "Review (dark, item needs review)"
+  },
+  {
+    "file": "05-scan-review-ed-safe.png",
+    "kind": "screen",
+    "section": "scan",
+    "caption": "Review (ED-Safe)"
+  },
+  {
+    "file": "06-scan-saved.png",
+    "kind": "screen",
+    "section": "scan",
+    "caption": "Saved"
+  },
+  {
+    "file": "07-core-today-light.png",
+    "kind": "screen",
+    "section": "core",
+    "caption": "Today (light)"
+  },
+  {
+    "file": "08-core-today-dark-offline.png",
+    "kind": "screen",
+    "section": "core",
+    "caption": "Today (dark, offline)"
+  },
+  {
+    "file": "09-core-today-ed-safe.png",
+    "kind": "screen",
+    "section": "core",
+    "caption": "Today (ED-Safe)"
+  },
+  {
+    "file": "10-core-diary-day-sheet-large-detent.png",
+    "kind": "screen",
+    "section": "core",
+    "caption": "Diary day (sheet, large detent)"
+  },
+  {
+    "file": "11-core-progress.png",
+    "kind": "screen",
+    "section": "core",
+    "caption": "Progress"
+  },
+  {
+    "file": "12-core-coach.png",
+    "kind": "screen",
+    "section": "core",
+    "caption": "Coach"
+  },
+  {
+    "file": "13-profile-profile.png",
+    "kind": "screen",
+    "section": "profile",
+    "caption": "Profile"
+  },
+  {
+    "file": "14-profile-settings.png",
+    "kind": "screen",
+    "section": "profile",
+    "caption": "Settings"
+  },
+  {
+    "file": "15-profile-food-search-ed-safe.png",
+    "kind": "screen",
+    "section": "profile",
+    "caption": "Food search (ED-Safe)"
+  },
+  {
+    "file": "16-profile-manual-log-ed-safe.png",
+    "kind": "screen",
+    "section": "profile",
+    "caption": "Manual log (ED-Safe)"
+  },
+  {
+    "file": "17-billing-quota-reached-sheet.png",
+    "kind": "screen",
+    "section": "billing",
+    "caption": "Quota reached (sheet)"
+  },
+  {
+    "file": "18-billing-plans-paywall.png",
+    "kind": "screen",
+    "section": "billing",
+    "caption": "Plans / paywall"
+  },
+  {
+    "file": "19-billing-cancel-flow.png",
+    "kind": "screen",
+    "section": "billing",
+    "caption": "Cancel flow"
+  },
+  {
+    "file": "20-onboarding-1-welcome.png",
+    "kind": "screen",
+    "section": "onboarding",
+    "caption": "1 · Welcome"
+  },
+  {
+    "file": "21-onboarding-2-goal.png",
+    "kind": "screen",
+    "section": "onboarding",
+    "caption": "2 · Goal"
+  },
+  {
+    "file": "22-onboarding-3-about-you.png",
+    "kind": "screen",
+    "section": "onboarding",
+    "caption": "3 · About you"
+  },
+  {
+    "file": "23-onboarding-4-goal-weight-and-pace.png",
+    "kind": "screen",
+    "section": "onboarding",
+    "caption": "4 · Goal weight and pace"
+  },
+  {
+    "file": "24-onboarding-5-activity-and-diet.png",
+    "kind": "screen",
+    "section": "onboarding",
+    "caption": "5 · Activity and diet"
+  },
+  {
+    "file": "25-onboarding-6-projection.png",
+    "kind": "screen",
+    "section": "onboarding",
+    "caption": "6 · Projection"
+  },
+  {
+    "file": "26-onboarding-7-privacy-health-and-ed-safe.png",
+    "kind": "screen",
+    "section": "onboarding",
+    "caption": "7 · Privacy, Health and ED-Safe"
+  },
+  {
+    "file": "27-onboarding-8-building-your-plan.png",
+    "kind": "screen",
+    "section": "onboarding",
+    "caption": "8 · Building your plan"
+  },
+  {
+    "file": "28-onboarding-9-your-plan.png",
+    "kind": "screen",
+    "section": "onboarding",
+    "caption": "9 · Your plan"
+  },
+  {
+    "file": "29-glance-small-widget.png",
+    "kind": "glanceable",
+    "section": "glance",
+    "caption": "Small widget"
+  },
+  {
+    "file": "30-glance-small-widget-ed-safe.png",
+    "kind": "glanceable",
+    "section": "glance",
+    "caption": "Small widget · ED-Safe"
+  },
+  {
+    "file": "31-glance-medium-widget.png",
+    "kind": "glanceable",
+    "section": "glance",
+    "caption": "Medium widget"
+  },
+  {
+    "file": "32-glance-lock-screen-widgets.png",
+    "kind": "glanceable",
+    "section": "glance",
+    "caption": "Lock Screen widgets"
+  },
+  {
+    "file": "33-glance-live-activity-lock-screen.png",
+    "kind": "glanceable",
+    "section": "glance",
+    "caption": "Live Activity · Lock Screen"
+  },
+  {
+    "file": "34-glance-dynamic-island.png",
+    "kind": "glanceable",
+    "section": "glance",
+    "caption": "Dynamic Island"
+  },
+  {
+    "file": "35-glance-live-activity-ed-safe.png",
+    "kind": "glanceable",
+    "section": "glance",
+    "caption": "Live Activity · ED-Safe"
+  }
+]
