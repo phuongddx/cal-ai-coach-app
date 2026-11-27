@@ -41,8 +41,8 @@ Run from the repo root unless stated.
 | Types | `npm run typecheck` | |
 | Parity gate | `npm run parity:check` (`npm run parity:write` regenerates the table) | under 1 s |
 | Local API with PostgreSQL 17 | `bash scripts/rn/start-api.sh`, stop with `bash scripts/rn/start-api.sh stop` | ports 5433 and 8787 |
-| Native project | `cd apps/mobile && npx expo prebuild --platform ios` | in the native worktree only |
-| Build, install, launch | `cd apps/mobile && CI=1 npx expo run:ios --no-bundler --device 85024D2F-71DE-43C0-8E11-CE58F4578FC3` | first build about 25 minutes; `export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8` first |
+| Native project | `bash scripts/rn/native-slot.sh prepare` (clean-tree and 6 GB disk check, then `expo prebuild`) | 138 s with `pod install`; in the native worktree only |
+| Build, install, launch | `cd apps/mobile && CI=1 npx expo run:ios --no-bundler --device 85024D2F-71DE-43C0-8E11-CE58F4578FC3` | measured 1002 s (16.7 min) from a cold DerivedData, including install and launch, on 2026-11-27 (U-13); `export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8` first |
 | Metro | `cd apps/mobile && npx expo start --dev-client --port 8081` | not with `CI=1` |
 | Point the dev client at Metro | `xcrun simctl openurl 85024D2F-71DE-43C0-8E11-CE58F4578FC3 "exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"` | the slug is `coachcal` since the promotion commit |
 | Screenshot | `xcrun simctl io <udid> screenshot <file.png>` | |
@@ -54,8 +54,31 @@ Run from the repo root unless stated.
 2. Jest with `--testPathPatterns` on one workspace is the fast way to re-run a subset; the full
    mobile suite takes about 50 seconds when other projects are building.
 
+3. Disk: the first native build needs about 5.3 GB (measured: `ios/Pods` 1.5 GB, DerivedData 3.8 GB, the
+   copied Debug app 199 MB). With 10 GB free before the build the volume ended at 3.8 GB. Run
+   `bash scripts/rn/native-slot.sh release` when the build is done (it removes only `ios/Pods` and
+   `DerivedData/CoachCal-*`); free disk went from 3.8 GB back to 8 GB.
+4. `npx expo install` exits 1 when `app.config.ts` is a dynamic config: it installs the packages but
+   cannot write the plugin list. Add the config plugins to `app.config.ts` by hand.
+5. A simulator build is ad-hoc signed with an empty entitlement set, so
+   `codesign -d --entitlements :- CoachCal.app` prints an empty `<dict>`. The real entitlements sit in the
+   `__TEXT,__entitlements` section of the executable (`otool -X -s __TEXT __entitlements`, 4-byte words
+   printed little-endian). `scripts/rn/check-artifact-compliance.mjs` reads both places.
+6. `expo-doctor` fails the "duplicate dependencies" check when `apps/mobile` pins `react@19.3.0` and a
+   hoisted package with `peer react: "*"` pulls `react@19.3.1` to the root. The root `package.json` has
+   `overrides` for `react` and `react-dom` at 19.3.0. Keep them equal to the version in `apps/mobile`.
+7. `expo-router/testing-library` `renderRouter` with an in-memory route object: keys must have no leading
+   `./` and no file extension (`'(tabs)/index'`, not `'./(tabs)/index.tsx'`), else it throws
+   "Cannot read properties of undefined (reading 'ErrorBoundary')". A `coachcal://` `initialUrl` resolves to
+   `/` even with `linking.prefixes`; convert with `extractExpoPathFromURL` first (as the native app does).
+8. jest-expo auto-mocks every native module with `jest.fn()` that returns `undefined`. A module the code
+   awaits (secure store, camera permissions) needs a manual mock in `src/__mocks__/`.
+9. `expo-doctor` also checks the `expo` package against the SDK patch line (`~58.1.0` for SDK 58 on
+   2026-11-27, not `~58.0.26`).
+
 ## State on 2026-11-27
 
 Verified in the promotion PR: `npm test` (140 tests), `npm run typecheck` and `npm run parity:check`
-at the repo root after the move. Not yet verified after the move: the native build (the identity
-changed to the production one, so the spike's build cannot be reused). U-13 builds first.
+at the repo root after the move. Verified in U-13: the native build with the production identity
+(`Build Succeeded`, 0 errors, 2 warnings), launch under Metro (Today, four tabs, Scan button),
+`npx expo-doctor` 20/20, `npm ci` in a fresh clone (1164 packages, 24 s).

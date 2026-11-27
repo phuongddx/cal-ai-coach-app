@@ -1,0 +1,40 @@
+› Generating debug CoachCal/ExpoWidgetsTarget » ExpoWidgetsTarget.appex.dSYM
+› Executing CoachCal/ExpoWidgetsTarget » [CP] Copy Pods Resources
+› Signing   CoachCal/ExpoWidgetsTarget » ExpoWidgetsTarget.debug.dylib
+› Signing   CoachCal/ExpoWidgetsTarget » __preview.dylib
+› Signing   CoachCal/ExpoWidgetsTarget » ExpoWidgetsTarget.appex
+› Creating  CoachCal/ExpoWidgetsTarget » ExpoWidgetsTarget.appex
+› Executing CoachCal » [CP] Check Pods Manifest.lock
+› Executing CoachCal » [Expo] Configure project
+    The @ExpoModule class 'CoreModule' (/Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-native/node_modules/expo-modules-core/ios/Core/Modules/CoreModule.swift) is internal, so the generated modules provider cannot reference it. Declare it public to link it automatically, or use a lower access level such as private to opt it out of linking.
+› Copying   ./PrivacyInfo.xcprivacy ➜ .worktrees/rn-native/apps/mobile/ios/CoachCal/PrivacyInfo.xcprivacy
+› Linking   CoachCal » __preview.dylib
+› Compiling CoachCal » SplashScreen.storyboard
+› Copying   ios/CoachCal/Supporting/Expo.plist ➜ ./Expo.plist
+› Compiling CoachCal » CoachCal_vers.c
+› Linking   CoachCal » CoachCal.debug.dylib
+› Linking   CoachCal » CoachCal
+› Executing CoachCal » Bundle React Native code and images
+› Generating debug CoachCal » CoachCal.app.dSYM
+› Executing CoachCal » [CP] Copy Pods Resources
+› Executing CoachCal » [Expo Dev Launcher] Strip Local Network Keys for Release
+› Preparing CoachCal » Info.plist
+› Executing CoachCal » [CP] Embed Pods Frameworks
+› Generating debug CoachCal » CoachCal.app.dSYM
+› Signing   CoachCal » CoachCal.debug.dylib
+› Signing   CoachCal » __preview.dylib
+› Signing   CoachCal » CoachCal.app
+› Creating  CoachCal » CoachCal.app
+⚠️  Script has ambiguous dependencies causing it to run on every build.
+   To fix, go to: Xcode » CoachCal/CoachCal » Build Phases » '[Expo Dev Launcher] Strip Local Network Keys for Release'
+   Either: Uncheck "Based on dependency analysis", or select output files to trigger the script
+
+› Build Succeeded
+
+› 0 error(s), and 2 warning(s)
+
+Waiting on http://localhost:8081
+› Installing /Users/ddphuong/Library/Developer/Xcode/DerivedData/CoachCal-avujcbolzismcofuvkweiywagazj/Build/Products/Debug-iphonesimulator/CoachCal.app
+› Installing on iPhone 17 Pro
+› Opening on iPhone 17 Pro (com.nextlabs.coachcal)
+› Opening exp+coachcal://?__expo_url=http%3A%2F%2F192.168.72.48%3A8081&__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1 on iPhone 17 Pro

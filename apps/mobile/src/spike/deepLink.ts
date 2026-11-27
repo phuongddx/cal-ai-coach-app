@@ -3,9 +3,11 @@ import * as Linking from 'expo-linking';
 import { runSpikeAction } from './registry';
 
 export const SPIKE_SCHEME = 'coachcal';
+/** The host of a debug-action link; it is also the route (`src/app/debug.tsx`) that shows the console. */
+export const DEBUG_HOST = 'debug';
 
 /**
- * `coachcal://spike?action=seed` → `seed`. Anything else (other scheme, other host, no action)
+ * `coachcal://debug?action=seed` → `seed`. Anything else (other scheme, other host, no action)
  * returns null so the URL stays a plain navigation.
  */
 export function parseSpikeUrl(url: string): string | null {
@@ -15,7 +17,7 @@ export function parseSpikeUrl(url: string): string | null {
 /** Like `parseSpikeUrl`, plus the other query parameters (`&rolloverInSeconds=90`). */
 export function parseSpikeLink(url: string): { name: string; params: Record<string, string> } | null {
   const m = /^coachcal:\/\/([^/?#]*)\/?(?:\?([^#]*))?/i.exec(url.trim());
-  if (!m || m[1].toLowerCase() !== 'spike') return null;
+  if (!m || m[1].toLowerCase() !== DEBUG_HOST) return null;
   const query = m[2] ?? '';
   let name = '';
   const params: Record<string, string> = {};
@@ -28,7 +30,7 @@ export function parseSpikeLink(url: string): { name: string; params: Record<stri
   return name.length > 0 ? { name, params } : null;
 }
 
-/** Run the action a spike URL names. Returns the action name it ran, or null for other URLs. */
+/** Run the action a debug URL names. Returns the action name it ran, or null for other URLs. */
 export async function handleSpikeUrl(url: string): Promise<string | null> {
   const link = parseSpikeLink(url);
   if (!link) return null;
