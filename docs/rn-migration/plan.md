@@ -88,7 +88,7 @@ Shared files have one writer per wave. "Only" means nobody else edits it in that
 ## Places
 
 See `standing-orders.md`. Coordinator state that survives a restart: `ledger.tsv` (one last row per
-unit), `trail.md` (decision log) and `briefs/U-*.md`, all on branch `rn/orchestrate`.
+unit), `trail.tsv` (decision log) and `briefs/U-*.md`, all on branch `rn/orchestrate`.
 
 ## Merge recipe (the owner, after every drain)
 
@@ -100,7 +100,7 @@ unit), `trail.md` (decision log) and `briefs/U-*.md`, all on branch `rn/orchestr
 3. The branch is synced with `main` (`git merge origin/main`, done by the worker if `main` moved)
    and RN CI is green or the same checks pass locally on the pushed head.
 4. `gh pr merge <n> --merge --delete-branch`. The Swift CI result is recorded, not waited for.
-5. Append a row to `ledger.tsv` and a line to `trail.md`, push `rn/orchestrate`.
+5. Append a row to `ledger.tsv` and a row to `trail.tsv`, push `rn/orchestrate`.
 6. Close the worker's thread; `git worktree remove` the unit worktree.
 
 ## Units of wave 1
@@ -336,6 +336,6 @@ Scoped here; each gets a `briefs/U-*.md` with the full CONTEXT at dispatch.
 
 ## Resuming after a restart
 
-Check out `rn/orchestrate`, read `ledger.tsv` (last row per unit is its state) and `trail.md`.
+Check out `rn/orchestrate`, read `ledger.tsv` (last row per unit is its state) and `trail.tsv`.
 A `running` unit lost its worker: its brief is in `briefs/`, its branch may hold commits; re-dispatch
 with the brief and the partial result. A `pass` whose PR head moved is void.

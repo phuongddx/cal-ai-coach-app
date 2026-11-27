@@ -1,0 +1,2 @@
+ts	unit	state	branch	pr	head	by	evidence
+2026-11-27T03:00:00Z	U-00	built	rn/promote-monorepo	2	834502d	CoachCal (owner)	local npm test 140 pass, typecheck clean, parity 0 problems
