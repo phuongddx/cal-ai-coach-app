@@ -11,29 +11,38 @@ Companion documents: `design-system.md` (tokens, rules, component mapping, hando
 
 ## How many frames the canvas holds
 
-Measured in a browser with the canvas open (`index.html` needs no server):
+Measured from the manifest, which the capture tool wrote from the canvas — repeatable without a
+browser:
 
 ```sh
-# in the browser, on the open canvas:
-document.querySelectorAll('figure.frame').length
-# → 40   (scan 6, core 6, profile 4, billing 3, onboarding 9, glance 7, icon 5)
+node -e "const m=require('./docs/design/ember/frames/manifest.json'); const k={},s={};
+for (const f of m) { k[f.kind]=(k[f.kind]||0)+1; s[f.section]=(s[f.section]||0)+1; }
+console.log(m.length, JSON.stringify(k)); console.log(JSON.stringify(s))"
+# → 107 {"screen":84,"glanceable":7,"panel":16}
+#   {"scan":6,"core":6,"profile":4,"billing":3,"onboarding":9,"diaryedit":12,"export":6,
+#    "darkmode":12,"hc":3,"auth":7,"target":4,"scansheets":6,"paywallstates":3,"darkmore":4,
+#    "glance":7,"icon":11,"glance2":4}
 ```
 
-The static file plus the generator agree:
+The static file plus the generators agree. The static `index.html` holds 25 `figure.frame`
+elements — the 19 phones of `#scan`, `#core`, `#profile` and `#billing`
+(`grep -c 'class="phone' docs/design/ember/index.html` → 19) plus the 6 Icon Composer renders of
+`#icon`. The three generators render the rest from templates:
 
-```sh
-grep -c '<figure class="frame"' docs/design/ember/index.html   # → 19 (static: #scan, #core, #profile, #billing)
-grep -c '<figure class="frame"' docs/design/ember/screens.js   # → 11 template occurrences,
-#   which render 21 runtime frames: 9 onboarding steps + 7 glanceables + 5 app-icon variants
-```
+- `screens.js`: 9 onboarding steps (light) + the same 9 again in `#onbDark` + 7 glanceables + 5
+  icon variants = 30 runtime frames.
+- `screens-additions.js`: 12 diary-edit + 6 export + 3 dark billing + 3 high contrast = 24 runtime
+  frames.
+- `screens-more.js`: 7 sign-in + 4 edit-goal + 6 scan sheets + 3 paywall states + 4 glance2 + 4
+  dark profile band = 28 runtime frames.
 
-Total: **40 frames = 28 phone screens + 7 glanceables + 5 app-icon variants.**
-The 28 screens are the six `#scan` frames, the six `#core` frames, the four `#profile` frames, the
-three `#billing` frames and the nine `#onboarding` steps (6+6+4+3+9). The 7 glanceables are the
-`#glance` band. The 5 `#icon` frames are the app-icon variants of the "Ember ring"; D13 and the
-`PL-17` row keep the current icon in place until the layers are built, so those five sections are
-reference for the unit that builds them, not for a screen restyle. This document gives every one of
-the 40 a section so the count above and the section count match.
+25 static + 82 runtime = 107. Of the 107, **84 are phone screens, 7 glanceables and 16 panels**
+(the panels: 11 icon frames, the High Contrast token table, and the 4 second-glance-band frames).
+
+Every frame of the manifest is a PNG under `frames/` at 2x (a phone screen is 780×1690) named
+`NN-<section>-<caption>.png`, in canvas order; this document cites each block's exact file name.
+Frames 01 to 28 kept their first-round file names; from 29 on the frames are new or renumbered (the
+glance band moved from 29–35 to 85–91, the icon band from 36–40 to 92–96).
 
 Each section has the seven parts the unit brief names. Token names (`--cc-accent`, `--cc-text-2`,
 …) are from `tokens.css`; hex values quoted in a frame are the canvas' inline values, which the
@@ -61,7 +70,7 @@ Conventions used below:
 
 ### Viewfinder
 
-1. **Frame:** "Viewfinder", anchor `#scan`, dark over a full-bleed camera image (`background #000`,
+1. **Frame:** "Viewfinder" — `01-scan-viewfinder.png`, anchor `#scan`, dark over a full-bleed camera image (`background #000`,
    photo placeholder). Phone size 390×844.
 2. **Shows**, top to bottom:
    - Close glass button, top-left, `aria-label "Close"`, `#i-x` icon, `rgba(0,0,0,.45)` surface,
@@ -103,7 +112,7 @@ Conventions used below:
 
 ### Analyzing
 
-1. **Frame:** "Analyzing", anchor `#scan`, dark (`#000`), blurred plate backdrop.
+1. **Frame:** "Analyzing" — `02-scan-analyzing.png`, anchor `#scan`, dark (`#000`), blurred plate backdrop.
 2. **Shows**, top to bottom:
    - 200×200 thumb, radius 32, `0 0 0 3px #FF6A00` ring plus a soft orange glow, over the blurred
      plate.
@@ -131,7 +140,7 @@ Conventions used below:
 
 ### Review (light)
 
-1. **Frame:** "Review (light)", anchor `#scan`, light (`--cc-bg`), plain phone, scroll under a
+1. **Frame:** "Review (light)" — `03-scan-review-light.png`, anchor `#scan`, light (`--cc-bg`), plain phone, scroll under a
    pinned dock.
 2. **Shows**, top to bottom:
    - Nav bar: back glass button (`aria-label "Back to camera"`, `#i-back`), title **"Review"**,
@@ -179,7 +188,7 @@ Conventions used below:
 
 ### Review (dark, item needs review)
 
-1. **Frame:** "Review (dark, item needs review)", anchor `#scan`, dark (`--cc-bg #000`, cards
+1. **Frame:** "Review (dark, item needs review)" — `04-scan-review-dark-item-needs-review.png`, anchor `#scan`, dark (`--cc-bg #000`, cards
    `--cc-card`).
 2. **Shows**, top to bottom:
    - Same nav bar as Review (light).
@@ -212,7 +221,7 @@ Conventions used below:
 
 ### Review (ED-Safe)
 
-1. **Frame:** "Review (ED-Safe)", anchor `#scan`, light with ED-Safe mode on.
+1. **Frame:** "Review (ED-Safe)" — `05-scan-review-ed-safe.png`, anchor `#scan`, light with ED-Safe mode on.
 2. **Shows**, top to bottom:
    - Nav bar; header **"Chicken rice bowl"** with **"High confidence"** badge (both stay).
    - Where the total card was: a neutral note card (`--cc-grouped`, no border, 40 pt `--cc-accent-tint`
@@ -236,7 +245,7 @@ Conventions used below:
 
 ### Saved
 
-1. **Frame:** "Saved", anchor `#scan`, light.
+1. **Frame:** "Saved" — `06-scan-saved.png`, anchor `#scan`, light.
 2. **Shows**, top to bottom:
    - 96 pt `--cc-accent` circle with a black check (`stroke-width 3`) and a 12 px `--cc-accent-tint`
      halo.
@@ -272,7 +281,7 @@ gear) — and a trailing Scan FAB (`#i-camera`, `aria-label "Scan food"`); no cu
 
 ### Today (light)
 
-1. **Frame:** "Today (light)", anchor `#core`, light, Today tab.
+1. **Frame:** "Today (light)" — `07-core-today-light.png`, anchor `#core`, light, Today tab.
 2. **Shows**, top to bottom:
    - Header: **"Tuesday, 24 Nov"** (subtitle), **"Today"** (large title), calendar glass button
      (`aria-label "Open diary"`, `#i-cal`).
@@ -313,7 +322,7 @@ gear) — and a trailing Scan FAB (`#i-camera`, `aria-label "Scan food"`); no cu
 
 ### Today (dark, offline)
 
-1. **Frame:** "Today (dark, offline)", anchor `#core`, dark (`--cc-bg #000`, warm cards `--cc-card
+1. **Frame:** "Today (dark, offline)" — `08-core-today-dark-offline.png`, anchor `#core`, dark (`--cc-bg #000`, warm cards `--cc-card
    #1C1A18`), Today tab.
 2. **Shows**, top to bottom:
    - Header: date + "Today"; instead of the calendar button, a caution chip **"Offline · syncs
@@ -337,7 +346,7 @@ gear) — and a trailing Scan FAB (`#i-camera`, `aria-label "Scan food"`); no cu
 
 ### Today (ED-Safe)
 
-1. **Frame:** "Today (ED-Safe)", anchor `#core`, light with ED-Safe on, Today tab.
+1. **Frame:** "Today (ED-Safe)" — `09-core-today-ed-safe.png`, anchor `#core`, light with ED-Safe on, Today tab.
 2. **Shows**, top to bottom:
    - Header as usual (no offline chip).
    - Ember card: ring centre **"On track"** (700 22 px `#F7F5F2`) + **"2 of 3 meals"** (500 13 px
@@ -362,7 +371,7 @@ gear) — and a trailing Scan FAB (`#i-camera`, `aria-label "Scan food"`); no cu
 
 ### Diary day (sheet, large detent)
 
-1. **Frame:** "Diary day (sheet, large detent)", anchor `#core`, dimmed backdrop (`#2b2724`), sheet
+1. **Frame:** "Diary day (sheet, large detent)" — `10-core-diary-day-sheet-large-detent.png`, anchor `#core`, dimmed backdrop (`#2b2724`), sheet
    on `--cc-grouped` with a 38 pt top radius.
 2. **Shows**, top to bottom:
    - Grabber 36×5 in `--cc-grabber` — visible in light mode (it was invisible).
@@ -397,7 +406,7 @@ gear) — and a trailing Scan FAB (`#i-camera`, `aria-label "Scan food"`); no cu
 
 ### Progress
 
-1. **Frame:** "Progress", anchor `#core`, light, Progress tab.
+1. **Frame:** "Progress" — `11-core-progress.png`, anchor `#core`, light, Progress tab.
 2. **Shows**, top to bottom:
    - Large title **"Progress"**; range segment **"Week / Month (selected) / 3M / Year"**.
    - Weight trend card: label **"Weight trend"**; **"80.6"** (700 28 px Rounded) + "kg";
@@ -430,7 +439,7 @@ gear) — and a trailing Scan FAB (`#i-camera`, `aria-label "Scan food"`); no cu
 
 ### Coach
 
-1. **Frame:** "Coach", anchor `#core`, light, Coach tab (icon `#i-spark`).
+1. **Frame:** "Coach" — `12-core-coach.png`, anchor `#core`, light, Coach tab (icon `#i-spark`).
 2. **Shows**, top to bottom:
    - **"Good afternoon"** (subtitle, no emoji) + large title **"Coach"**.
    - Ember card: eyebrow **"THIS WEEK"** (600 13 px `--cc-ember-accent`, letter-spacing .02em);
@@ -469,7 +478,7 @@ gear) — and a trailing Scan FAB (`#i-camera`, `aria-label "Scan food"`); no cu
 
 ### Profile
 
-1. **Frame:** "Profile", anchor `#profile`, light, Profile tab (icon `#i-user`).
+1. **Frame:** "Profile" — `13-profile-profile.png`, anchor `#profile`, light, Profile tab (icon `#i-user`).
 2. **Shows**, top to bottom:
    - Large title **"Profile"**.
    - User card (`data-id profile.userCard`): 56 pt `--cc-accent` avatar with a black **"M"**;
@@ -505,11 +514,13 @@ gear) — and a trailing Scan FAB (`#i-camera`, `aria-label "Scan food"`); no cu
 
 ### Settings
 
-1. **Frame:** "Settings", anchor `#profile`, light, pushed from Profile.
+1. **Frame:** "Settings" — `14-profile-settings.png`, anchor `#profile`, light, pushed from Profile.
 2. **Shows**, top to bottom:
    - Nav bar: back glass button (`aria-label "Back to Profile"`), title **"Settings"**.
    - Section head **"Subscription"**; card: **"CoachCal Plus · Yearly"** (700 17 px) +
-     **"Renews 12 Dec 2026 for $39.99."** / **"Billed by Apple. No hidden fees."** (15 px
+      **"Renews 12 Dec 2026 for {price}."** — the price is the canvas' dotted-underlined placeholder
+      (D13: filled at run time from the store product, never a sample) — then
+      **"Billed by Apple. No hidden fees."** (15 px
      `--cc-text-2`) + mini **"Active"** badge; 44 pt buttons **"Change plan"** (secondary) and
      **"Cancel subscription"** (`data-id settings.cancelSubscription`, destructive); ghost row
      **"Billing history · Restore purchases"**.
@@ -549,7 +560,7 @@ gear) — and a trailing Scan FAB (`#i-camera`, `aria-label "Scan food"`); no cu
 
 ### Food search (ED-Safe)
 
-1. **Frame:** "Food search (ED-Safe)", anchor `#profile`, light on `--cc-grouped`, sheet titled
+1. **Frame:** "Food search (ED-Safe)" — `15-profile-food-search-ed-safe.png`, anchor `#profile`, light on `--cc-grouped`, sheet titled
    for the target meal.
 2. **Shows**, top to bottom:
    - Nav bar: close glass button (`aria-label "Close"`), title **"Add to Dinner"**.
@@ -582,7 +593,7 @@ gear) — and a trailing Scan FAB (`#i-camera`, `aria-label "Scan food"`); no cu
 
 ### Manual log (ED-Safe)
 
-1. **Frame:** "Manual log (ED-Safe)", anchor `#profile`, light on `--cc-grouped`, sheet.
+1. **Frame:** "Manual log (ED-Safe)" — `16-profile-manual-log-ed-safe.png`, anchor `#profile`, light on `--cc-grouped`, sheet.
 2. **Shows**, top to bottom:
    - Nav bar: back glass button, title **"Log manually"**.
    - Segment **"Food (selected) / Exercise / Custom food"**.
@@ -624,7 +635,7 @@ run time and shows none until products exist.
 
 ### Quota reached (sheet)
 
-1. **Frame:** "Quota reached (sheet)", anchor `#billing`, sheet (520 pt) over a dimmed backdrop.
+1. **Frame:** "Quota reached (sheet)" — `17-billing-quota-reached-sheet.png`, anchor `#billing`, sheet (520 pt) over a dimmed backdrop.
 2. **Shows**, top to bottom:
    - Grabber (`--cc-grabber`) and a close glass button at the top right (`aria-label "Close"`,
      `#i-x`) — the sheet can also be swiped down.
@@ -649,7 +660,7 @@ run time and shows none until products exist.
 
 ### Plans / paywall
 
-1. **Frame:** "Plans / paywall", anchor `#billing`, light, full screen with dock.
+1. **Frame:** "Plans / paywall" — `18-billing-plans-paywall.png`, anchor `#billing`, light, full screen with dock.
 2. **Shows**, top to bottom:
    - Nav bar: ghost **"Restore"** at the left, close glass button at the right — both always
      visible.
@@ -659,11 +670,12 @@ run time and shows none until products exist.
      insights"**, **"CSV export and Apple Health sync"** (each with an `--cc-accent-ink` check) and
      the info row **"Manual logging is free on every plan"** (`--cc-text-2`).
    - Yearly option (selected): 2 px `--cc-accent` border, `--cc-accent-tint` background, orange
-     radio with a black check; **"Yearly"** + **"7 days free, then $39.99 / year"** on the same
-     line; right side **"$3.33"** (700 17 px Rounded) + **"per month"**.
-   - Monthly option: 1.5 px `--cc-separator` border; **"Monthly"** + **"$7.99 / month, no trial"**;
-     right side **"$7.99"**.
-   - Dock: primary **"Start 7-day free trial"**; note **"Free for 7 days, then $39.99/year. We'll
+     radio with a black check; **"Yearly"** + **"{trial} free, then {yearly} / year"** on the same
+     line (all three are the canvas' dotted-underlined placeholders, filled at run time from the
+     store product — D13); right side **"{perMonth}"** (700 17 px Rounded) + **"per month"**.
+   - Monthly option: 1.5 px `--cc-separator` border; **"Monthly"** + **"{monthly} / month, no trial"**;
+     right side **"{monthly}"**.
+   - Dock: primary **"Start {trial} free trial"**; note **"Free for {trial}, then {yearly}/year. We'll
      remind you 2 days before you're charged. Cancel any time in Settings."** with **"Terms"** and
      **"Privacy"** links.
 3. **Implemented today by:** no screen yet — today's only billing surface is the minimal plans
@@ -683,7 +695,7 @@ run time and shows none until products exist.
 
 ### Cancel flow
 
-1. **Frame:** "Cancel flow", anchor `#billing`, light, pushed screen.
+1. **Frame:** "Cancel flow" — `19-billing-cancel-flow.png`, anchor `#billing`, light, pushed screen.
 2. **Shows**, top to bottom:
    - Nav bar: back glass button, title **"Cancel subscription"**.
    - Title **"Here's what happens if you cancel"** (700 26 px).
@@ -718,7 +730,7 @@ one behavior contract: locked copy, engine-clamped numbers, `onboarding.continue
 
 ### 1 · Welcome
 
-1. **Frame:** "1 · Welcome", anchor `#onboarding`, dark over a real plate photo.
+1. **Frame:** "1 · Welcome" — `20-onboarding-1-welcome.png`, anchor `#onboarding`, dark over a real plate photo.
 2. **Shows:** plate photo with `#FF6A00` corner brackets (stroke 6); **"High confidence · 624
    kcal"** badge on `#12301E`/`#4ADE80`; eyebrow **"COACHCAL"** (600 13 px `--cc-ember-accent`);
    **"Snap your plate. See the estimate and how sure we are."** (700 34 px `#F7F5F2`); dock:
@@ -738,7 +750,7 @@ one behavior contract: locked copy, engine-clamped numbers, `onboarding.continue
 
 ### 2 · Goal
 
-1. **Frame:** "2 · Goal", anchor `#onboarding`, light.
+1. **Frame:** "2 · Goal" — `21-onboarding-2-goal.png`, anchor `#onboarding`, light.
 2. **Shows:** title **"What brings you here?"** + **"This sets your starting plan. You can change
    it any time."**; four option cards (icon tile + title + sub + orange check when selected):
    **"Lose weight · A gentle, steady deficit"** (selected), **"Maintain · Keep things steady"**,
@@ -755,7 +767,7 @@ one behavior contract: locked copy, engine-clamped numbers, `onboarding.continue
 
 ### 3 · About you
 
-1. **Frame:** "3 · About you", anchor `#onboarding`, light.
+1. **Frame:** "3 · About you" — `22-onboarding-3-about-you.png`, anchor `#onboarding`, light.
 2. **Shows:** title **"A few basics"** + **"Used only to estimate your energy needs."**; label
    **"Sex used for the formula"** with segment **"Female (selected) / Male / Prefer not to say"**;
    two-column fields **"Age 29 years"** and **"Height 172 cm"** (56 pt fill fields, 700 22 px
@@ -779,7 +791,7 @@ one behavior contract: locked copy, engine-clamped numbers, `onboarding.continue
 
 ### 4 · Goal weight and pace
 
-1. **Frame:** "4 · Goal weight and pace", anchor `#onboarding`, light.
+1. **Frame:** "4 · Goal weight and pace" — `23-onboarding-4-goal-weight-and-pace.png`, anchor `#onboarding`, light.
 2. **Shows:** title **"Where would you like to be?"**; field **"Goal weight 76 kg"**; label
    **"Pace"** with segment **"Relaxed / Steady (selected) / Faster"**; card on `--cc-grouped`:
    **"About 0.4 kg a week. Most people can keep this pace without feeling hungry all the time."**;
@@ -799,7 +811,7 @@ one behavior contract: locked copy, engine-clamped numbers, `onboarding.continue
 
 ### 5 · Activity and diet
 
-1. **Frame:** "5 · Activity and diet", anchor `#onboarding`, light.
+1. **Frame:** "5 · Activity and diet" — `24-onboarding-5-activity-and-diet.png`, anchor `#onboarding`, light.
 2. **Shows:** title **"How active are you?"**; three option cards: **"Mostly sitting · Desk job,
    little exercise"**, **"Lightly active · Walks, 1–2 workouts a week"** (selected), **"Active ·
    3–5 workouts a week"**; heading **"Any diet we should know about?"**; chips **"None"**,
@@ -821,7 +833,7 @@ one behavior contract: locked copy, engine-clamped numbers, `onboarding.continue
 
 ### 6 · Projection
 
-1. **Frame:** "6 · Projection", anchor `#onboarding`, light.
+1. **Frame:** "6 · Projection" — `25-onboarding-6-projection.png`, anchor `#onboarding`, light.
 2. **Shows:** title **"Here's a realistic path"** + **"Based on a steady 0.4 kg a week."**; chart
    card (326×170, `aria-label "Projected weight from 80.6 to 76 kilograms by late March"`):
    `--cc-accent-strong` 3.5 px curve, a 35%-opacity confidence band around it, endpoint dots, grid
@@ -841,7 +853,7 @@ one behavior contract: locked copy, engine-clamped numbers, `onboarding.continue
 
 ### 7 · Privacy, Health and ED-Safe
 
-1. **Frame:** "7 · Privacy, Health and ED-Safe", anchor `#onboarding`, light.
+1. **Frame:** "7 · Privacy, Health and ED-Safe" — `26-onboarding-7-privacy-health-and-ed-safe.png`, anchor `#onboarding`, light.
 2. **Shows:** title **"You choose what we see"**; three toggle rows: **"Connect Apple Health"** —
    small **"Read weight and workouts. Write meals. You'll see Apple's permission sheet next."**
    (toggle on, `#E5243B` tile, `#i-heart`); **"Meal reminders"** — small **"Up to 3 a day. Never
@@ -865,7 +877,7 @@ one behavior contract: locked copy, engine-clamped numbers, `onboarding.continue
 
 ### 8 · Building your plan
 
-1. **Frame:** "8 · Building your plan", anchor `#onboarding`, light, dock with a disabled button.
+1. **Frame:** "8 · Building your plan" — `27-onboarding-8-building-your-plan.png`, anchor `#onboarding`, light, dock with a disabled button.
 2. **Shows:** 140 pt ring (`--cc-fill` track, `--cc-accent-strong` arc at 69%) with `#i-spark` in
    the centre; **"Working out your numbers"** (700 26 px); formula card (15 px, rows justified
    space-between): **"Resting energy (Mifflin-St Jeor)"** — **"1,590"**; **"× Lightly active
@@ -886,7 +898,7 @@ one behavior contract: locked copy, engine-clamped numbers, `onboarding.continue
 
 ### 9 · Your plan
 
-1. **Frame:** "9 · Your plan", anchor `#onboarding`, light, dock **"Start logging"** with the note
+1. **Frame:** "9 · Your plan" — `28-onboarding-9-your-plan.png`, anchor `#onboarding`, light, dock **"Start logging"** with the note
    **"Next: an optional look at CoachCal Plus. You can close it."**
 2. **Shows:** title **"Your plan is ready"**; ember card: 120 pt ring (18 pt stroke, track
    `#3A342F`, arc `#FF6A00` nearly full) with centre **"1,750"** (700 26 px Rounded) + **"kcal /
@@ -915,7 +927,730 @@ one behavior contract: locked copy, engine-clamped numbers, `onboarding.continue
 
 ---
 
-## 6 · Widgets and Live Activity (`#glance`, 7 glanceables)
+## 6 · Diary edit (`#diaryedit`, 12 frames)
+
+The edit sheet of a food already logged in the diary — new in Ember, the SwiftUI app has no edit
+sheet (row DY-08). One screen in three appearances (light, dark, ED-Safe), then its three
+companions: the delete confirm, the saved state and the deleted + undo state, each also in three
+appearances. Built by U-74, stage A2 (the row DY-08 brief).
+
+### Edit item (light)
+
+1. **Frame:** "Edit item (light)" — `29-diaryedit-edit-item-light.png`, anchor `#diaryedit`, light,
+   sheet (`--cc-grouped`, 38 pt top radius, grabber) pushed inside the Diary day sheet.
+2. **Shows**, top to bottom:
+   - Nav bar: back glass button (`aria-label "Back to Tue, 24 Nov"`), title **"Edit item"**.
+   - Header: 64 pt thumb; **"Chicken rice bowl"** (700 20 px) with a `#i-pencil` glyph
+     (`aria-label "Rename Chicken rice bowl"`); **"High confidence"** badge + **"12:40 · scan"**
+     (13 px `--cc-text-2`).
+   - Meal segment **Breakfast / Lunch (selected) / Dinner / Snack** (`aria-label "Meal"`).
+   - Total card: **"Total · was 624"** (13 px `--cc-text-2`); **"650 kcal"** (700 30 px Rounded) —
+     recomputed from the current grams; right: **"P 42 g · C 79 g · F 17 g"** with macro dots.
+   - Section head **"3 items · tap grams to type"**.
+   - Expanded item card: **"Jasmine rice"** + **"260 kcal"**; the Review grams control: −/+ 44 pt
+     fill buttons (`aria-label "Decrease rice by 10 grams"` / `"Increase rice by 10 grams"`) around
+     the typed field (44 pt, 2 px `--cc-accent` border, **"200"** 700 22 px Rounded + "g" + caret,
+     `aria-valuenow 200`); drag ruler with labels 100 · 150 · **200** (in `--cc-accent-ink` 700) ·
+     250 · 300; serving chips **"½ cup"**, **"1 cup · 160 g"**, **"1½ cup"**.
+   - Collapsed rows: **"Roast chicken thigh"** / 320 kcal / **"140 g"** gram pill (`aria-label
+     "Roast chicken thigh, 140 grams. Tap to edit"`); **"Cucumber"** / "70 kcal incl. dressing" /
+     **"60 g"**.
+   - Dock: primary **"Save changes"**; under it **"Delete item"** with `#i-trash` in
+     `--cc-error-ink` — never the primary.
+3. **Implemented today by:** no screen — the diary has no edit sheet (DY-08, todo; U-74 stage A2
+   builds it). Today a row tap opens the add-food sheet and the delete path is DiaryDayView's custom
+   confirm. The grams control exists as the DS `GramsField` + `GramsRuler` (U-71/U-71b).
+4. **Identifiers that must survive:** RN `diary.foodRow`, `diary.toast`, DS `ccstepper.decrement`,
+   `ccstepper.increment`, `food-row:<title>`, `food-row-kcal:<title>`. The edit sheet's own ids are
+   new, named by the unit that builds it — design-system.md additions §8 fixes their names:
+   `diary.edit.grams.<id>.field` (next to the kept `.increment` / `.decrement`),
+   `diary.edit.save`, `diary.edit.delete`, `diary.toast.undo`. Swift: none (the screen is new).
+5. **Differences from today's screen:** the whole sheet is new. It reuses the Review grams control
+   (typed field, 44 pt −/+ at 10 g, ruler, serving chips); the total shows "was 624" so the change
+   is visible before saving; Delete sits under Save in red ink; the meal segment and rename sit
+   above the items.
+6. **Behavior the frame needs:** per the owner's decision ("Delete and edit in the diary"): the
+   kcal is recomputed from the edited grams (the client rule, I6), the write goes through the diary
+   repository with one pending op and `notifyLocalMutation()` — **client** (U-74, stage A2, DY-08).
+   No endpoint.
+7. **Parity rows:** DY-08, DY-01 (the sheet stack it pushes inside), PL-08 (its ED-Safe twin).
+
+### Edit item (dark)
+
+`30-diaryedit-edit-item-dark.png` — the same sheet on dark; the selected meal segment pill uses
+`--cc-fill-elevated` #3A3632 (accent-ink 4.59:1) and the grams field border stays a graphic
+(accent), not text. The rest as frame 29.
+
+### Edit item (ED-Safe)
+
+`31-diaryedit-edit-item-ed-safe.png` — the total card and the per-item kcal lines are gone; a
+neutral note card takes their place (`--cc-accent-tint` tile, `#i-leaf`): **"Adjust the grams if the
+portion looks off."** + **"Numbers are hidden in ED-Safe mode."**. The expanded item shows
+**"was 180 g"** where the kcal line was; the confidence badge, the grams, the meal segment and Save
+stay. The rest as frame 29.
+
+### Delete confirm (light)
+
+1. **Frame:** "Delete confirm (light)" — `32-diaryedit-delete-confirm-light.png`, anchor
+   `#diaryedit`, the system action sheet over the dimmed edit sheet.
+2. **Shows:** title **"Delete Chicken rice bowl?"**; body **"This removes 624 kcal from Lunch. You
+   can undo for 5 seconds."** (13 px `--cc-text-2`); destructive **"Delete item"** (56 pt,
+   `--cc-error-ink`); **"Cancel"** as the separate bottom button, as iOS draws it.
+3. **Implemented today by:** DiaryDayView.tsx renders a custom card modal ("Delete …?" / "This will
+   remove it from …. This can't be undone." / Delete / Cancel); the dialog buttons carry no
+   identifiers today.
+4. **Identifiers that must survive:** none declared on the dialog today; the action sheet is new,
+   named by the unit (`diary.edit.delete` per design-system.md §8). The kept rule: a delete is never
+   silent and never double-confirmed.
+5. **Differences from today's screen:** the custom card modal becomes the system action sheet
+   (RN `ActionSheetIOS` with `destructiveButtonIndex`); the message states what will change and
+   that Undo exists — today's copy says the opposite ("This can't be undone.").
+6. **Behavior the frame needs:** the 5 s Undo toast after the delete (the owner's decision; the
+   Swift app tombstoned with no undo window) — **client** (U-74). No endpoint.
+7. **Parity rows:** DY-08.
+
+### Delete confirm (dark)
+
+`33-diaryedit-delete-confirm-dark.png` — same action sheet on `--cc-elevated`; the rest as frame 32.
+
+### Delete confirm (ED-Safe)
+
+`34-diaryedit-delete-confirm-ed-safe.png` — the message drops the kcal figure:
+**"It will be removed from Lunch. You can undo for 5 seconds."** Same two buttons. The rest as
+frame 32.
+
+### Saved (light)
+
+1. **Frame:** "Saved (light)" — `35-diaryedit-saved-light.png`, anchor `#diaryedit`, back on the
+   Diary day sheet after Save.
+2. **Shows:** summary card **"Eaten 1,310 / Goal 2,100 / Left 790"** ("Left" in
+   `--cc-accent-ink`); Breakfast 410 kcal; Lunch **"900 kcal"** with the edited row tinted
+   `--cc-accent-tint` and labelled **"Edited"** — **"Chicken rice bowl · 400 g · High · Edited ·
+   650"** — plus **"Avocado toast · 1 slice · from search · 250"**; dashed **"Add dinner"**;
+   Exercise **"Brisk walk · 40 min · 180"**; dark ember toast **"Changes saved — Chicken rice bowl ·
+   400 g"** with an **"Undo"** action (`aria-label "Undo changes"`).
+3. **Implemented today by:** DiaryDayView.tsx + DS `Toast` (`diary.toast` with Undo) — today a save
+   through the add-food sheet shows that toast; there is no edit path and no "Edited" tag.
+4. **Identifiers that must survive:** RN `diary.toast`, `diary.foodRow`, DS `food-row:<title>`,
+   `food-row-kcal:<title>`; the toast's Undo action is DS `toast:undo`. `diary.toast.undo` is the
+   new undo id the unit names.
+5. **Differences from today's screen:** the edited row is tinted for 2 s and keeps a persistent
+   **"Edited"** label, so colour is not the only cue; totals update at once; the toast offers Undo
+   for 5 s and stays while VoiceOver is on.
+6. **Behavior the frame needs:** the owner's decision — a saved toast with its own undo, the
+   "Edited" label that persists — **client** (U-74). No endpoint.
+7. **Parity rows:** DY-08, DY-01.
+
+### Saved (dark)
+
+`36-diaryedit-saved-dark.png` — the same day sheet on dark; the rest as frame 35.
+
+### Saved (ED-Safe)
+
+`37-diaryedit-saved-ed-safe.png` — the summary reads **"Logged 3 items / Weight 80.4 kg"** (weight
+stays visible in ED-Safe); no kcal anywhere, including the toast. The rest as frame 35.
+
+### Deleted + Undo (light)
+
+1. **Frame:** "Deleted + Undo (light)" — `38-diaryedit-deleted-undo-light.png`, anchor
+   `#diaryedit`, the day sheet after the delete.
+2. **Shows:** the row is gone (Lunch holds only "Avocado toast · 250"); summary **"Eaten 660 / Goal
+   2,100 / Left 1,440"**; ember toast **"Chicken rice bowl deleted — Removed from Lunch"** with
+   **"Undo"** (`aria-label "Undo delete"`).
+3. **Implemented today by:** the tombstone path of the diary repository exists (the Swift port);
+   today there is no edit-row delete and no undo window.
+4. **Identifiers that must survive:** RN `diary.toast`, DS `toast:undo`; `diary.toast.undo` names
+   the undo action.
+5. **Differences from today's screen:** the row leaves with a 200 ms collapse (reduced motion: a
+   cross-fade); Undo restores the item and its position; after 5 s the delete is sent to the
+   server. Today's confirm says "This can't be undone." — the frame replaces the second confirm
+   with the undo window.
+6. **Behavior the frame needs:** the owner's decision (undo toast for five seconds, no second
+   confirm) — **client** (U-74). No endpoint.
+7. **Parity rows:** DY-08.
+
+### Deleted + Undo (dark)
+
+`39-diaryedit-deleted-undo-dark.png` — the same on dark; the rest as frame 38.
+
+### Deleted + Undo (ED-Safe)
+
+`40-diaryedit-deleted-undo-ed-safe.png` — the summary counts items, not kcal (**"Logged 2 items /
+Weight 80.4 kg"**); the rest as frame 38.
+
+---
+
+## 7 · Export errors (`#export`, 6 frames)
+
+The CSV export sheet with its three failure states, light and dark. The sheet opens from Settings →
+"Export diary as CSV". Built by U-77 (the Settings unit; PL-14 binds the tap to the file share).
+
+### Export: Write failed (light)
+
+1. **Frame:** "Export: Write failed (light)" — `41-export-export-write-failed-light.png`, anchor
+   `#export`, sheet (610 pt) over a dimmed backdrop.
+2. **Shows:** title **"Export diary"** + close glass button; sub **"A CSV of your meals, grams,
+   nutrition and weight."**; range chips **"Last 7 days / Last 30 days (selected) / All time"**
+   (`role=radio`, `aria-label "Date range"`); error card on `--cc-error-tint` (`#i-alert` in
+   `--cc-error-ink`, `role=alert`): **"Couldn't create the file"** (600 17 px) + **"Your iPhone may
+   be low on storage. Free up some space, then try again. Nothing in your diary changed."** (15 px)
+   + **"Error EXP-WRITE · 24 Nov, 12:41"** (13 px `--cc-text-2`); dock: primary **"Try again"**,
+   secondary **"Contact us"** (`#i-mail`), footnote **"Contact us attaches the error code, never
+   your diary."**
+3. **Implemented today by:** the Settings row `settings.row.export`
+   (`SettingsDetailView.tsx`) → the CSV share of `apps/mobile/src/platform/csv/csvExportFile.ts`
+   (U-42). Today the tap shares the text fallback, not a file, and there is no sheet: the range
+   chips, the states and the file row are new.
+4. **Identifiers that must survive:** RN `settings.row.export`, `settings.row.contact`; the sheet
+   and its state cards are new, named by the unit that builds it.
+5. **Differences from today's screen:** the whole sheet is new. The failure becomes an inline error
+   card in the sheet — never a dead-end alert — and says what to try and that the diary is safe.
+6. **Behavior the frame needs:** per the owner's decisions the Export tap opens the share with the
+   file (`exportCsvAndShare`, U-77) and the write failure is recoverable in place: **client**
+   (U-77). The EXP-WRITE code is a client-side code; "Contact us" pre-attaches it. No endpoint.
+7. **Parity rows:** PR-02, PL-14.
+
+### Export: Write failed (dark)
+
+`42-export-export-write-failed-dark.png` — dark sheet surface `--cc-elevated`; chips, the file row
+and the secondary button use `--cc-fill-elevated` so they keep their shape. The rest as frame 41.
+
+### Export: No data in range (light)
+
+1. **Frame:** "Export: No data in range (light)" — `43-export-export-no-data-in-range-light.png`,
+   anchor `#export`, same sheet, range "Last 7 days".
+2. **Shows:** title, sub and chips as frame 41 (Last 7 days selected); empty card on
+   `--cc-fill-elevated`: 48 pt `--cc-elevated` tile with `#i-cal`, **"Nothing logged in the last 7
+   days"** (600 17 px) + **"There is no file to make for these dates. Pick a longer range to export
+   what you have logged."** (15 px `--cc-text-2`); dock: primary **disabled and labelled with the
+   reason** — **"No entries in the last 7 days"** (`aria-disabled`) — and secondary **"Choose All
+   time"**.
+3. **Implemented today by:** nothing — the sheet is new (as frame 41). Today an empty range still
+   produces a (header-only) file.
+4. **Identifiers that must survive:** `settings.row.export`; the rest new, named by the unit.
+5. **Differences from today's screen:** new state; the disabled primary states why and the one-tap
+   fix is the secondary button. If the diary is empty for all time, the chips hide and the copy
+   becomes "Log your first meal to export".
+6. **Behavior the frame needs:** the empty check over the existing series — **client** (U-77). No
+   endpoint.
+7. **Parity rows:** PR-02, PL-14.
+
+### Export: No data in range (dark)
+
+`44-export-export-no-data-in-range-dark.png` — the same on dark; the rest as frame 43.
+
+### Export: Share sheet cancelled (light)
+
+1. **Frame:** "Export: Share sheet cancelled (light)" —
+   `45-export-export-share-sheet-cancelled-light.png`, anchor `#export`, same sheet, range "Last 30
+   days".
+2. **Shows:** info card on `--cc-info-tint` (`#i-info` in `--cc-info-ink`, `role=status`):
+   **"Not shared"** + **"Your file is still ready. Share it again, or choose "Save to Files" in the
+   share sheet."**; file row on `--cc-fill-elevated` (`#i-receipt`):
+   **"coachcal-diary-2026-10-26_2026-11-….csv"** + **"42 KB · 31 days · 96 entries"**; dock:
+   primary **"Share again"** (`#i-share`), secondary **"Done"**.
+3. **Implemented today by:** nothing — the share today resolves silently; there is no sheet and no
+   file row.
+4. **Identifiers that must survive:** `settings.row.export`; the rest new, named by the unit.
+5. **Differences from today's screen:** closing the share sheet is not an error — no red, no alert.
+   RN `Share.share()` resolves with `dismissedAction`; the frame answers it with a neutral note that
+   keeps the file one tap away.
+6. **Behavior the frame needs:** a dismissed share is not an error (the owner's decision) —
+   **client** (U-77). No endpoint.
+7. **Parity rows:** PR-02, PL-14.
+
+### Export: Share sheet cancelled (dark)
+
+`46-export-export-share-sheet-cancelled-dark.png` — the same on dark; the rest as frame 45.
+
+---
+
+## 8 · Dark mode: onboarding and billing (`#darkmode`, 12 frames)
+
+The `.dark` token set on the onboarding steps and the billing surfaces. Same layout, same copy,
+only tokens change (sheets on dark sit on `--cc-elevated` over a #0E0D0C backdrop so the sheet edge
+reads). Onboarding dark is built by U-73, billing dark by U-77.
+
+### 1 · Welcome (dark)
+
+`47-darkmode-1-welcome-dark-same-in-both-modes.png` — the welcome stage on dark; the canvas captions
+it "same in both modes" (the photo stage is dark in light mode too). Brackets, badge, eyebrow,
+hero sentence, dock as frame 20. The rest as frame 20.
+
+### 2 · Goal (dark)
+
+`48-darkmode-2-goal-dark.png` — the four option cards on dark (`--cc-card` #1C1A18, selected on
+`--cc-accent-tint` #3A2312 with the orange check). The rest as frame 21.
+
+### 3 · About you (dark)
+
+`49-darkmode-3-about-you-dark.png` — the segment, the two-column 56 pt fields and the unit segment
+on dark. The rest as frame 22.
+
+### 4 · Goal weight and pace (dark)
+
+`50-darkmode-4-goal-weight-and-pace-dark.png` — the pace segment and the caution floor card on dark
+(caution ink #FFD43B on tint #3A3214). The rest as frame 23.
+
+### 5 · Activity and diet (dark)
+
+`51-darkmode-5-activity-and-diet-dark.png` — the three activity cards and the diet chips on dark.
+The rest as frame 24.
+
+### 6 · Projection (dark)
+
+`52-darkmode-6-projection-dark.png` — the projection chart card on dark (`--cc-accent-strong`
+#FF6A00 curve, band and grid lines on the dark card). The rest as frame 25.
+
+### 7 · Privacy, Health and ED-Safe (dark)
+
+`53-darkmode-7-privacy-health-and-ed-safe-dark.png` — the three toggle rows on dark (Apple Health
+tile keeps its red, reminders blue, ED-Safe purple). The rest as frame 26.
+
+### 8 · Building your plan (dark)
+
+`54-darkmode-8-building-your-plan-dark.png` — the ring and the formula card on dark; the disabled
+**"Almost there"** dock. The rest as frame 27.
+
+### 9 · Your plan (dark)
+
+`55-darkmode-9-your-plan-dark.png` — the ember reveal card and the Goal / Free scans rows on dark.
+The rest as frame 28.
+
+### Quota reached (dark sheet)
+
+`56-darkmode-quota-reached-dark-sheet.png` — the quota sheet on dark: sheet surface `--cc-elevated`
+#2A2724 (not black) so it lifts off the dimmed app; scan tile, title **"You've used this week's 3
+free scans"**, body, dock **"See plans"** + **"Log manually, free"** as frame 17. The free path
+keeps equal weight; the limit and the reset day come from the server. The rest as frame 17.
+
+### Plans / paywall (dark)
+
+`57-darkmode-plans-paywall-dark.png` — the paywall on dark: ember hero with a `--cc-border` edge,
+feature rows, yearly option selected (`--cc-accent-tint` #3A2312, 2 px accent border), monthly
+below; every price the `{trial}` / `{yearly}` / `{perMonth}` / `{monthly}` placeholder as frame 18
+(D13; the light paywall uses the same placeholders). The rest as frame 18.
+
+### Cancel flow (dark)
+
+`58-darkmode-cancel-flow-dark.png` — the informational cancel step on dark: three check rows with
+**"{expiryDate}"** in the first (the subscription's expiration date at run time), note, dock
+**"Cancel subscription"** (destructive tint #3A1219 with #FF7088 text, 6.19:1) + **"Keep Plus"** as
+frame 19. The rest as frame 19.
+
+---
+
+## 9 · High Contrast: edit item (`#hc`, frames 59 and 60)
+
+The `.hc` (light) and `.dark.hc` appearances of the edit sheet, drawn when iOS "Increase Contrast"
+is on. Only ten tokens change (frame 103, the token table, holds the list and sits at canvas
+position 103 — catalogued after the icon band below). The tokens are U-71c's delivery; the screens
+themselves are built by their restyle unit (U-74 for the edit sheet) and inherit the appearances
+from the tokens.
+
+### Edit item (High Contrast light)
+
+`59-hc-edit-item-high-contrast-light.png` — frame 29 with the HC light tokens: accent ink darkens
+to #8F3400, accent strong to #C24D00, secondary text to #4A4643, on-accent to pure black. The rest
+as frame 29.
+
+### Edit item (High Contrast dark)
+
+`60-hc-edit-item-high-contrast-dark.png` — frame 30 with the HC dark tokens: accent text brightens
+to #FF9A52, text to pure white, secondary text to #C8C3BD. The rest as frame 30.
+
+## 10 · Sign in (`#auth`, 7 frames)
+
+The sign-in flow: the entry step with the three providers, the e-mail step, its error state and the
+reset-link screen. Built by U-77b (row AU-01).
+
+**The owner's decision for this band (taken after plan.md):** the frames draw a password; the app
+signs in with a code sent to the e-mail and keeps that (parity AU-01). The entry step takes frames
+61 and 62 as they are. The e-mail step takes the look of frames 63 to 67 with **the code where the
+frame has a password**. The segment "Sign in | Create account", **"Forgot password?"**, the
+reset-link screen and the two notes under the dock are not drawn. The back button of the entry step
+is not drawn (the root gate puts nothing behind it). The privacy line "Meal photos are only used
+for your estimate, never to train models." and the footnote about Terms and Privacy Policy are not
+drawn until Phương supplies the promise and the pages.
+
+### Sign in (light)
+
+1. **Frame:** "Sign in (light)" — `61-auth-sign-in-light.png`, anchor `#auth`, light, full screen.
+2. **Shows:** back glass button (`aria-label "Back"`, not built: see the decision above); 64 pt
+   app mark (the Ember ring on orange); **"Sign in to keep your diary safe"** (700 32 px);
+   **"Your meals, weight and streaks are backed up and stay in sync on your other devices."** (400
+   17 px `--cc-text-2`); two trust rows (`#i-shield`, `#i-lock` in `--cc-accent-ink`): **"We never
+   post anywhere or read your contacts."** and **"Meal photos are only used for your estimate,
+   never to train models."**; dock: **"Sign in with Apple"** (black, brand button), **"Continue
+   with Google"** (white, bordered, brand button), "or" divider, secondary **"Continue with
+   email"** (`#i-mail`), footnote **"By continuing you agree to our Terms and Privacy Policy"**.
+3. **Implemented today by:** `apps/mobile/src/features/auth/SignInScreen.tsx` (route
+   `apps/mobile/src/app/sign-in.tsx`; U-20).
+4. **Identifiers that must survive:** RN `auth.signInApple`, `auth.signInGoogle`,
+   `auth.emailField`, `auth.sendCode`, `auth.otpField`, `auth.verifyCode`, `auth.form`; Swift the
+   same strings (`SignInView.swift`, per the networking-auth detail file). In the app the provider
+   buttons are the native ones (`AppleAuthenticationButton` style BLACK on light / WHITE on dark,
+   corner radius 14; Google's own button assets) — the canvas marks are only for the mock.
+5. **Differences from today's screen:** the entry step gains the value headline, the trust rows and
+   the terms footnote (footnote and the photo line wait for Phương — the decision above); Apple
+   first, then Google, then email, matching today's order. No skip button is drawn.
+6. **Behavior the frame needs:** the three providers exist (U-20; Apple and Google were never
+   called for real — no credentials, NW-03). The copy lines held back by the decision are a content
+   follow-up, not client work. Otherwise **client** (U-77b).
+7. **Parity rows:** AU-01, PL-01 (root gate).
+
+### Sign in (dark)
+
+`62-auth-sign-in-dark.png` — the Apple button flips to white with black text, Google to its dark
+theme (#131314 fill, #8E918F border, #E3E3E3 text), as both guidelines require. The rest as
+frame 61.
+
+### Email + password (light)
+
+1. **Frame:** "Email + password (light)" — `63-auth-email-password-light.png`, anchor `#auth`,
+   light, pushed from the entry step.
+2. **Shows:** nav bar: back glass button, title **"Email"**; **"Sign in with email"** (700 28 px);
+   segment **"Sign in (selected) / Create account"** (`role=radiogroup`); field **"Email"** with
+   **"minh@example.com"** (52 pt, `--cc-fill`); field **"Password"** focused — 2 px `--cc-accent`
+   border, dot mask, caret, eye glass button (`aria-label "Show password"`, 44 pt); ghost row
+   **"Forgot password?"**; dock: primary **"Sign in"**, note **"Create account asks for at least 8
+   characters and shows the rule before you type."**
+3. **Implemented today by:** `SignInScreen.tsx` (the e-mail step of the code flow).
+4. **Identifiers that must survive:** RN `auth.emailField`, `auth.sendCode`, `auth.otpField`,
+   `auth.verifyCode`, `auth.form`; Swift the same.
+5. **Differences from today's screen:** the frame's password field becomes the code field
+   (`auth.otpField`, the "6-digit code" field) — the owner's decision; the segment, the
+   "Forgot password?" row and the dock note are not drawn. `textContentType` /
+   `autoComplete` (email, one-time-code) stay so Keychain can fill.
+6. **Behavior the frame needs:** the code flow exists (U-20/U-21; the OTP throttle answers 429 —
+   the contract follow-up in plan.md). The show-password eye has no counterpart for a code field
+   and is not built. **Client** (U-77b).
+7. **Parity rows:** AU-01.
+
+### Email + password (dark)
+
+`64-auth-email-password-dark.png` — fields on `--cc-fill`; the focus ring is accent (a graphic),
+the caret too. The rest as frame 63.
+
+### Wrong password (light)
+
+1. **Frame:** "Wrong password (light)" — `65-auth-wrong-password-light.png`, anchor `#auth`, the
+   e-mail step after a failed sign-in.
+2. **Shows:** as frame 63, with the field border in `--cc-error` and an inline alert under it
+   (`role=alert`, `#i-alert`, `--cc-error-ink`): **"That email and password don't match. Check
+   them, or reset your password."**; dock note **"After 5 wrong tries we pause sign-in for 1
+   minute."**; the primary stays enabled and labelled **"Sign in"**.
+3. **Implemented today by:** `SignInScreen.tsx` (the error path of the code flow).
+4. **Identifiers that must survive:** `auth.emailField`, `auth.otpField`, `auth.verifyCode`,
+   `auth.form`.
+5. **Differences from today's screen:** the error is inline under the field, announced, and never
+   says which of the two was wrong — today's screen surfaces the envelope error; the frame fixes
+   the copy pattern. The rate-limit note after 5 tries comes from the server.
+6. **Behavior the frame needs:** the wording maps to the code flow ("That code doesn't match…");
+   the server rate limit exists (BE-06). **Client** (U-77b).
+7. **Parity rows:** AU-01.
+
+### Wrong password (dark)
+
+`66-auth-wrong-password-dark.png` — error ink #FF7088 on black is 7.3:1. The rest as frame 65.
+
+### Reset link sent (light)
+
+1. **Frame:** "Reset link sent (light)" — `67-auth-reset-link-sent-light.png`, anchor `#auth`,
+   light, after "Forgot password?".
+2. **Shows:** 64 pt `--cc-accent-tint` tile with `#i-mail` in `--cc-accent-ink`; **"Check your
+   email"** (700 28 px); **"We sent a link to minh@example.com. Open it on this iPhone to set a new
+   password. The link works for 1 hour."** (400 17 px, the address in `--cc-text` 700); **"Can't
+   find it? Look in Junk or Promotions."** (15 px); dock: primary **"Open Mail"**, secondary
+   disabled **"Resend link in 0:42"** (unlocks after 60 s and counts down), ghost **"Use a
+   different email"**.
+3. **Implemented today by:** nothing — the code flow has no reset-link screen (the owner's
+   decision: not drawn).
+4. **Identifiers that must survive:** none — the screen is not built; new ids would be the unit's.
+5. **Differences from today's screen:** none to build (decision above). The frame stays in the
+   catalog as the reference if a reset flow returns.
+6. **Behavior the frame needs:** none — **not built** per the owner's decision.
+7. **Parity rows:** AU-01 (derived; the row's screen keeps the code flow).
+
+---
+
+## 11 · Edit goal sheet (`#target`, 4 frames)
+
+The Profile goal sheet, restyled and restructured. Built by U-77 (row PR-03); frame 71 is not
+built — it guards an engine follow-up.
+
+### Edit goal sheet (light)
+
+1. **Frame:** "Edit goal sheet (light)" — `68-target-edit-goal-sheet-light.png`, anchor `#target`,
+   light, large-detent sheet from Profile → Daily target or Goal weight.
+2. **Shows:** title **"Edit goal"** + close glass button; current-weight row on
+   `--cc-fill-elevated` (`#i-scale` in `--cc-text-2`): **"Current weight · 80.6 kg"** (600 16 px) +
+   **"From Apple Health, today"** (13 px `--cc-text-2`) + chip **"Update"** (44 pt); label **"Goal
+   weight"**; the grams stepper reused for kilograms: −/+ 44 pt (`aria-label "Decrease Goal weight
+   by 0.5 kilograms"` / `"Increase …"`), field **"76.0 kg"** (700 22 px Rounded, 2 px accent
+   border, `aria-valuenow 76`); ruler 72 · 74 · **76** (in `--cc-accent-ink` 700) · 78 · 80; label
+   **"Pace"**; group of three radio rows: **"Gentle · 0.25 kg a week"**, **"Steady · 0.5 kg a
+   week"** (selected, 600, orange check, **"Recommended"** tint tag), **"Faster · 0.75 kg a week ·
+   harder to keep up"**; ember result card: **"Daily target"** / **"1,750 kcal · was 2,100"** (700
+   30 px Rounded, the old value kept) + right **"76 kg / late March"**; dock: primary **"Save
+   goal"**, footnote **"Past days in your diary don't change."**
+3. **Implemented today by:** `apps/mobile/src/features/profile/TargetEditSheet.tsx` (model
+   `targetEditModel.ts`, U-41; route entry from Profile).
+4. **Identifiers that must survive:** RN `settings.targetEdit.goalWeight`, `settings.targetEdit.kcal`,
+   `settings.targetEdit.kcalDown`, `settings.targetEdit.kcalUp`,
+   `settings.targetEdit.safetyFloor`, `settings.targetEdit.save`; Swift the same strings
+   (`TargetEditSheet.swift`). The stepper labels and the ruler are DS (`ccstepper.*`, the grams
+   ruler a11y labels).
+5. **Differences from today's screen:** the wheel fields become the stepper + ruler in 0.5 kg steps
+   (lb when Units = lb); pace becomes three named options, never a free number; the result updates
+   live on the ember card and shows the old target; the current-weight row reads Health with an
+   Update chip that opens the weight log; today's sheet has no current-weight row and no pace
+   group.
+6. **Behavior the frame needs:** every save goes through `TargetsEngine` (already true, PR-03's
+   rule); the live recompute is **client** (U-77). The current-weight value needs the Health weight
+   read (U-42 ported it; wiring it into the sheet is **client**). No endpoint.
+7. **Parity rows:** PR-03, PR-01 (the entry point).
+
+### Edit goal sheet (dark)
+
+`69-target-edit-goal-sheet-dark.png` — sheet on `--cc-elevated`; the current-weight row and the
+pace group use `--cc-fill-elevated` so they keep their shape. The rest as frame 68.
+
+### Edit goal sheet (ED-Safe)
+
+`70-target-edit-goal-sheet-ed-safe.png` — per the 27/11 decision ED-Safe hides only kcal: the goal
+weight, the pace rows and Save stay; the ember card shows **"Goal date / 76 kg around late March /
+Your meal plan adjusts on its own. Numbers stay hidden."** instead of the daily target. The rest as
+frame 68.
+
+### Goal below healthy range (light)
+
+1. **Frame:** "Goal below healthy range (light)" —
+   `71-target-goal-below-healthy-range-light.png`, anchor `#target`, the sheet with a 54 kg goal.
+2. **Shows:** the stepper border turns `--cc-caution`; ruler 50–58; caution card on
+   `--cc-caution-tint` (`#i-info` in `--cc-caution-ink`, `role=alert`): **"54 kg is below the
+   healthy range for your height. We'll plan for 59 kg, the lowest weight in that range. A doctor
+   or dietitian can help with a different goal."**; dock primary renames the outcome:
+   **"Save 59 kg goal"**.
+3. **Implemented today by:** today's sheet floors on the engine's flat minimum and shows the locked
+   safety-floor banner (`settings.targetEdit.safetyFloor`).
+4. **Identifiers that must survive:** `settings.targetEdit.goalWeight`, `settings.targetEdit.save`,
+   `settings.targetEdit.safetyFloor`.
+5. **Differences from today's screen:** the frame's guardrail is height-based ("below the healthy
+   range **for your height**") and renames the button to the clamped value. **Not built**: the
+   owner's decision keeps the flat minimum the engine returns; the height-based minimum is an
+   engine follow-up, and the copy never says "BMI". The caution colours (not error red) and the
+   no-blame copy are the pattern for whichever floor ships.
+6. **Behavior the frame needs:** the height-based floor — **engine follow-up** (a `TargetsEngine`
+   change whose behavior tests are locked; owner decision). The rest of the pattern (caution
+   styling, clamped Save label) is **client** (U-77) when the engine ships it.
+7. **Parity rows:** PR-03.
+
+---
+
+## 12 · Scan sheets: Describe and Report a problem (`#scansheets`, 6 frames)
+
+The two sheets of the scan loop round 3: Describe a meal (typing, estimating) and Report a problem
+(the renamed Fix Issue), with their dark and sent states. Built by U-72 (SC-05 and the review's
+report path).
+
+### Describe a meal: typing (light)
+
+1. **Frame:** "Describe a meal: typing (light)" —
+   `72-scansheets-describe-a-meal-typing-light.png`, anchor `#scansheets`, large-detent sheet with
+   the keyboard up.
+2. **Shows:** title **"Describe your meal"** + close glass button; text box focused (2 px accent
+   border, caret) with **"2 scrambled eggs with butter, 1 slice of sourdough toast and a flat white
+   with oat milk"**; under it **"Amounts help: "1 cup", "a palm-sized piece"."** and the counter
+   **"89/500"**; hint chips **"+ Amount"**, **"+ How it was cooked"**, **"+ Brand"** (insert a
+   prompt at the caret); above the keyboard: **"Breakfast · uses 1 of your 2 free scans left this
+   week"** (13 px `--cc-text-2`) and the pill primary **"Estimate"** (48 pt).
+3. **Implemented today by:** `apps/mobile/src/features/scan/DescribeMealSheet.tsx` (SC-05, U-30;
+   the field is clamped to 500 characters on the client).
+4. **Identifiers that must survive:** RN `scan.describeTitle`, `scan.describeField`,
+   `scan.describeSubmit`, `scan.describe.back`, `scan.describe.mealPicker`, `scan.describe.search`;
+   Swift: the sheet exists (SC-05) and carries no distinct identifiers beyond the review's — the
+   RN strings are the contract.
+5. **Differences from today's screen:** the sheet gains the hint chips, the counter, the meal +
+   quota line that rides above the keyboard, and the focused-on-open field; today's sheet is a plain
+   field with a submit.
+6. **Behavior the frame needs:** the quota line reads the server's remaining count and is hidden on
+   Plus — the pre-scan entitlement read is a **backend follow-up** (the owner's decision: the line
+   is not shown until the server sends the limit before a scan). The rest is **client** (U-72); the
+   scan itself is `kind: "text"` (exists).
+7. **Parity rows:** SC-05, SC-02 (the Describe entry), SC-01.
+
+### Describe a meal: typing (dark)
+
+`73-scansheets-describe-a-meal-typing-dark.png` — iOS dark keyboard; the field on
+`--cc-fill-elevated` with the accent focus ring. The rest as frame 72.
+
+### Describe a meal: estimating (light)
+
+1. **Frame:** "Describe a meal: estimating (light)" —
+   `74-scansheets-describe-a-meal-estimating-light.png`, anchor `#scansheets`, the sheet after
+   Estimate.
+2. **Shows:** sub **"We estimate each item and show how sure we are. You can fix anything before
+   saving."**; the text stays visible (box unfocused); label **"Meal"** with chips **Breakfast
+   (selected) / Lunch / Dinner / Snack**; status card (`role=status`, `aria-live="polite"`):
+   **"Estimating · step 2 of 3"** with a spinner and three rows — **"Found 3 foods"** (green
+   check), **"Finding each food"** (search, accent), **"Adding it up"** (idle, `--cc-text-2`);
+   dock: disabled primary **"Estimating…"** + ghost **"Cancel"**.
+3. **Implemented today by:** `DescribeMealSheet.tsx` + the analyzing state of `scanModel.ts`.
+4. **Identifiers that must survive:** `scan.describeField`, `scan.describeSubmit`,
+   `scan.describe.mealPicker`, `scan.step.<step>` (the checklist steps), `scan.cancel`.
+5. **Differences from today's screen:** the keyboard drops and the text stays visible; the steps
+   are the same three the Live Activity shows (find foods, match each food, add it up), announced
+   politely.
+6. **Behavior the frame needs:** real server-reported stages — **backend follow-up** (the owner's
+   decision: the screen shows only what the client observes and runs no timer; the plan's phase-4
+   table says the same). Cancel stops the request and refunds nothing because the credit is only
+   claimed server-side — existing behavior. Success pushes the normal Review screen with the
+   confidence badge; a typed 422 shows the Review error state (and the Live Activity's couldn't-read
+   card, frame 107). **Client** (U-72).
+7. **Parity rows:** SC-05, SC-03, SC-01.
+
+### Report a problem (light)
+
+1. **Frame:** "Report a problem (light)" — `75-scansheets-report-a-problem-light.png`, anchor
+   `#scansheets`, large-detent sheet.
+2. **Shows:** title **"Report a problem"** + close glass button; label **"Which item?"** with item
+   chips **"Jasmine rice (selected) / Roast chicken thigh / Cucumber / Whole meal"** (the entry
+   point preselects: the per-item ⋯ menu preselects that item, "Something wrong? Report it" under
+   Save preselects Whole meal); label **"What's wrong?"**; group of five radio rows: **"Wrong food ·
+   It isn't jasmine rice"** (selected, check), **"Wrong amount · More or less than that"**,
+   **"Shouldn't be here · I didn't eat this"**, **"Nutrition looks off · The numbers seem wrong"**,
+   **"Something else"**; ghost row **"Fix it now: rename the item"** (`#i-pencil`); note box
+   **"It's brown rice, not jasmine"** (`aria-label "Add a note, optional"`); **"Include the
+   photo"** with the toggle off and small **"Off by default. Only used to check this report."**;
+   dock: primary **"Send report"**.
+3. **Implemented today by:** `apps/mobile/src/features/scan/CorrectionCaptureView.tsx` (SC-06:
+   issue kind + note against one item, entered from `scan.fixIssue.<id>`).
+4. **Identifiers that must survive:** RN `scan.fixIssue.<itemId>`, `scan.correction.sheet`,
+   `scan.correction.close`, `scan.correction.note`, `scan.correction.save`,
+   `scan.correction.kind.<option>`; Swift the same strings. The five-reason vocabulary and the
+   item chips are new, named by the unit.
+5. **Differences from today's screen:** "Fix Issue" is renamed **Report a problem** with an honest
+   label; five reasons replace today's kind list; the direct fix ("Fix it now") is offered first so
+   a report is never the only way to correct a number; the photo toggle is drawn but **not built**
+   (decision below).
+6. **Behavior the frame needs:** the owner's decision — a report unlocks Save, as the correction of
+   the SwiftUI app did, and nothing leaves the device; the photo toggle is not drawn until an
+   endpoint with storage exists (**backend follow-up** for the endpoint; the toggle itself stays
+   out of the build). The rest is **client** (U-72). No endpoint for the report itself.
+7. **Parity rows:** SC-06, SC-04 (the review it returns to), SC-01.
+
+### Report a problem (dark)
+
+`76-scansheets-report-a-problem-dark.png` — item chips and the reason group sit on
+`--cc-fill-elevated`; the selected chip is accent with a black label. The rest as frame 75.
+
+### Report sent (light)
+
+1. **Frame:** "Report sent (light)" — `77-scansheets-report-sent-light.png`, anchor `#scansheets`,
+   520 pt sheet.
+2. **Shows:** 64 pt `--cc-success-tint` tile with a green check; **"Thanks, report sent"** (700 26
+   px); **"We read every report to make estimates better. Your review hasn't changed: to fix this
+   meal now, edit the item."** (400 17 px `--cc-text-2`); dock: primary **"Back to review"**,
+   secondary **"Rename Jasmine rice"** (`#i-pencil`).
+3. **Implemented today by:** the correction sheet's dismissal path (no sent state today).
+4. **Identifiers that must survive:** `scan.correction.close`, `scan.correction.save`; the sent
+   state is new, named by the unit.
+5. **Differences from today's screen:** new state — it confirms in plain words, says the review is
+   unchanged, and offers the matching direct fix.
+6. **Behavior the frame needs:** per the decision the sent copy says the report is saved on this
+   device; a network failure keeps the form and queues the report (sent with the next sync) —
+   **client** (U-72). No endpoint.
+7. **Parity rows:** SC-06, SC-04.
+
+---
+
+## 13 · Paywall without prices (`#paywallstates`, 3 frames)
+
+The paywall's two non-ready states around the shell. Built by U-77.
+
+**The owner's decision:** the paywall is a shell with three states and no price — it ends in the
+failed state until a store is connected.
+
+### Paywall: loading prices (light)
+
+1. **Frame:** "Paywall: loading prices (light)" —
+   `78-paywallstates-paywall-loading-prices-light.png`, anchor `#paywallstates`, light, full
+   screen.
+2. **Shows:** nav **"Restore"** ghost + close glass button; ember hero **"COACHCAL PLUS /
+   Unlimited scans and a coach who shows the maths."**; the four feature rows with real names; the
+   yearly option selected (2 px accent border, tint background, orange radio with black check) with
+   grey skeleton slots where the price line and the right-side price sit; monthly below with
+   skeletons; dock: disabled primary with a spinner — **"Loading prices…"** — and note **"Prices
+   come from the App Store in your currency."** + **"Terms · Privacy"**.
+3. **Implemented today by:** nothing — today's only billing surface is the minimal plans sheet
+   (`scan.plansSheet`, `scan.plansTitle`, `scan.plansLogManually`).
+4. **Identifiers that must survive:** the minimal sheet's three strings above stay on whatever
+   replaces it; the states and skeleton are new, named by the unit.
+5. **Differences from today's screen:** new state. The skeleton shows only after 300 ms (no flash);
+   plan names are real, prices are skeletons, the button is disabled and says why; Restore and
+   Close always work; Reduce Motion: no shimmer, static skeleton.
+6. **Behavior the frame needs:** products to load — **store + native follow-up** (PL-16); until
+   then the shell renders and the state machine simply never leaves this state for long — the
+   owner's decision makes the failed state the resting one. **Client** (U-77) for the shell.
+7. **Parity rows:** PR-02.
+
+### Paywall: prices failed (light)
+
+1. **Frame:** "Paywall: prices failed (light)" —
+   `79-paywallstates-paywall-prices-failed-light.png`, anchor `#paywallstates`, after a timeout (8
+   s) or a StoreKit error.
+2. **Shows:** as frame 78, with a caution card (`--cc-caution-tint`, `#i-info` in
+   `--cc-caution-ink`, `role=alert`): **"Prices didn't load."** (600) + **"Check your connection
+   and try again. You'll always see the price before you pay."** + secondary **"Try again"** (44
+   pt); the plans stay visible but unselectable (`aria-disabled`) with **"Price unavailable"** in
+   the price slots; dock: disabled primary **"Prices unavailable"**, note **"Already subscribed?
+   Restore works without prices."** + **"Terms · Privacy"**.
+3. **Implemented today by:** nothing (as frame 78).
+4. **Identifiers that must survive:** as frame 78.
+5. **Differences from today's screen:** new state; caution, not red — nothing the person did; we
+   never show a buy button without a price next to it (3.1.2(c)).
+6. **Behavior the frame needs:** the shell ends here until a store is connected (the owner's
+   decision) — the resting state of the built screen. **Client** (U-77); products are the **store +
+   native follow-up**.
+7. **Parity rows:** PR-02.
+
+### Paywall: prices failed (dark)
+
+`80-paywallstates-paywall-prices-failed-dark.png` — caution ink #FFD43B on #3A3214 is 9.9:1. The
+rest as frame 79.
+
+---
+
+## 14 · Dark: Profile, Settings, food search, manual log (`#darkmore`, 4 frames)
+
+The `.dark` clones of the profile band (canvas section 3). No new tokens; built by U-77 (frames 81,
+82) and U-74 (frames 83, 84).
+
+### Profile (dark)
+
+`81-darkmore-profile-dark.png` — frame 13 on dark: cards on `--cc-card` #1C1A18 over black; the
+avatar keeps its orange fill with a black initial; the system icon tiles keep their colours. The
+rest as frame 13.
+
+### Settings (dark)
+
+`82-darkmore-settings-dark.png` — frame 14 on dark: the subscription card shows the real renewal
+price from StoreKit (`{price}`); Cancel uses the destructive tint #3A1219 with #FF7088 text
+(6.19:1). The rest as frame 14.
+
+### Food search (dark, ED-Safe)
+
+`83-darkmore-food-search-dark-ed-safe.png` — frame 15 on dark: search field and segment on
+`--cc-fill`; add buttons use accent-tint #3A2312 with accent-ink #FF7A1F (5.64:1). The rest as
+frame 15.
+
+### Manual log (dark, ED-Safe)
+
+`84-darkmore-manual-log-dark-ed-safe.png` — frame 16 on dark: the same rule as light, no kcal field
+under ED-Safe; the note card uses accent-tint. The rest as frame 16.
+
+## 15 · Widgets and Live Activity (`#glance`, 7 glanceables)
 
 The widget surface is ember (`#141210`) with the brand ring for the first time; the Live Activity
 covers the scan-in-progress and ready-to-review states and their ED-Safe variants. The ED-Safe
@@ -923,7 +1658,7 @@ flag travels through the shared app group and the activity's ContentState.
 
 ### Small widget
 
-1. **Frame:** "Small widget", anchor `#glance`, 170×170, ember surface.
+1. **Frame:** "Small widget" — `85-glance-small-widget.png`, anchor `#glance`, 170×170, ember surface.
 2. **Shows:** radial orange glow top-right; "CoachCal" label (600 11 px `--cc-ember-accent`, top
    left); 112 pt ring (11 pt stroke, track `#3A342F`, arc `#FF6A00` at 61%) with centre **"816"**
    (700 26 px Rounded, `#F7F5F2`) + **"kcal left"** (500 11 px `#ABA6A0`). Tap opens Today.
@@ -941,7 +1676,7 @@ flag travels through the shared app group and the activity's ContentState.
 
 ### Small widget · ED-Safe
 
-1. **Frame:** "Small widget · ED-Safe", anchor `#glance`, 170×170, ember surface.
+1. **Frame:** "Small widget · ED-Safe" — `86-glance-small-widget-ed-safe.png`, anchor `#glance`, 170×170, ember surface.
 2. **Shows:** same ring at 66% with centre **"On track"** (700 17 px) + **"2 of 3 meals"** (500 11
    px) — no number anywhere; reads the ED-Safe flag from the shared app group.
 3. **Implemented today by:** not implemented — today's widget has no ED-Safe variant (PL-11 open
@@ -954,7 +1689,7 @@ flag travels through the shared app group and the activity's ContentState.
 
 ### Medium widget
 
-1. **Frame:** "Medium widget", anchor `#glance`, 364×170, ember surface.
+1. **Frame:** "Medium widget" — `87-glance-medium-widget.png`, anchor `#glance`, 364×170, ember surface.
 2. **Shows:** 120 pt ring (61%, centre "816 / kcal left"); three macro bars — **"Protein 82/130
    g"** (63%, `#6EA8FF`), **"Carbs 140/210 g"** (67%, `#3CCFBE`), **"Fat 38/70 g"** (54%,
    `#B794FF`) on `#3A342F` tracks; orange **"Scan a meal"** button (32 pt, `#i-camera`, black
@@ -970,7 +1705,7 @@ flag travels through the shared app group and the activity's ContentState.
 
 ### Lock Screen widgets
 
-1. **Frame:** "Lock Screen widgets", anchor `#glance`, circular + rectangular accessory families
+1. **Frame:** "Lock Screen widgets" — `88-glance-lock-screen-widgets.png`, anchor `#glance`, circular + rectangular accessory families
    on a Lock Screen backdrop.
 2. **Shows:** circular 72 pt — white ring at 61% (8 pt stroke) with **"816"** (700 17 px Rounded)
    + **"LEFT"** (600 9 px); rectangular 172×72 — **"12-day streak"** with `#i-flame`, **"1,284 of
@@ -987,14 +1722,16 @@ flag travels through the shared app group and the activity's ContentState.
 
 ### Live Activity · Lock Screen
 
-1. **Frame:** "Live Activity · Lock Screen", anchor `#glance`, two 370 pt cards on the Lock Screen.
+1. **Frame:** "Live Activity · Lock Screen" — `89-glance-live-activity-lock-screen.png`, anchor `#glance`, two 370 pt cards on the Lock Screen.
 2. **Shows:** processing card — 28 pt `#FF6A00` tile with `#i-scan` (black glyph), **"Reading your
    plate"** (600 15 px `#F7F5F2`), **"~3 s"** (500 13 px `#ABA6A0`); 56 pt thumb + **"Chicken rice
    bowl"** (600 17 px) + **"Finding each food · step 2 of 3"** (500 13 px `#ABA6A0`) + a 66% orange
    bar on `#3A342F`. Ready card — 56 pt thumb + **"Ready to review"** (600 17 px) + mini **"High"**
    badge + **"624 kcal"** (600 15 px Rounded) + orange **"Review"** button (44 pt, black label).
    Active while a scan processes (steps come from the server) and when it is ready; ends when saved
-   or after 8 h; height 84–160 pt.
+   or after 8 h; height 84–160 pt. The PNG under `frames/` holds only the processing card — the
+   capture tool photographs the first child of the canvas figure, and the ready card is the second;
+   the canvas figure stacks both, so a restyle unit compares against both cards.
 3. **Implemented today by:** the port seam only — `apps/mobile/src/features/scan/scanActivity.ts`
    is a no-op implementation behind `ScanActivityPort`; the model starts/ends the activity
    (`scanModel.ts`). The native activity is U-43's open scope (PL-12 partial).
@@ -1009,7 +1746,7 @@ flag travels through the shared app group and the activity's ContentState.
 
 ### Dynamic Island
 
-1. **Frame:** "Dynamic Island", anchor `#glance`, compact, minimal and expanded presentations.
+1. **Frame:** "Dynamic Island" — `90-glance-dynamic-island.png`, anchor `#glance`, compact, minimal and expanded presentations.
 2. **Shows:** compact 250×37 — orange `#i-scan` glyph at the leading edge and a progress ring at
    the trailing edge; minimal 37×37 — the progress ring only; expanded 370×160 — header
    **"Ready"** (600 15 px) + mini **"High confidence"** badge; **"Chicken rice bowl"** (600 17 px)
@@ -1023,7 +1760,7 @@ flag travels through the shared app group and the activity's ContentState.
 
 ### Live Activity · ED-Safe
 
-1. **Frame:** "Live Activity · ED-Safe", anchor `#glance`, 370 pt ready card with ED-Safe on.
+1. **Frame:** "Live Activity · ED-Safe" — `91-glance-live-activity-ed-safe.png`, anchor `#glance`, 370 pt ready card with ED-Safe on.
 2. **Shows:** 56 pt thumb + **"Ready to review"** + mini **"High"** badge + **"3 items"** (500 13
    px `#ABA6A0`) — the `edSafe` flag in the ContentState removes the kcal figure; the confidence
    badge stays; orange **"Review"** button.
@@ -1037,7 +1774,7 @@ flag travels through the shared app group and the activity's ContentState.
 
 ---
 
-## 7 · App icon: "Ember ring" (`#icon`, 5 frames)
+## 16 · App icon: "Ember ring" (`#icon`, 11 frames)
 
 One idea: an open progress ring that also reads as a C, with an ember dot where the ring stops.
 Built as two layers (background + foreground) for Icon Composer, so Liquid Glass adds its own
@@ -1046,12 +1783,17 @@ shapes. Files: `icon/layer-background.svg`, `icon/layer-foreground.svg`,
 `icon/AppIcon-1024.svg` (plus the flattened `AppIcon-1024.png` fallback with no alpha for older
 OS versions). This replaces `#FF8841` and the old mark.
 
+The band holds eleven frames: the five drawn frames of the first catalog (92 to 96) and the six
+renditions exported from `icon/AppIcon.icon` with Icon Composer's command-line renderer (97 to
+102; two glass layers on a solid orange fill, Dark, Clear and Tinted from per-appearance fills).
+The steps for opening and shipping it are `icon/ICON-COMPOSER.md`.
+
 Per D13 and the `PL-17` row, **the current icon stays until the layers are built**; these frames
 are the reference for that build, not a restyle of a screen.
 
 ### Default
 
-1. **Frame:** "Default", anchor `#icon`.
+1. **Frame:** "Default" — `92-icon-default.png`, anchor `#icon`.
 2. **Shows:** `#FF6A00` background with a white 18%-opacity radial highlight; black ring and ember
    dot (black on `#FF6A00` is 6.89:1).
 3. **Implemented today by:** no RN screen — the app icon asset (`app.config.ts`; PL-17: the
@@ -1064,7 +1806,7 @@ are the reference for that build, not a restyle of a screen.
 
 ### Dark
 
-1. **Frame:** "Dark", anchor `#icon`.
+1. **Frame:** "Dark" — `93-icon-dark.png`, anchor `#icon`.
 2. **Shows:** `#141210` background; `#FF6A00` ring; `#FF7A1F` dot.
 3. **Implemented today by:** no RN screen (icon asset).
 4. **Identifiers that must survive:** none.
@@ -1074,7 +1816,7 @@ are the reference for that build, not a restyle of a screen.
 
 ### Clear
 
-1. **Frame:** "Clear", anchor `#icon`.
+1. **Frame:** "Clear" — `94-icon-clear.png`, anchor `#icon`.
 2. **Shows:** the system renders the glass; the app supplies the foreground layer only (white
    92%-opacity ring and dot on transparent).
 3. **Implemented today by:** no RN screen (icon asset).
@@ -1085,7 +1827,7 @@ are the reference for that build, not a restyle of a screen.
 
 ### Tinted
 
-1. **Frame:** "Tinted", anchor `#icon`.
+1. **Frame:** "Tinted" — `95-icon-tinted.png`, anchor `#icon`.
 2. **Shows:** `#1a1a1a` background; grayscale `#E8E8E8` ring and dot; iOS applies the user's tint.
 3. **Implemented today by:** no RN screen (icon asset).
 4. **Identifiers that must survive:** none.
@@ -1095,7 +1837,7 @@ are the reference for that build, not a restyle of a screen.
 
 ### Icon Composer layers
 
-1. **Frame:** "Icon Composer layers", anchor `#icon`.
+1. **Frame:** "Icon Composer layers" — `96-icon-icon-composer-layers.png`, anchor `#icon`.
 2. **Shows:** the three source files side by side — the default 1024 render, the flat background
    layer, the ring-plus-dot foreground layer on transparency; 1024×1024, square, unmasked; the
    background is a flat colour so the system adds the Liquid Glass light; export a flattened PNG
@@ -1109,97 +1851,254 @@ are the reference for that build, not a restyle of a screen.
    into it.
 7. **Parity rows:** PL-17.
 
+### Default (Icon Composer rendition)
+
+`97-icon-default.png` — the Default appearance as rendered from `icon/AppIcon.icon`
+(`icon/composer/AppIcon-Default-1024.png`): orange fill, black glass ring and dot. The reference
+render for U-80; the rest as frame 92.
+
+### Dark (Icon Composer rendition)
+
+`98-icon-dark.png` — the Dark appearance render (`icon/composer/AppIcon-Dark-1024.png`): ember-black
+fill, orange ring, brighter ember dot. The rest as frame 93.
+
+### Clear light (Icon Composer rendition)
+
+`99-icon-clear-light.png` — the Clear appearance in light
+(`icon/composer/AppIcon-ClearLight-1024.png`): system glass; the glyph keeps its shape. The rest as
+frame 94.
+
+### Clear dark (Icon Composer rendition)
+
+`100-icon-clear-dark.png` — the Clear appearance in dark
+(`icon/composer/AppIcon-ClearDark-1024.png`). The rest as frame 94.
+
+### Tinted light (Icon Composer rendition)
+
+`101-icon-tinted-light.png` — the Tinted appearance in light
+(`icon/composer/AppIcon-TintedLight-1024.png`): ring white (the most recognisable part), dot light
+grey. The rest as frame 95.
+
+### Tinted dark (Icon Composer rendition)
+
+`102-icon-tinted-dark.png` — the Tinted appearance in dark
+(`icon/composer/AppIcon-TintedDark-1024.png`). The rest as frame 95.
+
+---
+
+## 17 · High Contrast tokens panel (`#hc`, canvas position 103)
+
+### High Contrast overrides (read live from tokens.css)
+
+1. **Frame:** "High Contrast overrides (read live from tokens.css)" —
+   `103-hc-high-contrast-overrides-read-live-from-tokens-cs.png`, anchor `#hc`, a table panel.
+2. **Shows:** the ten tokens that change under Increase Contrast — `--cc-on-accent`,
+   `--cc-accent-strong`, `--cc-accent-ink`, `--cc-accent-tint`, `--cc-ember`, `--cc-ember-track`,
+   `--cc-ember-accent`, `--cc-text`, `--cc-text-2`, `--cc-text-3` — with a swatch and hex per
+   column: Light, HC light, Dark, HC dark (for example `--cc-accent-ink` #B84300 → #8F3400 →
+   #FF7A1F → #FF9A52; `--cc-text-2` #5F5B57 → #4A4643 → #ABA6A0 → #C8C3BD). The canvas reads the
+   values live from `tokens.css`, so the table always matches it. Caption: classes `.hc` (light)
+   and `.dark.hc` (dark), applied when iOS "Increase Contrast" is on; in RN pass them as
+   `highContrastLight` / `highContrastDark` to `DynamicColorIOS`.
+3. **Implemented today by:** no screen — a token panel. The RN side holds `tokens.json`'s
+   `color.highContrastLight` / `color.highContrastDark` (U-71c) behind the same keys.
+4. **Identifiers that must survive:** none.
+5. **Differences from today's screen:** the high-contrast appearances are not yet rendered by the
+   app's screens; the token chain is.
+6. **Behavior the frame needs:** the app decides the mode from iOS Increase Contrast
+   (`AccessibilityInfo` / `UIAccessibility.isDarkerSystemColorsEnabled`; with `DynamicColorIOS` the
+   high-contrast keys do it) — **delivered by U-71c**; the screens pick it up through their restyle
+   units.
+7. **Parity rows:** PL-06, PL-07 (the token chain).
+
+---
+
+## 18 · Glance, second band (`#glance2`, frames 104 to 107)
+
+The round-3 additions to the glance band: the medium widget's ED-Safe variant, the Live Activity's
+per-step processing states, its Dynamic Island processing pair and its couldn't-read failure card.
+Built by U-78 (not dispatched; it needs the native slot).
+
+### Medium widget · ED-Safe
+
+1. **Frame:** "Medium widget · ED-Safe" — `104-glance2-medium-widget-ed-safe.png`, anchor
+   `#glance2`, 364×170, ember surface.
+2. **Shows:** the ring at 66% with centre **"On track"** (700 17 px) + **"2 of 3 meals"** (500 11
+   px) — no numbers; right column: three meal lines — check circle **"Breakfast / Overnight
+   oats"**, check **"Lunch / Chicken rice bowl"**, empty circle **"Dinner / Next"** (logged names
+   only, the next meal grey); orange **"Scan a meal"** button (32 pt). Reads the ED-Safe flag from
+   the shared app group, like the small widget.
+3. **Implemented today by:** not implemented — the spike widget has no ED-Safe variant (PL-11 open
+   scope).
+4. **Identifiers that must survive:** none declared; the snapshot gains the `edSafe` flag field.
+5. **Differences from today's screen:** whole frame is new; macro grams are replaced by the meals
+   logged today (name only) and the next meal.
+6. **Behavior the frame needs:** the flag in the app-group payload and the variant rendering —
+   **native follow-up** (U-78, native slot).
+7. **Parity rows:** PL-11, PL-08.
+
+### Live Activity · processing (Lock Screen)
+
+1. **Frame:** "Live Activity · processing (Lock Screen)" —
+   `105-glance2-live-activity-processing-lock-screen.png`, anchor `#glance2`, the three step cards
+   stacked.
+2. **Shows:** three 370 pt cards, one per server stage: header **"Reading your plate"** (600 15 px)
+   + orange `#i-scan` tile + **"step 1 of 3"** / **"step 2 of 3"** / **"step 3 of 3"**; 56 pt thumb
+   + the step label — **"Spotting the foods"**, **"Finding each food"**, **"Adding it up"** — each
+   with a three-part progress bar filled up to the current step. The steps run in this order: 1
+   Spotting the foods (vision model), 2 Finding each food (food database lookup), 3 Adding it up
+   (nutrition maths). No time estimate: steps are honest, seconds are not.
+3. **Implemented today by:** the port seam only — `apps/mobile/src/features/scan/scanActivity.ts`
+   is a no-op behind `ScanActivityPort` (PL-12 partial).
+4. **Identifiers that must survive:** none declared in the activity UI; ContentState carries
+   `step` (1–3) and the label, so wording can change without an app update — keep those field
+   names and add `edSafe`.
+5. **Differences from today's screen:** whole presentation is new (today nothing renders); the
+   first-round frame 89 showed the step as a percentage bar, this frame shows one card per stage.
+6. **Behavior the frame needs:** the server-reported stages (the Analyzing behavior — **backend
+   follow-up**) and the activity UI itself (**native follow-up**, U-78). Identical under ED-Safe
+   (no numbers here). Ends as "Ready to review" (frame 89's ready card).
+7. **Parity rows:** PL-12.
+
+### Dynamic Island · processing
+
+1. **Frame:** "Dynamic Island · processing" — `106-glance2-dynamic-island-processing.png`, anchor
+   `#glance2`, compact + expanded.
+2. **Shows:** compact 250×37 — orange `#i-scan` glyph and **"2/3"**; expanded 370×150 — header
+   **"Reading your plate"** + **"step 2 of 3"**, step label **"Finding each food"**, the same
+   three-part bar as the Lock Screen. Minimal stays the progress ring of frame 90.
+3. **Implemented today by:** nothing renders (no-op seam).
+4. **Identifiers that must survive:** none declared; ContentState fields as frame 105.
+5. **Differences from today's screen:** whole frame is new.
+6. **Behavior the frame needs:** the processing presentations — **native follow-up** (U-78); the
+   steps are the **backend** stages follow-up.
+7. **Parity rows:** PL-12.
+
+### Live Activity · couldn't read
+
+1. **Frame:** "Live Activity · couldn't read" — `107-glance2-live-activity-couldn-t-read.png`,
+   anchor `#glance2`, 370 pt failure card.
+2. **Shows:** dimmed 56 pt thumb; **"Couldn't read this photo"** (600 17 px) + **"Too dark to see
+   the food. Retake it or describe it."** (500 13 px `#ABA6A0`); **"Open"** button (44 pt,
+   `#3A342F` fill).
+3. **Implemented today by:** nothing renders (no-op seam).
+4. **Identifiers that must survive:** none declared; the ContentState gains the failure reason
+   (from the error code: too dark, no food found, blurry).
+5. **Differences from today's screen:** whole frame is new.
+6. **Behavior the frame needs:** for a typed 422 (unreadable photo): the reason comes from the
+   error code; Open goes back to the camera with Describe one tap away; the activity ends after 15
+   minutes or when the person opens it — **native follow-up** (U-78) + the error-code mapping
+   **client** (U-72).
+7. **Parity rows:** PL-12, SC-01.
+
 ---
 
 ## Table A — parity row to frames
 
-Every `parity.tsv` row whose `ember` cell is not `-` (41 rows), and the frames it covers here.
+Every `parity.tsv` row whose `ember` cell is not `-` (41 rows), plus the rows this catalog gives
+frames for the first time (DY-08, AU-01, PR-03, the QA-04 check), and the frames each covers.
 
 | Parity row | `ember` cell | Frames |
 |---|---|---|
-| PL-01 | Shell (tab bar and Scan button in every frame) | The shell itself has no frame: it is the tab bar + Scan FAB repeated in every phone-screen frame (screens.js `data-tab` chrome). Touches all 28 screen sections. |
-| PL-06 | Design system (#system) | No frame — the `#system` band is the token board behind every section. |
+| PL-01 | Shell (tab bar and Scan button in every frame) | The shell itself has no frame: it is the tab bar + Scan FAB repeated in every phone-screen frame (screens.js `data-tab` chrome). Touches all 84 screen sections. |
+| PL-06 | Design system (#system) | No frame — the `#system` band is the token board behind every section. The HC token panel 103 is its high-contrast slice. |
 | PL-07 | Design system (#system) | No frame — the component mapping in `design-system.md`. |
-| PL-08 | Today (ED-Safe); Review (ED-Safe); Food search (ED-Safe); Manual log (ED-Safe); widgets and Live Activity in ED-Safe | Review (ED-Safe); Today (ED-Safe); Food search (ED-Safe); Manual log (ED-Safe); Small widget · ED-Safe; Live Activity · ED-Safe |
-| PL-11 | Widgets (#glance: small, medium, Lock Screen, ED-Safe) | Small widget; Small widget · ED-Safe; Medium widget; Lock Screen widgets |
-| PL-12 | Live Activity (#glance: Lock Screen, Dynamic Island, ED-Safe) | Live Activity · Lock Screen; Dynamic Island; Live Activity · ED-Safe |
-| PL-17 | App icon "Ember ring" (#icon): not adopted, the current icon stays | Default; Dark; Clear; Tinted; Icon Composer layers |
-| OB-01 | Onboarding: 9 steps (#onboarding) | All nine step frames (the flow contract and the shared scaffold) |
-| OB-02 | Onboarding: 9 steps (#onboarding) | 1 · Welcome |
-| OB-03 | Onboarding: 9 steps (#onboarding) | 7 · Privacy, Health and ED-Safe |
-| OB-04 | Onboarding: 9 steps (#onboarding) | 2 · Goal |
-| OB-05 | Onboarding: 9 steps (#onboarding) | 5 · Activity and diet |
-| OB-06 | Onboarding: 9 steps (#onboarding) | 3 · About you |
-| OB-07 | Onboarding: 9 steps (#onboarding) | 4 · Goal weight and pace |
-| OB-08 | Onboarding: 9 steps (#onboarding) | 8 · Building your plan |
-| OB-09 | Onboarding: 9 steps (#onboarding) | 9 · Your plan |
-| OB-10 | Onboarding: 9 steps (#onboarding) | 6 · Projection |
-| TD-01 | Today (light); Today (dark, offline); Today (ED-Safe) | Today (light); Today (dark, offline); Today (ED-Safe) |
-| SC-01 | Scan loop (#scan) | All six `#scan` frames (the state machine behind them) |
-| SC-02 | Viewfinder; Describe mode | Viewfinder (Describe is its fourth chip) |
-| SC-03 | Analyzing | Analyzing |
-| SC-04 | Review (light); Review (dark, item needs review); Review (ED-Safe) | Review (light); Review (dark, item needs review); Review (ED-Safe) |
-| SC-05 | Describe mode | No dedicated frame — the Describe chip of Viewfinder plus the describe sheet restyled on the same tokens |
-| SC-06 | Review (dark, item needs review) | Review (dark, item needs review) |
-| SC-07 | Saved | Saved |
-| DY-01 | Diary day (sheet, large detent) | Diary day (sheet, large detent) |
+| PL-08 | Today (ED-Safe); Review (ED-Safe); Food search (ED-Safe); Manual log (ED-Safe); widgets and Live Activity in ED-Safe | Today (ED-Safe) 09; Review (ED-Safe) 05; Food search (ED-Safe) 15; Manual log (ED-Safe) 16; Edit item (ED-Safe) 31; Delete confirm (ED-Safe) 34; Saved (ED-Safe) 37; Deleted + Undo (ED-Safe) 40; Edit goal sheet (ED-Safe) 70; Food search (dark, ED-Safe) 83; Manual log (dark, ED-Safe) 84; Small widget · ED-Safe 86; Live Activity · ED-Safe 91; Medium widget · ED-Safe 104 |
+| PL-11 | Widgets (#glance: small, medium, Lock Screen, ED-Safe) | Small widget 85; Small widget · ED-Safe 86; Medium widget 87; Lock Screen widgets 88; Medium widget · ED-Safe 104 |
+| PL-12 | Live Activity (#glance: Lock Screen, Dynamic Island, ED-Safe) | Live Activity · Lock Screen 89; Dynamic Island 90; Live Activity · ED-Safe 91; Live Activity · processing 105; Dynamic Island · processing 106; Live Activity · couldn't read 107 |
+| PL-14 | — (the CSV export states ride the Settings row) | Export: Write failed 41/42; No data in range 43/44; Share sheet cancelled 45/46 |
+| PL-17 | App icon "Ember ring" (#icon): not adopted, the current icon stays | Default 92; Dark 93; Clear 94; Tinted 95; Icon Composer layers 96; and the Icon Composer renditions 97, 98, 99, 100, 101, 102 |
+| OB-01 | Onboarding: 9 steps (#onboarding) | All nine step frames 20–28 and their dark twins 47–55 (the flow contract and the shared scaffold) |
+| OB-02 | Onboarding: 9 steps (#onboarding) | 1 · Welcome 20; its dark twin 47 |
+| OB-03 | Onboarding: 9 steps (#onboarding) | 7 · Privacy, Health and ED-Safe 26; dark 53 |
+| OB-04 | Onboarding: 9 steps (#onboarding) | 2 · Goal 21; dark 48 |
+| OB-05 | Onboarding: 9 steps (#onboarding) | 5 · Activity and diet 24; dark 51 |
+| OB-06 | Onboarding: 9 steps (#onboarding) | 3 · About you 22; dark 49 |
+| OB-07 | Onboarding: 9 steps (#onboarding) | 4 · Goal weight and pace 23; dark 50 |
+| OB-08 | Onboarding: 9 steps (#onboarding) | 8 · Building your plan 27; dark 54 |
+| OB-09 | Onboarding: 9 steps (#onboarding) | 9 · Your plan 28; dark 55 |
+| OB-10 | Onboarding: 9 steps (#onboarding) | 6 · Projection 25; dark 52 |
+| TD-01 | Today (light); Today (dark, offline); Today (ED-Safe) | Today (light) 07; Today (dark, offline) 08; Today (ED-Safe) 09 |
+| SC-01 | Scan loop (#scan) | All six `#scan` frames 01–06 (the state machine behind them), plus the sheet band 72–77 and the Live Activity band 105–107 that ride the same flow |
+| SC-02 | Viewfinder; Describe mode | Viewfinder 01 (Describe is its fourth chip); Describe a meal: typing 72/73 |
+| SC-03 | Analyzing | Analyzing 02; Describe a meal: estimating 74 |
+| SC-04 | Review (light); Review (dark, item needs review); Review (ED-Safe) | Review (light) 03; Review (dark, item needs review) 04; Review (ED-Safe) 05 |
+| SC-05 | Describe mode | Describe a meal: typing 72; dark 73; estimating 74 |
+| SC-06 | Review (dark, item needs review) | Report a problem 75; dark 76; Report sent 77 |
+| SC-07 | Saved | Saved 06 |
+| DY-01 | Diary day (sheet, large detent) | Diary day (sheet, large detent) 10 |
 | DY-02 | derived (no frame) | — (Table B) |
-| DY-03 | Food search (ED-Safe) | Food search (ED-Safe) |
+| DY-03 | Food search (ED-Safe) | Food search (ED-Safe) 15; dark ED-Safe 83 |
 | DY-04 | derived (Custom food has no frame) | — (Table B) |
-| DY-05 | Manual log (ED-Safe) | Manual log (ED-Safe) |
+| DY-05 | Manual log (ED-Safe) | Manual log (ED-Safe) 16; dark ED-Safe 84 |
 | DY-06 | derived (Exercise has no frame) | — (Table B) |
 | DY-07 | derived (Water has no frame) | — (Table B) |
-| PG-01 | Progress | Progress |
-| PG-02 | Progress | Progress (weight trend card) |
-| PG-03 | Progress | Progress (weekly energy card) |
-| PG-04 | Progress | Progress (badges grid) |
-| CH-01 | Coach | Coach |
-| PR-01 | Profile | Profile |
-| PR-02 | Settings; Quota reached (sheet); Plans / paywall; Cancel flow | Settings; Quota reached (sheet); Plans / paywall; Cancel flow |
-| PR-03 | derived (Target edit has no frame) | — (Table B) |
-| AU-01 | derived (Ember has no sign-in frame) | — (Table B) |
+| DY-08 | Editing a food in the diary (Designer drew the frames; U-74 stage A2) | Edit item 29/30/31; Delete confirm 32/33/34; Saved 35/36/37; Deleted + Undo 38/39/40 |
+| PG-01 | Progress | Progress 11 |
+| PG-02 | Progress | Progress (weight trend card) 11 |
+| PG-03 | Progress | Progress (weekly energy card) 11 |
+| PG-04 | Progress | Progress (badges grid) 11 |
+| CH-01 | Coach | Coach 12 |
+| PR-01 | Profile | Profile 13; dark 81 |
+| PR-02 | Settings; Quota reached (sheet); Plans / paywall; Cancel flow | Settings 14; dark 82; Quota reached (sheet) 17; dark sheet 56; Plans / paywall 18; dark 57; Cancel flow 19; dark 58; Paywall: loading prices 78; prices failed 79/80; Export states 41–46 |
+| PR-03 | Edit goal sheet (was derived; Designer drew the frames) | Edit goal sheet 68/69/70; Goal below healthy range 71 (not built: engine follow-up) |
+| AU-01 | Sign in (was derived; Designer drew the frames) | Sign in 61/62; Email + code 63/64; Wrong code 65/66; Reset link sent 67 (not built: owner decision) |
+| QA-04 | Parity check | No frame — this catalog is its frames-side evidence: `scripts/rn/check-frames-doc.mjs` fails the build when a manifest frame is missing here or a cited name has gone stale |
 
 ---
 
 ## Table B — screens the design does not show, and the nearest frame to derive from
 
-The `parity.tsv` `derived` rows plus the frames `README.md` names. Each derivation keeps the
-behavior, the test sentences and the identifiers of today's screen and takes only tokens and
-patterns from the named frame.
+After three rounds some screens still have no frame. Derived from `parity.tsv` (the `derived`
+cells) and the routes and sheets under `apps/mobile/src/app/` and `apps/mobile/src/features/`.
+Each derivation keeps the behavior, the test sentences and the identifiers of today's screen and
+takes only tokens and patterns from the named frame.
 
 | Screen (no frame) | Parity row | Nearest frame to derive from | What it takes |
 |---|---|---|---|
-| Add food sheet (`AddFoodSheet.tsx`) | DY-02 | Diary day (sheet, large detent) | Sheet chrome, grabber, section rhythm, the dashed tile style; the five quick-action tiles use the icon set of the canvas |
-| Custom food sheet (`CustomFoodSheet.tsx`) | DY-04 | Manual log (ED-Safe) | Form rows, the Advanced fold (collapsed + blurred) for nutrition fields, the accent-tint note card |
-| Exercise log sheet (`ExerciseLogSheet.tsx`) | DY-06 | Manual log (ED-Safe) | Same rows; "Activity and minutes only. Burned kcal is hidden." under ED-Safe; kcal field returns when off |
-| Water log sheet (`WaterLogSheet.tsx`) | DY-07 | Today (light) — the water card | The `--cc-info-tint` droplet tile, the ± 250 ml chip pattern, the sheet chrome of Diary day |
-| Target edit sheet (`TargetEditSheet.tsx`) | PR-03 | 4 · Goal weight and pace (+ Profile's Plan group) | The 56 pt fill fields, the engine-clamped pace/card pattern, the caution floor card |
-| Sign-in (`SignInScreen.tsx`) | AU-01 | 1 · Welcome | Dark stage, ember eyebrow, primary + ghost buttons, no number gate |
-| Editing a food in the diary (README) | — | Review (light) | The grams field + 44 pt steppers + ruler + serving chips, applied to the diary row's edit sheet |
-| The export error row (README) | — | Settings | An inline `--cc-error-tint` row under the export row (the frame says "not drawn here") |
-| Dark variants of onboarding (README) | — | Today (dark, offline) | `.dark` tokens: `#000` bg, `#1C1A18` cards, `#F7F5F2`/`#ABA6A0` text, unchanged accent |
-| Dark variants of billing (README) | — | Plans / paywall + Today (dark, offline) | Ember hero unchanged in dark; option cards on `--cc-elevated #2A2724` with `--cc-separator` borders |
-| Medium widget under ED-Safe (implied by the flag) | PL-11/PL-08 | Small widget · ED-Safe | Numbers replaced by "On track" framing; bars and the scan button stay |
+| Add food sheet (`AddFoodSheet.tsx`) | DY-02 | Diary day (sheet, large detent) 10 + Edit item 29 | Sheet chrome, grabber, section rhythm, the dashed tile style; the five quick-action tiles use the icon set of the canvas |
+| Custom food sheet (`CustomFoodSheet.tsx`) | DY-04 | Manual log (ED-Safe) 16 | Form rows, the Advanced fold (collapsed + blurred) for nutrition fields, the accent-tint note card |
+| Exercise log sheet (`ExerciseLogSheet.tsx`) | DY-06 | Manual log (ED-Safe) 16 | Same rows; "Activity and minutes only. Burned kcal is hidden." under ED-Safe; kcal field returns when off |
+| Water log sheet (`WaterLogSheet.tsx`) | DY-07 | Today (light) 07 — the water card | The `--cc-info-tint` droplet tile, the ± 250 ml chip pattern, the sheet chrome of Diary day 10 |
+| Weight log sheet (`WeightLogSheet.tsx`) | PG-02 | Edit goal sheet 68 — the current-weight row | The fill-field + ruler pattern in kilograms, the Update chip; the sheet chrome of Diary day 10 |
+| The account-delete confirm of Settings (`settings.deleteConfirm`) | PR-02 | Delete confirm 32 | The system action sheet with a destructive button and Cancel (the frame's pattern, applied to the account) |
+| The minimal plans sheet of today (`scan.plansSheet`) | PR-02 | Plans / paywall 18 | Superseded by frames 18/57/78–80; until U-77 lands, the sheet keeps its three identifiers |
+| Barcode and label capture states of the viewfinder | SC-02 | Viewfinder 01 | The mode chips only; no dedicated frames for the barcode picker or the label flow |
+| The debug console (`debug.tsx`) | — | none (not a product screen) | Stays out of the catalog on purpose |
+
+Rows that used to be here and have frames now: editing a food in the diary (29–40), the export
+error states (41–46), the dark variants of onboarding (47–55) and billing (56–58), the
+high-contrast tokens (103), the target edit sheet (68–71), sign-in (61–67), and the medium widget
+under ED-Safe (104).
 
 ---
 
-## The five behaviors the frames need that the app does not have
+## The behaviors the 107 frames need that the app does not have
 
-1. **Server-reported scan stages** — Analyzing and the Live Activity processing card tick real
-   stages; the scan API answers in one request and reports none. Backend follow-up; until then the
-   client shows only what it observes and runs no timer (U-72).
-2. **Haptics** — success on save, selection on the meal segment, light impact on −/+ (handoff
-   note 7). Needs `expo-haptics`, a native dependency that is not installed: follow-up with the
-   next native unit.
-3. **Live billing** — the paywall's store-read prices, Change plan, the in-app cancel sheet,
-   Restore and Billing history need StoreKit products, a StoreKit configuration and a purchase
-   SDK (none exists; PL-16): store + native follow-up. Until then the paywall renders no sample
-   price (D13) and the Settings buttons stay inert.
-4. **ED-Safe in the glanceables** — the flag through the App Group snapshot and the Live Activity
-   ContentState, plus the accessory families, Dynamic Island presentations and the widget scan
-   button: native follow-up (U-78, native slot; expo-widgets coverage on SDK 58 unverified, D14).
-5. **A pre-scan entitlement read** — the viewfinder's "2 of 3 free scans left this week" chip and
-   the plan-reveal's "Free scans · 3 a week" row need the server's quota state before any scan;
-   today the client only learns it from a scan's 402 envelope (which does carry `{tier, scansUsed,
-   scanLimit, windowResetAt}` — BE-08 done). Backend follow-up: a read endpoint, or the client
-   falls back to the last known entitlement state.
+One table, the plan's decision for each. "Built in unit X" means client work inside the named
+restyle unit; anything else is a follow-up with its owner.
+
+| The frames need | Frames | Decision |
+|---|---|---|
+| Server-reported scan stages (Analyzing ticks only what the server reports) | 02, 74, 89, 105 | the dwell timer goes and the screen shows only what the client observes (U-72); server stages are a backend follow-up |
+| A pre-scan entitlement read (the free-scan counter before any scan) | 01, 28, 72 | not shown until the server sends the limit before a scan; a pre-scan read is a backend follow-up |
+| Serving chips on the items of the review and the edit sheet | 03, 29 | the scan contract carries no servings and the VLM vocabulary is strict: contract and backend follow-up |
+| Haptics (save, meal segment, minus and plus) | 03, 06, 29, and every segment | needs `expo-haptics`, a native dependency: follow-up with the next native unit |
+| Live billing (store-read prices, Change plan, in-app cancel, Restore, Billing history) | 14, 17, 18, 19, 56, 57, 58, 78, 79, 80, 82 | the paywall is a shell with three states that never shows a price; it ends in the failed state until a store is connected (owner decision); products, the purchase SDK and a StoreKit configuration are store + native follow-ups; the Settings billing buttons stay visibly disabled with a note |
+| ED-Safe in the glanceables (flag through App Group and ContentState) | 86, 91, 104 | native follow-up (U-78, native slot; expo-widgets coverage on SDK 58 unverified, D14) |
+| Accessory families, Dynamic Island presentations, the widget scan button, the Live Activity failure card | 88, 90, 105, 106, 107 | native follow-up (U-78); the processing steps are the backend stages follow-up; the couldn't-read reason maps from the typed 422 error code (client, U-72) |
+| The app icon "Ember ring" | 92–102 | adopted when Designer's complete set is in (U-80, native slot); a step that needs Icon Composer by hand is written down for Phương; until then the current icon stays (PL-17) |
+| Sign-in keeps the e-mail code where the frames draw a password | 61–67 | the entry step takes 61/62 as they are; the e-mail step takes the look of 63–67 with the code in place of the password; the Sign in / Create account segment, Forgot password?, the reset-link screen (67) and the two notes under the dock are not drawn; the entry back button is not drawn (the root gate puts nothing behind it); the photo-privacy line and the Terms/Privacy footnote wait for Phương's promise and pages (owner decision) |
+| The goal floor of the target sheet | 71 | the floor the engine returns, one flat minimum; the height-based minimum of the frame is an engine follow-up; the copy never says "BMI" (owner decision) |
+| Report a problem | 75, 76, 77 | a report unlocks Save and stays on this device; the sent state says so; the photo toggle is not drawn until an endpoint with storage exists (backend follow-up) (owner decision) |
+| Diary edit, delete and undo | 29–40 | built in stage A2 of U-74 (row DY-08): the system action sheet, an undo toast for five seconds (`diary.toast.undo`), the "Edited" label that persists, and a saved toast with its undo (owner decision) |
+| The Export tap | 41–46 | U-77 binds the tap to `exportCsvAndShare`; a dismissed share is not an error; until then it shares the text, as before U-42 (owner decision) |
+| One Food / Exercise / Custom food segment in the diary | 16, 84 | follow-up: it moves three sheets and their `*.close` identifiers (owner decision) |
+| Onboarding "Prefer not to say" | 22, 49 | follow-up: a new path through `TargetsEngine`, whose behavior tests are locked (owner decision) |
+| Metric and Imperial units | 22, 49, 68–70 | follow-up: unit conversion across the app (owner decision) |
+| A meal-reminders toggle and "Set a reminder" in Coach | 26, 53, 12 | not drawn until a reminders preference exists and something calls `refreshNotifications()` (owner decision; PL-10) |
+| The percent readout of onboarding step 8 | 27, 54 | removed with the fake progress; the identifier is recorded as removed (owner decision) |
+| The ED-Safe choice at onboarding step 7 | 26, 53 | built in U-73: it writes the same stored key (`edSafeMode`) the Settings toggle owns |
+| High Contrast appearances | 59, 60, 103 | delivered by U-71c in the token chain (`tokens.json` highContrastLight/highContrastDark); the screens pick it up through their restyle units |
+| The dark appearances of every band | 47–58, 81–84 | tokens only (U-71/U-71c); the screens are their units' normal scope — nothing new to build beyond the restyle |
+| Burned calories on Today | 07, 08, 09 | the burned figure needs the Apple Health steps read and the burned write (PL-13): the remaining U-42/U-76 scope, native wiring |

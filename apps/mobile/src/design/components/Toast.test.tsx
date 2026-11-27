@@ -69,6 +69,62 @@ describe('Toast rendering', () => {
   });
 });
 
+/** The table of the U-71f brief, the same rows as FoodRow.test.tsx and calorieFigure.test.ts. */
+const HIDDEN_MESSAGES = [
+  'Calories today: 1,850',
+  '640 kcal',
+  'kJ',
+  '220 cals',
+  '5 kilojoules',
+  '640kJs',
+  '220cals',
+  '1,850 Calories',
+  '6CAL',
+  'Cal 640',
+  '640kcal',
+  'kcal.',
+  'calories,',
+  'kilojoule',
+  'About 300 cal',
+];
+const SHOWN_MESSAGES = [
+  'Changes saved',
+  'Chicken · 180 g',
+  'Edited',
+  'Calm bowl',
+  'calcium 220 mg',
+  'December',
+  'escalate',
+  'scalable',
+  'Calzone',
+  '150 g · 2 pieces',
+];
+
+describe('Toast ED-safe screen of the message, every form of the calorie words', () => {
+  it.each(HIDDEN_MESSAGES)('hides the message %j under ED-safe, from the line and the spoken label, and shows it otherwise', async (text) => {
+    expect(toastVisibleMessage(text, true)).toBeUndefined();
+    expect(toastVisibleMessage(text, false)).toBe(text);
+    await render(<Toast title="Saved" message={text} />);
+    expect(screen.getByTestId('toast:message', { includeHiddenElements: true })).toHaveTextContent(text);
+    await act(async () => {
+      setEdSafeMode(true);
+    });
+    expect(screen.queryByTestId('toast:message', { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByText(text, { includeHiddenElements: true })).toBeNull();
+    expect(screen.getByTestId('toast')).toHaveProp('accessibilityLabel', 'Saved');
+  });
+
+  it.each(SHOWN_MESSAGES)('keeps the message %j under ED-safe, on the line and in the spoken label', async (text) => {
+    expect(toastVisibleMessage(text, true)).toBe(text);
+    await render(<Toast title="Saved" message={text} />);
+    await act(async () => {
+      setEdSafeMode(true);
+    });
+    expect(screen.getByTestId('toast:message', { includeHiddenElements: true })).toHaveTextContent(text);
+    expect(screen.getByTestId('toast')).toHaveProp('accessibilityLabel', `Saved. ${text}`);
+  });
+});
+
 describe('Toast message line', () => {
   it('spots a calorie figure', () => {
     expect(carriesCalorieFigure('640 kcal')).toBe(true);

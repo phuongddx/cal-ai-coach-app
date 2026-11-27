@@ -1,0 +1,82 @@
+FAIL iOS src/__tests__/rootLayoutGate.test.tsx
+  ● root layout: the navigator reaches the route the gate decides (PL-01) › a fresh install (no target) shows onboarding, not the debug console
+
+    expect(received).toHavePathname(expected)
+
+    Expected: "/onboarding"
+    Received: "/debug"
+
+      77 |   it('a fresh install (no target) shows onboarding, not the debug console', async () => {
+      78 |     await launchThenDecide('onboarding');
+    > 79 |     expect(screen).toHavePathname('/onboarding');
+         |                    ^
+      80 |     expect(screen.getByTestId('stub').props.children).toBe('onboarding/index');
+      81 |   });
+      82 |
+
+      at Object.toHavePathname (src/__tests__/rootLayoutGate.test.tsx:79:20)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● root layout: the navigator reaches the route the gate decides (PL-01) › a signed-out user with a target shows sign-in
+
+    expect(received).toHavePathname(expected)
+
+    Expected: "/sign-in"
+    Received: "/debug"
+
+      83 |   it('a signed-out user with a target shows sign-in', async () => {
+      84 |     await launchThenDecide('sign-in');
+    > 85 |     expect(screen).toHavePathname('/sign-in');
+         |                    ^
+      86 |     expect(screen.getByTestId('stub').props.children).toBe('sign-in');
+      87 |   });
+      88 |
+
+      at Object.toHavePathname (src/__tests__/rootLayoutGate.test.tsx:85:20)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● root layout: the navigator reaches the route the gate decides (PL-01) › a gate change moves the navigator: onboarding saved a target, then the shell
+
+    expect(received).toHavePathname(expected)
+
+    Expected: "/"
+    Received: "/debug"
+
+      106 |       mockListeners.forEach((listener) => listener());
+      107 |     });
+    > 108 |     expect(screen).toHavePathname('/');
+          |                    ^
+      109 |     expect(screen.getByTestId('stub').props.children).toBe('(tabs)/index');
+      110 |   });
+      111 |
+
+      at Object.toHavePathname (src/__tests__/rootLayoutGate.test.tsx:108:20)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● root layout: the navigator reaches the route the gate decides (PL-01) › a sign-in requirement while onboarding is open moves the navigator to sign-in, not to debug
+
+    expect(received).toHavePathname(expected)
+
+    Expected: "/sign-in"
+    Received: "/debug"
+
+      116 |       mockListeners.forEach((listener) => listener());
+      117 |     });
+    > 118 |     expect(screen).toHavePathname('/sign-in');
+          |                    ^
+      119 |   });
+      120 |
+      121 |   it('the debug console stays reachable in every gate state', async () => {
+
+      at Object.toHavePathname (src/__tests__/rootLayoutGate.test.tsx:118:20)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 3 passed, 7 total
+Snapshots:   0 total
+Time:        5.36 s
+Ran all test suites matching src/__tests__/rootLayoutGate.test.tsx.

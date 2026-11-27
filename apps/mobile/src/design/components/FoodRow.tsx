@@ -10,8 +10,8 @@ import { SymbolView } from 'expo-symbols';
 
 import { radius, space, typography, useTokens } from '../tokens';
 
+import { carriesCalorieFigure } from '../calorieFigure';
 import { useEdSafeMode } from '../edSafe';
-import { carriesCalorieFigure } from './Toast';
 
 export type FoodRowProps = {
   title: string;
