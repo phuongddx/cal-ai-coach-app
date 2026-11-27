@@ -28,7 +28,8 @@ that has to be repeated in briefs belongs here.
 3. If `origin/main` moved, run `git fetch origin && git merge origin/main` and resolve conflicts in
    files you own. A conflict in a file you do not own: stop and report it.
 4. Do not add, remove or upgrade a package, and never edit `package.json` or `package-lock.json`,
-   unless your brief names you the dependency writer for that wave. If you need a package, report it.
+   unless your brief names you the dependency writer for that wave or names the fields of one
+   package file you may edit. If you need a package, report it.
 5. No native build (`expo prebuild`, `expo run:ios`, `pod install`, `xcodebuild`) and no Simulator
    use (`xcrun simctl`, `axe`, Simulator.app) unless your brief gives you that slot.
 6. Files you may not edit unless your brief lists them: `apps/mobile/app.config.ts`,
@@ -39,8 +40,9 @@ that has to be repeated in briefs belongs here.
    `docs/rn-migration/parity-detail/<area>.md`.
 7. Ids: `apps/mobile/src/data/sync/uuid.ts` is the only id source in the app; never
    `crypto.randomUUID` under `apps/mobile`. `packages/core` imports nothing but its own files.
-8. No Supabase, no EAS, no new accounts, no secrets, no `.env` edits, no deploy, no App Store
-   Connect. Never commit a file that holds a key or a token.
+8. No Supabase, no EAS, no new accounts, no secrets, no `.env` file edits (`.env.example` files
+   are yours to write), no deploy, no App Store Connect. Never commit a file that holds a key or a
+   token.
 9. Read every Swift or Deno source you port in full before you write. Port its tests with it: one
    Jest case per old test case, same behavior sentence as the test name.
 10. Before you report, at the repo root: `npm test`, `npm run typecheck` and `npm run parity:check`
