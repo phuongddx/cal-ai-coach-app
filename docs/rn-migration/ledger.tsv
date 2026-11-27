@@ -1,2 +1,3 @@
 ts	unit	state	branch	pr	head	by	evidence
 2026-11-27T03:00:00Z	U-00	built	rn/promote-monorepo	2	834502d	CoachCal (owner)	local npm test 140 pass, typecheck clean, parity 0 problems
+2026-11-27T03:32:00Z	U-00	landed	-	2	834502d	CoachCal (owner)	https://github.com/phuongddx/cal-ai-coach-app/pull/2 merge commit 0b5ede6; RN CI pass

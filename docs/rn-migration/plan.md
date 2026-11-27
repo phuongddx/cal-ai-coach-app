@@ -221,20 +221,20 @@ SHAPE       Dependencies to add with `npx expo install` in apps/mobile: @tanstac
             app icon from native/App/CoachCal/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png.
             Route skeleton (placeholder screens that render the route name; feature units replace
             their file's default export later):
-              src/app/_layout.tsx                      root (keep the spike's deep-link and data binding)
-              src/app/sign-in.tsx                     AU-01
-              src/app/onboarding/index.tsx            OB-01
-              src/app/(tabs)/_layout.tsx              NativeTabs today, progress, coach, profile with the
+              src/app/_layout.tsx                      Stack over the tabs group and the other routes
+              src/app/(tabs)/_layout.tsx              NativeTabs index, progress, coach, profile with the
                                                        SF symbols of MainShell.swift (sun.max,
                                                        chart.line.uptrend.xyaxis, bell, gearshape) and
                                                        the Scan button, testID shell.fab
-              src/app/(tabs)/today.tsx                the spike's index.tsx (Ember) moved here
+              src/app/(tabs)/index.tsx                Today: the spike's index.tsx (Ember) moved here
               src/app/(tabs)/progress.tsx, coach.tsx, profile.tsx (already placeholders)
+              src/app/sign-in.tsx                     AU-01
+              src/app/onboarding/index.tsx            OB-01
               src/app/scan/index.tsx                  SC-01
               src/app/diary.tsx                       DY-01, presented as a sheet
               src/app/settings.tsx                    PR-02
               src/app/debug.tsx                       the spike console (spike.tsx renamed), no longer
-                                                       a tab
+                                                       a tab; deep links become coachcal://debug
             Jest: jest.setup.ts with a manual mock for every native module that jest-expo does not
             mock itself; one smoke test per added package that imports it.
 ACCEPTANCE  npm ci in a fresh clone of your branch succeeds from the committed lockfile; `npx expo-doctor`
