@@ -1,0 +1,18 @@
+U-81 probe log (temporary console.log in app/_layout.tsx, removed before the commit).
+Each line is one render of RootLayout: the route the gate decided, then the router's pathname,
+segments and the navigator state (root routes / inner routes). Simulator iPhone 17 Pro, iOS 26.4,
+dev client of U-79, fresh install (no stored target). Copied from `xcrun simctl launch --console-pty`
+output, 2026-11-27 ~21:32 and ~21:34 Asia/Saigon.
+
+=== BEFORE the fix (Stack.Protected without redirectTo) ===
+ LOG  [gate-probe] +1198ms render gate=wait pathname=/ segments=["(tabs)"] rootRoutes=["__root"] rootIndex=0 innerRoutes=["(tabs)"] innerIndex=0
+ LOG  [gate-probe] +1578ms render gate=onboarding pathname=/ segments=["(tabs)"] rootRoutes=["__root"] rootIndex=0 innerRoutes=["(tabs)"] innerIndex=0
+ LOG  [gate-probe] +1654ms render gate=onboarding pathname=/ segments=["(tabs)"] rootRoutes=["__root"] rootIndex=0 innerRoutes=["(tabs)"] innerIndex=0
+ LOG  [gate-probe] +1668ms render gate=onboarding pathname=/debug segments=["debug"] rootRoutes=["__root"] rootIndex=0 innerRoutes=["debug"] innerIndex=0
+
+=== AFTER the fix (redirectTo = the gate's own route on each Stack.Protected) ===
+ LOG  [gate-probe] +133ms render gate=wait pathname=/ segments=["(tabs)"] rootRoutes=["__root"] rootIndex=0 innerRoutes=["(tabs)"] innerIndex=0
+ LOG  [gate-probe] +262ms render gate=onboarding pathname=/ segments=["(tabs)"] rootRoutes=["__root"] rootIndex=0 innerRoutes=["(tabs)"] innerIndex=0
+ LOG  [gate-probe] +322ms render gate=onboarding pathname=/ segments=["(tabs)"] rootRoutes=["__root"] rootIndex=0 innerRoutes=["(tabs)"] innerIndex=0
+ LOG  [gate-probe] +337ms render gate=onboarding pathname=/ segments=["(tabs)"] rootRoutes=["__root"] rootIndex=0 innerRoutes=["(tabs)"] innerIndex=0
+ LOG  [gate-probe] +348ms render gate=onboarding pathname=/onboarding segments=["onboarding"] rootRoutes=["__root"] rootIndex=0 innerRoutes=["onboarding/index"] innerIndex=0
