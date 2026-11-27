@@ -31,18 +31,10 @@ export function clamp(value: number, min: number, max: number): number {
 }
 
 /**
- * Local calendar day as `YYYY-MM-DD`, using the device's local time zone (the web client's `dayKey`).
- * An invalid date returns an empty string rather than throwing.
+ * Local calendar day as `YYYY-MM-DD` — the DayKey.swift port lives in
+ * `dayKey.ts` and is re-exported here unchanged.
  */
-export function dayKey(date: Date): string {
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-  const y = String(date.getFullYear()).padStart(4, '0');
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
+export { dayKey } from './dayKey';
 
 export type MacroTotals = Macros & { kcal: number; fiberG: number };
 
@@ -89,3 +81,84 @@ export function kcalLeft(goalKcal: number, consumedKcal: number): number {
 }
 
 export { roundKcal, roundMacro, sumItemKcal, type KcalBearing } from './arithmetic';
+
+// ---------------------------------------------------------------------------
+// CoachCalCore.swift — the module surface itself.
+// ---------------------------------------------------------------------------
+
+/** The Swift module name this package ports (`CoachCalCore.moduleName`). */
+export const moduleName = 'CoachCalCore' as const;
+
+/** WalkingSnapshot from CoachCalCore.swift. */
+export interface WalkingSnapshot {
+  stepCount: number;
+}
+
+// ---------------------------------------------------------------------------
+// The nine CoachCalCore engine ports — one file per Swift source, all
+// re-exported from here (docs/rn-migration/briefs/U-10.md).
+// ---------------------------------------------------------------------------
+
+export { KcalArithmetic } from './kcal';
+
+export { TargetsEngine, ACTIVITY_MULTIPLIER } from './targets';
+export type {
+  Sex,
+  ActivityLevel,
+  Goal,
+  QuizProfile,
+  Targets,
+  ClampedKcal,
+  ClampedPace,
+  MacroSplit,
+} from './targets';
+
+export { StreakEngine } from './streak';
+export type { StreakInput, StreakOutcome } from './streak';
+
+export { WidgetSnapshotStore, encodeWidgetSnapshot, decodeWidgetSnapshot } from './widgetSnapshot';
+export type { WidgetSnapshot, WidgetSnapshotContainer } from './widgetSnapshot';
+
+export { compareCanonicalVersions } from './canonicalVersion';
+export type { CanonicalRowVersion } from './canonicalVersion';
+
+export {
+  SyncEnvelopeError,
+  createPushRequest,
+  decodeDiaryEntrySnapshot,
+  formatSyncDate,
+  parseSyncDate,
+  rejectUnknownKeys,
+  validateAcknowledgementSet,
+  validatePullResponse,
+} from './syncEnvelope';
+export type {
+  SyncedTable,
+  MutationKind,
+  DiaryEntrySnapshot,
+  SyncOperation,
+  PushRequest,
+  PushAcknowledgement,
+  PushResponse,
+  PulledRow,
+  PullResponse,
+  SyncTransport,
+} from './syncEnvelope';
+
+export { ProofRecordSerializer, ProofRedactionError } from './proofRecord';
+export type {
+  ProofScenario,
+  ProofCheckStatus,
+  ProofEnvironment,
+  ProofCheck,
+  ProofValue,
+  ProofRecord,
+} from './proofRecord';
+
+export { NotificationScheduler } from './notificationSchedule';
+export type {
+  MealSlot,
+  ScheduledIdentifier,
+  NotificationTrigger,
+  ScheduledNotificationRequest,
+} from './notificationSchedule';
