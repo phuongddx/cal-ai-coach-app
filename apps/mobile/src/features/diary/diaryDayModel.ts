@@ -36,10 +36,15 @@ export type DiaryDayModel = {
   /** Tombstone + detail delete — the delete of the food row. */
   delete(item: DiaryDaySnapshot['sections'][number]['items'][number]): Promise<void>;
   /**
-   * The edit sheet's write: new grams, the kcal recomputed from the stored
-   * per-100g basis (KcalArithmetic), mirror + detail + one op in ONE batch.
+   * The edit sheet's write: new grams (the kcal recomputed from the stored
+   * per-100g basis, KcalArithmetic) and the (possibly renamed) title; mirror +
+   * detail + one op in ONE batch.
    */
-  updateEntry(item: DiaryDaySnapshot['sections'][number]['items'][number], grams: number): Promise<void>;
+  updateEntry(
+    item: DiaryDaySnapshot['sections'][number]['items'][number],
+    grams: number,
+    title?: string,
+  ): Promise<void>;
   /** Undo path: tombstone by id without needing the observed item. */
   deleteEntry(id: string): Promise<void>;
   /** Local-only exercise write (I4), then notify so Today re-reads. */
@@ -129,7 +134,7 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
       deps.notify();
       await refresh();
     },
-    async updateEntry(item, grams) {
+    async updateEntry(item, grams, title = item.title) {
       // The recomputed kcal comes from the entry's own per-100g basis, the
       // same KcalArithmetic rule the review sheet uses; without a basis
       // (no stored grams) the stored kcal is kept.
@@ -141,8 +146,13 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
       await deps.diaryEntries.recordUpserts(
         [
           {
-            entry: { ...item.entry, updatedAt: stamp },
-            detail: { ...item.detail, grams, kcal: basis === null ? item.kcal : manualKcal(basis, grams) },
+            entry: { ...item.entry, displayText: title, updatedAt: stamp },
+            detail: {
+              ...item.detail,
+              grams,
+              kcal: basis === null ? item.kcal : manualKcal(basis, grams),
+              title,
+            },
           },
         ],
         stamp,

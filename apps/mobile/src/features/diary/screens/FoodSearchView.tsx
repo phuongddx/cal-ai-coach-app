@@ -16,10 +16,10 @@ import type { DiaryDetailRepository } from '../../../data/repos/diaryDetailRepos
 import type { Clock, IdGenerator } from '../../../data/repos/sqlDb';
 import {
   EdSafeCollapse,
+  GlassIconButton,
   Icon,
   SearchField,
   Segment,
-  SheetHeader,
   useEdSafeMode,
   useTokens,
 } from '../../../design';
@@ -133,12 +133,20 @@ export function FoodSearchView({
 
   return (
     <View style={[styles.root, { backgroundColor: colors.grouped }]}>
-      <SheetHeader
-        title={`Add to ${mealName(mealSlot)}`}
-        onBack={onDismiss}
-        backAccessibilityLabel="Back"
-        testID="search"
-      />
+      {/* The frame's bar: the dismiss glass button (an X glyph) on the left and
+          the target meal as the title — composed on GlassIconButton so the
+          `search.back` identifier keeps its string on the X. */}
+      <View style={styles.bar} testID="search">
+        <GlassIconButton icon="x" accessibilityLabel="Close" testID="search.back" onPress={onDismiss} />
+        <Text
+          accessibilityRole="header"
+          testID="search.title"
+          style={[styles.barTitle, typography.headline, { color: colors.textPrimary }]}
+        >
+          {`Add to ${mealName(mealSlot)}`}
+        </Text>
+        <View style={styles.barSpacer} />
+      </View>
 
       <View testID="search.field" style={styles.fieldWrapper}>
         <SearchField
@@ -337,6 +345,9 @@ function FoodSearchRowView({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  bar: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+  barTitle: { flex: 1, textAlign: 'center' },
+  barSpacer: { width: 44 },
   fieldWrapper: { marginHorizontal: 16, marginTop: 8 },
   content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24, gap: 12 },
   emptyState: { borderWidth: 1, padding: 20, gap: 8, alignItems: 'center' },

@@ -235,9 +235,9 @@ describe('DiaryDayView screen', () => {
 
     fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
     expect(await screen.findByText('Delete Overnight Oats?')).toBeOnTheScreen();
-    expect(screen.getByText("This will remove it from Breakfast. This can't be undone.")).toBeOnTheScreen();
+    expect(screen.getByText('This removes 320 kcal from Breakfast.')).toBeOnTheScreen();
 
-    await userEvent.press(screen.getByText('Delete'));
+    await userEvent.press(screen.getByText('Delete item'));
     await waitFor(() => expect(model.delete).toHaveBeenCalledWith(expect.objectContaining({ id: 'entry-1' })));
     await waitFor(() => expect(screen.queryByText('Delete Overnight Oats?')).toBeNull());
   });
@@ -341,18 +341,54 @@ describe('DiaryDayView screen', () => {
     expect(screen.getByTestId('diary.edit.close')).toBeOnTheScreen();
     expect(screen.getByTestId('diary.edit.grams.entry-1')).toBeOnTheScreen();
     expect(screen.getByTestId('diary.edit.save')).toBeOnTheScreen();
-    // The kcal figure of the stored pair, and the stored grams in the field.
-    const kcalRow = screen.getByText('kcal').parent as unknown as ReturnType<typeof screen.getByTestId>;
-    expect(within(kcalRow).getByText('320')).toBeOnTheScreen();
+    // The total card: the stored kcal as the "was" figure, the recomputed figure beside it.
+    const totalCard = screen.getByText(/Total · was/).parent as unknown as ReturnType<typeof screen.getByTestId>;
+    expect(within(totalCard).getByText('320')).toBeOnTheScreen();
 
     // A gram change recomputes the kcal from the entry's per-100g basis:
     // 320/250 × 100 = 128 per100g → 128 × 260 / 100 → 333.
     await userEvent.press(within(screen.getByTestId('diary.edit.grams.entry-1')).getByTestId('ccstepper.increment'));
-    await waitFor(() => expect(within(kcalRow).getByText('333')).toBeOnTheScreen());
+    await waitFor(() => expect(within(totalCard).getByText('333')).toBeOnTheScreen());
 
     await userEvent.press(within(screen.getByTestId('diary.edit.save')).getByRole('button'));
-    await waitFor(() => expect(updateEntry).toHaveBeenCalledWith(expect.objectContaining({ id: 'entry-1' }), 260));
+    await waitFor(() =>
+      expect(updateEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'entry-1' }),
+        260,
+        'Overnight Oats',
+      ),
+    );
     await waitFor(() => expect(screen.queryByTestId('diary.edit')).toBeNull());
+  });
+
+  it('the edit sheet renames the entry through the save', async () => {
+    const updateEntry = jest.fn(async () => undefined);
+    const model = makeModel(makeSnapshot(), { updateEntry });
+    await renderDay(model);
+
+    await userEvent.press(screen.getByTestId('diary.foodRow'));
+    await userEvent.type(await screen.findByLabelText('Name'), ' overnight');
+
+    await userEvent.press(within(screen.getByTestId('diary.edit.save')).getByRole('button'));
+    await waitFor(() =>
+      expect(updateEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'entry-1' }),
+        250,
+        'Overnight Oats overnight',
+      ),
+    );
+  });
+
+  it('the edit sheet Delete item opens the delete confirmation', async () => {
+    const model = makeModel(makeSnapshot(), { delete: jest.fn(async () => undefined) });
+    await renderDay(model);
+
+    await userEvent.press(screen.getByTestId('diary.foodRow'));
+    await userEvent.press(await screen.findByText('Delete item'));
+    expect(await screen.findByText('Delete Overnight Oats?')).toBeOnTheScreen();
+    // Cancel leaves the entry in place.
+    await userEvent.press(screen.getByText('Cancel'));
+    expect(model.delete).not.toHaveBeenCalled();
   });
 
   it('the edit sheet Close changes nothing', async () => {
@@ -374,11 +410,15 @@ describe('DiaryDayView screen', () => {
 
     setEdSafeMode(true);
     await waitFor(() => expect(screen.queryByText('kcal')).toBeNull());
+    // The leaf note takes the total card's place.
+    expect(screen.getByText('Adjust the grams if the portion looks off.')).toBeOnTheScreen();
+    expect(screen.getByText('Numbers are hidden in ED-Safe mode.')).toBeOnTheScreen();
     // Grams and Save stay.
     expect(screen.getByTestId('diary.edit.grams.entry-1')).toBeOnTheScreen();
     expect(screen.getByTestId('diary.edit.save')).toBeOnTheScreen();
 
     setEdSafeMode(false);
     await waitFor(() => expect(screen.getByText('kcal')).toBeOnTheScreen());
+    expect(screen.queryByText('Numbers are hidden in ED-Safe mode.')).toBeNull();
   });
 });

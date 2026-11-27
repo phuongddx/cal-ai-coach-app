@@ -181,28 +181,35 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
         animationType="fade"
         onRequestClose={() => setPendingDelete(null)}
       >
+        {/* The d-delete confirm: two stacked action-sheet cards over a scrim. */}
         <View style={[styles.dialogBackdrop, { backgroundColor: withAlpha('#000000', 0.45) }]}>
-          <View style={[styles.dialogCard, { backgroundColor: colors.card, borderRadius: radius.lg }]}>
-            <Text style={[typography.headline, { color: colors.textPrimary }]}>
-              {`Delete ${pendingDelete?.title ?? ''}?`}
-            </Text>
-            <Text style={[typography.subhead, { color: colors.textSecondary }]}>
-              {`This will remove it from ${pendingDelete === null ? '' : mealName(pendingDelete.mealSlot)}. This can't be undone.`}
-            </Text>
-            <View style={styles.dialogButtons}>
+          <View style={styles.dialogStack}>
+            <View style={[styles.dialogCard, { backgroundColor: colors.card, borderRadius: radius.lg }]}>
+              <Text style={[typography.headline, { color: colors.textPrimary, textAlign: 'center' }]}>
+                {`Delete ${pendingDelete?.title ?? ''}?`}
+              </Text>
+              <Text style={[typography.subhead, { color: colors.textSecondary, textAlign: 'center' }]}>
+                {pendingDelete === null
+                  ? ''
+                  : pendingDelete.kcal !== null
+                    ? `This removes ${pendingDelete.kcal} kcal from ${mealName(pendingDelete.mealSlot)}.`
+                    : `This will remove it from ${mealName(pendingDelete.mealSlot)}. This can't be undone.`}
+              </Text>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => pendingDelete !== null && onDeleteConfirm(pendingDelete)}
                 style={styles.dialogButton}
               >
-                <Text style={[typography.body, { color: colors.errorInk }]}>Delete</Text>
+                <Text style={[typography.body, { color: colors.errorInk, fontWeight: '600' }]}>Delete item</Text>
               </Pressable>
+            </View>
+            <View style={[styles.dialogCard, { backgroundColor: colors.card, borderRadius: radius.lg }]}>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setPendingDelete(null)}
                 style={styles.dialogButton}
               >
-                <Text style={[typography.body, { color: colors.textPrimary }]}>Cancel</Text>
+                <Text style={[typography.body, { color: colors.textPrimary, fontWeight: '600' }]}>Cancel</Text>
               </Pressable>
             </View>
           </View>
@@ -228,7 +235,15 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
       >
         <View style={[styles.sheetBackdrop, { backgroundColor: colors.background }]}>
           {editItem !== null && (
-            <DiaryEditSheet item={editItem} model={model} onDismiss={() => setEditItem(null)} />
+            <DiaryEditSheet
+              item={editItem}
+              model={model}
+              onDismiss={() => setEditItem(null)}
+              onDelete={(item) => {
+                setEditItem(null);
+                setPendingDelete(item);
+              }}
+            />
           )}
         </View>
       </Modal>
@@ -393,9 +408,9 @@ const styles = StyleSheet.create({
   exerciseText: { flex: 1, gap: 2 },
   exerciseKcal: { fontWeight: '500', fontVariant: ['tabular-nums'] },
   toastOverlay: { position: 'absolute', top: 8, left: 16, right: 16 },
-  dialogBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  dialogCard: { width: '100%', padding: 16, gap: 8 },
-  dialogButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 24, marginTop: 8 },
-  dialogButton: { paddingVertical: 8 },
+  dialogBackdrop: { flex: 1, justifyContent: 'flex-end', padding: 16 },
+  dialogStack: { width: '100%', gap: 8 },
+  dialogCard: { padding: 16, gap: 8, alignItems: 'center' },
+  dialogButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   sheetBackdrop: { flex: 1, justifyContent: 'flex-end' },
 });
