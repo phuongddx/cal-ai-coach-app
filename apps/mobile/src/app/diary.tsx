@@ -109,5 +109,13 @@ export default function DiaryScreen() {
     );
   }
 
-  return <DiaryDayView model={session.model} deps={session.deps} onCapture={onCapture} />;
+  // One wrapping View: a formSheet whose only child is the day ScrollView (plus the two Modals the view
+  // adds as siblings) trips react-native-screens' "FormSheet with ScrollView expects at most 2
+  // subviews" layout path and renders blank (U-33 findings, flow 04). `collapsable={false}` keeps Fabric
+  // from flattening the wrapper away, which would put the ScrollView back as the direct child.
+  return (
+    <View style={{ flex: 1 }} collapsable={false}>
+      <DiaryDayView model={session.model} deps={session.deps} onCapture={onCapture} />
+    </View>
+  );
 }
