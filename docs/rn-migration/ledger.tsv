@@ -31,3 +31,7 @@ ts	unit	state	branch	pr	head	by	evidence
 2026-11-27T07:59:28Z	U-30	fail	rn/u-30-scan-flow	16	9db1bf4	CoachCal (owner)	review found a Flip camera button without an action and a hint promising OCR; rework sent to Worker-S2 in thread ff693640 (receipt 9c331968)
 2026-11-27T07:59:28Z	U-30	running	rn/u-30-scan-flow	16	-	Worker-S2	rework of the two review fixes on PR 16
 2026-11-27T08:14:UTC	U-30	landed	-	16	2a72d67	CoachCal (owner)	merge bfb8408 after the rework (working camera switch, honest label hint, exact quota routing); owner re-ran 1,018 tests with PostgreSQL 17, typecheck, parity 0, sync script 15 of 15, smokes 5 of 5 on the synced head; the Simulator screenshots move to U-33
+2026-11-27T08:22:UTC	U-33	running	rn/u-33-today	-	78f7952	Worker-S2	docs/rn-migration/briefs/U-33.md (Simulator slot)
+2026-11-27T08:22:UTC	U-40	running	rn/u-40-progress-coach	-	78f7952	Worker-G2	docs/rn-migration/briefs/U-40.md
+2026-11-27T08:22:UTC	U-41	running	rn/u-41-profile-settings	-	78f7952	Worker-G1	docs/rn-migration/briefs/U-41.md
+2026-11-27T08:22:UTC	U-51	running	rn/u-51-root	-	78f7952	Worker-S1	docs/rn-migration/briefs/U-51.md
