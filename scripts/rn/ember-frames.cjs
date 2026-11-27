@@ -47,7 +47,18 @@ const slug = (text) =>
       section: 'glance',
       caption: firstLine(el.querySelector('figcaption')),
     }));
-    return phones.concat(glance);
+    // A frame of any other section that holds no phone (a widget, a Live Activity, a step list).
+    const panels = [...document.querySelectorAll('figure.frame:not(:has(.phone))')].filter(
+      (el) => (el.closest('section') || {}).id !== 'glance',
+    );
+    const others = panels.map((el) => ({
+      kind: 'panel',
+      pick: 'figure.frame:not(:has(.phone))',
+      nth: [...document.querySelectorAll('figure.frame:not(:has(.phone))')].indexOf(el),
+      section: (el.closest('section') || {}).id || '',
+      caption: firstLine(el.querySelector('figcaption')) || el.id || 'frame',
+    }));
+    return phones.concat(glance).concat(others);
   });
   if (mode !== 'capture') {
     console.log(JSON.stringify(frames, null, 2));

@@ -1,6 +1,7 @@
 /* CoachCal Design System v2 — "Ember" (neon orange)
    One brand palette for app, icon, widget and web.
-   Every value below maps 1:1 to a Colors.xcassets entry (Any / Dark; High Contrast noted in tokens.md).
+   Every value below maps 1:1 to a Colors.xcassets entry and to tokens.json (light / dark / highContrastLight / highContrastDark).
+   High Contrast (iOS Increase Contrast) lives here since 27/11: .hc = HC light, .dark.hc = HC dark. Tokens not listed there keep the base value.
    Contrast figures: WCAG 2.x, computed with scripts/contrast.py. */
 
 :root {
@@ -23,6 +24,10 @@
   --cc-card: #FFFFFF;
   --cc-elevated: #FFFFFF;
   --cc-fill: #EFEDEA;              /* control fills, tracks */
+  --cc-fill-elevated: #EFEDEA;     /* NEW 27/11: control fills inside sheets (on ccElevated). Same as fill in light */
+  --cc-segment-selected: #FFFFFF;  /* NEW 27/11 (round 3): selected pill of a segmented control. Light = card white on the fill track */
+  --cc-on-media: #FFFFFF;          /* NEW 27/11 (round 3): glyphs/labels of glass buttons over a photo or the camera. Same in every mode; always on --cc-media-scrim */
+  --cc-media-scrim: rgba(0,0,0,.45); /* NEW 27/11 (round 3): glass fill behind --cc-on-media. Over a pure-white photo it composites to #8C8C8C: white glyph 3.4:1 (graphic min 3:1) */
   --cc-border: rgba(20,18,16,.08);
   --cc-separator: rgba(20,18,16,.12);
   --cc-text: #141210;              /* 18.69:1 */
@@ -69,6 +74,8 @@
   --cc-card: #1C1A18;
   --cc-elevated: #2A2724;
   --cc-fill: #2A2724;
+  --cc-fill-elevated: #3A3632;     /* NEW 27/11: fill == elevated in dark, so sheet controls need a lighter fill. text 11.00:1, text-2 4.96:1, accent-ink 4.59:1. Never text-3 on it (4.03:1) */
+  --cc-segment-selected: #3A3632; /* NEW 27/11 (round 3): selected pill in dark, on the #2A2724 track and inside sheets. text 11.00:1, accent-ink 4.59:1 (replaces the old #45403B, 3.93:1) */
   --cc-border: rgba(255,255,255,.08);
   --cc-separator: rgba(255,255,255,.12);
   --cc-text: #F7F5F2;              /* 15.94:1 card */
@@ -85,4 +92,33 @@
   --cc-carbs:   #3CCFBE;
   --cc-fat:     #B794FF;
   --cc-fiber:   #5AD27A;
+}
+
+/* ---------- High Contrast (iOS Settings › Accessibility › Display & Text Size › Increase Contrast) ----------
+   Moved here from design-system.md on 27/11 so every token value lives in one file.
+   Put .hc on the same element as .dark for HC dark. RN: DynamicColorIOS({ light, dark, highContrastLight, highContrastDark }). */
+.hc {
+  --cc-on-accent: #000000;         /* 7.31:1 on accent */
+  --cc-accent-strong: #C24D00;     /* 4.82:1 on white */
+  --cc-accent-ink: #8F3400;        /* 6.83:1 on tint, 8.4:1 white */
+  --cc-accent-tint: #FFEBDC;
+  --cc-ember: #000000;
+  --cc-ember-track: #4A433D;
+  --cc-ember-accent: #FF9A52;      /* 10.00:1 on ember */
+  --cc-text: #000000;
+  --cc-text-2: #4A4643;            /* 7.99:1 on fill */
+  --cc-text-3: #54504C;            /* 7.33:1 grouped */
+}
+
+.dark.hc {
+  --cc-on-accent: #000000;
+  --cc-accent-strong: #FF8F45;     /* 7.66:1 on card */
+  --cc-accent-ink: #FF9A52;        /* 8.26:1 card, 6.99:1 tint */
+  --cc-accent-tint: #3A2312;
+  --cc-ember: #000000;
+  --cc-ember-track: #4A433D;
+  --cc-ember-accent: #FF9A52;
+  --cc-text: #FFFFFF;
+  --cc-text-2: #C8C3BD;            /* 8.48:1 elevated */
+  --cc-text-3: #B8B3AD;            /* 7.13:1 elevated */
 }
