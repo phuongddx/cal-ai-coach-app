@@ -231,7 +231,7 @@ describe('settings screen', () => {
     await waitFor(() => expect(screen.queryByTestId('settings.exportError')).toBeNull());
   });
 
-  it('renders Contact us on the failed row inert: no support path exists in the app', async () => {
+  it('shows the failed row with exactly the code and the retry: no Contact us while no support address exists', async () => {
     const { model } = makeModel({
       shareExport: jest.fn(async () => {
         throw new Error('disk full');
@@ -240,12 +240,15 @@ describe('settings screen', () => {
     await render(<SettingsDetailView model={model} planName="Free" />);
     await model.loadExport();
     await userEvent.press(screen.getByTestId('settings.row.export'));
+    await waitFor(() => expect(screen.getByTestId('settings.exportError')).toBeOnTheScreen());
 
-    // No support e-mail address exists in the app (Swift included) and the
-    // contact row has no action, so the button is present and inert — it
-    // neither opens anything nor prints an invented address.
-    const contact = screen.getByTestId('settings.exportContact');
-    expect(contact.props.accessibilityState?.disabled).toBe(true);
+    // The row shows two things, not three: the EXP-WRITE code and Try again.
+    // The frame's "Contact us" button stays undrawn — no support address
+    // exists in the app yet (the identifier is recorded in the findings).
+    expect(screen.getByText(settingsCopy.exportFailedCode)).toBeOnTheScreen();
+    expect(screen.getByTestId('settings.exportRetry')).toBeOnTheScreen();
+    expect(screen.queryByTestId('settings.exportContact')).toBeNull();
+    expect(screen.queryByText(settingsCopy.exportContact)).toBeNull();
     expect(screen.queryByText(/@\w+\.\w+/)).toBeNull();
   });
 

@@ -179,7 +179,11 @@ export function SettingsDetailView({ model, planName }: SettingsDetailViewProps)
                 variant="error"
                 text={`**${settingsCopy.exportFailedTitle}.** ${model.exportShare.reason}`}
               />
-              {/* The frame's error code line (x-write-*). */}
+              {/* The frame's error code line (x-write-*). The frame's "Contact
+                  us" button is not drawn: no support address exists in the app
+                  yet — `settings.exportContact` is recorded and shown when a
+                  support address exists; the address is Phương's to supply
+                  (findings §5). */}
               <Text style={[typography.caption, { color: colors.textTertiary }]}>
                 {settingsCopy.exportFailedCode}
               </Text>
@@ -188,16 +192,6 @@ export function SettingsDetailView({ model, planName }: SettingsDetailViewProps)
                   title={settingsCopy.exportRetry}
                   testID="settings.exportRetry"
                   action={() => void model.shareExport()}
-                />
-                {/* The contact path of settings.row.contact, which has no
-                    action today and no support address exists in the app
-                    (Swift included) — the button must not act, so it passes
-                    disabled (findings). */}
-                <SecondaryButton
-                  title={settingsCopy.exportContact}
-                  testID="settings.exportContact"
-                  disabled
-                  action={() => undefined}
                 />
               </View>
             </View>
