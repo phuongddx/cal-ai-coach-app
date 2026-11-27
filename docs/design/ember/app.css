@@ -98,8 +98,7 @@ figure.frame figcaption span { display: block; font-weight: 400; color: #5F5B57;
 .badge.mini { height: 22px; font-size: 12px; padding: 0 8px 0 6px; }
 .seg { display: flex; background: var(--cc-fill); border-radius: 12px; padding: 3px; gap: 2px; }
 .seg a { flex: 1; height: 34px; display: grid; place-items: center; border-radius: 9px; font: 600 14px/1 var(--cc-font); color: var(--cc-text); text-decoration: none; }
-.seg a.on { background: var(--cc-card); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
-.dark .seg a.on { background: #45403B; }
+.seg a.on { background: var(--cc-segment-selected); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
 
 /* ---------- Data ---------- */
 .ring { position: relative; width: var(--ring); height: var(--ring); }
@@ -156,3 +155,41 @@ figure.frame figcaption span { display: block; font-weight: 400; color: #5F5B57;
   .ds-grid { grid-template-columns: 1fr; } .ds-card { padding: 16px; }
   .sws { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ===================== 27/11 additions (Diary edit, Export errors, dark Onboarding/Billing, High Contrast) ===================== */
+/* Contrast fix 27/11: dark selected segment. accent-ink #FF7A1F on the old #45403B was 3.93:1 (Review dark, Onboarding).
+   Now var(--cc-fill-elevated) #3A3632: accent-ink 4.59:1, text 11.00:1. Light is unchanged (card #FFFFFF). */
+.dark .seg a.on { background: var(--cc-segment-selected); } /* token since round 3; was var(--cc-fill-elevated), same value */
+
+/* Sheets: surface = ccElevated. In dark, fill == elevated, so controls inside a sheet use ccFillElevated. */
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--cc-elevated); color: var(--cc-text); border-radius: 38px 38px 0 0; padding: 8px 20px 0; z-index: 21; }
+.grab { width: 36px; height: 5px; border-radius: 3px; background: var(--cc-grabber); margin: 0 auto 4px; }
+.sheet .btn.secondary, .sheet .chip:not(.on), .sheet .btn.primary.disabled { background: var(--cc-fill-elevated); }
+.sheet .glassbtn { background: var(--cc-fill-elevated); border: 0; }
+.chip.tap { height: 44px; padding: 0 16px; border-radius: 22px; }
+.scrim { position: absolute; inset: 0; background: rgba(0,0,0,.45); z-index: 23; }
+.dark .scrim { background: rgba(0,0,0,.6); }
+/* Toast: ember surface in both modes (signature), auto-dismiss 5 s, stays while VoiceOver is on */
+.toast { position: absolute; left: 16px; right: 16px; bottom: 34px; z-index: 26; min-height: 56px; border-radius: 20px; background: var(--cc-ember); color: var(--cc-ember-text); display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 16px; box-shadow: 0 12px 30px rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.08); font: 500 15px/1.3 var(--cc-font); }
+.toast small { display: block; font: 400 13px/1.3 var(--cc-font); color: var(--cc-ember-text-2); }
+.toast .act { margin-left: auto; height: 44px; min-width: 64px; padding: 0 14px; border-radius: 14px; display: grid; place-items: center; font: 600 15px var(--cc-font); color: var(--cc-ember-accent); }
+/* Store price placeholders: dotted underline marks text filled from StoreKit at runtime */
+.pv { text-decoration: underline dotted; text-underline-offset: 3px; text-decoration-thickness: 1.5px; }
+/* Edited-row highlight (paired with the "Edited" label, so colour is never the only cue) */
+.foodrow.edited { background: var(--cc-accent-tint); margin: 0 -14px; padding: 10px 14px; }
+.foodrow .tag { font: 600 12px/1 var(--cc-font); color: var(--cc-accent-ink); }
+.hc-table { border-collapse: collapse; font: 400 13px/1.3 var(--cc-font); background: #fff; border-radius: 16px; overflow: hidden; }
+.hc-table th, .hc-table td { padding: 6px 10px; border-bottom: 1px solid rgba(20,18,16,.08); text-align: left; white-space: nowrap; color: #141210; }
+.hc-table th { font-weight: 600; background: #F6F5F3; }
+.hc-table td code { font: 500 12px ui-monospace, monospace; }
+.hc-sw { display: inline-block; width: 18px; height: 18px; border-radius: 5px; vertical-align: -4px; margin-right: 6px; border: 1px solid rgba(0,0,0,.15); }
+#darkmode figure.frame figcaption { color: #F7F5F2; }
+#darkmode figure.frame figcaption span { color: #ABA6A0; }
+#darkmode figure.frame figcaption code { color: #F7F5F2; }
+/* round 3: inline spinner (static under Reduce Motion) */
+.spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid var(--cc-fill-elevated); border-top-color: var(--cc-accent-strong); display: inline-block; flex: none; animation: ccspin .9s linear infinite; }
+.btn .spin { margin-right: 8px; }
+@keyframes ccspin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; border-top-color: var(--cc-text-2); } }
+/* round 3: glass buttons over a photo or the camera feed */
+.glassbtn.on-media { background: var(--cc-media-scrim); color: var(--cc-on-media); border-color: rgba(255,255,255,.12); }
