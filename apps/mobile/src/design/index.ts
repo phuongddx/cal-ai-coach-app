@@ -171,3 +171,36 @@ export {
   type ScaledNumberProps,
 } from './components/ScaledNumber';
 export { EdSafeCollapse } from './components/EdSafeCollapse';
+export {
+  Icon,
+  iconStrokeWidth,
+  type IconProps,
+} from './components/Icon';
+export { iconNames, iconShapes, type IconName, type IconShape } from './components/iconShapes';
+export {
+  GlassIconButton,
+  glassIconButtonColors,
+  type GlassIconButtonProps,
+  type GlassTone,
+} from './components/GlassIconButton';
+export { SheetHeader, type SheetHeaderProps } from './components/SheetHeader';
+export {
+  Segment,
+  segmentChipHeight,
+  segmentPillHeight,
+  type SegmentOption,
+  type SegmentProps,
+} from './components/Segment';
+export { EdSafeNote, type EdSafeNoteProps } from './components/EdSafeNote';
+export { FillField, fieldDigitWidth, type FillFieldProps } from './components/FillField';
+export {
+  GramsRuler,
+  rulerHeight,
+  rulerMinorEvery,
+  rulerPointsPerUnit,
+  rulerTickOpacity,
+  rulerTicks,
+  rulerValueAfterDrag,
+  snapRulerValue,
+  type GramsRulerProps,
+} from './components/GramsRuler';

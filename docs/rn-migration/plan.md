@@ -470,6 +470,7 @@ Units, in order; U-71 first because every other unit reads its tokens:
 | U-77 Profile, Settings and Billing on Ember | PR-01 to PR-03 | Profile, Settings, the quota sheet, the paywall, the cancel flow | U-71 |
 | U-78 Widgets and Live Activity on Ember (native slot) | PL-11, PL-12 | small, medium and Lock Screen widgets, the ED-Safe variants, the Live Activity in both places | U-71, the native slot |
 | U-79 The native launch-argument reader (Worker-S2; native slot and Simulator slot) | PL-05 | a local Expo module reads the process arguments once at launch; the nine `--cc*` arguments work on a device as they did in the SwiftUI app; the harness passes them to `simctl launch` | nothing |
+| U-80 App icon "Ember ring" (native slot) | PL-17 | starts when Designer delivers the complete icon: the flattened 1024 icon without alpha as the store icon, the Icon Composer document for the four appearances where `ios.icon` takes a `.icon` directory (the config type of SDK 58 says so; the prebuild result is what proves it), the compliance check on the built app, and every step that needs Icon Composer by hand written down for Phương | the complete icon set, the native slot |
 
 Topology of phase 4: U-71 owned `apps/mobile/src/design/**`, and U-71b owns it until it merges. A
 restyle unit owns its feature tree and its route files, and changes a design component only through
@@ -503,7 +504,9 @@ Decisions the owner took for the behaviors the frames add. Each brief holds the 
 | A meal-reminders toggle | follow-up: no stored preference exists, and `refreshNotifications()` has no caller yet (PL-10) |
 | The percent readout of onboarding step 8 | removed with the fake progress; the identifier is recorded as removed |
 | One Food / Exercise / Custom food segment in the diary | follow-up: it moves three sheets and their `*.close` identifiers |
-| Editing a food in the diary | follow-up: the app has no edit sheet today |
+| Editing a food in the diary | built in stage A2 of U-74 (row DY-08), derived from the Review frame until the frame of Designer arrives |
+| The frames Designer is still drawing: the edit sheet, the CSV export error state, the dark variants of onboarding and billing, the high-contrast tokens, a `tokens.json`, the complete icon | Phương approved Ember on 2026-11-27: every one of those screens is built now from the tokens and the patterns of the nearest frame (D15). When a frame arrives, the owner copies it into `docs/design/ember/`, sends it into the thread of its unit, and the unit corrects the screen |
+| The app icon | it becomes "Ember ring" when Designer delivers the complete set (U-80); a step that needs Icon Composer by hand is written down for Phương |
 | The Export tap shares a file | U-77 binds the tap to `exportCsvAndShare`; today it shares the text, as before U-42 |
 | `SecondaryButton` without an action in Settings | `action` becomes required in U-77; the billing buttons stay inert until products exist |
 | The label of the ring | U-76 decides between "remaining" and the frame's "kcal left" |
@@ -518,8 +521,12 @@ Each restyle unit writes its rows with `node scripts/rn/evidence/side-by-side.mj
 
 Merged, each after an independent review and the full gates with PostgreSQL 17 on an integration
 tree: PR 27 (U-33 Today, `e34ebda`), PR 30 (U-61b frame catalog, `d25536d`), PR 31 (U-71 Ember
-design system, `a0f210f`), PR 32 (U-42 HealthKit, notifications, CSV, `2458805`). Parity table: 18
-done, 57 partial, 12 todo, 1 n/a.
+design system, `a0f210f`), PR 32 (U-42 HealthKit, notifications, CSV, `2458805`). Parity table: 89
+rows, 18 done, 57 partial, 13 todo, 1 n/a.
+
+Phương approved Ember on 2026-11-27 in the evening, through Zed, and asked that the parts the
+design was missing be drawn and built at once (D15). The owner PR of that decision added U-80 and
+the row DY-08.
 
 Running: U-79 (Worker-S2, native and Simulator slots), U-71b (Worker-S1), stage A of U-73
 (Worker-G1) and of U-74 (Worker-G2). Queued in the order the workers free up: U-72 after U-71b,
