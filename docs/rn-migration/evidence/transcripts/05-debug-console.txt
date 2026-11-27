@@ -1,13 +1,13 @@
   ok: simulator already booted
-  ok: simulator ready (85024D2F-71DE-43C0-8E11-CE58F4578FC3)
+  ok: simulator ready (A902237E-29DE-4A6F-9E93-23199FC2107F)
 
 === opening the app via the dev client URL ===
-  ok: found title 'Today' (Heading at y=326)
+  ok: found title 'Today' (Heading at y=92.333335876464844)
   ok: app is showing 'Today' (attempt 1)
 
 === deep link: coachcal://debug ===
   ok: found title 'Debug console' (Heading at y=118.66666666666669)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/PL-05/05-debug-console.png (245 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/PL-05-05-debug-console.png
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/PL-05/05-debug-console.png (342 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/PL-05-05-debug-console.png
 
 === flow done — 0 failed ===
