@@ -1,0 +1,88 @@
+/* CoachCal Design System v2 — "Ember" (neon orange)
+   One brand palette for app, icon, widget and web.
+   Every value below maps 1:1 to a Colors.xcassets entry (Any / Dark; High Contrast noted in tokens.md).
+   Contrast figures: WCAG 2.x, computed with scripts/contrast.py. */
+
+:root {
+  /* Brand */
+  --cc-accent: #FF6A00;            /* fills: primary button, FAB, shutter, selected chip. Label = on-accent */
+  --cc-accent-pressed: #E35A00;    /* pressed fill; on-accent 5.40:1 */
+  --cc-on-accent: #0B0A09;         /* text/icons on accent: 6.89:1 */
+  --cc-accent-strong: #E35A00;     /* graphics on light bg (ring arc, chart line, bars): 3.67:1 on white */
+  --cc-accent-ink: #B84300;        /* accent TEXT on light: 5.47:1 white, 5.02:1 grouped, 4.73:1 tint */
+  --cc-accent-tint: #FFEBDC;       /* selected chip bg, insight edge bg */
+  --cc-ember: #141210;             /* signature dark hero card (both modes) */
+  --cc-ember-track: #3A342F;
+  --cc-ember-text: #F7F5F2;        /* 17.17:1 on ember */
+  --cc-ember-text-2: #ABA6A0;      /* 7.74:1 on ember */
+  --cc-ember-accent: #FF7A1F;      /* accent text on ember: 7.17:1 */
+
+  /* Neutrals (warm) */
+  --cc-bg: #FFFFFF;
+  --cc-grouped: #F6F5F3;
+  --cc-card: #FFFFFF;
+  --cc-elevated: #FFFFFF;
+  --cc-fill: #EFEDEA;              /* control fills, tracks */
+  --cc-border: rgba(20,18,16,.08);
+  --cc-separator: rgba(20,18,16,.12);
+  --cc-text: #141210;              /* 18.69:1 */
+  --cc-text-2: #5F5B57;            /* 6.73:1 white, 6.18:1 grouped */
+  --cc-text-3: #6F6A65;            /* 5.35:1 white, 4.91:1 grouped — was #AEAEB2 (2.21:1) */
+  --cc-grabber: rgba(20,18,16,.22);
+
+  /* Semantic — caution moved OFF orange to yellow so it never reads as brand */
+  --cc-success: #22A653;  --cc-success-ink: #146C34; --cc-success-tint: #E6F6EB;
+  --cc-caution: #E0A800;  --cc-caution-ink: #6E5300; --cc-caution-tint: #FFF6D6;
+  --cc-error:   #E5243B;  --cc-error-ink:   #B3122E; --cc-error-tint:   #FDE8EC;
+  --cc-info:    #2563EB;  --cc-info-ink:    #1D4ED8; --cc-info-tint:    #E8EFFE;
+
+  /* Macros — carbs moved off orange to teal; all ≥3:1 as graphics */
+  --cc-protein: #2563EB;   /* 5.17:1 */
+  --cc-carbs:   #0E8A7E;   /* 4.24:1 */
+  --cc-fat:     #7C4DDB;   /* 5.33:1 */
+  --cc-fiber:   #2E8B47;   /* 4.29:1 */
+
+  /* Type — SF Pro text styles (Dynamic Type). px = default size */
+  --cc-font: -apple-system, "SF Pro Text", "SF Pro Display", system-ui, "Inter", "Segoe UI", sans-serif;
+  --cc-font-round: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
+
+  /* Spacing 4-pt grid */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px; --s10: 40px; --s12: 48px;
+  /* Radii — concentric with iOS 26 controls */
+  --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-xl: 28px; --r-pill: 999px;
+  /* Sizes */
+  --tap: 44px; --btn: 56px; --shutter: 76px; --ring: 184px; --ring-stroke: 16px;
+}
+
+.dark {
+  --cc-accent: #FF6A00;
+  --cc-accent-pressed: #E35A00;
+  --cc-on-accent: #0B0A09;
+  --cc-accent-strong: #FF6A00;     /* 6.04:1 on card */
+  --cc-accent-ink: #FF7A1F;        /* 8.06:1 black, 6.66:1 card, 5.70:1 elevated */
+  --cc-accent-tint: #3A2312;       /* ink on tint 5.64:1 */
+  --cc-ember: #1C1A18;
+  --cc-ember-track: #3A342F;
+
+  --cc-bg: #000000;
+  --cc-grouped: #000000;
+  --cc-card: #1C1A18;
+  --cc-elevated: #2A2724;
+  --cc-fill: #2A2724;
+  --cc-border: rgba(255,255,255,.08);
+  --cc-separator: rgba(255,255,255,.12);
+  --cc-text: #F7F5F2;              /* 15.94:1 card */
+  --cc-text-2: #ABA6A0;            /* 7.18:1 card */
+  --cc-text-3: #9A958F;            /* 5.00:1 elevated — was #636366 (2.84:1) */
+  --cc-grabber: rgba(255,255,255,.3);
+
+  --cc-success: #4ADE80;  --cc-success-ink: #4ADE80; --cc-success-tint: #12301E;
+  --cc-caution: #FFD43B;  --cc-caution-ink: #FFD43B; --cc-caution-tint: #3A3214;
+  --cc-error:   #FF7088;  --cc-error-ink:   #FF7088; --cc-error-tint:   #3A1219;
+  --cc-info:    #6EA8FF;  --cc-info-ink:    #6EA8FF; --cc-info-tint:    #14223D;
+
+  --cc-protein: #6EA8FF;
+  --cc-carbs:   #3CCFBE;
+  --cc-fat:     #B794FF;
+  --cc-fiber:   #5AD27A;
+}

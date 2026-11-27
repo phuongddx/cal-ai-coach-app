@@ -85,6 +85,10 @@ that has to be repeated in briefs belongs here.
     the code on `main` requires (look into `Frameworks/` of the built app; `uuid.ts` needs
     `ExpoCrypto`). If one is missing, stop and ask the owner for the native slot. Do not weaken the
     code to fit an old build.
+22. The token source is `docs/design/ember/tokens.css` (light in `:root`, dark in `.dark`), not the
+    Swift `Tokens.swift`. Feature code uses tokens and design components only, never a literal
+    color. A unit that restyles a screen does not change its behavior, its tests' sentences or its
+    identifiers: a test may change only where it asserts a visual value.
 
 ## Report format
 

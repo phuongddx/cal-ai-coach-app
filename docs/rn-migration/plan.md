@@ -19,6 +19,10 @@ Checked at the end, box by box, with evidence.
 - [ ] The four spike issues are fixed and tested: the Scan button no longer covers a meal's kcal
       (TD-01), HealthKit delete removes each child sample (PL-13), ids are UUID v4 on Hermes (I11),
       Drizzle migrations are bundled for Metro by a script (PL-03).
+- [ ] `apps/mobile/src/design/tokens.ts` holds every token of `docs/design/ember/tokens.css` for
+      light and dark, and its test compares the two files.
+- [ ] Every screen has a Simulator screenshot next to its Ember frame, and the report lists each
+      deviation from the design with its reason and the backend follow-ups.
 - [ ] `docs/rn-migration/report.md` exists in Vietnamese with the six sections Zed asked for.
 - [ ] Worker threads are closed, worktrees and DerivedData are removed.
 
@@ -431,6 +435,46 @@ Topology of wave 4 (one writer per file):
 | `apps/mobile/src/features/ember/**` | nobody: deleted after wave 4 |
 | `src/__tests__/routes.test.tsx` | nobody: no unit adds or removes a route file in wave 4 |
 | `scripts/rn/evidence/**` | U-33 |
+
+## Phase 4: the Ember design (decided 2026-11-27)
+
+Phương asked, through Zed, that the RN app follow the Ember design of Designer instead of copying
+the SwiftUI app. Spec decisions D12 to D14, `docs/design/ember/README.md` and the `ember` column of
+`parity.tsv` hold the rule. What stays: behavior, test sentences, accessibility identifiers, the
+kcal parity test of the review (464 becomes 508 after three taps on `+`), invariant I7.
+
+New behavior the design adds, and where each one goes:
+
+| Behavior | Decision |
+|---|---|
+| Describe mode of the scan | exists (SC-05); restyled in U-72 |
+| Review that blocks Save while an item needs review | exists (the unresolved item gates the save); restyled in U-72 |
+| Onboarding in nine steps | exists; restyled in U-73 |
+| Analyzing with the real progress of the server | the scan API answers in one request, so it reports no stages; until the backend does, the screen shows only what the client observes and runs no timer (U-72). Server stages are a backend follow-up |
+| Action buttons in Coach | built in U-75 when they need no new endpoint; anything that needs one goes to the backend follow-up list |
+| Billing: Quota sheet, Plans, Cancel | the quota sheet reads the limit and the reset day from the server (U-77). No product and no StoreKit configuration exists, so the paywall reads the store at run time and shows no sample price; products, the purchase SDK (a native dependency) and a StoreKit configuration are follow-ups |
+| Haptics (save, meal segment, minus and plus) | needs `expo-haptics`, a native dependency: follow-up with the next native unit |
+| ED-Safe leaks the design closes (food search rows, manual log, exercise and custom food kcal fields, widgets, Live Activity) | U-74 and U-78 |
+
+Units, in order; U-71 first because every other unit reads its tokens:
+
+| Unit | Rows | Goal | Needs |
+|---|---|---|---|
+| U-71 Ember design system (Worker-S1) | PL-06, PL-07 | `apps/mobile/src/design/tokens.ts` holds every token of `tokens.css` for light and dark, one to one, under names that keep today's keys working; the design components follow the component mapping and the color rules of `design-system.md`; the token test compares with `tokens.css`; a `SideBySide` evidence helper renders an RN frame and its Ember frame | nothing |
+| U-72 Scan on Ember | SC-01 to SC-07 | the six frames of the scan loop and Describe mode | U-71 |
+| U-73 Onboarding on Ember | OB-01 to OB-10 | the nine steps | U-71 |
+| U-74 Diary sheets on Ember | DY-01 to DY-07 | Diary day, add food, food search, manual log, exercise, custom food, water; the ED-Safe leak fixes | U-71 |
+| U-75 Progress and Coach on Ember | PG-01 to PG-04, CH-01 | both tabs, the chart tokens, the Coach actions | U-71 |
+| U-76 Today on Ember | TD-01 | the three Today frames, the tab bar icons of the design (Coach `sparkles`, Profile `person.crop.circle`) | U-33 merged, U-71 |
+| U-77 Profile, Settings and Billing on Ember | PR-01 to PR-03 | Profile, Settings, the quota sheet, the paywall, the cancel flow | U-71 |
+| U-78 Widgets and Live Activity on Ember (native slot) | PL-11, PL-12 | small, medium and Lock Screen widgets, the ED-Safe variants, the Live Activity in both places; the launch-argument reader | U-71, the native slot |
+
+Topology of phase 4: U-71 owns `apps/mobile/src/design/**`. After it merges, each restyle unit owns
+its feature tree and its route files, and may change a design component only through a finding to
+the owner. `apps/mobile/src/app/(tabs)/_layout.tsx` belongs to U-76.
+
+Evidence of phase 4: for every frame, a Simulator screenshot of the RN screen next to the Ember
+frame (light, dark and ED-Safe where the design has them), and a list of deviations with reasons.
 
 ## Waves 5 to 7 (outline; scoped at the drain before each)
 
