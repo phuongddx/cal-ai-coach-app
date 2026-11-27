@@ -81,7 +81,7 @@ Screen: `features/auth/SignInScreen.tsx`; route: `app/sign-in.tsx` (`router.repl
 
 | Behaviour | Swift source | Proving Jest case |
 |---|---|---|
-| Entry points reachable: title, `auth.signInApple`, `auth.signInGoogle` "Continue with Google", `auth.emailField` "Email", `auth.sendCode` "Send code" | `SignInView.swift`, `SignInFlowTests.testSignInEntryPointsAreReachable` | `sign in screen > the sign in entry points are reachable` |
+| Entry points reachable: title "Sign in to keep your diary safe", `auth.signInApple`, `auth.signInGoogle` "Continue with Google", `auth.signInEmail` "Continue with email"; one tap later `auth.emailField` "Email" and `auth.sendCode` "Send code" | `SignInView.swift`, `SignInFlowTests.testSignInEntryPointsAreReachable` | `sign in screen > the sign in entry points are reachable` |
 | Tapping Apple starts the Apple flow and hands the session on | `SignInFlowTests.testTappingAppleStartsTheAppleFlow` | `sign in screen > tapping Apple starts the Apple sign in and hands the session on` |
 | Apple button only when Apple sign in is available (and the nonce can be hashed) | `SignInView.swift` | `sign in screen > the Apple button is not shown when Apple sign in is not available` |
 | Google sign-in | `SignInView.swift` | `sign in screen > Continue with Google signs in` |
@@ -92,7 +92,21 @@ Screen: `features/auth/SignInScreen.tsx`; route: `app/sign-in.tsx` (`router.repl
 | Busy state disables the form and ignores a second tap | `SignInView.swift` (`.disabled(isBusy)`) | `sign in screen > is busy while a sign in runs: the form is disabled and a second tap does nothing` |
 | SHA-256 nonce before the token reaches Apple | `AppleNonceProvider.swift` | `data/auth/appleNonce.test.ts`, `data/auth/appleSignIn.test.ts > sends the hashed nonce to apple and the raw nonce to the server` |
 
+Ember look (U-77b, frames 61 to 67): two steps of one route. Entry: tile, title, subtitle, privacy line, Apple, Google,
+"or", Continue with email. E-mail step (behind `auth.signInEmail`): header with Back (`auth.emailBack`), title "Sign in with
+email", labeled fields, one sentence after the code is sent (`auth.codeSent`), docked Send code / Verify, one error line.
+
+| Identifier | Status |
+|---|---|
+| `auth.signInEmail` | added: "Continue with email" on the entry step; the e-mail flow starts with a tap on it |
+| `auth.emailBack` | added: Back on the e-mail step, keeps the typed e-mail |
+| `auth.codeSent` | added: "We sent a code to <e-mail>." |
+| `auth.tile` | added: the app tile of the entry step |
+| `auth.emailField.label`, `auth.otpField.label` | added by `FillField` |
+| `auth.form`, `auth.signInApple`, `auth.signInGoogle`, `auth.emailField`, `auth.sendCode`, `auth.otpField`, `auth.verifyCode` | kept |
+
 Differences from the SwiftUI screen: the `auth.*` identifiers sit on wrapper views for the design buttons
 (`PrimaryButton` and `SecondaryButton` take no `testID`), so the tests press the button by its label; the
 native Apple button carries `auth.signInApple` itself. The Apple cancel gives the line "Sign-in was cancelled."
-(Swift showed the system error text).
+(Swift showed the system error text). The sign-in/create-account segment, "Forgot password?" and the reset-link screen of
+the Ember frames are not built: the app signs in by code. Details: `findings/U-77b.md`.
