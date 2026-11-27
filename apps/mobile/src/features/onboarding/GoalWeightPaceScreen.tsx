@@ -1,12 +1,14 @@
 /**
  * GoalWeightPaceView.swift — goal weight hero + wheel, and the weekly pace
  * slider for lose/gain goals. The pace value always lands on the engine's
- * clamped result; a clamp shows the verbatim safety-floor banner.
+ * clamped result; a clamp shows the verbatim safety-floor banner on the
+ * Ember caution tokens (design-system rule 3: caution is yellow, not orange).
  */
 
 import { StyleSheet, Text, View } from 'react-native';
+import { SymbolView } from 'expo-symbols';
 
-import { BannerNote, ScaledNumber, WheelField, space, typography, useTokens } from '../../design';
+import { ScaledNumber, WheelField, markdownSegments, radius, space, typography, useTokens } from '../../design';
 
 import { onboardingCopy } from './onboardingCopy';
 import { PaceSlider } from './PaceSlider';
@@ -84,8 +86,21 @@ export function GoalWeightPaceScreen({ model }: { model: OnboardingModel }) {
               <Text style={[styles.paceLabel, { color: colors.textSecondary }]}>Fast</Text>
             </View>
             {model.paceClamped && (
-              <View testID="onboarding.safetyFloor">
-                <BannerNote text={onboardingCopy.safetyFloorBanner} variant="success" markdown />
+              <View
+                testID="onboarding.safetyFloor"
+                style={[
+                  styles.cautionBanner,
+                  { backgroundColor: colors.cautionTint, borderColor: colors.caution },
+                ]}
+              >
+                <SymbolView name="info.circle" size={16} tintColor={colors.cautionInk} />
+                <Text style={[styles.cautionText, { color: colors.cautionInk }]}>
+                  {markdownSegments(onboardingCopy.safetyFloorBanner).map((segment, index) => (
+                    <Text key={index} style={segment.bold ? styles.cautionBold : undefined}>
+                      {segment.text}
+                    </Text>
+                  ))}
+                </Text>
               </View>
             )}
           </View>
@@ -114,4 +129,14 @@ const styles = StyleSheet.create({
   paceValue: { ...typography.headline, fontVariant: ['tabular-nums'] },
   paceLabels: { flexDirection: 'row', justifyContent: 'space-between' },
   paceLabel: { ...typography.caption },
+  cautionBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: space.md,
+  },
+  cautionText: { ...typography.footnote, flex: 1 },
+  cautionBold: { fontWeight: '700' },
 });

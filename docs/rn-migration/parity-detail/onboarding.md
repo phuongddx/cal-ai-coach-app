@@ -21,7 +21,7 @@ in `apps/mobile`.
 | ActivityDietView.swift (73) | `features/onboarding/ActivityDietScreen.tsx` | OB-05 |
 | ProjectionView.swift (218) | `features/onboarding/ProjectionScreen.tsx` | OB-10; kg + weeks only |
 | PrivacyHealthView.swift (59) | `features/onboarding/PrivacyHealthScreen.tsx` | OB-03; the button runs the injected JIT request |
-| GeneratingPlanView.swift (136) | `features/onboarding/GeneratingPlanScreen.tsx` | OB-08; ring + 4-step checklist, 2 s minimum window, `disableAnimations` flips instantly |
+| GeneratingPlanView.swift (136) | `features/onboarding/GeneratingPlanScreen.tsx` | OB-08; U-73: indeterminate ring + the engine's formula lines — no percent readout, no window, instant reveal |
 | PlanRevealView.swift (256) | `features/onboarding/PlanRevealScreen.tsx` + `MacroRing.tsx` | OB-09; reveal edits re-clamp through the engine |
 | RootView.swift `OnboardingFlowRoute` | `app/onboarding/index.tsx` | The route builds the model's deps (owner id from the session else `DEMO_USER_ID`, clock, `disableAnimations`, HealthKit ask, `saveTarget`, `notify`); finish → `router.replace('/')` (Today tab); the root gate lands with U-51 |
 | — | `features/onboarding/healthAccess.ts` | The real `requestAuthorization` of `@kingstinct/react-native-healthkit` (read/write: active energy, dietary energy, body mass, height, step count); errors map to `'denied'` |
@@ -32,14 +32,14 @@ in `apps/mobile`.
 |---|---|---|---|---|
 | OB-01 | Flow + model: step order, locked copy, generation, persist | OnboardingModel.swift, OnboardingFlowView.swift | onboardingModel.ts, OnboardingFlowView.tsx, index.tsx | `onboardingModel.test.tsx` (twin + extras), `OnboardingFlowView.test.tsx` (UI-test walk) |
 | OB-02 | Value hero copy incl. ED-safe line, "Get started" CTA | ValueHeroView.swift | ValueHeroScreen.tsx | `ValueHeroScreen.test.tsx` (+ twin case 2) |
-| OB-03 | JIT HealthKit ask; denial shows footnote, grant silent; "Skip for now" CTA | PrivacyHealthView.swift | PrivacyHealthScreen.tsx, healthAccess.ts | `PrivacyHealthScreen.test.tsx` (granted/denied), twin cases |
+| OB-03 | JIT HealthKit ask; denial shows footnote, grant silent; "Skip for now" CTA; U-73 adds the ED-Safe switch (stored '1'/'0', applied at once) | PrivacyHealthView.swift | PrivacyHealthScreen.tsx, healthAccess.ts | `PrivacyHealthScreen.test.tsx` (granted/denied + the switch), twin cases |
 | OB-04 | Goal picker, single select, selection in the model | GoalPickerView.swift | GoalPickerScreen.tsx | `GoalPickerScreen.test.tsx` (+ twin case 1) |
 | OB-05 | Activity level cards + diet chips, copy verbatim | ActivityDietView.swift | ActivityDietScreen.tsx | `ActivityDietScreen.test.tsx` |
 | OB-06 | Body metrics: sex chips, three wheels, under-18 gate | BodyMetricsView.swift | BodyMetricsScreen.tsx | `BodyMetricsScreen.test.tsx` (+ twin cases 3–4) |
-| OB-07 | Goal weight hero + wheel; pace slider clamped by the engine; safety-floor banner | GoalWeightPaceView.swift | GoalWeightPaceScreen.tsx, PaceSlider.tsx | `GoalWeightPaceScreen.test.tsx` (+ twin cases 5–7) |
-| OB-08 | Ring + 4-step checklist; 2 s window; instant flip with the flag | GeneratingPlanView.swift | GeneratingPlanScreen.tsx | `GeneratingPlanScreen.test.tsx` |
-| OB-09 | Plan reveal: kcal hero, macro rings, weekly range, edit panel, persist; ED-safe collapse of the hero and the range | PlanRevealView.swift | PlanRevealScreen.tsx, MacroRing.tsx | `PlanRevealScreen.test.tsx` (+ twin case 8, finish cases, ED-safe case) |
-| OB-10 | Projection: kg + weeks only, no calorie strings | ProjectionView.swift | ProjectionScreen.tsx | `ProjectionScreen.test.tsx` (renders every string and keeps the unit out) |
+| OB-07 | Goal weight hero + wheel; pace slider clamped by the engine; safety-floor banner on the caution tokens (U-73) | GoalWeightPaceView.swift | GoalWeightPaceScreen.tsx, PaceSlider.tsx | `GoalWeightPaceScreen.test.tsx` (+ twin cases 5–7) |
+| OB-08 | U-73: indeterminate ring + formula lines the engine computed (no percent, no window); card collapses under ED-safe; instant reveal | GeneratingPlanView.swift | GeneratingPlanScreen.tsx | `GeneratingPlanScreen.test.tsx` |
+| OB-09 | Plan reveal: kcal hero on the ember card (U-73), macro rings, weekly range, edit panel, persist; ED-safe collapses hero card and range | PlanRevealView.swift | PlanRevealScreen.tsx, MacroRing.tsx | `PlanRevealScreen.test.tsx` (+ twin case 8, finish cases, ED-safe case) |
+| OB-10 | Projection: kg + weeks only, no calorie strings; labeled gridlines + 35% band (U-73) | ProjectionView.swift | ProjectionScreen.tsx | `ProjectionScreen.test.tsx` (renders every string and keeps the unit out) |
 
 ## Model contract (the 8 Swift twins, same behavior sentences)
 
@@ -80,7 +80,7 @@ Static identifiers:
 | `onboarding.healthConnect` | connect button (View wrapper over DS SecondaryButton) | privacy & health |
 | `onboarding.healthConnectNote` | denial footnote Text | privacy & health |
 | `onboarding.generating` | generating screen root | generating |
-| `onboarding.generatingPercent` | ring center Text ("…", "25%" … "100%") | generating |
+| `onboarding.edSafeToggle` | the step-7 ED-Safe switch (U-73; the route owns the stored key and the flag setter) | privacy & health |
 | `onboarding.projectionStart` / `onboarding.projectionGoal` | start / goal kg Texts | projection |
 | `onboarding.projectionChart` | SVG chart container | projection |
 | `onboarding.projectionKg` / `onboarding.projectionWeeks` | stat cards (a11y labels "N kg to lose/gain", "N weeks") | projection |
@@ -105,12 +105,16 @@ Templated identifiers (same strings as Swift):
 | `onboarding.goalCard.<goal>` | lose, maintain, gain, habit | goal picker |
 | `onboarding.activityCard.<level>` | sedentary, light, moderate, active, athlete | activity & diet |
 | `onboarding.dietChip.<lowercased style without spaces>` | standard, highprotein, vegetarian, vegan, keto | activity & diet |
-| `onboarding.genStep.<index>` | 0–3 (Calculating TDEE / Setting macro ratios / Applying safety floor / Generating weekly plan) | generating |
+| `onboarding.genStep.<index>` | **removed in U-73** (the timed checklist is gone; the formula lines replaced it) | — |
 
 DS-owned identifiers riding along (not onboarding's, but on these screens):
 `option-card:<title>`, `chip-option:<title>`, `wheel-field:<label>`,
 `wheel-value:<label>`, `wheel-scroll:<label>`, `banner:<variant>`,
 `progress-rail`, `settings-row:<label>`, `ccstepper.*` (not used here).
+U-73 note: step 4's floor banner is no longer a `BannerNote`, so `banner:success`
+no longer renders there — the banner is the feature's caution surface under the
+unchanged `onboarding.safetyFloor`; `banner:*` still rides the privacy promise,
+the projection disclaimer and the reveal banners.
 
 ## Gaps (recorded, none silently dropped)
 
@@ -128,6 +132,11 @@ DS-owned identifiers riding along (not onboarding's, but on these screens):
 3. **Projection chart axis labels**: the Swift automatic axis value labels
    are not drawn; the same numbers appear in the start/goal header and the
    "Today / 12 weeks" caption. Band, line, endpoints and gridlines port.
+   CLOSED in U-73 for the value labels: three gridlines now stand at real
+   kilogram values with right-side labels (0.5 kg steps), the band is the
+   frame's 35% opacity and the goal endpoint is hollow. The in-card x labels
+   ("Today" / "Late Mar") stay un-drawn — the caption row carries them (see
+   findings/U-73.md §3.19).
 4. **Flow handoff**: `OnboardingFlowTests` ends on the MainShell ring
    (`today.ring`); the RN twin ends on the flow's `onFinished` (Today tab
    navigation) because the shell gate is U-51's.

@@ -45,7 +45,9 @@ function makeModel(overrides: Partial<OnboardingModelDeps> = {}): OnboardingMode
   return createOnboardingModel({
     ownerId: '11111111-2222-4333-8444-555555555555',
     now: () => FIXED_NOW,
-    disableAnimations: true,
+    policyStorageKey: 'onboarding.policy.key',
+    applyPolicyFlag: jest.fn(),
+    writeSetting: jest.fn(async () => undefined),
     saveTarget: jest.fn(async () => undefined),
     notify: jest.fn(),
     requestHealthAccess: jest.fn(async () => 'denied'),
@@ -274,6 +276,42 @@ describe('onboarding model (brief additions)', () => {
     expect(model.finished).toBe(false);
     expect(model.persistError).toBe(onboardingCopy.persistError);
     expect(notify).not.toHaveBeenCalled();
+  });
+});
+
+// U-73: the step-7 ED-Safe switch. The stored key and the design flag setter
+// are injected; the toggle's contract is the Settings wellness toggle's order —
+// persist '1'/'0' first, then apply the mode, and a failed write never applies.
+describe('the step-7 ED-safe policy switch', () => {
+  it('persists the stored value first and then applies the mode', async () => {
+    const writeSetting = jest.fn(async () => undefined);
+    const applyPolicyFlag = jest.fn();
+    const model = makeModel({ policyStorageKey: 'onboarding.policy.key', writeSetting, applyPolicyFlag });
+
+    await model.setSafeModePolicy(true);
+    expect(writeSetting).toHaveBeenCalledWith('onboarding.policy.key', '1');
+    // The design flag applies only after the stored write resolves.
+    expect(applyPolicyFlag.mock.invocationCallOrder[0] ?? 0).toBeGreaterThan(
+      writeSetting.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(applyPolicyFlag).toHaveBeenCalledWith(true);
+    expect(model.safePolicyWriteError).toBeNull();
+
+    await model.setSafeModePolicy(false);
+    expect(writeSetting).toHaveBeenLastCalledWith('onboarding.policy.key', '0');
+    expect(applyPolicyFlag).toHaveBeenLastCalledWith(false);
+  });
+
+  it('a failed stored write never applies the mode', async () => {
+    const writeSetting = jest.fn(async () => {
+      throw new Error('disk full');
+    });
+    const applyPolicyFlag = jest.fn();
+    const model = makeModel({ policyStorageKey: 'onboarding.policy.key', writeSetting, applyPolicyFlag });
+
+    await expect(model.setSafeModePolicy(true)).rejects.toThrow('disk full');
+    expect(applyPolicyFlag).not.toHaveBeenCalled();
+    expect(model.safePolicyWriteError).toBe('disk full');
   });
 });
 

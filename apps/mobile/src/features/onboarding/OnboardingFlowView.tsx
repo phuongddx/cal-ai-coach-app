@@ -28,10 +28,6 @@ export type OnboardingFlowViewProps = {
 export function OnboardingFlowView({ model, onFinished }: OnboardingFlowViewProps) {
   useOnboardingModel(model);
 
-  useEffect(() => {
-    return () => model.dispose();
-  }, [model]);
-
   const step = model.currentStep;
 
   useEffect(() => {

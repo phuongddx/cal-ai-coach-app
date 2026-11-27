@@ -16,20 +16,28 @@ jest.mock('react/jsx-runtime', () => {
   return jest.requireActual(`${root}/react/jsx-runtime`);
 });
 
-import { render, screen, userEvent } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, userEvent, waitFor } from '@testing-library/react-native';
+
+import { setEdSafeMode } from '../../design';
 
 import { PrivacyHealthScreen } from './PrivacyHealthScreen';
 import { onboardingCopy } from './onboardingCopy';
-import { createOnboardingModel } from './onboardingModel';
+import { createOnboardingModel, type OnboardingModelDeps } from './onboardingModel';
 
-function makeModel(requestHealthAccess: () => Promise<'granted' | 'denied'>) {
+function makeModel(
+  requestHealthAccess: () => Promise<'granted' | 'denied'>,
+  overrides: Partial<OnboardingModelDeps> = {},
+) {
   const model = createOnboardingModel({
     ownerId: '11111111-2222-4333-8444-555555555555',
     now: () => new Date('2026-09-14T00:00:00Z'),
-    disableAnimations: true,
+    policyStorageKey: 'onboarding.policy.key',
+    applyPolicyFlag: jest.fn(),
+    writeSetting: jest.fn(async () => undefined),
     saveTarget: jest.fn(async () => undefined),
     notify: jest.fn(),
     requestHealthAccess: jest.fn(requestHealthAccess),
+    ...overrides,
   });
   // Walk the quiz so this step's CTA leads to the generating step, as in the flow.
   for (let index = 0; index < 6; index += 1) model.advance();
@@ -37,6 +45,9 @@ function makeModel(requestHealthAccess: () => Promise<'granted' | 'denied'>) {
 }
 
 describe('privacy and health screen', () => {
+  beforeEach(() => setEdSafeMode(false));
+  afterEach(() => setEdSafeMode(false));
+
   it('shows the locked copy, the settings rows and the privacy promise identifier', async () => {
     await render(<PrivacyHealthScreen model={makeModel(async () => 'denied')} />);
 
@@ -82,5 +93,23 @@ describe('privacy and health screen', () => {
 
     await userEvent.press(screen.getByRole('button', { name: 'Skip for now' }));
     expect(model.path[model.path.length - 1]).toBe('generating');
+  });
+
+  it('the ED-safe switch stores the policy and applies the mode at once', async () => {
+    const writeSetting = jest.fn(async () => undefined);
+    // The real design-system setter: the Switch's value IS the design flag, so
+    // the flip proves the route-shaped wiring end to end (as in Settings).
+    const model = makeModel(async () => 'denied', { writeSetting, applyPolicyFlag: setEdSafeMode });
+    await render(<PrivacyHealthScreen model={model} />);
+
+    const edSafeSwitch = screen.getByTestId('onboarding.edSafeToggle');
+    expect(edSafeSwitch.props.value).toBe(false);
+    await act(async () => {
+      fireEvent(edSafeSwitch, 'valueChange', true);
+    });
+    // The stored write lands first, under the injected key, as '1'.
+    expect(writeSetting).toHaveBeenCalledWith('onboarding.policy.key', '1');
+    // The design flag applied at once: the switch's value follows the live flag.
+    await waitFor(() => expect(edSafeSwitch.props.value).toBe(true));
   });
 });

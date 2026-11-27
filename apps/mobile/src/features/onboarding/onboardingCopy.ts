@@ -20,11 +20,3 @@ export const onboardingCopy = {
   healthConnectNote: 'Apple Health connects in a later update.',
   persistError: "Couldn't save your plan. Try again.",
 } as const;
-
-/** The 4-step checklist of the generating screen, in order. */
-export const GENERATION_STEPS = [
-  'Calculating TDEE',
-  'Setting macro ratios',
-  'Applying safety floor',
-  'Generating weekly plan',
-] as const;
