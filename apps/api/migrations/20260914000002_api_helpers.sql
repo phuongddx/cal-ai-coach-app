@@ -51,7 +51,7 @@ end;
 $$;
 
 -- get_entitlement: the caller's current entitlement (AD-01 resolution order:
--- supabase_user_id or app_user_id equals the caller; active; unexpired; the
+-- user_id or app_user_id equals the caller; active; unexpired; the
 -- latest expiry wins, a null expiry never expires). Returns
 -- {"active": bool, "expiresAt": timestamptz|null}.
 create or replace function public.get_entitlement()
@@ -70,7 +70,7 @@ begin
   end if;
   select true, e.expires_at into v_found, v_expires
     from public.entitlements e
-   where (e.supabase_user_id = v_user or e.app_user_id = v_user::text)
+   where (e.user_id = v_user or e.app_user_id = v_user::text)
      and e.active = true
      and (e.expires_at is null or e.expires_at > now())
    order by e.expires_at desc nulls last

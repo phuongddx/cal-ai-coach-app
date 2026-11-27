@@ -17,6 +17,12 @@ import type { Hono } from 'hono';
 import postgres from 'postgres';
 
 import { createApp } from '../app';
+import type { AuthLimits } from '../auth/routes';
+import type { AppleProvider } from '../auth/providers/apple';
+import type { GoogleProvider } from '../auth/providers/google';
+import type { OtpSender } from '../auth/otpSender';
+import { SessionService } from '../auth/session';
+import { loadConfig, type Config } from '../config';
 import { createDb, type Db } from '../db';
 import type { CascadeTiers } from '../grounding/cascade';
 
@@ -52,7 +58,12 @@ export function sqlEnv(): SqlEnv | null {
  * `describe` for a SQL-backed suite. `define` receives a getter for the harness (created on the
  * first test, closed after the last). Without the database the suite is skipped, loudly.
  */
-export function describeSql(label: string, define: (harness: () => Harness) => void): void {
+export function describeSql(
+  label: string,
+  define: (harness: () => Harness) => void,
+  /** Read when the harness is first used, so a suite can build providers in `beforeAll`. */
+  options: HarnessOptions | (() => HarnessOptions) = {},
+): void {
   const env = sqlEnv();
   if (!env) {
     const message =
@@ -72,20 +83,41 @@ export function describeSql(label: string, define: (harness: () => Harness) => v
       await harness?.cleanup();
     });
     define(() => {
-      harness ??= new Harness(env);
+      harness ??= new Harness(env, typeof options === 'function' ? options() : options);
       return harness;
     });
   });
 }
 
-// The legacy user-mapping column of public.entitlements. The parity gate forbids the vendor name
-// literal in .ts files, and the column name itself is kept as the ported schema has it.
-const MAPPING_COLUMN = ['supabase', 'user', 'id'].join('_');
+/** Secrets the harness hands to the app; fixed so tests can sign webhook bodies and tokens. */
+export const TEST_WEBHOOK_SECRET = 'test-webhook-signing-secret-0123456789';
+export const TEST_JWT_SECRET = 'test-jwt-secret-0123456789-0123456789';
+export const TEST_ENCRYPTION_KEY = 'test-encryption-key-0123456789-012345';
 
-const STUB_STORE = {
-  query: () => Promise.reject(new Error('the sync store is not used by the scan suites')),
-  transaction: () => Promise.reject(new Error('the sync store is not used by the scan suites')),
-};
+/** Records the codes the app would have mailed. */
+export class CapturingOtpSender implements OtpSender {
+  readonly sent: { email: string; code: string }[] = [];
+  failWith: Error | undefined;
+
+  async send(email: string, code: string): Promise<void> {
+    if (this.failWith) throw this.failWith;
+    this.sent.push({ email, code });
+  }
+
+  lastCode(email: string): string | undefined {
+    return this.sent.filter((s) => s.email === email).at(-1)?.code;
+  }
+}
+
+export interface HarnessOptions {
+  tiers?: CascadeTiers;
+  apple?: AppleProvider;
+  google?: GoogleProvider;
+  generateCode?: () => string;
+  limits?: AuthLimits;
+  /** Environment overrides for loadConfig (for instance provider variables). */
+  env?: Record<string, string>;
+}
 
 export class Harness {
   readonly env: SqlEnv;
@@ -94,22 +126,73 @@ export class Harness {
   /** The API's own client (role coachcal_api). */
   readonly db: Db;
   readonly app: Hono<never>;
+  readonly config: Config;
+  readonly sessions: SessionService;
+  readonly otp = new CapturingOtpSender();
   readonly tokens: Record<string, string> = {};
   readonly #users = new Set<string>();
+  readonly #emails = new Set<string>();
+  readonly #eventIds = new Set<string>();
   readonly #cacheKeys = new Set<string>();
   readonly #savedDevTokens: string | undefined;
 
-  constructor(env: SqlEnv, options: { tiers?: CascadeTiers } = {}) {
+  constructor(env: SqlEnv, options: HarnessOptions = {}) {
     this.env = env;
     this.owner = postgres(env.ownerUrl, { max: 2, idle_timeout: 5, onnotice: () => undefined });
     this.db = createDb(env.apiUrl);
     this.#savedDevTokens = process.env.AUTH_DEV_TOKENS;
     process.env.AUTH_DEV_TOKENS = '1';
+    this.config = loadConfig({
+      DATABASE_URL: env.apiUrl,
+      AUTH_JWT_SECRET: TEST_JWT_SECRET,
+      AUTH_ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,
+      RC_WEBHOOK_SIGNING_SECRET: TEST_WEBHOOK_SECRET,
+      OTP_SENDER: 'log',
+      ...options.env,
+    });
+    this.sessions = new SessionService({ db: this.db, jwtSecret: this.config.jwtSecret });
     this.app = createApp({
-      store: STUB_STORE,
+      auth: {
+        db: this.db,
+        sessions: this.sessions,
+        config: this.config,
+        otpSender: this.otp,
+        apple: options.apple,
+        google: options.google,
+        generateCode: options.generateCode,
+        limits: options.limits,
+      },
+      webhookSecret: this.config.webhookSecret,
       tokens: this.tokens,
-      scan: { db: this.db, tiers: options.tiers },
+      tiers: options.tiers,
     }) as unknown as Hono<never>;
+  }
+
+  /**
+   * A user with a real row in `users` and a real session (API-signed access token); the way the
+   * app itself authenticates. `email` defaults to a unique address.
+   */
+  async sessionUser(options: { email?: string } = {}): Promise<{
+    userId: string;
+    email: string;
+    accessToken: string;
+    refreshToken: string;
+  }> {
+    const email = options.email ?? `user-${crypto.randomUUID()}@example.test`;
+    const [row] = await this.owner<{ id: string }[]>`
+      INSERT INTO public.users (email) VALUES (${email.toLowerCase()}) RETURNING id`;
+    const userId = row?.id;
+    if (!userId) throw new Error('users insert returned no id');
+    this.#users.add(userId);
+    this.#emails.add(email.toLowerCase());
+    const session = await this.sessions.issue({ id: userId, email: email.toLowerCase(), providers: [] });
+    return { userId, email, accessToken: session.tokens.accessToken, refreshToken: session.tokens.refreshToken };
+  }
+
+  /** Registers an id (for instance a user the API created) for cleanup. */
+  track(userId: string, email?: string): void {
+    this.#users.add(userId);
+    if (email) this.#emails.add(email.toLowerCase());
   }
 
   /** A fresh user with its own bearer token; `entitled` grants an active entitlement. */
@@ -126,16 +209,16 @@ export class Harness {
     this.#users.add(userId);
     const expires = expiresAt ?? new Date(Date.now() + 24 * 60 * 60 * 1000);
     await this.owner.unsafe(
-      `INSERT INTO public.entitlements (app_user_id, entitlement_id, ${MAPPING_COLUMN}, active, expires_at)
+      `INSERT INTO public.entitlements (app_user_id, entitlement_id, user_id, active, expires_at)
        VALUES ($1::text, 'coachcal_pro', $3::uuid, true, $2::timestamptz)
        ON CONFLICT (app_user_id, entitlement_id)
-       DO UPDATE SET ${MAPPING_COLUMN} = excluded.${MAPPING_COLUMN}, active = true, expires_at = excluded.expires_at`,
+       DO UPDATE SET user_id = excluded.user_id, active = true, expires_at = excluded.expires_at`,
       [userId, expires.toISOString(), userId],
     );
   }
 
   async removeEntitlement(userId: string): Promise<void> {
-    await this.owner.unsafe(`DELETE FROM public.entitlements WHERE ${MAPPING_COLUMN} = $1::uuid`, [userId]);
+    await this.owner.unsafe(`DELETE FROM public.entitlements WHERE user_id = $1::uuid`, [userId]);
   }
 
   async seedCache(
@@ -207,17 +290,33 @@ export class Harness {
   }
 
   /** POST a JSON body (or a raw string) to the app; the token defaults to none. */
-  post(path: string, body: unknown, token?: string): Promise<Response> {
+  post(path: string, body: unknown, token?: string, headers: Record<string, string> = {}): Promise<Response> {
     return Promise.resolve(
       this.app.request(path, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...headers,
         },
         body: typeof body === 'string' ? body : JSON.stringify(body),
       }),
     );
+  }
+
+  /** Any other method (GET, DELETE) without a body. */
+  call(method: string, path: string, token?: string, headers: Record<string, string> = {}): Promise<Response> {
+    return Promise.resolve(
+      this.app.request(path, {
+        method,
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers },
+      }),
+    );
+  }
+
+  /** Remembers a webhook event id so cleanup can remove its ledger row. */
+  trackEvent(eventId: string): void {
+    this.#eventIds.add(eventId);
   }
 
   /** Deletes everything this harness created (idempotent); the connections stay open. */
@@ -226,7 +325,17 @@ export class Harness {
       await this.owner`DELETE FROM public.scan_items WHERE user_id = ${userId}::uuid`;
       await this.owner`DELETE FROM public.scans WHERE user_id = ${userId}::uuid`;
       await this.owner`DELETE FROM public.scan_usage WHERE user_id = ${userId}::uuid`;
-      await this.owner.unsafe(`DELETE FROM public.entitlements WHERE ${MAPPING_COLUMN} = $1::uuid`, [userId]);
+      await this.owner.unsafe(`DELETE FROM public.entitlements WHERE user_id = $1::uuid OR app_user_id = $1::text`, [userId]);
+      await this.owner`DELETE FROM public.diary_entries WHERE user_id = ${userId}::uuid`;
+      await this.owner`DELETE FROM public.sync_operations WHERE user_id = ${userId}::uuid`;
+      await this.owner`DELETE FROM public.users WHERE id = ${userId}::uuid`;
+    }
+    for (const email of this.#emails) {
+      await this.owner`DELETE FROM public.auth_otp_codes WHERE email = ${email}`;
+      await this.owner`DELETE FROM public.users WHERE email = ${email}`;
+    }
+    for (const eventId of this.#eventIds) {
+      await this.owner`DELETE FROM public.webhook_events WHERE event_id = ${eventId}`;
     }
     for (const key of this.#cacheKeys) {
       await this.owner`DELETE FROM public.food_cache WHERE cache_key = ${key}`;
