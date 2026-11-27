@@ -14,8 +14,20 @@ Promotions.", Verify enabled at six digits, "Resend code in" after 60 seconds, "
 email"); the e-mail step on `108-auth-email-step-light.png` and `109-auth-email-step-dark.png`
 ("Continue with email", "We'll email you a 6-digit code. If you're new, the same code creates your
 account."); the errors on 110, 111, 114 and 115; `SheetHeader` for the header (`auth.emailBack`);
-`SecondaryButton leading` for the three buttons of the entry step. Stage B then waits for the
-Simulator slot.
+`SecondaryButton leading` for the three buttons of the entry step. Replace the three literal sizes and
+weights of the correction by the text styles of `useTokens().type` (`EmailStep.tsx` lines 126 and
+180, `EntryStep.tsx` line 127 at 659d4e6). Stage B then waits for the Simulator slot.
+
+## When the slot reaches U-76 (after U-72): the go for its stage B
+
+- The decisions on the three questions of Worker-S2: the sentence "N of M meals" stays out (no
+  source); the offline chip sits beside the diary button (a recorded deviation from frame 08 that
+  Phương may overrule); the meal rows take `chevron={false}` and `unitHidden` of `FoodRow` once
+  U-71g is on `main`; the photo tile of the frames is not built (a diary entry holds no photo).
+- For the worker: prove the new `TodayView` tests can fail (one run with the view mutated under
+  test, quoted in the findings).
+- For the reviewer: `CalorieRing` gained the variant `md` and its render was restructured; the
+  variants `hero`, `compact` and `goal` must draw as before.
 
 ## When a report arrives
 
