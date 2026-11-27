@@ -7,7 +7,7 @@
 
 import { StyleSheet, Text, type TextProps } from 'react-native';
 
-import { scaledNumberSize, type ScaledNumberRole } from './tokens';
+import { scaledNumberSize, type ScaledNumberRole } from '../tokens';
 
 export type ScaledNumberProps = TextProps & {
   text: string;
