@@ -1,4 +1,5 @@
 /** @type {import('jest').Config} */
+process.env.TZ = 'UTC'; // probe: pin before workers spawn
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
