@@ -198,21 +198,27 @@ function sameStrings(label: string, expected: Record<string, string>, actual: Re
   return problems;
 }
 
-/** Every `--ring*`, `--fab`, `--macro-bar`, `--tap`, `--btn` and `--shutter` of tokens.css. */
-const SIZE_VARIABLES =
-  /^(tap|btn|shutter|ring|ring-stroke|fab|ring-md|ring-md-stroke|ring-sm|ring-sm-stroke|macro-bar)$/;
+/**
+ * The size group is derived, not listed: every variable of tokens.css whose value is a px length and that no
+ * other group claims (space `--s<n>`, radius `--r-*`; text styles `--t-*` are not a bare length). A new
+ * `--ring-xs: 30px` is therefore a size, and the first and the third link of the chain fail until
+ * tokens.json and tokens.ts have it.
+ */
+const PX_LENGTH = /^-?\d+(?:\.\d+)?px$/;
+const isSizeVariable = (name: string, value: string) =>
+  PX_LENGTH.test(value) && !/^s\d+$/.test(name) && !name.startsWith('r-') && !name.startsWith('t-');
 
 function cssNumbers(root: Declarations) {
-  const pick = (test: (name: string) => boolean, rename: (name: string) => string) =>
+  const pick = (test: (name: string, value: string) => boolean, rename: (name: string) => string) =>
     Object.fromEntries(
       Object.entries(root)
-        .filter(([name]) => test(name))
+        .filter(([name, value]) => test(name, value))
         .map(([name, value]) => [rename(name), px(value)]),
     );
   return {
     space: pick((n) => /^s\d+$/.test(n), (n) => n),
     radius: pick((n) => n.startsWith('r-'), (n) => n.slice(2)),
-    size: pick((n) => SIZE_VARIABLES.test(n), camel),
+    size: pick(isSizeVariable, camel),
   };
 }
 
@@ -557,6 +563,25 @@ describe('one changed value fails at each link', () => {
     expect(changed).not.toBe(css);
     expect(compareCssWithJson(changed, json).join('\n')).toContain('newThing: missing');
     expect(compareTokensWithChain(changed, real).join('\n')).toContain('colors.newThing: missing');
+  });
+
+  it('derives the size group from tokens.css: the eleven known variables, and nothing else', () => {
+    const root = cascadeCss(css).light;
+    const sizes = Object.keys(root).filter((name) => isSizeVariable(name, root[name]));
+    expect(sizes.sort()).toEqual(
+      ['btn', 'fab', 'macro-bar', 'ring', 'ring-md', 'ring-md-stroke', 'ring-sm', 'ring-sm-stroke', 'ring-stroke', 'shutter', 'tap'].sort(),
+    );
+    expect(Object.keys(cssNumbers(root).size).sort()).toEqual(Object.keys(json.size).sort());
+  });
+
+  it('fails the chain when tokens.css gains a px variable that tokens.json and tokens.ts do not have', () => {
+    const changed = css.replace('--macro-bar: 8px;', '--macro-bar: 8px; --ring-xs: 30px;');
+    expect(changed).not.toBe(css);
+    expect(compareCssWithJson(changed, json).join('\n')).toContain('json size ringXs');
+    expect(compareTokensWithChain(changed, real).join('\n')).toContain('tokens size.ringXs differs');
+    // The unchanged file still passes, so the failure comes from the new variable alone.
+    expect(compareCssWithJson(css, json)).toEqual([]);
+    expect(compareTokensWithChain(css, real)).toEqual([]);
   });
 
   it('fails when a color changes in tokens.json', () => {

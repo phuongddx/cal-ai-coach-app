@@ -1,7 +1,7 @@
 /**
  * CCToast (Components/Content.swift). Saved-entry toast with undo; auto-dismiss
  * after 4 s. ED-safe drops the kcal line. An optional `message` is a second line shown in every mode
- * (the name and grams of an edited entry) unless it carries a calorie figure, which ED-safe still hides.
+ * (the name and grams of an edited entry) unless it carries a calorie word or figure, which ED-safe still hides.
  */
 
 import { useEffect, useRef } from 'react';
@@ -10,12 +10,16 @@ import { SymbolView } from 'expo-symbols';
 
 import { radius, space, typography, useTokens } from '../tokens';
 
+import { carriesCalorieFigure } from '../calorieFigure';
 import { useEdSafeMode } from '../edSafe';
+
+// The rule lives in ../calorieFigure (U-71f); re-exported so the barrel and every caller keep the same name.
+export { carriesCalorieFigure };
 
 export type ToastProps = {
   title: string;
   kcalText?: string;
-  /** Second line under the title, shown in every mode unless it holds a calorie figure (then ED-safe hides it). */
+  /** Second line under the title, shown in every mode unless it holds a calorie word or figure (then ED-safe hides it). */
   message?: string;
   undoTitle?: string;
   onUndo?: () => void;
@@ -27,12 +31,7 @@ export function toastVisibleKcalText(kcalText: string | undefined, edSafeMode: b
   return edSafeMode ? undefined : kcalText;
 }
 
-/** True when the text states a calorie figure: "kcal" anywhere, or a number followed by cal / kcal / calories / kJ. */
-export function carriesCalorieFigure(text: string): boolean {
-  return /\bkcal\b/i.test(text) || /\d\s*(?:k?cal(?:ories)?|kj)\b/i.test(text);
-}
-
-/** The pure ED-safe rule for the message line: kept in every mode, hidden under ED-safe only if it holds kcal. */
+/** The pure ED-safe rule for the message line: kept in every mode, hidden under ED-safe only if it holds a calorie word or figure. */
 export function toastVisibleMessage(message: string | undefined, edSafeMode: boolean): string | undefined {
   if (message == null || message.length === 0) return undefined;
   return edSafeMode && carriesCalorieFigure(message) ? undefined : message;

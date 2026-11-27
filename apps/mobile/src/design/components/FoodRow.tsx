@@ -10,6 +10,7 @@ import { SymbolView } from 'expo-symbols';
 
 import { radius, space, typography, useTokens } from '../tokens';
 
+import { carriesCalorieFigure } from '../calorieFigure';
 import { useEdSafeMode } from '../edSafe';
 
 export type FoodRowProps = {
@@ -18,11 +19,17 @@ export type FoodRowProps = {
   kcal?: number;
   compactBadge?: ReactNode;
   syncPending?: boolean;
-  /** Short label drawn on the row under the meta, such as "Edited". */
+  /** Short label drawn on the row under the meta, such as "Edited". Hidden under ED-safe when it holds a calorie word or figure. */
   chip?: string;
   /** Identifier of the chip when the caller must keep its own (`diary.editedChip.<id>`). Default `food-row-chip:<title>`. */
   chipTestID?: string;
 };
+
+/** The pure ED-safe rule for the chip: kept in every mode, hidden under ED-safe only if it holds a calorie word or figure. */
+export function foodRowVisibleChip(chip: string | undefined, edSafeMode: boolean): string | undefined {
+  if (chip == null || chip.length === 0) return undefined;
+  return edSafeMode && carriesCalorieFigure(chip) ? undefined : chip;
+}
 
 export function FoodRow({
   title,
@@ -35,6 +42,7 @@ export function FoodRow({
 }: FoodRowProps) {
   const { colors } = useTokens();
   const edSafeMode = useEdSafeMode();
+  const visibleChip = foodRowVisibleChip(chip, edSafeMode);
   return (
     <View
       testID={`food-row:${title}`}
@@ -53,12 +61,12 @@ export function FoodRow({
           </Text>
         )}
         {compactBadge}
-        {chip != null && chip.length > 0 && (
+        {visibleChip != null && (
           <View
             testID={chipTestID ?? `food-row-chip:${title}`}
             style={[styles.chip, { backgroundColor: colors.fill }]}
           >
-            <Text style={[styles.chipText, { color: colors.text2 }]}>{chip}</Text>
+            <Text style={[styles.chipText, { color: colors.text2 }]}>{visibleChip}</Text>
           </View>
         )}
       </View>
