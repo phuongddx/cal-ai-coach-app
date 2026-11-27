@@ -5,8 +5,7 @@
  *    `emberText`: dark glass over the camera in both schemes (36 pt chips inside 44 pt targets).
  *  - `text`: the canvas `.seg` (meal segment of Review, Search / Saved / Recent, Week / Month / 3M /
  *    Year, kg / lb): a `fill` track with a raised pill under the selected option, whose label is in
- *    `accentInk`. The pill is `card` in light; in dark it is `text` at 12%, which approximates the canvas dark
- *    pill (a warm grey with no token of its own) without a literal.
+ *    `accentInk`. The pill is `segmentSelected` (its own token of round 3, lighter than the track in dark).
  *
  * Every option is a radio button (role `radio`, `selected` and `checked` state, so VoiceOver says
  * "selected") with a target of 44 pt and the testID `<testID>.<value>`. The row is a radio group.
@@ -53,7 +52,6 @@ export function Segment<T extends string = string>({
     >
       {options.map((option) => {
         const selected = option.value === value;
-        const pillColor = isDark ? withAlpha(colors.text, 0.12) : colors.card;
         return (
           <Pressable
             key={option.value}
@@ -87,7 +85,7 @@ export function Segment<T extends string = string>({
                 style={[
                   styles.pill,
                   selected && {
-                    backgroundColor: pillColor,
+                    backgroundColor: colors.segmentSelected,
                     shadowColor: colors.ember,
                     shadowOpacity: isDark ? 0 : 0.12,
                     shadowRadius: 3,

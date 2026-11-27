@@ -63,14 +63,22 @@ export function SettingsDetailView({ model, planName }: SettingsDetailViewProps)
             {`${planName} plan`}
           </Text>
           <View style={styles.subscriptionButtons}>
-            {/* Display-only (no store in this build): the buttons stay visibly
-                disabled — no action, dimmed — and the note says why. */}
-            <View style={styles.inertButton} pointerEvents="none">
-              <SecondaryButton title="Change plan" testID="settings.changePlan" />
-            </View>
-            <View style={styles.inertButton} pointerEvents="none">
-              <SecondaryButton title="Cancel subscription" bordered testID="settings.cancelSubscription" />
-            </View>
+            {/* Display-only (no store in this build): the buttons are disabled
+                — dimmed by the design component, presses ignored — and the
+                note says why. The required action opens nothing. */}
+            <SecondaryButton
+              title="Change plan"
+              testID="settings.changePlan"
+              disabled
+              action={() => undefined}
+            />
+            <SecondaryButton
+              title="Cancel subscription"
+              bordered
+              testID="settings.cancelSubscription"
+              disabled
+              action={() => undefined}
+            />
           </View>
           <View testID="settings.billingNote">
             <BannerNote text={settingsCopy.billingNote} />
@@ -324,8 +332,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: space.sm,
   },
-  /** The inert plan buttons read visibly disabled: dimmed and untouchable. */
-  inertButton: { flex: 1, opacity: 0.5 },
   exportRow: { gap: space.sm, paddingHorizontal: space.lg, paddingVertical: space.sm },
   exportButtons: {
     flexDirection: 'row',

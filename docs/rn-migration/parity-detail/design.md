@@ -18,18 +18,21 @@ Live Activity. The PNG frames are in `docs/design/ember/frames/` (merged from ma
 
 | Item | Swift source | RN file | Notes |
 |---|---|---|---|
-| CCSpace | Tokens.swift | `tokens.ts` `space` | `--s1`..`--s12` as `space[1]`..`space[12]` (4-pt grid); earlier `xs`..`xl5` kept |
-| CCRadius | Tokens.swift | `tokens.ts` `radius` | Ember `--r-*`: sm 10 / md 14 / lg 20 / xl 28 / pill 999 (+ `full` 999, `button` 18) |
-| CCSize | Tokens.swift | `tokens.ts` `size` | `--tap` 44, `--btn` 56, `--shutter` 76, `--ring` 184, `--ring-stroke` 16; earlier keys kept (findings section 2); macroBarHeight 8 |
-| CCTypography | Tokens.swift | `tokens.ts` `typography` | roles → system text style points/weights (title 34/600 … tabLabel 11/500) |
-| 38 Ember colors | `docs/design/ember/tokens.css` (`:root` / `.dark`) | `tokens.ts` `lightColors`/`darkColors` | every variable, light and dark; earlier keys are aliases (`legacyColorAliases`); high-contrast not ported (findings) |
+| CCSpace | Tokens.swift | `tokens.ts` `space` | read from `emberTokens.space` (`--s1`..`--s12`) as `space[1]`..`space[12]`; earlier `xs`..`xl5` kept as aliases |
+| CCRadius | Tokens.swift | `tokens.ts` `radius` | read from `emberTokens.radius` (`--r-*`: sm 10 / md 14 / lg 20 / xl 28 / pill 999) + `full`; `button` 18 has no source (`tokensWithoutSource.ts`) |
+| CCSize | Tokens.swift | `tokens.ts` `size` | read from `emberTokens.size` (`--tap`, `--btn`, `--shutter`, `--ring`, `--ring-stroke`); earlier keys: aliases of those, or `tokensWithoutSource.ts` (fab, ringCompact, ringGoal, strokes, macroBarHeight) |
+| CCTypography | Tokens.swift | `tokensWithoutSource.ts` `typography` | roles → system text style points/weights (title 34/600 … tabLabel 11/500); tokens.css has no type scale |
+| Ember colors, four modes | `docs/design/ember/tokens.css` → `tokens.json` → `emberTokens.generated.ts` (`node scripts/rn/gen-tokens.mjs`) | `tokens.ts` `lightColors` / `darkColors` / `highContrastLightColors` / `highContrastDarkColors`, `colorsByMode` | no hand-written color in `tokens.ts`; 42 `--cc-*` keys per mode (round 3 adds `fillElevated`, `segmentSelected`, `onMedia`, `mediaScrim`); earlier keys are aliases (`legacyColorAliases`); `appleHealth` has no source (`tokensWithoutSource.ts`) |
+| High Contrast | design-system.md / tokens.css `.hc`, `.dark.hc` | `highContrast.ts` `useHighContrast()`, `useTokens().highContrast` | iOS Increase Contrast: `AccessibilityInfo.isDarkerSystemColorsEnabled()` + event `darkerSystemColorsChanged` (RN 0.88 names; iOS only); one shared native listener |
 | CCScaledNumber | Tokens.swift | `components/ScaledNumber.tsx` | hero 56 / plan 64 bold, tabular-nums, allowFontScaling |
 | EdSafe.swift | EdSafe.swift | `edSafe.ts` | `edSafeMode()`, `edSafeHidden()`, `setEdSafeMode()`, `useEdSafeMode()`, `useEdSafeHidden()`; the only file exporting ED-safe functions (I7) |
 
-Token parity evidence: `src/design/__tests__/tokens.test.ts` (reads `docs/design/ember/tokens.css`,
-compares every variable with `tokens.ts` light and dark; mutation-proven in both directions, findings
-section 7) and `src/design/__tests__/useTokens.test.tsx`
-(hook follows the scheme: light default, dark, null→light).
+Token parity evidence: `src/design/__tests__/tokens.test.ts` compares the whole chain, link by link
+(tokens.css → tokens.json → `emberTokens.generated.ts` → the keys `tokens.ts` returns, in four modes) and runs
+`node scripts/rn/gen-tokens.mjs --check`; mutation-proven at every link (findings/U-71c.md section 5).
+`src/design/__tests__/useTokens.test.tsx` (scheme light default / dark / null→light; Increase Contrast on and
+off, light and dark, the change event, listener shared and removed, an unanswered query = normal contrast, with a
+double of `AccessibilityInfo`).
 ED-safe evidence: `src/design/__tests__/edSafe.test.ts` (off by default; flip → `edSafeHidden()`
 true; rendered component re-renders through `act`; no re-render on same-value set).
 
@@ -38,7 +41,7 @@ true; rendered component re-renders through `act`; no re-render on same-value se
 | Component (RN) | Swift type | Variants | ED-safe behavior | accessibility identifiers / labels | Test file | Ember section |
 |---|---|---|---|---|---|---|
 | PrimaryButton | CCPrimaryButton + CCPrimaryButtonStyle | — (one style) | none | a11y role button, state disabled | `components/PrimaryButton.test.tsx` | #system (`.btn.primary`, 56 pt, radius 18); used in #scan Review/Saved, #onboarding, #billing Plans |
-| SecondaryButton | CCSecondaryButton + CCSecondaryButtonStyle | bordered | none | a11y role button | `components/SecondaryButton.test.tsx` | #system (`.btn` secondary / bordered); #profile Settings detail |
+| SecondaryButton | CCSecondaryButton + CCSecondaryButtonStyle | bordered; U-71c: required `action`, `disabled` (40% opacity, no press) | none | a11y role button, state disabled | `components/SecondaryButton.test.tsx` | #system (`.btn` secondary / bordered); #profile Settings detail |
 | DashedAddButton | CCDashedAddButton | — | none | default title "Add food" | `components/DashedAddButton.test.tsx` | #core Diary day (add food row) |
 | Card | CCCard | — | none | — | `components/Card.test.tsx` | #system (card, radius `--r-lg`); #core Today / Progress cards |
 | MacroBar | CCMacroBar | protein/carbs/fat/fiber | none (a11y-hidden, as in Swift) | hidden | `components/MacroBar.test.tsx` | #system (`.bar`, 8 pt); #core Today macros, #scan Review |

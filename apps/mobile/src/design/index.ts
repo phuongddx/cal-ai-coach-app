@@ -9,6 +9,8 @@ export {
   darkColors,
   fontFamily,
   getTokens,
+  highContrastDarkColors,
+  highContrastLightColors,
   legacyColorAliases,
   lightColors,
   radius,
@@ -16,17 +18,22 @@ export {
   size,
   space,
   typography,
+  colorsByMode,
   useTokens,
   withAlpha,
+  type ColorMode,
   type Colors,
   type EmberColors,
   type LegacyColorKey,
   type Scheme,
+  type TokenOptions,
   type ScaledNumberRole,
   type Tokens,
   type TypographyRole,
   type TypographyStyle,
 } from './tokens';
+
+export { useHighContrast } from './highContrast';
 
 export {
   edSafeHidden,

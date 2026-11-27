@@ -98,10 +98,12 @@
     const field = (label, value, unit) => `<div><div style="font:500 13px var(--cc-font);color:var(--cc-text-2);margin-bottom:6px">${label}</div><div style="height:56px;border-radius:14px;background:var(--cc-fill);display:flex;align-items:center;padding:0 16px;gap:6px"><b class="num" style="font:700 22px var(--cc-font-round)">${value}</b><span style="color:var(--cc-text-2);font:500 15px var(--cc-font)">${unit}</span></div></div>`;
     const title = (t, s) => `<div style="font:700 28px/1.15 var(--cc-font);margin-top:22px">${t}</div>${s ? `<div style="font:400 17px/1.4 var(--cc-font);color:var(--cc-text-2);margin-top:8px">${s}</div>` : ""}`;
     const dock = (label, extra = "") => `<div class="dock"><a class="btn primary">${label}</a>${extra}</div>`;
-    const frame = (n, name, body, cap, fixes = [], cls = "plain", dockHtml = dock("Continue")) =>
-      `<figure class="frame"><div class="phone ${cls}" data-sb2><div class="scroll" style="padding-bottom:150px">${n ? nav(n) : ""}${body}</div>${dockHtml}</div><figcaption>${n ? n + " · " : ""}${name}<span>${cap}</span>${fixes.map(f => `<i class="fix">${f}</i>`).join("")}</figcaption></figure>`;
+    /* 27/11: DARK switches the same builder to the dark token set (light output unchanged). */
+    let DARK = false;
+    const frame = (n, name, body, cap, fixes = [], cls = DARK ? "plain dark" : "plain", dockHtml = dock("Continue")) =>
+      `<figure class="frame"${DARK ? ` id="onb-dark-${n}" data-frame="onb-dark-${n}"` : ""}><div class="phone ${cls}" data-sb2><div class="scroll" style="padding-bottom:150px">${n ? nav(n) : ""}${body}</div>${dockHtml}</div><figcaption>${n ? n + " · " : ""}${name}${DARK ? " (dark)" : ""}<span>${cap}</span>${fixes.map(f => `<i class="fix">${f}</i>`).join("")}</figcaption></figure>`;
 
-    const steps = [
+    const buildSteps = () => [
       `<figure class="frame"><div class="phone dark on-dark" style="background:#000" data-sb2>
         <div class="ph-bowl" style="position:absolute;left:-40px;top:70px;width:470px;height:470px;border-radius:50%"></div>
         <div style="position:absolute;left:0;right:0;top:300px;height:260px;background:linear-gradient(to bottom,transparent,#000)"></div>
@@ -173,7 +175,7 @@
           <div style="display:flex;justify-content:space-between"><span style="color:var(--cc-text-2)">− Steady pace</span><b class="num">−440</b></div>
           <div style="display:flex;justify-content:space-between;border-top:1px solid var(--cc-separator);margin-top:6px;padding-top:6px"><span>Daily target</span><b class="num" style="color:var(--cc-accent-ink)">1,750 kcal</b></div>
         </div>`,
-        "The real calculation is shown line by line as it completes, with no fake loading bar. This step takes about a second. Under ED-Safe it shows only “Balancing your meals”.", ["#53 fake progress"], "plain", `<div class="dock"><a class="btn primary disabled">Almost there</a></div>`),
+        "The real calculation is shown line by line as it completes, with no fake loading bar. This step takes about a second. Under ED-Safe it shows only “Balancing your meals”.", ["#53 fake progress"], undefined, `<div class="dock"><a class="btn primary disabled">Almost there</a></div>`),
 
       frame(9, "Your plan", title("Your plan is ready") +
         `<div class="ember" style="margin-top:20px"><div style="display:flex;gap:18px;align-items:center">
@@ -182,10 +184,18 @@
         </div></div>
         <div class="group" style="margin-top:12px"><div class="cell noicon"><span class="lbl">Goal</span><span class="val">76 kg by late March</span></div><div class="cell noicon"><span class="lbl">Free scans</span><span class="val">3 a week</span></div></div>
         <div style="font:400 13px/1.45 var(--cc-font);color:var(--cc-text-2);margin-top:12px">You can edit any of this in Profile. The scan limit comes from your plan.</div>`,
-        "The reveal sits on the ember card. Scan limits are stated before any paywall. The paywall is offered once after this screen and can always be closed.", ["transparent billing"], "plain", dock("Start logging", `<div class="note">Next: an optional look at CoachCal Plus. You can close it.</div>`)),
+        "The reveal sits on the ember card. Scan limits are stated before any paywall. The paywall is offered once after this screen and can always be closed.", ["transparent billing"], undefined, dock("Start logging", `<div class="note">Next: an optional look at CoachCal Plus. You can close it.</div>`)),
     ];
-    onb.innerHTML = steps.join("");
-    onb.querySelectorAll("[data-sb2]").forEach((p) => {
+    onb.innerHTML = buildSteps().join("");
+    const onbDark = document.getElementById("onbDark");
+    if (onbDark) {
+      DARK = true;
+      onbDark.innerHTML = buildSteps().join("")
+        .replace('<figure class="frame">', '<figure class="frame" id="onb-dark-1" data-frame="onb-dark-1">')
+        .replace("1 · Welcome<span>", "1 · Welcome (dark, same in both modes)<span>");
+      DARK = false;
+    }
+    document.querySelectorAll("#onb [data-sb2], #onbDark [data-sb2]").forEach((p) => {
       p.insertAdjacentHTML("afterbegin", `<div class="sb"><span>9:41</span><span class="island"></span><span class="sys"><i></i><b></b></span></div>`);
       p.insertAdjacentHTML("beforeend", `<div class="home"></div>`);
     });

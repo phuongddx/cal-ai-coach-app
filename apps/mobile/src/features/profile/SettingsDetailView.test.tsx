@@ -107,8 +107,8 @@ describe('settings screen', () => {
       const button = screen.getByTestId(testID);
       expect(button.props.accessibilityState?.disabled).toBe(true);
     }
-    // The buttons read dimmed (the inert wrapper's opacity) and the note names
-    // the reason.
+    // The design component dims a disabled button (secondaryDisabledOpacity)
+    // and the note names the reason.
     expect(screen.getByText(settingsCopy.billingNote)).toBeOnTheScreen();
   });
 

@@ -89,14 +89,14 @@ describe('Segment', () => {
     expect(screen.getByText('Lunch')).toHaveStyle({ color: lightColors.accentInk });
     expect(screen.getByText('Dinner')).toHaveStyle({ color: lightColors.text });
     const pillOf = (id: string) => screen.getByTestId(id).children[0] as never;
-    expect(pillOf('meal.lunch')).toHaveStyle({ backgroundColor: lightColors.card });
+    expect(pillOf('meal.lunch')).toHaveStyle({ backgroundColor: lightColors.segmentSelected });
   });
 
-  it('raises the selected pill with text at 12% in dark', async () => {
+  it('draws the selected pill with segmentSelected in dark', async () => {
     mockUseColorScheme.mockReturnValue('dark');
     await render(<Harness variant="text" />);
     const pill = screen.getByTestId('meal.lunch').children[0] as never;
-    expect(pill).toHaveStyle({ backgroundColor: withAlpha(darkColors.text, 0.12) });
+    expect(pill).toHaveStyle({ backgroundColor: darkColors.segmentSelected });
     expect(screen.getByText('Lunch')).toHaveStyle({ color: darkColors.accentInk });
   });
 });
