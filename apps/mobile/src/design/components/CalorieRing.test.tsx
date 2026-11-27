@@ -17,7 +17,9 @@ import {
   CalorieRing,
   dayPercentText,
   defaultDayProgress,
+  remainingNumberProps,
 } from './CalorieRing';
+import { lightColors } from '../tokens';
 import { setEdSafeMode } from '../edSafe';
 
 beforeEach(() => setEdSafeMode(false));
@@ -53,6 +55,25 @@ describe('CalorieRing rendering', () => {
     expect(ring).toHaveProp('accessibilityLabel', '1607 calories remaining of 2150 goal');
     expect(screen.getByText('1607', { includeHiddenElements: true })).toBeOnTheScreen();
     expect(screen.getByText('remaining', { includeHiddenElements: true })).toBeOnTheScreen();
+  });
+
+  // U-71 acceptance: the ring passes fitWidth, so "1607" never wraps as "16" over "07".
+  it('passes fitWidth to the remaining number so four digits stay on one line', async () => {
+    expect(remainingNumberProps).toEqual({ role: 'hero', fitWidth: true });
+    await render(<CalorieRing consumed={543} goal={2150} variant="hero" />);
+    const number = screen.getByText('1607', { includeHiddenElements: true });
+    expect(number).toHaveProp('numberOfLines', 1);
+    expect(number).toHaveProp('adjustsFontSizeToFit', true);
+    expect(number).toHaveProp('minimumFontScale', 0.5);
+  });
+
+  it('draws the plain ring on card tokens and the Ember ring on ember tokens', async () => {
+    const { rerender } = await render(<CalorieRing consumed={543} goal={2150} variant="hero" />);
+    expect(screen.getByText('1607', { includeHiddenElements: true })).toHaveStyle({ color: lightColors.text });
+    expect(screen.getByText('remaining', { includeHiddenElements: true })).toHaveStyle({ color: lightColors.text2 });
+    await rerender(<CalorieRing consumed={543} goal={2150} variant="hero" onEmber />);
+    expect(screen.getByText('1607', { includeHiddenElements: true })).toHaveStyle({ color: lightColors.emberText });
+    expect(screen.getByText('remaining', { includeHiddenElements: true })).toHaveStyle({ color: lightColors.emberText2 });
   });
 
   it('renders compact and goal variants', async () => {

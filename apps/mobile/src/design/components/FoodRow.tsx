@@ -28,15 +28,15 @@ export function FoodRow({ title, meta, kcal, compactBadge, syncPending = false }
       testID={`food-row:${title}`}
       style={[styles.row, { borderBottomColor: colors.border }]}
     >
-      <View style={[styles.tile, { backgroundColor: colors.surface }]}>
-        <SymbolView name="fork.knife" size={15} tintColor={colors.textTertiary} />
+      <View style={[styles.tile, { backgroundColor: colors.fill }]}>
+        <SymbolView name="fork.knife" size={15} tintColor={colors.text3} />
       </View>
       <View style={styles.textColumn}>
-        <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
+        <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
           {title}
         </Text>
         {meta != null && (
-          <Text style={[styles.meta, { color: colors.textSecondary }]} numberOfLines={2}>
+          <Text style={[styles.meta, { color: colors.text2 }]} numberOfLines={2}>
             {meta}
           </Text>
         )}
@@ -44,16 +44,16 @@ export function FoodRow({ title, meta, kcal, compactBadge, syncPending = false }
       </View>
       {syncPending && (
         <View style={styles.syncPending}>
-          <SymbolView name="clock" size={11} tintColor={colors.textTertiary} />
-          <Text style={[styles.syncText, { color: colors.textTertiary }]}>Syncs later</Text>
+          <SymbolView name="clock" size={11} tintColor={colors.text3} />
+          <Text style={[styles.syncText, { color: colors.text3 }]}>Syncs later</Text>
         </View>
       )}
       {!edSafeMode && kcal != null && (
-        <Text style={[styles.kcal, { color: colors.textPrimary }]} testID={`food-row-kcal:${title}`}>
+        <Text style={[styles.kcal, { color: colors.text }]} testID={`food-row-kcal:${title}`}>
           {`${kcal} kcal`}
         </Text>
       )}
-      <SymbolView name="chevron.right" size={12} weight="semibold" tintColor={colors.textTertiary} />
+      <SymbolView name="chevron.right" size={12} weight="semibold" tintColor={colors.text3} />
     </View>
   );
 }

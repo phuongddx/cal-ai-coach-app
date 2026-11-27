@@ -18,7 +18,7 @@ export function SectionHeader({ title }: SectionHeaderProps) {
       accessibilityRole="header"
       style={{
         ...typography.caption,
-        color: colors.textSecondary,
+        color: colors.text2,
         textTransform: 'uppercase',
         letterSpacing: 0.55,
       }}

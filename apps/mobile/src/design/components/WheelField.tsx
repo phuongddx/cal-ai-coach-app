@@ -48,7 +48,7 @@ export function WheelField<T extends string | number>({
         { backgroundColor: colors.card, borderColor: colors.border },
       ]}
     >
-      <Text style={[styles.label, { color: colors.textPrimary }]}>{label}</Text>
+      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
       <Text style={[styles.value, { color: colors.accentInk }]} testID={`wheel-value:${label}`}>
         {displayText(selection)}
       </Text>
@@ -67,7 +67,7 @@ export function WheelField<T extends string | number>({
             <Text
               style={[
                 styles.rowText,
-                { color: itemIndex === index ? colors.textPrimary : colors.textTertiary },
+                { color: itemIndex === index ? colors.text : colors.text3 },
               ]}
             >
               {displayText(item)}

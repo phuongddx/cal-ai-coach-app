@@ -11,10 +11,12 @@ jest.mock('react/jsx-runtime', () => {
 });
 
 import { render, screen } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { Text, useColorScheme } from 'react-native';
 
 import { Card } from './Card';
-import { lightColors } from '../tokens';
+import { darkColors, lightColors } from '../tokens';
+
+const mockUseColorScheme = useColorScheme as jest.MockedFunction<typeof useColorScheme>;
 
 describe('Card', () => {
   it('renders its children on the card surface', async () => {
@@ -26,7 +28,17 @@ describe('Card', () => {
     expect(screen.getByText('inside')).toBeOnTheScreen();
     expect(screen.getByTestId('card')).toHaveStyle({
       backgroundColor: lightColors.card,
-      borderRadius: 16,
+      borderRadius: 20,
     });
+  });
+
+  it('has the light shadow only on light and none on dark', async () => {
+    mockUseColorScheme.mockReturnValue('light');
+    const { rerender } = await render(<Card testID="card" />);
+    expect(screen.getByTestId('card')).toHaveStyle({ shadowColor: lightColors.text, shadowOpacity: 0.04 });
+    mockUseColorScheme.mockReturnValue('dark');
+    await rerender(<Card testID="card" />);
+    expect(screen.getByTestId('card')).toHaveStyle({ backgroundColor: darkColors.card, shadowOpacity: 0 });
+    mockUseColorScheme.mockReturnValue('light');
   });
 });

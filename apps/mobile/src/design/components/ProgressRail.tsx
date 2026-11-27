@@ -5,7 +5,7 @@
 
 import { StyleSheet, View } from 'react-native';
 
-import { useTokens, withAlpha } from '../tokens';
+import { useTokens } from '../tokens';
 
 export type ProgressRailProps = {
   progress: number;
@@ -27,7 +27,7 @@ export function ProgressRail({ progress }: ProgressRailProps) {
       accessible
       accessibilityLabel={progressA11yLabel(progress)}
       testID="progress-rail"
-      style={[styles.rail, { backgroundColor: withAlpha('#FFFFFF', 0.1) }]}
+      style={[styles.rail, { backgroundColor: colors.fill }]}
     >
       <View
         style={{
@@ -35,7 +35,7 @@ export function ProgressRail({ progress }: ProgressRailProps) {
           minWidth: 4,
           width: `${fraction * 100}%`,
           borderRadius: 2,
-          backgroundColor: colors.accentLime,
+          backgroundColor: colors.accent,
         }}
         testID="progress-rail:fill"
       />

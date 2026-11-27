@@ -1,11 +1,12 @@
 /**
- * CCChipOption (Components/Controls.swift). Capsule chip with the selected
- * trait, lime-tinted when selected.
+ * CCChipOption (Components/Controls.swift). Chip with the selected trait. Ember (`#system`
+ * chip): selected = `accent` fill with an `onAccent` label, otherwise a `fill` chip with
+ * `text2`; height 36, radius 18.
  */
 
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { space, typography, useTokens, withAlpha } from '../tokens';
+import { radius, space, typography, useTokens } from '../tokens';
 
 export type ChipOptionProps = {
   title: string;
@@ -21,21 +22,13 @@ export function ChipOption({ title, isSelected, onSelect }: ChipOptionProps) {
       accessibilityState={{ selected: isSelected }}
       testID={`chip-option:${title}`}
       onPress={onSelect}
-      style={[
-        styles.chip,
-        {
-          backgroundColor: isSelected
-            ? withAlpha(colors.accentLime, 0.15)
-            : colors.surface,
-          borderWidth: 1,
-          borderColor: isSelected ? colors.accentLime : 'transparent',
-        },
-      ]}
+      style={[styles.chip, { backgroundColor: isSelected ? colors.accent : colors.fill }]}
     >
       <Text
         style={{
           ...typography.subhead,
-          color: isSelected ? colors.accentInk : colors.textSecondary,
+          fontWeight: isSelected ? '600' : typography.subhead.fontWeight,
+          color: isSelected ? colors.onAccent : colors.text2,
         }}
       >
         {title}
@@ -46,8 +39,9 @@ export function ChipOption({ title, isSelected, onSelect }: ChipOptionProps) {
 
 const styles = StyleSheet.create({
   chip: {
-    borderRadius: 999,
-    paddingVertical: space.sm,
+    minHeight: 36,
+    justifyContent: 'center',
+    borderRadius: radius.button,
     paddingHorizontal: space.lg,
   },
 });

@@ -26,8 +26,8 @@ export function DashedAddButton({ title = 'Add food', action }: DashedAddButtonP
         { borderColor: colors.border },
       ]}
     >
-      <SymbolView name="plus" size={14} tintColor={colors.textSecondary} />
-      <Text style={[styles.title, { color: colors.textSecondary }]} allowFontScaling>
+      <SymbolView name="plus" size={14} tintColor={colors.text2} />
+      <Text style={[styles.title, { color: colors.text2 }]} allowFontScaling>
         {title}
       </Text>
     </Pressable>

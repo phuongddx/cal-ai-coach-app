@@ -1,13 +1,15 @@
 /**
- * CCPrimaryButton + CCPrimaryButtonStyle (Components/Buttons.swift).
- * Lime fill, black label, full width; 0.4 opacity while disabled, 0.96 scale
- * while pressed. The Swift 0.12s ease-out press animation is approximated by
- * the instant Pressable state (see parity-detail/design.md).
+ * CCPrimaryButton + CCPrimaryButtonStyle, in Ember (design-system.md "Component mapping",
+ * canvas `.btn.primary`): `accent` fill, `onAccent` label (never white: 6.89:1), 56 pt high,
+ * radius 18, full width. Pressed uses `accentPressed`; disabled is the canvas
+ * `.btn.primary.disabled` (`fill` with a `text2` label). The Swift press animation is
+ * approximated by the Pressable state; `.sensoryFeedback(.impact)` is a follow-up (no haptics
+ * package in this unit, see findings/U-71.md).
  */
 
 import { Pressable, StyleSheet, Text, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
-import { radius, space, typography, useTokens } from '../tokens';
+import { radius, size, typography, useTokens, type Colors } from '../tokens';
 
 export type PrimaryButtonProps = {
   title: string;
@@ -17,27 +19,32 @@ export type PrimaryButtonProps = {
   testID?: string;
 };
 
-/** The CCPrimaryButtonStyle visual mapping, exposed for contract tests. */
+/** The primary button's visual mapping, exposed for contract tests. */
 export function primaryButtonStyle(
-  accentLime: string,
+  colors: Colors,
   pressed: boolean,
   enabled: boolean,
 ): StyleProp<ViewStyle> {
   return {
-    backgroundColor: accentLime,
-    borderRadius: radius.lg,
-    opacity: enabled ? 1 : 0.4,
+    backgroundColor: !enabled ? colors.fill : pressed ? colors.accentPressed : colors.accent,
+    borderRadius: radius.button,
+    minHeight: size.btn,
+    opacity: 1,
     transform: [{ scale: pressed && enabled ? 0.96 : 1 }],
   };
 }
 
-const labelTypography: TextStyle = {
-  ...typography.headline,
-  color: '#000000',
-};
+/** The label color: `onAccent` on the fill, `text2` on the disabled fill. */
+export function primaryButtonLabelColor(colors: Colors, enabled: boolean): string {
+  return enabled ? colors.onAccent : colors.text2;
+}
 
 export function PrimaryButton({ title, action, disabled = false, testID }: PrimaryButtonProps) {
   const { colors } = useTokens();
+  const labelStyle: TextStyle = {
+    ...typography.headline,
+    color: primaryButtonLabelColor(colors, !disabled),
+  };
   return (
     <Pressable
       accessibilityRole="button"
@@ -45,16 +52,19 @@ export function PrimaryButton({ title, action, disabled = false, testID }: Prima
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={action}
-      style={({ pressed }) => primaryButtonStyle(colors.accentLime, pressed, !disabled)}
+      style={({ pressed }) => [styles.button, primaryButtonStyle(colors, pressed, !disabled)]}
     >
-      <Text style={[labelTypography, styles.label]}>{title}</Text>
+      <Text style={[labelStyle, styles.label]}>{title}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  button: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   label: {
-    paddingVertical: space.lg,
     textAlign: 'center',
     width: '100%',
   },

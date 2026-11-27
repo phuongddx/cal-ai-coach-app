@@ -26,12 +26,12 @@ export function SettingsRow({ icon, label, value }: SettingsRowProps) {
       testID={`settings-row:${label}`}
       style={styles.row}
     >
-      <SymbolView name={icon as SFSymbol} size={20} tintColor={colors.textSecondary} />
-      <Text style={[styles.label, { color: colors.textPrimary }]}>{label}</Text>
+      <SymbolView name={icon as SFSymbol} size={20} tintColor={colors.text2} />
+      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
       {value != null && (
-        <Text style={[styles.value, { color: colors.textSecondary }]}>{value}</Text>
+        <Text style={[styles.value, { color: colors.text2 }]}>{value}</Text>
       )}
-      <SymbolView name="chevron.right" size={12} weight="semibold" tintColor={colors.textTertiary} />
+      <SymbolView name="chevron.right" size={12} weight="semibold" tintColor={colors.text3} />
     </View>
   );
 }

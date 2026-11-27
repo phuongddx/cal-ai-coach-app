@@ -43,18 +43,35 @@ describe('SecondaryButton', () => {
   });
 
   it('maps the pressed visual state like CCSecondaryButtonStyle', () => {
-    expect(secondaryButtonStyle(true, lightColors.border, false)).toEqual(
+    expect(secondaryButtonStyle(true, lightColors, false)).toEqual(
       expect.objectContaining({
         borderWidth: 1,
         borderColor: lightColors.border,
         opacity: 1,
       }),
     );
-    expect(secondaryButtonStyle(true, lightColors.border, true)).toEqual(
+    expect(secondaryButtonStyle(true, lightColors, true)).toEqual(
       expect.objectContaining({ opacity: 0.7 }),
     );
-    expect(secondaryButtonStyle(false, lightColors.border, false)).toEqual(
+    expect(secondaryButtonStyle(false, lightColors, false)).toEqual(
       expect.objectContaining({ borderColor: 'transparent' }),
     );
+  });
+
+  // Ember canvas `.btn.secondary`: fill background, text label, 56 pt, radius 18.
+  it('draws the Ember secondary button', async () => {
+    await render(<SecondaryButton title="Skip" action={() => undefined} />);
+    expect(screen.getByRole('button')).toHaveStyle({
+      backgroundColor: lightColors.fill,
+      minHeight: 56,
+      borderRadius: 18,
+    });
+    expect(screen.getByText('Skip')).toHaveStyle({ color: lightColors.text });
+  });
+
+  // design-system.md audit #52: a button without an action is not offered as pressable.
+  it('is exposed as disabled without an action', async () => {
+    await render(<SecondaryButton title="Skip" />);
+    expect(screen.getByRole('button').props.accessibilityState).toEqual({ disabled: true });
   });
 });

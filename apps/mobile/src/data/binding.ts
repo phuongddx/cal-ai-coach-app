@@ -18,6 +18,9 @@ import { spikeLog } from '../spike/spikeLog';
 import { snapshotFromMeals } from './widget/snapshotFromMeals';
 import { publish, startForegroundReload } from './widget/WidgetSnapshotPublisher';
 import { isOfflineFrom } from './sync/offlineState';
+import { getSessionStore } from './auth';
+import { getDataEnvironment } from './environment';
+import { DEMO_USER_ID } from './repos/seedDataManager';
 import { getSyncRuntime, type SyncRuntime } from './sync/runtime';
 import type { LocalMeal } from './sync/types';
 
@@ -75,6 +78,19 @@ const toEmberMeal = (m: LocalMeal): EmberMeal => ({
 
 let lastPublished = '';
 
+/** The widget's goals: the active target of the local store (what Today shows), else the spike fixture. */
+async function widgetGoals() {
+  try {
+    const target = await (await getDataEnvironment()).targets.activeTarget(getSessionStore().getSession()?.user.id ?? DEMO_USER_ID);
+    if (target !== null) {
+      return { kcal: target.dailyKcal, proteinG: target.proteinG, carbsG: target.carbsG, fatG: target.fatG };
+    }
+  } catch {
+    // The store is not readable yet: fall back to the fixture goals below.
+  }
+  return fixtureTargets;
+}
+
 async function refresh(runtime: SyncRuntime): Promise<void> {
   const [rows, outbox, cursor, quarantined] = await Promise.all([
     runtime.repository.listMeals(),
@@ -99,7 +115,7 @@ async function refresh(runtime: SyncRuntime): Promise<void> {
   };
   listeners.forEach((l) => l());
 
-  const snapshot = snapshotFromMeals(meals, fixtureTargets, new Date());
+  const snapshot = snapshotFromMeals(meals, await widgetGoals(), new Date());
   const key = JSON.stringify(snapshot);
   if (key !== lastPublished) {
     lastPublished = key;

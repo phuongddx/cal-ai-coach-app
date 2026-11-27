@@ -1,13 +1,13 @@
 /**
  * CCInsightCard (Components/Cards.swift). Icon tile, title + text; accent
- * variant carries a lime left bar, info variant a blue left bar on a tinted
- * background.
+ * variant carries an orange left bar (`accentStrong`) on an `accentTint` tile, info variant a
+ * blue left bar on an `infoTint` background (Ember `#core` insight).
  */
 
 import { StyleSheet, Text, View } from 'react-native';
 import { SymbolView, type SFSymbol } from 'expo-symbols';
 
-import { radius, space, typography, useTokens, withAlpha } from '../tokens';
+import { radius, space, typography, useTokens } from '../tokens';
 
 export type InsightVariant = 'accent' | 'info';
 
@@ -26,10 +26,10 @@ export function InsightCard({
 }: InsightCardProps) {
   const { colors } = useTokens();
   const isInfo = variant === 'info';
-  const background = isInfo ? withAlpha(colors.info, 0.1) : colors.card;
-  const tileBackground = isInfo ? withAlpha(colors.info, 0.12) : withAlpha(colors.accentLime, 0.15);
+  const background = isInfo ? colors.infoTint : colors.card;
+  const tileBackground = isInfo ? colors.infoTint : colors.accentTint;
   const iconColor = isInfo ? colors.infoInk : colors.accentInk;
-  const barColor = isInfo ? colors.info : colors.accentLime;
+  const barColor = isInfo ? colors.info : colors.accentStrong;
   return (
     <View
       testID={`insight-card:${variant}`}
@@ -37,7 +37,7 @@ export function InsightCard({
         styles.card,
         {
           backgroundColor: background,
-          borderColor: isInfo ? withAlpha(colors.info, 0.2) : colors.border,
+          borderColor: colors.border,
         },
       ]}
     >
@@ -46,8 +46,8 @@ export function InsightCard({
         <SymbolView name={icon as SFSymbol} size={17} tintColor={iconColor} />
       </View>
       <View style={styles.textColumn}>
-        <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
-        <Text style={[styles.text, { color: colors.textSecondary }]}>{text}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+        <Text style={[styles.text, { color: colors.text2 }]}>{text}</Text>
       </View>
     </View>
   );
