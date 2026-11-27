@@ -191,10 +191,13 @@ export function SettingsDetailView({ model, planName }: SettingsDetailViewProps)
                 />
                 {/* The contact path of settings.row.contact, which has no
                     action today and no support address exists in the app
-                    (Swift included) — the button stays inert (findings). */}
+                    (Swift included) — the button must not act, so it passes
+                    disabled (findings). */}
                 <SecondaryButton
                   title={settingsCopy.exportContact}
                   testID="settings.exportContact"
+                  disabled
+                  action={() => undefined}
                 />
               </View>
             </View>
