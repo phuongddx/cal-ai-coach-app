@@ -39,12 +39,26 @@ describe('debug flags', () => {
     expect(flagsFromArguments([]).scanScenario).toBeNull();
   });
 
-  it('reads a fixed clock as an ISO instant or as epoch milliseconds', () => {
-    expect(flagsFromArguments(['--ccFixedClock=2026-11-27T05:40:00.000Z']).fixedClock).toBe(
-      Date.parse('2026-11-27T05:40:00.000Z'),
+  it('reads a fixed clock from the next argument as an ISO 8601 instant, as Swift does', () => {
+    expect(flagsFromArguments(['--ccFixedClock', '2026-11-27T05:40:00Z']).fixedClock).toBe(
+      Date.parse('2026-11-27T05:40:00Z'),
     );
-    expect(flagsFromArguments(['--ccFixedClock', '1764210000000']).fixedClock).toBe(1764210000000);
-    expect(flagsFromArguments(['--ccFixedClock=not-a-date']).fixedClock).toBeNull();
+    expect(flagsFromArguments(['--ccEDSafe', '--ccFixedClock', '2026-11-27T12:40:00+07:00']).fixedClock).toBe(
+      Date.parse('2026-11-27T05:40:00Z'),
+    );
+  });
+
+  it('leaves the real clock for a fixed clock Swift would not parse', () => {
+    // The `=` form, epoch milliseconds, fractional seconds, a missing value and a bad value.
+    expect(flagsFromArguments(['--ccFixedClock=2026-11-27T05:40:00Z']).fixedClock).toBeNull();
+    expect(flagsFromArguments(['--ccFixedClock', '1764210000000']).fixedClock).toBeNull();
+    expect(flagsFromArguments(['--ccFixedClock', '2026-11-27T05:40:00.000Z']).fixedClock).toBeNull();
+    expect(flagsFromArguments(['--ccFixedClock']).fixedClock).toBeNull();
+    expect(flagsFromArguments(['--ccFixedClock', 'not-a-date']).fixedClock).toBeNull();
+  });
+
+  it('matches the switches by exact name, as Swift `contains` does', () => {
+    expect(flagsFromArguments(['--ccEDSafe=1', '--ccedsafe', '--ccFreshStart2'])).toEqual(DEFAULT_DEBUG_FLAGS);
   });
 
   it('ignores arguments it does not know', () => {
