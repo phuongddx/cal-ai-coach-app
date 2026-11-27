@@ -32,10 +32,17 @@ export type CameraHandle = {
   takePictureAsync: (options: { quality: number; base64: boolean; skipProcessing: boolean }) => Promise<{ uri: string; base64?: string } | undefined>;
 };
 
+/** Which camera feeds the viewfinder; `expo-camera`'s `CameraType`. */
+export type CameraFacing = 'front' | 'back';
+
 export interface ScanCaptureService {
   /** `fixture` renders the bundled photo as the feed; `device` renders the live `CameraView`. */
   readonly kind: 'fixture' | 'device';
   readonly mode: ScanMode;
+  /** The camera in use; starts at `back`. */
+  readonly facing: CameraFacing;
+  /** CameraService.flipCamera: switches front/back and returns the new facing. The fixture service only records it. */
+  flipCamera(): CameraFacing;
   /** Resolves video permission before the session starts; false feeds the permission card. */
   requestAccessIfNeeded(): Promise<boolean>;
   /** Device only: the mounted camera. */
@@ -53,9 +60,18 @@ function imageKind(mode: ScanMode): 'photo' | 'label' {
 }
 
 export function createFixtureCaptureService(mode: ScanMode): ScanCaptureService {
+  let facing: CameraFacing = 'back';
   return {
     kind: 'fixture',
     mode,
+    get facing() {
+      return facing;
+    },
+    // The feed stays the bundled photo; the switch is only recorded.
+    flipCamera() {
+      facing = facing === 'back' ? 'front' : 'back';
+      return facing;
+    },
     // The fixture seam never touches the camera, so it is always "granted".
     requestAccessIfNeeded: async () => true,
     attachCamera: () => undefined,
@@ -101,6 +117,7 @@ export type DeviceCaptureDeps = {
 
 export function createDeviceCaptureService(mode: ScanMode, deps: DeviceCaptureDeps = {}): ScanCaptureService {
   let camera: CameraHandle | null = null;
+  let facing: CameraFacing = 'back';
   const requestCameraPermission =
     deps.requestCameraPermission ?? (async () => (await Camera.requestCameraPermissionsAsync()).granted);
 
@@ -118,6 +135,13 @@ export function createDeviceCaptureService(mode: ScanMode, deps: DeviceCaptureDe
   return {
     kind: 'device',
     mode,
+    get facing() {
+      return facing;
+    },
+    flipCamera() {
+      facing = facing === 'back' ? 'front' : 'back';
+      return facing;
+    },
     requestAccessIfNeeded: requestCameraPermission,
     attachCamera(handle) {
       camera = handle;

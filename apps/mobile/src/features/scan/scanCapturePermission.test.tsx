@@ -15,9 +15,9 @@ jest.mock('react/jsx-runtime', () => {
   return jest.requireActual(`${root}/react/jsx-runtime`);
 });
 
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 
-import { createFixtureCaptureService } from './scanCapture';
+import { createDeviceCaptureService, createFixtureCaptureService } from './scanCapture';
 import { CaptureViewfinderView } from './CaptureViewfinderView';
 import { GateApi, makeModel } from './scanTestKit';
 
@@ -56,5 +56,58 @@ describe('ScanCapturePermissionTests twins', () => {
     await render(viewfinder());
     // the permission card must stay hidden while access is granted
     expect(screen.queryByText('Camera access is off')).not.toBeOnTheScreen();
+  });
+});
+
+/** The `facing` prop on the one live camera node in the rendered tree (the native view has no test id). */
+function liveCameraFacing(): unknown {
+  const found: unknown[] = [];
+  const walk = (node: unknown): void => {
+    if (typeof node !== 'object' || node === null) return;
+    const { props, children } = node as { props?: Record<string, unknown>; children?: unknown[] };
+    if (props !== undefined && 'facing' in props) found.push(props.facing);
+    if (Array.isArray(children)) children.forEach(walk);
+  };
+  const tree = screen.toJSON();
+  (Array.isArray(tree) ? tree : [tree]).forEach(walk);
+  expect(found).toHaveLength(1);
+  return found[0];
+}
+
+describe('Flip camera (CameraService.flipCamera)', () => {
+  function viewfinderWith(capture: ReturnType<typeof createFixtureCaptureService>) {
+    return (
+      <CaptureViewfinderView
+        model={makeModel({ api: new GateApi() })}
+        mode="photo"
+        onModeChange={() => {}}
+        onLoggedElsewhere={() => {}}
+        capture={capture}
+      />
+    );
+  }
+
+  it('pressing Flip camera switches the fixture service from back to front and back again', async () => {
+    const capture = createFixtureCaptureService('photo');
+    await render(viewfinderWith(capture));
+    const flip = screen.getByTestId('scan.flip');
+    expect(capture.facing).toBe('back');
+    expect(flip.props.accessibilityValue).toEqual({ text: 'Back camera' });
+    await userEvent.press(flip);
+    expect(capture.facing).toBe('front');
+    expect(screen.getByTestId('scan.flip').props.accessibilityValue).toEqual({ text: 'Front camera' });
+    await userEvent.press(screen.getByTestId('scan.flip'));
+    expect(capture.facing).toBe('back');
+    // the fixture feed stays the bundled photo
+    expect(screen.getByTestId('scan.fixtureFeed', { includeHiddenElements: true })).toBeOnTheScreen();
+  });
+
+  it('the device viewfinder passes the new facing to the live CameraView', async () => {
+    const capture = createDeviceCaptureService('photo', { requestCameraPermission: async () => true });
+    await render(viewfinderWith(capture));
+    expect(liveCameraFacing()).toBe('back');
+    await userEvent.press(screen.getByTestId('scan.flip'));
+    expect(capture.facing).toBe('front');
+    expect(liveCameraFacing()).toBe('front');
   });
 });

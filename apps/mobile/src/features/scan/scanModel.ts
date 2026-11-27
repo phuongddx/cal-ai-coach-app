@@ -211,9 +211,10 @@ export function createScanModel(options: ScanModelOptions) {
   }
 
   function route(error: unknown): void {
-    if (isScanApiError(error) && error.isQuotaReached) {
+    // Swift: `error.isQuotaReached, case .envelope` — only a decoded FREE_LIMIT_REACHED envelope reaches the quota state.
+    if (isScanApiError(error) && error.kind === 'envelope' && error.code === 'FREE_LIMIT_REACHED') {
       const entitlement =
-        error.kind === 'envelope' && error.entitlement !== undefined
+        error.entitlement !== undefined
           ? error.entitlement
           : { tier: 'free' as const, scansUsed: 0, scanLimit: 3, windowResetAt: now().toISOString() };
       set({ phase: { kind: 'quotaReached', entitlement } });

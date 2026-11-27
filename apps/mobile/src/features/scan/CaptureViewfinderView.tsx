@@ -10,7 +10,7 @@ import { CameraView } from 'expo-camera';
 import { SymbolView } from 'expo-symbols';
 
 import { ChipOption, radius, SecondaryButton, size, space, typography, useTokens, withAlpha } from '../../design';
-import { FIXTURE_MEAL_IMAGE, type ScanCaptureService } from './scanCapture';
+import { FIXTURE_MEAL_IMAGE, type CameraFacing, type ScanCaptureService } from './scanCapture';
 import type { ScanModel } from './scanModel';
 import type { ScanFailure, ScanMode } from './scanTypes';
 import { useScanState } from './useScanModel';
@@ -44,6 +44,7 @@ export function CaptureViewfinderView({
   const state = useScanState(model);
   const [denied, setDenied] = useState(isCameraAccessDenied);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [facing, setFacing] = useState<CameraFacing>(capture.facing);
   const scannedRef = useRef(false);
 
   // The fixture seam never reports denial; only the device service resolves permission (Swift `as? CameraService`).
@@ -86,6 +87,10 @@ export function CaptureViewfinderView({
     }
   }
 
+  function flipCamera(): void {
+    setFacing(capture.flipCamera());
+  }
+
   const shutterDisabled = isCapturing || state.isAnalyzing || denied;
 
   return (
@@ -113,7 +118,7 @@ export function CaptureViewfinderView({
               <View style={styles.frame}>
                 <CameraView
                   style={StyleSheet.absoluteFill}
-                  facing="back"
+                  facing={facing}
                   barcodeScannerSettings={{ barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'qr'] }}
                   onBarcodeScanned={({ data }) => {
                     if (scannedRef.current || state.isAnalyzing) return;
@@ -135,7 +140,7 @@ export function CaptureViewfinderView({
                 <Text style={styles.canvasText}>Pick a barcode photo</Text>
               </Pressable>
             ) : (
-              <AlignmentFrame capture={capture} />
+              <AlignmentFrame capture={capture} facing={facing} />
             )}
             {mode !== 'barcode' && (
               <View testID="scan.coachMark" style={styles.coachMark}>
@@ -143,7 +148,7 @@ export function CaptureViewfinderView({
               </View>
             )}
             {mode === 'label' ? (
-              <Text style={styles.labelHint}>Point at the nutrition label — text is read automatically</Text>
+              <Text style={styles.labelHint}>Point at the nutrition label — the photo is analyzed to read it</Text>
             ) : (
               <Text testID="scan.zoom" style={styles.zoom}>
                 1.0×
@@ -177,7 +182,14 @@ export function CaptureViewfinderView({
           >
             {mode === 'barcode' && !usesLiveReticle && <SymbolView name="barcode.viewfinder" size={26} weight="semibold" tintColor="#000000" />}
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Flip camera" testID="scan.flip" style={styles.circleButton}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Flip camera"
+            accessibilityValue={{ text: facing === 'back' ? 'Back camera' : 'Front camera' }}
+            testID="scan.flip"
+            onPress={flipCamera}
+            style={styles.circleButton}
+          >
             <SymbolView name="arrow.triangle.2.circlepath.camera" size={18} tintColor="#FFFFFF" />
           </Pressable>
         </View>
@@ -215,11 +227,11 @@ function FrameOutline() {
   );
 }
 
-function AlignmentFrame({ capture }: { capture: ScanCaptureService }) {
+function AlignmentFrame({ capture, facing }: { capture: ScanCaptureService; facing: CameraFacing }) {
   return (
     <View style={styles.frame} accessible={false} importantForAccessibility="no-hide-descendants">
       {capture.kind === 'device' ? (
-        <CameraView ref={(handle) => capture.attachCamera(handle)} style={StyleSheet.absoluteFill} facing="back" />
+        <CameraView ref={(handle) => capture.attachCamera(handle)} style={StyleSheet.absoluteFill} facing={facing} />
       ) : (
         <Image testID="scan.fixtureFeed" source={FIXTURE_MEAL_IMAGE} resizeMode="cover" style={StyleSheet.absoluteFill} />
       )}

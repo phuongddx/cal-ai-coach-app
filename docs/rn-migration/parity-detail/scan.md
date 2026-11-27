@@ -3,7 +3,7 @@
 Per-row record of the scan flow port (`apps/mobile/src/features/scan`, route `apps/mobile/src/app/scan/index.tsx`).
 Swift sources are under `native/App/Features/Scan/` (read in full). Test evidence is run by `npm test`.
 Jest files are in `apps/mobile/src/features/scan/`: `scanKcalParity.test.ts`, `scanCapturePermission.test.tsx`,
-`scanModelTransitions.test.ts` (37 cases), `scanScreens.test.tsx` (26), `scanCapture.test.ts` (9).
+`scanModelTransitions.test.ts` (38 cases), `scanScreens.test.tsx` (26), `scanCapture.test.ts` (9).
 
 **Simulator evidence: not captured.** The machine has no iOS Simulator runtime and no devices
 (`xcrun simctl list runtimes` and `list devices` print empty headers; `xcrun simctl runtime list`: 0 disk images).
@@ -17,7 +17,7 @@ Every "screenshot" cell below is therefore `not captured`; the proof is the Jest
 | analyze → analyzing(detecting), keeps thumb, opens re-entrancy gate | ScanModel.analyze | `scanModel.ts` | "analyze moves capture to analyzing(detecting)…"; "the re-entrancy gate ignores analyze while one is running" |
 | 200 plays three steps (0.5 s dwell) then review | ScanModel.analyze | `scanModel.ts` | "a 200 plays the three checklist steps and lands in review with the result" |
 | 4th step only after the 5 s watchdog | ScanModel.analyze | `scanModel.ts` | "a call that outlasts the escalation budget shows the fourth step before review" |
-| 402 → quotaReached with entitlement, free-tier fallback | ScanModel.analyze | `scanModel.ts` | "a 402 surfaces immediately…"; "a quota error without an entitlement falls back…" |
+| Only an envelope with code FREE_LIMIT_REACHED → quotaReached (entitlement, free-tier fallback); any other error, including a non-envelope error flagged quota, → failed(analysisFailure) | ScanModel.route | `scanModel.ts` | "a 402 surfaces immediately…"; "a FREE_LIMIT_REACHED envelope without an entitlement falls back…"; "only a FREE_LIMIT_REACHED envelope routes to quota…" |
 | 404 → failed(barcodeNotFound); 422 and other errors → failed(analysisFailure) | ScanModel.analyze | `scanModel.ts` | "a 404 becomes…"; "a 422 becomes…"; "a non-API error…"; "a synchronous throw…" |
 | cancelAnalyzing returns to capture; stale work cannot clobber | ScanModel.cancelAnalyzing, generation | `scanModel.ts` | "cancelAnalyzing…" (2), `cancelledAnalyzingStaysCancelledWhenStaleWorkCompletes`, `staleResumeCannotClobberANewAnalysis` |
 | analyzeDescription (text scan) | ScanModel.analyzeDescription | `scanModel.ts` | "analyzeDescription sends the text as textDescription…" |
@@ -40,8 +40,14 @@ Every "screenshot" cell below is therefore `not captured`; the proof is the Jest
 | Denied card renders copy and a Settings escape | CaptureViewfinderView | `CaptureViewfinderView.tsx` | `testDeniedPermissionCardRendersCopyAndSettingsEscape` |
 | Granted state hides the card | CaptureViewfinderView | `CaptureViewfinderView.tsx` | `testGrantedStateHidesPermissionCard` |
 | Viewfinder with the fixture feed | CaptureViewfinderView | `CaptureViewfinderView.tsx`, `assets/fixture-meal.png` | screens: "capture shows the viewfinder with the fixture feed"; screenshot not captured |
+| Flip camera switches front/back (device passes `facing` to `CameraView`; fixture keeps the bundled feed and only records the switch) | CaptureViewfinderView.flipCamera, CameraService.flipCamera | `CaptureViewfinderView.tsx`, `scanCapture.ts` (`facing`, `flipCamera`) | capturePermission: "pressing Flip camera switches the fixture service…"; "the device viewfinder passes the new facing to the live CameraView" |
 | Fixture capture: photo, label (uploads image), barcode, library | FixtureCaptureService | `scanCapture.ts` | scanCapture: first three cases |
 | Device capture: permission, empty frame, 1024-wide JPEG at 0.7, library pick/cancel, barcode from photo, live barcode | CameraService | `scanCapture.ts` (expo-camera, expo-image-picker, expo-image-manipulator) | scanCapture: remaining cases; real camera not run |
+
+Differences from Swift in SC-02 (intentional):
+
+- Label hint copy: Swift's label mode said text is read automatically. RN says "Point at the nutrition label — the photo is analyzed to read it", because the photo is uploaded and analyzed server-side.
+- Swift's library-pick label path ran OCR on the device and sent text; RN sends the image for both paths. The contract has no OCR-text label request.
 
 ## SC-03 Analyzing (AnalyzingView.swift)
 
@@ -69,7 +75,7 @@ Every "screenshot" cell below is therefore `not captured`; the proof is the Jest
 
 | Behavior | Swift source | TS file | Proof |
 |---|---|---|---|
-| 500-character limit, placeholder, Analyze disabled until non-space text | DescribeMealSheet | `DescribeMealSheet.tsx` | screens: "Analyze description is disabled until…" |
+| 500-character limit (RN clamps the field to 500 characters on the client with `slice`; Swift clamps only in the request schema), placeholder, Analyze disabled until non-space text | DescribeMealSheet | `DescribeMealSheet.tsx` | screens: "Analyze description is disabled until…" |
 | Submit sends the trimmed text | same | same | screens: "submits the trimmed description as a text scan" |
 | Failure overlay, Back to description | same | same | screens: "a failure overlays the error card…" |
 | Search icon escape | same | same | screens: "the search icon calls the route escape" |
