@@ -1,0 +1,123 @@
+  ok: simulator already booted
+  ok: simulator ready (A902237E-29DE-4A6F-9E93-23199FC2107F)
+  ok: appearance light
+
+=== fresh install of the built dev client ===
+  ok: uninstalled + installed com.nextlabs.coachcal
+  ok: app: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-native/apps/mobile/build-output/CoachCal-dev.app
+
+=== starting Metro on 8081 ===
+  ok: metro pid 1424, log /private/var/folders/nn/n6wtxkdd3n10d78wf4xmygrm0000gp/T/opencode/rn-logs/u14-metro.log
+  ok: metro answers packager-status:running on 8081
+
+=== 4. no argument: the app behaves as before ===
+
+=== seeding a target in the fresh install (the root gate shows onboarding without one) ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+
+=== deep link: coachcal:///?seed=1 ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: found text: Spaghetti Bolognese
+  ok: target seeded; the app is stopped
+
+=== opening the app via the dev client URL ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== deep link: coachcal:///?seed=1 ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: found text: Spaghetti Bolognese
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/PL-05/launch-args-none.png (378 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/PL-05-launch-args-none.png
+  ok: Health Score visible without --ccEDSafe
+
+=== deep link: coachcal://debug ===
+  ok: found title 'Debug console' (Heading at y=118.66666666666669)
+  console: fixedClock real · scanScenario live API
+  console switch: --ccDisableAnimations = ?
+  console switch: --ccDisableAnimations = 0
+  console switch: --ccEDSafe = ?
+  console switch: --ccEDSafe = 0
+  console switch: --ccFixtureCapture = ?
+  console switch: --ccFixtureCapture = 0
+  console switch: --ccForceOffline = ?
+  console switch: --ccForceOffline = 0
+  console switch: --ccFreshStart = ?
+  console switch: --ccFreshStart = 0
+  console switch: --ccRequireSignIn = ?
+  console switch: --ccRequireSignIn = 0
+  console switch: --ccSeedNoTargets = ?
+  console switch: --ccSeedNoTargets = 0
+
+=== 2. --ccFixedClock 2026-09-12T09:00:00Z ===
+
+=== opening the app via the dev client URL with launch arguments: --ccFixedClock 2026-09-12T09:00:00Z ===
+  ok: launched com.nextlabs.coachcal with: --ccFixedClock 2026-09-12T09:00:00Z
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/PL-05/launch-args-fixed-clock.png (373 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/PL-05-launch-args-fixed-clock.png
+
+=== deep link: coachcal://debug ===
+  ok: found title 'Debug console' (Heading at y=118.66666666666669)
+  console: fixedClock 2026-09-12T09:00:00.000Z · scanScenario live API
+  console switch: --ccDisableAnimations = ?
+  console switch: --ccDisableAnimations = 0
+  console switch: --ccEDSafe = ?
+  console switch: --ccEDSafe = 0
+  console switch: --ccFixtureCapture = ?
+  console switch: --ccFixtureCapture = 0
+  console switch: --ccForceOffline = ?
+  console switch: --ccForceOffline = 0
+  console switch: --ccFreshStart = ?
+  console switch: --ccFreshStart = 0
+  console switch: --ccRequireSignIn = ?
+  console switch: --ccRequireSignIn = 0
+  console switch: --ccSeedNoTargets = ?
+  console switch: --ccSeedNoTargets = 0
+
+=== 3. --ccScanScenario 402, then the scan route ===
+
+=== opening the app via the dev client URL with launch arguments: --ccScanScenario 402 ===
+  ok: launched com.nextlabs.coachcal with: --ccScanScenario 402
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== deep link: coachcal://scan ===
+  ok: found text: Capture photo, button
+  ok: tap --label Capture photo, button
+  ok: found text: See plans
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/PL-05/launch-args-scan-402.png (126 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/PL-05-launch-args-scan-402.png
+  ok: the review shows the quota state (See plans)
+
+=== 1. --ccEDSafe ===
+
+=== opening the app via the dev client URL with launch arguments: --ccEDSafe ===
+  ok: launched com.nextlabs.coachcal with: --ccEDSafe
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+  ok: found text: On track
+  ok: no Health Score under --ccEDSafe
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/PL-05/launch-args-edsafe.png (375 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/PL-05-launch-args-edsafe.png
+
+=== deep link: coachcal://debug ===
+  ok: found title 'Debug console' (Heading at y=118.66666666666669)
+  console: fixedClock real · scanScenario live API
+  console switch: --ccDisableAnimations = ?
+  console switch: --ccDisableAnimations = 0
+  console switch: --ccEDSafe = ?
+  console switch: --ccEDSafe = 1
+  console switch: --ccFixtureCapture = ?
+  console switch: --ccFixtureCapture = 0
+  console switch: --ccForceOffline = ?
+  console switch: --ccForceOffline = 0
+  console switch: --ccFreshStart = ?
+  console switch: --ccFreshStart = 0
+  console switch: --ccRequireSignIn = ?
+  console switch: --ccRequireSignIn = 0
+  console switch: --ccSeedNoTargets = ?
+  console switch: --ccSeedNoTargets = 0
+
+=== flow done — 0 failed ===

@@ -86,6 +86,26 @@ app_install_fresh() {
   xcrun simctl install "$UDID" "$APP_PATH" || fatal "simctl install failed"
   ok "uninstalled + installed $BUNDLE_ID"
   ok "app: $APP_PATH"
+  FRESH_INSTALL=1   # the next app_open seeds a target first (see _seed_fresh_target)
+}
+
+# A fresh install has no target, so the root gate picks onboarding and the app never shows Today
+# (found in U-79). The first app_open after app_install_fresh therefore launches once with
+# --ccSeedNoTargets (the shell without a target), seeds the demo persona through coachcal:///?seed=1,
+# then terminates the app: the target is stored, so every later launch shows Today.
+_seed_fresh_target() {
+  FRESH_INSTALL=0
+  step "seeding a target in the fresh install (the root gate shows onboarding without one)"
+  xcrun simctl launch "$UDID" "$BUNDLE_ID" --ccSeedNoTargets >/dev/null || fatal "simctl launch for the seed failed"
+  xcrun simctl openurl "$UDID" "$DEV_CLIENT_URL" || echo "  note: simctl openurl timed out (the launch reconnects to Metro by itself)"
+  dismiss_open_dialog || true
+  _wait_title "Today" 150 || fatal "the seeding launch never showed 'Today'"
+  link "coachcal:///?seed=1" "Today" 25
+  wait_for_text "Spaghetti Bolognese" 30 || bad "the demo persona was not seeded"
+  sleep 2
+  xcrun simctl terminate "$UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
+  sleep 1
+  ok "target seeded; the app is stopped"
 }
 
 # Tap the system "Open in CoachCal?" dialog away when it is there. The dialog is native, so
@@ -158,6 +178,7 @@ app_open() {
   local text="${1:-Today}" sec="${2:-90}" wait_sec
   local launch_args=()
   if [ "$#" -gt 2 ]; then launch_args=("${@:3}"); fi
+  if [ "${FRESH_INSTALL:-0}" = "1" ]; then _seed_fresh_target; fi
   step "opening the app via the dev client URL${launch_args[*]:+ with launch arguments: ${launch_args[*]}}"
   if [ "${#launch_args[@]}" -gt 0 ]; then
     xcrun simctl terminate "$UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
@@ -167,7 +188,11 @@ app_open() {
     ok "launched $BUNDLE_ID with: ${launch_args[*]}"
   fi
   for attempt in 1 2; do
-    xcrun simctl openurl "$UDID" "$DEV_CLIENT_URL" || bad "simctl openurl failed (attempt $attempt)"
+    if ! xcrun simctl openurl "$UDID" "$DEV_CLIENT_URL"; then
+      # After a launch with arguments the app already reconnects to the last Metro, so a timed-out
+      # openurl is only a note there; without launch arguments it stays a failure.
+      if [ "${#launch_args[@]}" -gt 0 ]; then echo "  note: simctl openurl timed out (attempt $attempt)"; else bad "simctl openurl failed (attempt $attempt)"; fi
+    fi
     dismiss_open_dialog || true
     if [ "$attempt" -eq 1 ]; then wait_sec=45; else wait_sec="$sec"; fi
     if _wait_title "$text" "$wait_sec"; then
