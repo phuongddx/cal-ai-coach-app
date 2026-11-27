@@ -13,3 +13,7 @@ ts	unit	state	branch	pr	head	by	evidence
 2026-11-27T05:40:00Z	U-14	running	rn/u-14-evidence-harness	-	3c62322	Worker-G2	docs/rn-migration/briefs/U-14.md
 2026-11-27T05:40:00Z	U-20	running	rn/u-20-networking-auth	-	3c62322	Worker-S2	docs/rn-migration/briefs/U-20.md
 2026-11-27T05:40:00Z	U-21	running	rn/u-21-backend-auth	-	3c62322	Worker-S1	docs/rn-migration/briefs/U-21.md
+2026-11-27T05:58:00Z	U-12	running	rn/u-12-persistence	-	20699e7	Worker-G1	docs/rn-migration/briefs/U-12.md (base moved to main after PR 10)
+2026-11-27T05:58:00Z	U-14	running	rn/u-14-evidence-harness	-	20699e7	Worker-G2	docs/rn-migration/briefs/U-14.md (base moved to main after PR 10)
+2026-11-27T05:58:00Z	U-20	running	rn/u-20-networking-auth	-	20699e7	Worker-S2	docs/rn-migration/briefs/U-20.md (base moved to main after PR 10)
+2026-11-27T05:58:00Z	U-21	running	rn/u-21-backend-auth	-	20699e7	Worker-S1	docs/rn-migration/briefs/U-21.md (base moved to main after PR 10)
