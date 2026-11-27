@@ -27,10 +27,8 @@ import {
   typography,
   useTokens,
 } from '../../design';
-
 import { onboardingCopy } from '../onboarding/onboardingCopy';
 import { goalFloorCopy, settingsCopy } from './settingsCopy';
-import { StateNote } from './StateNote';
 import { grouped } from './grouping';
 import type { TargetEditModel } from './targetEditModel';
 
@@ -121,9 +119,14 @@ export function TargetEditSheet({ model, onDismiss }: TargetEditSheetProps) {
 
         {model.goalClamped && (
           <View testID="settings.targetEdit.goalFloor" style={styles.goalFloor}>
-            {/* The engine's flat clamp, shown with the caution tint — the
-                height-based floor of the frame is an engine change (follow-up). */}
-            <StateNote variant="caution" text={goalFloorCopy(model.goalWeightKg, model.clampedGoalWeightKg)} />
+            {/* The engine's flat clamp, shown with the design system's caution
+                banner — the height-based floor of the frame is an engine change
+                (follow-up). */}
+            <BannerNote
+              variant="caution"
+              markdown
+              text={goalFloorCopy(model.goalWeightKg, model.clampedGoalWeightKg)}
+            />
           </View>
         )}
 

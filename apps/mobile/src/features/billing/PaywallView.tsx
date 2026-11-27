@@ -94,7 +94,8 @@ export function PaywallView({ model, onClose }: PaywallViewProps) {
                 {billingCopy.failedCardText}
               </Text>
             </View>
-            {/* The frame's Try again sits inside the caution card. */}
+            {/* The frame's Try again sits inside the caution card (79); here it
+                renders directly under it — recorded in findings §7. */}
             <SecondaryButton
               title={billingCopy.tryAgain}
               testID="plans.retry"

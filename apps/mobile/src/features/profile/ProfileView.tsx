@@ -174,16 +174,19 @@ export function ProfileView({
           onPress={() => setShowsHealthNote(true)}
         >
           {/* The real connection status is the row's value (the frame's
-              "Connected"); the tap still reveals the honest footnote. */}
+              "Connected", success-tinted); the tap still reveals the honest
+              footnote. */}
           <SettingsRow
             icon="heart.fill"
             label="Apple Health"
             value={healthConnected ? 'Connected' : 'Not connected'}
+            tint={healthConnected ? 'success' : undefined}
           />
         </Pressable>
         {/* The frame's kg / lb segment is app-wide unit conversion — a new
-            feature, not built. The row shows the unit (findings/U-77.md). */}
-        <SettingsRow icon="globe" label="Units" value="Metric" />
+            feature, not built. The row shows the unit, no chevron (the row has
+            no action). */}
+        <SettingsRow icon="globe" label="Units" value="Metric" chevron={false} />
       </SettingsGroup>
       {showsHealthNote && (
         <View testID="profile.healthNote">

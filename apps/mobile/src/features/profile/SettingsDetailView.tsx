@@ -30,7 +30,6 @@ import {
 
 import { settingsCopy, wellnessAnnouncement } from './settingsCopy';
 import type { SettingsModel } from './settingsModel';
-import { StateNote } from './StateNote';
 
 export type SettingsDetailViewProps = {
   model: SettingsModel;
@@ -175,8 +174,9 @@ export function SettingsDetailView({ model, planName }: SettingsDetailViewProps)
           )}
           {model.exportShare.kind === 'failed' && (
             <View style={styles.exportRow} testID="settings.exportError">
-              <StateNote
+              <BannerNote
                 variant="error"
+                markdown
                 text={`**${settingsCopy.exportFailedTitle}.** ${model.exportShare.reason}`}
               />
               {/* The frame's error code line (x-write-*). The frame's "Contact
