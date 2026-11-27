@@ -1,15 +1,14 @@
 /**
  * WeeklyReviewCard.swift — the Ember hero card of the Coach tab (frame 12):
  * the "THIS WEEK" eyebrow, the weekly sentence, and the three stat tiles.
- * The stat row is the design-system WeeklyReviewStats (the ED-safe swap
- * lives there, GATE-1 — this feature file holds no policy branch), mounted
- * on a card inset inside the hero because the component has no onEmber
- * styling yet — the gap is recorded in findings U-75 under "Needs a design
- * component".
+ * The stat row is the design-system WeeklyReviewStats mounted with `onEmber`
+ * (U-71d): the ED-safe swap still lives in the design system (GATE-1 — this
+ * feature file holds no policy branch), and the tiles read directly on the
+ * ember card as the frame draws them.
  */
 import { StyleSheet, Text, View } from 'react-native';
 
-import { EmberCard, radius, space, typography, useTokens, WeeklyReviewStats } from '../../../design';
+import { EmberCard, space, typography, useTokens, WeeklyReviewStats } from '../../../design';
 
 import type { WeekStats } from '../coachSnapshot';
 
@@ -32,14 +31,13 @@ export function WeeklyReviewCard({ stats }: WeeklyReviewCardProps) {
       <View style={styles.stack}>
         <Text style={[typography.footnote, styles.eyebrow, { color: colors.emberAccent }]}>THIS WEEK</Text>
         <Text style={[styles.sentence, { color: colors.emberText }]}>{encouragement(stats.daysLogged)}</Text>
-        <View style={[styles.statsInset, { backgroundColor: colors.card }]}>
-          <WeeklyReviewStats
-            daysLogged={stats.daysLogged}
-            daysOnTarget={stats.daysOnTarget}
-            weeksAllLogged={stats.weeksAllLogged}
-            kgThisWeek={stats.kgThisWeek}
-          />
-        </View>
+        <WeeklyReviewStats
+          onEmber
+          daysLogged={stats.daysLogged}
+          daysOnTarget={stats.daysOnTarget}
+          weeksAllLogged={stats.weeksAllLogged}
+          kgThisWeek={stats.kgThisWeek}
+        />
       </View>
     </EmberCard>
   );
@@ -54,9 +52,5 @@ const styles = StyleSheet.create({
   sentence: {
     fontSize: 22,
     fontWeight: '700',
-  },
-  statsInset: {
-    borderRadius: radius.md,
-    padding: space.md,
   },
 });

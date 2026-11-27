@@ -17,7 +17,6 @@ import { createProgressModel } from '../progressModel';
 import { clampKg } from '../progressMath';
 import { makeWeightChartDescriptor, weightTrendA11yLabel, weightYRange } from '../weightChartDescriptor';
 import { addDays } from '../progressMath';
-import { weightAxisTicks } from '../screens/WeightChart';
 import { WeeklyEnergyView } from '../screens/WeeklyEnergyView';
 import type { ProgressDeps } from '../progressModel';
 
@@ -130,12 +129,5 @@ describe('ChartDescriptorTests twins', () => {
     );
     expect(weightTrendA11yLabel(points, 7)).toBe('Weight trend from 82.4 to 80.6 kilograms over 7 days');
     expect(weightTrendA11yLabel([], 30)).toBe('Weight trend'); // no series, no numbers
-  });
-
-  // The frame's y-axis: integer kg gridlines that fit the data (83/82/81).
-  it('the axis ticks fit the data', () => {
-    expect(weightAxisTicks(80.6, 82.4)).toEqual([81, 82, 83]);
-    expect(weightAxisTicks(79.95, 81.35)).toEqual([80, 81, 82]);
-    expect(weightAxisTicks(4, 6)).toEqual([4, 5, 6]); // a flat series' padded range
   });
 });

@@ -9,11 +9,11 @@ import { useState, useSyncExternalStore } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
-import { Card, radius, space, typography, useTokens } from '../../../design';
+import { Card, TrendChart, radius, space, typography, useTokens } from '../../../design';
 
 import { RANGE_WINDOW_DAYS, type ProgressRange } from '../progressMath';
 import type { ProgressModel } from '../progressModel';
-import { WeightChart } from './WeightChart';
+import { weightTrendA11yLabel } from '../weightChartDescriptor';
 import { WeightLogSheet } from './WeightLogSheet';
 
 export type WeightTrendViewProps = {
@@ -88,7 +88,12 @@ export function WeightTrendView({ model, range = 'month' }: WeightTrendViewProps
         </View>
 
         {points.length >= 2 ? (
-          <WeightChart points={points} windowDays={windowDays} />
+          <TrendChart
+            points={points.map((point) => ({ at: point.date, value: point.value }))}
+            unit="kg"
+            accessibilityLabel={weightTrendA11yLabel(points, windowDays)}
+            testID="chart-card"
+          />
         ) : (
           <Text style={[styles.emptyTrend, type.subhead, { color: colors.textSecondary }]}>
             Log your weight to start the trend

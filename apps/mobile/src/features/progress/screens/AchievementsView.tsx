@@ -1,21 +1,18 @@
 /**
  * AchievementsView.swift — ENG-01/02 achievements surface on Ember (frame
  * 11): the streak hero (with freeze chip), one "Badges" grid — earned tiles
- * first, then locked, Swift order — with the Ember icon set in place of
- * emoji, and the disabled progress-photos row (ENG2-01 is v2 — the planner
- * choice renders the row disabled). The tile is drawn here because the
- * design-system BadgeTile takes an emoji string only — the gap is recorded
- * in findings U-75 under "Needs a design component"; the tile keeps
- * BadgeTile's testID and accessibility label.
+ * first, then locked, Swift order — with the Ember icon set on the design
+ * BadgeTile (`iconName`, U-71d) in place of emoji, and the disabled
+ * progress-photos row (ENG2-01 is v2 — the planner choice renders the row
+ * disabled). The tile keeps BadgeTile's testID and accessibility label.
  */
 import { StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
 import {
-  Icon,
+  BadgeTile,
   SectionHeader,
   StreakCard,
-  badgeA11yLabel,
   radius,
   space,
   useTokens,
@@ -97,43 +94,15 @@ function BadgeGrid({ badges, lockedCount }: { badges: Badge[]; lockedCount: numb
         const isLocked = index >= badges.length - lockedCount;
         return (
           <View key={badge.id} style={styles.gridCell}>
-            <BadgeTileEmber badge={badge} isLocked={isLocked} />
+            <BadgeTile
+              iconName={badgeIcon(badge.code, isLocked)}
+              name={badge.label}
+              detail={isLocked ? `${lockedDaysLeft(badge)} days left` : (badge.detail ?? '')}
+              isLocked={isLocked}
+            />
           </View>
         );
       })}
-    </View>
-  );
-}
-
-/** The Ember badge tile: an Ember icon instead of BadgeTile's emoji string. */
-function BadgeTileEmber({ badge, isLocked }: { badge: Badge; isLocked: boolean }) {
-  const { colors, space, typography: type } = useTokens();
-  const detail = isLocked ? `${lockedDaysLeft(badge)} days left` : (badge.detail ?? '');
-  const ink = isLocked ? colors.text2 : colors.accentInk;
-  return (
-    <View
-      accessible
-      accessibilityLabel={badgeA11yLabel(badge.label, isLocked, detail)}
-      testID={`badge-tile:${badge.label}`}
-      style={[
-        styles.tile,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          opacity: isLocked ? 0.5 : 1,
-        },
-      ]}
-    >
-      <Icon name={badgeIcon(badge.code, isLocked)} size={24} color={ink} />
-      <Text
-        style={[type.subhead, styles.tileName, { color: isLocked ? colors.text2 : colors.text }]}
-        numberOfLines={1}
-      >
-        {badge.label}
-      </Text>
-      {detail.length > 0 && (
-        <Text style={[type.caption, styles.tileDetail, { color: colors.text2 }]}>{detail}</Text>
-      )}
     </View>
   );
 }
@@ -169,17 +138,6 @@ const styles = StyleSheet.create({
   stack: {},
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   gridCell: { width: '31.5%', flexGrow: 1 },
-  tile: {
-    alignItems: 'center',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    flexGrow: 1,
-    paddingVertical: space.md,
-    paddingHorizontal: space.sm,
-    gap: space.xs,
-  },
-  tileName: { fontWeight: '500' },
-  tileDetail: { textAlign: 'center' },
   photosRow: {
     flexDirection: 'row',
     alignItems: 'center',
