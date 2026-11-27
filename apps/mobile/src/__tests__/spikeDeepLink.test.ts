@@ -13,17 +13,17 @@ beforeEach(() => {
 afterEach(() => jest.restoreAllMocks());
 
 describe('parseSpikeUrl', () => {
-  it('reads the action name from coachcal://spike?action=<name>', () => {
-    expect(parseSpikeUrl('coachcal://spike?action=seed')).toBe('seed');
-    expect(parseSpikeUrl('coachcal://spike/?action=health-save&x=1')).toBe('health-save');
-    expect(parseSpikeUrl('coachcal://spike?x=1&action=force-offline')).toBe('force-offline');
+  it('reads the action name from coachcal://debug?action=<name>', () => {
+    expect(parseSpikeUrl('coachcal://debug?action=seed')).toBe('seed');
+    expect(parseSpikeUrl('coachcal://debug/?action=health-save&x=1')).toBe('health-save');
+    expect(parseSpikeUrl('coachcal://debug?x=1&action=force-offline')).toBe('force-offline');
   });
 
   it('ignores other schemes, other hosts and URLs without an action', () => {
-    expect(parseSpikeUrl('https://example.com/spike?action=seed')).toBeNull();
-    expect(parseSpikeUrl('coachcal://other?action=seed')).toBeNull();
-    expect(parseSpikeUrl('coachcal://spike')).toBeNull();
-    expect(parseSpikeUrl('coachcal://spike?action=')).toBeNull();
+    expect(parseSpikeUrl('https://example.com/debug?action=seed')).toBeNull();
+    expect(parseSpikeUrl('coachcal://spike?action=seed')).toBeNull();
+    expect(parseSpikeUrl('coachcal://debug')).toBeNull();
+    expect(parseSpikeUrl('coachcal://debug?action=')).toBeNull();
   });
 });
 
@@ -32,7 +32,7 @@ describe('handleSpikeUrl', () => {
     const run = jest.fn(() => ({ status: 'ok' as const, summary: 'did it', data: { n: 1 } }));
     registerSpikeAction({ name: 'seed', item: 'ui', title: 'Seed', run });
 
-    await expect(handleSpikeUrl('coachcal://spike?action=seed')).resolves.toBe('seed');
+    await expect(handleSpikeUrl('coachcal://debug?action=seed')).resolves.toBe('seed');
 
     expect(run).toHaveBeenCalledTimes(1);
     expect(getLastRuns().ui?.result).toEqual({ status: 'ok', summary: 'did it', data: { n: 1 } });
@@ -83,7 +83,7 @@ describe('deep link parameters', () => {
     }));
     registerSpikeAction({ name: 'widget-publish', item: 'widget', title: 'Publish', run });
 
-    await handleSpikeUrl('coachcal://spike?action=widget-publish&rolloverInSeconds=90');
+    await handleSpikeUrl('coachcal://debug?action=widget-publish&rolloverInSeconds=90');
 
     expect(run).toHaveBeenCalledTimes(1);
     expect(getLastRuns().widget?.result?.summary).toBe('{"rolloverInSeconds":"90"}');

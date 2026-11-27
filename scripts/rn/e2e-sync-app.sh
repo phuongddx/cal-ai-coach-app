@@ -8,7 +8,7 @@
 #
 #   bash scripts/e2e-sync-app.sh 2>&1 | tee evidence/item4/e2e-app-transcript.txt
 #
-# Deep links: `xcrun simctl openurl` opens coachcal://spike?action=<name>. When iOS asks
+# Deep links: `xcrun simctl openurl` opens coachcal://debug?action=<name>. When iOS asks
 # "Open in CoachCal?" the script presses Open with `axe tap --label Open`.
 set -uo pipefail
 
@@ -48,7 +48,7 @@ spike_lines_since() { tail -n +"$(($1 + 1))" "$METRO_LOG" | grep -a '\[spike\]' 
 link() { # action [extra query]
   local action="$1" extra="${2:-}" before i
   before="$(log_lines)"
-  xcrun simctl openurl "$UDID" "coachcal://spike?action=$action${extra:+&$extra}"
+  xcrun simctl openurl "$UDID" "coachcal://debug?action=$action${extra:+&$extra}"
   for i in $(seq 1 25); do
     sleep 1
     if tail -n +"$((before + 1))" "$METRO_LOG" | grep -aq "\"event\":\"action-done\",\"data\":{\"name\":\"$action\""; then

@@ -24,10 +24,26 @@ describe('snapshotFromMeals', () => {
       proteinGoalG: 130,
       carbsGoalG: 210,
       fatGoalG: 70,
+      // The Swift WidgetSnapshot fields (WidgetSnapshot.swift alignment).
+      caloriesRemaining: 1600,
+      edSafeMode: false,
+      updatedAt: NOW.toISOString(),
     });
   });
 
   it('is a zeroed snapshot for a day without meals', () => {
-    expect(snapshotFromMeals([], goals, NOW)).toMatchObject({ date: '2026-11-27', consumedKcal: 0, proteinG: 0 });
+    expect(snapshotFromMeals([], goals, NOW)).toMatchObject({
+      date: '2026-11-27',
+      consumedKcal: 0,
+      proteinG: 0,
+      caloriesRemaining: 2100,
+    });
+  });
+
+  it('carries the ed safe flag from the caller into the snapshot', () => {
+    const snapshot = snapshotFromMeals([], goals, NOW, true);
+    expect(snapshot.edSafeMode).toBe(true);
+    expect(snapshot.caloriesRemaining).toBe(2100);
+    expect(snapshot.updatedAt).toBe(NOW.toISOString());
   });
 });

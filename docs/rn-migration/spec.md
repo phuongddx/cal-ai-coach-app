@@ -122,8 +122,9 @@ when the account was created with Apple.
 | `POST /v1/sync/push`, `POST /v1/sync/pull` | RPCs `sync_push`, `sync_pull` | app, bearer session |
 | `DELETE /v1/account` | `delete-account` | app, bearer session |
 | `POST /webhooks/revenuecat` | `rc-webhook` | RevenueCat, HMAC over the raw body |
-| `POST /v1/auth/apple` | GoTrue `signInWithIdToken` (Apple) | app, Apple identity token, nonce, authorization code |
-| `GET /v1/auth/google/start`, `GET /v1/auth/google/callback` | GoTrue `signInWithOAuth` (Google) | browser session; callback redirects to `coachcal://auth/google?...` |
+| `POST /v1/auth/apple` | GoTrue `signInWithIdToken` (Apple) | app: Apple identity token, raw nonce, authorization code when present |
+| `GET /v1/auth/google/start`, `GET /v1/auth/google/callback` | GoTrue `signInWithOAuth` (Google) | browser session; the callback redirects to `coachcal://auth/google?code=<one-time code>` |
+| `POST /v1/auth/google/exchange` | (replaces the implicit tokens in the redirect URL) | app: the one-time code, once |
 | `POST /v1/auth/email` | GoTrue `signIn(email, password)` | app |
 | `POST /v1/auth/otp/request`, `POST /v1/auth/otp/verify` | GoTrue `signInWithOTP`, `verifyOTP` | app |
 | `POST /v1/auth/refresh`, `POST /v1/auth/signout` | GoTrue session | refresh token / session |
@@ -132,6 +133,12 @@ when the account was created with Apple.
 The wire bodies of scan, lookup, webhook and sync do not change: they are the relocated contracts.
 Unknown routes answer `404 {error:{code:"VALIDATION_ERROR",details:["route"]}}` so the envelope stays
 uniform.
+
+The request and response bodies of sign-in and session are `packages/api-contract/src/auth.ts`
+(the owner wrote it before the two units that implement it started). Access tokens are short-lived
+(15 minutes) and treated as opaque; refresh tokens (30 days) are random, stored hashed and rotated
+on every refresh. Email with password only signs an existing user in; an account is created through
+Apple, Google or the e-mail code.
 
 ## 7. Native surface
 

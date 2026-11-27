@@ -123,7 +123,7 @@ step "Done — all curl steps green"
 cat <<'APP_STEPS'
 
 App-driven steps (integration task T6, via deep links and the [spike] log):
-  1. Online:      coachcal://spike?action=seed ; action=sync   → server has A and C (already true above)
+  1. Online:      coachcal://debug?action=seed ; action=sync   → server has A and C (already true above)
   2. Offline:     scripts/start-api.sh stop (server stopped); on the device
                   action=force-offline, action=add-meal (B), action=edit-meal (A 450),
                   action=delete-meal (C); force-stop and relaunch the app; B present,

@@ -1,4 +1,10 @@
-import { clamp, dayKey, kcalFromMacros, kcalLeft, ringProgress, sumMacros } from './index';
+import { clamp, dayKey, kcalFromMacros, kcalLeft, moduleName, ringProgress, sumMacros } from './index';
+
+describe('CoachCalCore module surface', () => {
+  it('module name is exposed', () => {
+    expect(moduleName).toBe('CoachCalCore');
+  });
+});
 
 describe('kcalFromMacros', () => {
   it('uses 4 kcal/g for protein and carbs and 9 kcal/g for fat, rounded half-up', () => {

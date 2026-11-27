@@ -1,0 +1,19 @@
+checking apps/mobile/build-output/CoachCal-dev.app
+PASS  Info.plist is readable
+PASS  bundle id is com.nextlabs.coachcal  (com.nextlabs.coachcal)
+PASS  NSCameraUsageDescription is set
+PASS  NSHealthShareUsageDescription is set
+PASS  NSHealthUpdateUsageDescription is set
+PASS  CFBundleURLSchemes contains coachcal  (coachcal, com.nextlabs.coachcal, exp+coachcal)
+PASS  NSSupportsLiveActivities is true
+PASS  ITSAppUsesNonExemptEncryption is false
+PASS  entitlements are embedded in the app  (Mach-O __entitlements (simulator build))
+PASS  entitlement com.apple.developer.healthkit
+PASS  entitlement com.apple.developer.healthkit.background-delivery
+PASS  entitlement com.apple.developer.applesignin
+PASS  App Group group.com.nextlabs.coachcal  (group.com.nextlabs.coachcal)
+PASS  PrivacyInfo.xcprivacy exists and is a valid plist
+PASS  NSPrivacyTracking is false
+PASS  NSPrivacyCollectedDataTypes are exactly 3 (email, health, photos)  (EmailAddress, Health, PhotosorVideos)
+PASS  no .p8 .p12 .pem .jks .mobileprovision .env file in the bundle
+COMPLIANCE-OK: com.nextlabs.coachcal 1.0.0(1)

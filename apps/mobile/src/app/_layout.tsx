@@ -1,70 +1,34 @@
-import { GlassView } from 'expo-glass-effect';
-import { NativeTabs } from 'expo-router/native-tabs';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { SymbolView } from 'expo-symbols';
 import { useEffect } from 'react';
-import { StyleSheet, useColorScheme, View } from 'react-native';
 
-import { getColors } from '../features/ember/tokens';
 import { startDataBinding } from '../data/binding';
-import { startSpikeDeepLinks } from '../spike/deepLink';
 import { registerBuiltinSpikeActions } from '../spike/builtinActions';
+import { startSpikeDeepLinks } from '../spike/deepLink';
 
 registerBuiltinSpikeActions();
 
-export default function RootLayout() {
-  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
-  const c = getColors(scheme);
+// The tabs are the home of the app; every other route is pushed over them.
+export const unstable_settings = { anchor: '(tabs)' };
 
+export default function RootLayout() {
+  // `coachcal://debug?action=<name>` runs a debug action (the route itself opens the console).
   useEffect(() => startSpikeDeepLinks(), []);
-  // Sync triggers, widget foreground reload, SQLite -> Ember/widget binding.
+  // Sync triggers, widget foreground reload, SQLite -> Today/widget binding.
   useEffect(() => startDataBinding(), []);
 
   return (
-    <View style={styles.root}>
+    <>
       <StatusBar style="auto" />
-      <NativeTabs tintColor={c.accentInk} minimizeBehavior="onScrollDown">
-        <NativeTabs.Trigger name="index">
-          <NativeTabs.Trigger.Label>Ember</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="sun.max" md="sunny" />
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="progress">
-          <NativeTabs.Trigger.Label>Progress</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="chart.line.uptrend.xyaxis" md="show_chart" />
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="coach">
-          <NativeTabs.Trigger.Label>Coach</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="sparkles" md="auto_awesome" />
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="profile">
-          <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="person.crop.circle" md="account_circle" />
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="spike">
-          <NativeTabs.Trigger.Label>Spike</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="ladybug" md="bug_report" />
-        </NativeTabs.Trigger>
-      </NativeTabs>
-      {/* Visual-only Scan button. NativeTabs has no inline trailing slot, so it floats above the bar. */}
-      <View pointerEvents="box-none" style={styles.scanWrap}>
-        <GlassView
-          testID="scan:button"
-          glassEffectStyle="regular"
-          tintColor={c.accent}
-          isInteractive
-          colorScheme={scheme}
-          style={styles.scan}
-          accessibilityLabel="Scan a meal"
-        >
-          <SymbolView name="camera.fill" size={24} weight="semibold" tintColor={c.onAccent} />
-        </GlassView>
-      </View>
-    </View>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="sign-in" />
+        <Stack.Screen name="onboarding/index" />
+        <Stack.Screen name="scan/index" options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="diary" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
+        <Stack.Screen name="settings" />
+        <Stack.Screen name="debug" options={{ headerShown: true, title: 'Debug console' }} />
+      </Stack>
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1 },
-  scanWrap: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: 'flex-end', justifyContent: 'flex-end', paddingRight: 20, paddingBottom: 104 },
-  scan: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
-});
