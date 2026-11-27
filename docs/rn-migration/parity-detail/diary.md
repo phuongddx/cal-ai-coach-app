@@ -87,15 +87,17 @@ live-diary join and its localtime day grouping are part of the behavior under te
 | Water has no kcal framing and stays visible under ED-safe; the droplet tile is accessibility-hidden | `WaterCard.swift` | `screens/WaterCard.tsx` | policy by construction (no calorie ring reuse); tile a11y-hidden |
 | Card tap opens the log sheet; Close dismisses | `TodayView.swift` (mount, U-33) / `WaterLogSheet` | `screens/WaterCard.tsx` | `__tests__/WaterCard.test.tsx` › "a tap hands over to the log sheet"; `__tests__/WaterLogSheet.test.tsx` › "Close dismisses the sheet" |
 
-## DY-08 — the edit sheet of a food (new in Ember; stage A2)
+## DY-08 — the edit sheet of a food (new in Ember; built on Designer's d-edit frames, stage A2)
 
 | Behavior | Swift source | TypeScript | Jest case |
 |---|---|---|---|
-| The row tap opens the edit sheet; the long-press delete stays reachable | — (frame addition; Designer's frame pending) | `screens/DiaryDayView.tsx` (`diary.editFood.<id>` wrapper) | `__tests__/DiaryDayView.test.tsx` › "a tap on the food row opens the edit sheet of the entry"; the delete twins: "a long press on the food row opens the delete confirmation and Delete tombstones" |
-| The kcal recomputes from the new grams over the entry's stored per-100g basis (KcalArithmetic) | — | `screens/DiaryEditSheet.tsx` + `diaryDayModel.ts` (`updateEntry`) | `__tests__/DiaryDayView.test.tsx` › "a tap on the food row…" (320 → 333 at +10 g); the model twin below |
+| The row tap opens the edit sheet; the long-press delete stays reachable | — (frame `d-edit-light`) | `screens/DiaryDayView.tsx` (`diary.editFood.<id>` wrapper) | `__tests__/DiaryDayView.test.tsx` › "a tap on the food row opens the edit sheet of the entry"; the delete twins: "a long press on the food row opens the delete confirmation and Delete tombstones" |
+| The kcal recomputes from the new grams over the entry's stored per-100g basis (KcalArithmetic); the stored macros scale by the same ratio | — (frame `d-edit-light`) | `screens/DiaryEditSheet.tsx` + `diaryDayModel.ts` (`updateEntry`) | `__tests__/DiaryDayView.test.tsx` › "a tap on the food row…" (320 → 333 at +10 g); the model twin below |
+| The editable name (the frame's pencil) renames the entry through the save | — (frame `d-edit-light`) | `screens/DiaryEditSheet.tsx` + `diaryDayModel.ts` (`updateEntry(item, grams, title)`) | `__tests__/DiaryDayView.test.tsx` › "the edit sheet renames the entry through the save" |
 | The save writes mirror + detail + one pending op in ONE batch, then notifies, and the model re-reads | — | `diaryDayModel.ts` (`recordUpserts`) | `__tests__/DiaryWaterExercise.test.ts` › "editing a food recomputes the kcal and writes one batch with one pending op" (543 → 465 at 350 g → 300 g) |
-| Cancel changes nothing | — | `screens/DiaryEditSheet.tsx` | `__tests__/DiaryDayView.test.tsx` › "the edit sheet Close changes nothing" |
-| The kcal figure collapses under ED-Safe; grams and Save stay | — | `screens/DiaryEditSheet.tsx` (`EdSafeCollapse`) | `__tests__/DiaryDayView.test.tsx` › "the edit sheet kcal hides in the ED-safe mode and returns when it is off" |
+| Cancel and the frame's "Delete item" | — (frames `d-edit-light`, `d-delete-light`) | `screens/DiaryEditSheet.tsx` (`onDelete`) + the day sheet's confirmation | `__tests__/DiaryDayView.test.tsx` › "the edit sheet Close changes nothing"; "the edit sheet Delete item opens the delete confirmation" |
+| The total card collapses under ED-Safe and the leaf note takes its place; grams and Save stay | — (frame `d-edit-ed`) | `screens/DiaryEditSheet.tsx` (`EdSafeCollapse` + `EdSafeNote`) | `__tests__/DiaryDayView.test.tsx` › "the edit sheet kcal hides in the ED-safe mode and returns when it is off" |
+| The delete confirmation is the frame's stacked action sheet; "Delete item" destructive, "Cancel" | — (frame `d-delete-light`) | `screens/DiaryDayView.tsx` (the dialog) | `__tests__/DiaryDayView.test.tsx` › "a long press on the food row opens the delete confirmation and Delete tombstones"; "Cancel leaves the entry in place" |
 
 ## Accessibility identifier inventory
 
@@ -111,7 +113,7 @@ call sites (pager buttons, water tiles, custom-food fields).
 | `diary.exerciseRow` | exercise row | `screens/DiaryDayView.tsx` `ExerciseRowView` |
 | `diary.addExercise` | add exercise button | `screens/DiaryDayView.tsx` |
 | `diary.editFood.<id>` | the row's edit action wrapper (added A2, DY-08) | `screens/DiaryDayView.tsx` |
-| `diary.edit` / `diary.edit.close` / `diary.edit.title` | the edit sheet's `SheetHeader` bar (added A2, DY-08) | `screens/DiaryEditSheet.tsx` |
+| `diary.edit` / `diary.edit.close` / `diary.edit.title` | the edit sheet's bar ("Edit item") and its close glass button (added A2, DY-08; the bar is composed on `GlassIconButton` per `d-edit-light`) | `screens/DiaryEditSheet.tsx` |
 | `diary.edit.grams.<id>` (+ `.ruler`) | the grams control and its `GramsRuler` (added A2, DY-08) | `screens/DiaryEditSheet.tsx` |
 | `diary.edit.save` | the edit sheet's save wrapper (added A2, DY-08) | `screens/DiaryEditSheet.tsx` |
 | `diary.toast` | saved toast | `screens/DiaryDayView.tsx` wrapper View around `Toast` |
@@ -120,9 +122,9 @@ call sites (pager buttons, water tiles, custom-food fields).
 | `addfood.tile.photo` / `.barcode` / `.label` / `.describe` / `.search` | quick-action tiles | `screens/AddFoodSheet.tsx` wrapper Views around `QuickActionTile` |
 | `addfood.savedMealsEmpty` | empty rail card | `screens/AddFoodSheet.tsx` |
 | `addfood.savedMeal` | rail card (label "Log saved meal, …") | `screens/AddFoodSheet.tsx` Pressable |
-| `search.back` | back/dismiss button (the `SheetHeader` bar's back slot since A2) | `screens/FoodSearchView.tsx` |
+| `search.back` | dismiss button (the frame's X glass button; the bar is composed on `GlassIconButton` since the frames addendum) | `screens/FoodSearchView.tsx` |
 | `search.field` | search field | `screens/FoodSearchView.tsx` wrapper View around `SearchField` |
-| `search.title` | the bar's title, "Add to <meal>" (DS `SheetHeader` pattern, A2) | `screens/FoodSearchView.tsx` |
+| `search.title` | the bar's title, "Add to <meal>" (composed bar, frames addendum) | `screens/FoodSearchView.tsx` |
 | `search.emptyState` | verbatim empty state | `screens/FoodSearchView.tsx` |
 | `search.foodRow` | result row (label "Add food, …") | `screens/FoodSearchView.tsx` `FoodSearchRowView` |
 | `search.segment.<value>` | segment option (added U-74, Ember frame) | `screens/FoodSearchView.tsx` |
