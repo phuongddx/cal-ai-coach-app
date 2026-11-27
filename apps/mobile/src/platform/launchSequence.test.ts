@@ -5,7 +5,7 @@ import { runLaunchSequence, targetOwners, type LaunchDeps } from './launchSequen
 
 const SESSION = { user: { id: 'user-1' } } as unknown as Session;
 
-function makeDeps(overrides: Partial<LaunchDeps> & { flags?: Partial<DebugFlags> } = {}) {
+function makeDeps(overrides: Partial<Omit<LaunchDeps, 'flags'>> & { flags?: Partial<DebugFlags> } = {}) {
   const calls: string[] = [];
   const { flags, ...rest } = overrides;
   const deps: LaunchDeps = {
