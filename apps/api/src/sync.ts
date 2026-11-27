@@ -1,294 +1,187 @@
 /**
- * POST /v1/sync/push and POST /v1/sync/pull (spec D4).
+ * POST /v1/sync/push and POST /v1/sync/pull on the ported SECURITY DEFINER functions
+ * `sync_push(jsonb)` and `sync_pull(bigint)` (the API role has no table privileges).
  *
- * Push, per operation, inside one transaction:
- *  - an `op_id` seen before answers `duplicate` with the current record and writes nothing;
- *  - an upsert with `meal.updatedAt` greater than the stored row's overwrites it and
- *    appends a change; an older upsert is a no-op that answers `applied` with the
- *    current record;
- *  - a tombstone sets `deleted` and wins when its `clientTimestamp` is not older than
- *    the stored `updatedAt`;
- *  - every answer returns the server's current record so the client converges.
+ * The wire contract (packages/api-contract/src/sync.ts, unchanged) speaks of meals and of a client-clock
+ * last-writer-wins rule; the functions store one text per diary entry and order writes by a
+ * server-owned global version. This adapter bridges the two:
  *
- * Pull returns changes with `seq > cursor` in order, pages by `limit`, and a
- * `hasMore` that is true only when more rows exist. Users never see each other's rows.
+ *  - a meal travels in `diary_entries.display_text` as `{"v":1,"meal":{...}}`; a tombstone sets
+ *    `deleted_at` (and keeps the last meal, or a placeholder when the record never reached the server);
+ *  - the client-clock rule is decided here, from a read inside the same transaction: an upsert applies
+ *    when `meal.updatedAt` is greater than the stored one, a tombstone when `clientTimestamp` is not older.
+ *    A losing operation is not forwarded, answers `applied` with the current record and is not
+ *    recorded in the ledger. A winner goes through `sync_push`, which numbers it;
+ *  - `serverVersion` is the function's global version of the entry and a pull row's `seq` equals it;
+ *  - `sync_ops_seen` opens the batch: it serialises same-user pushes and reports operation ids the
+ *    ledger already acknowledged, which answer `duplicate` and write nothing;
+ *  - pull pages in the adapter (`limit`, `hasMore`), because `sync_pull` returns every row after the cursor;
+ *  - an operation aimed at a record another user owns makes `sync_push` raise 42501: the whole batch
+ *    rolls back and answers 403.
  */
 import {
+  MealSchema,
   PullRequestSchema,
   PushRequestSchema,
+  type Meal,
   type MealRecord,
+  type PullRequest,
+  type PushRequest,
   type SyncOperation,
 } from '@coachcal/api-contract';
-import { zValidator } from '@hono/zod-validator';
 import type { Hono } from 'hono';
 
-import type { SqlQuery, SyncStoreApi } from './store';
+import { parseJson } from './auth/sql';
+import type { Db, Query } from './db';
+import { errorJson, json } from './http';
+import { requireUser, validateJson, type RequireUserOptions, type ScanAppEnv } from './middleware';
 
-type AppEnv = { Variables: { userId: string } };
+interface MirrorRow {
+  recordId: string;
+  displayText: string;
+  deletedAt: string | null;
+  serverVersion: number;
+  acceptedOpId: string | null;
+}
 
-/** Zod failure -> 400 VALIDATION_ERROR; details are dotted paths (or the message for pathless issues), as in the legacy backend. */
-const invalidRequest = (
-  c: { json: (body: unknown, status: 400) => Response },
-  error: { issues: { path: PropertyKey[]; message: string }[] },
-): Response =>
-  c.json(
-    {
-      error: {
-        code: 'VALIDATION_ERROR',
-        details: error.issues.map((issue) => issue.path.map(String).join('.') || issue.message),
-      },
-    },
-    400,
-  );
+/** The meal a tombstone leaves behind when the record never reached this server. */
+const placeholderMeal = (id: string, clientTimestamp: number): Meal => ({
+  id,
+  eatenAt: '1970-01-01T00:00:00.000Z',
+  name: '',
+  kcal: 0,
+  proteinG: 0,
+  carbsG: 0,
+  fatG: 0,
+  fiberG: 0,
+  updatedAt: clientTimestamp,
+});
 
-/** Normalises a `meals` row into the wire record. `Number()` accepts both drivers' number/string forms. */
-function toRecord(row: Record<string, unknown>): MealRecord {
+const encodeMeal = (meal: Meal): string => JSON.stringify({ v: 1, meal });
+
+/** Mirror row -> wire record; undefined when the stored text is not an envelope this adapter wrote. */
+export function toRecord(row: MirrorRow): MealRecord | undefined {
+  let envelope: unknown;
+  try {
+    envelope = JSON.parse(row.displayText);
+  } catch {
+    return undefined;
+  }
+  const meal = MealSchema.safeParse((envelope as { meal?: unknown } | null)?.meal);
+  if (!meal.success) return undefined;
   return {
-    id: String(row.id),
-    eatenAt: String(row.eaten_at),
-    name: String(row.name),
-    kcal: Number(row.kcal),
-    proteinG: Number(row.protein_g),
-    carbsG: Number(row.carbs_g),
-    fatG: Number(row.fat_g),
-    fiberG: Number(row.fiber_g),
-    updatedAt: Number(row.updated_at),
-    deleted: Boolean(row.deleted),
-    serverVersion: Number(row.server_version),
-    acceptedOpId: row.accepted_op_id === null || row.accepted_op_id === undefined ? null : String(row.accepted_op_id),
+    ...meal.data,
+    deleted: row.deletedAt !== null,
+    serverVersion: Number(row.serverVersion),
+    acceptedOpId: row.acceptedOpId,
   };
 }
 
-async function appendChange(query: SqlQuery, userId: string, record: MealRecord): Promise<void> {
-  await query(
-    `INSERT INTO sync_changes (user_id, record_id, record) VALUES ($1, $2, $3::jsonb)`,
-    [userId, record.id, JSON.stringify(record)],
-  );
+async function readRows(query: Query, recordIds: string[]): Promise<Map<string, MirrorRow>> {
+  const rows = await query<{ r: unknown }>(`SELECT public.sync_records_get($1::uuid[]) AS r`, [recordIds]);
+  const list = parseJson<MirrorRow[]>(rows[0]?.r ?? []);
+  return new Map(list.map((row) => [row.recordId, row]));
 }
 
-async function processPushOperation(
-  query: SqlQuery,
-  userId: string,
-  operation: SyncOperation,
-): Promise<{ opId: string; status: 'applied' | 'duplicate'; record: MealRecord }> {
-  const seen = await query(
-    `SELECT 1 AS seen FROM sync_ops WHERE user_id = $1 AND op_id = $2`,
-    [userId, operation.opId],
-  );
-  if (seen.length > 0) {
-    // Idempotent replay: the current record, nothing written.
-    const current = await query(
-      `SELECT * FROM meals WHERE user_id = $1 AND id = $2`,
-      [userId, operation.recordId],
-    );
-    const row = current[0];
-    if (row === undefined) {
-      // A seen op always has a stored record; this is a genuine bug -> 500 INTERNAL.
-      throw new Error(`sync_ops row ${operation.opId} has no stored record ${operation.recordId}`);
-    }
-    return { opId: operation.opId, status: 'duplicate', record: toRecord(row) };
-  }
+function wins(operation: SyncOperation, stored: MealRecord | undefined): boolean {
+  if (stored === undefined) return true;
+  return operation.kind === 'upsert'
+    ? operation.meal.updatedAt > stored.updatedAt
+    : operation.clientTimestamp >= stored.updatedAt;
+}
 
-  await query(
-    `INSERT INTO sync_ops (user_id, op_id, record_id, kind, client_timestamp)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [userId, operation.opId, operation.recordId, operation.kind, operation.clientTimestamp],
-  );
-
-  const existingRows = await query(
-    `SELECT * FROM meals WHERE user_id = $1 AND id = $2 FOR UPDATE`,
-    [userId, operation.recordId],
-  );
-  const existing = existingRows[0];
-
+function toEnvelope(operation: SyncOperation, stored: MealRecord | undefined) {
   if (operation.kind === 'upsert') {
-    if (existing === undefined) {
-      await query(
-        `INSERT INTO meals
-           (user_id, id, eaten_at, name, kcal, protein_g, carbs_g, fat_g, fiber_g,
-            updated_at, deleted, server_version, accepted_op_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, false, 1, $11)`,
-        [
-          userId,
-          operation.meal.id,
-          operation.meal.eatenAt,
-          operation.meal.name,
-          operation.meal.kcal,
-          operation.meal.proteinG,
-          operation.meal.carbsG,
-          operation.meal.fatG,
-          operation.meal.fiberG,
-          operation.meal.updatedAt,
-          operation.opId,
-        ],
-      );
-      const record: MealRecord = {
-        ...operation.meal,
-        deleted: false,
-        serverVersion: 1,
-        acceptedOpId: operation.opId,
-      };
-      await appendChange(query, userId, record);
-      return { opId: operation.opId, status: 'applied', record };
-    }
-
-    if (operation.meal.updatedAt > Number(existing.updated_at)) {
-      const nextVersion = Number(existing.server_version) + 1;
-      await query(
-        `UPDATE meals
-         SET eaten_at = $3, name = $4, kcal = $5, protein_g = $6, carbs_g = $7,
-             fat_g = $8, fiber_g = $9, updated_at = $10, deleted = false,
-             server_version = $11, accepted_op_id = $12
-         WHERE user_id = $1 AND id = $2`,
-        [
-          userId,
-          operation.recordId,
-          operation.meal.eatenAt,
-          operation.meal.name,
-          operation.meal.kcal,
-          operation.meal.proteinG,
-          operation.meal.carbsG,
-          operation.meal.fatG,
-          operation.meal.fiberG,
-          operation.meal.updatedAt,
-          nextVersion,
-          operation.opId,
-        ],
-      );
-      const record: MealRecord = {
-        ...operation.meal,
-        deleted: false,
-        serverVersion: nextVersion,
-        acceptedOpId: operation.opId,
-      };
-      await appendChange(query, userId, record);
-      return { opId: operation.opId, status: 'applied', record };
-    }
-
-    // Older upsert: no write, the current record wins.
-    return { opId: operation.opId, status: 'applied', record: toRecord(existing) };
+    return {
+      opId: operation.opId,
+      table: 'diary_entries',
+      recordId: operation.recordId,
+      kind: 'upsert',
+      snapshot: { id: operation.recordId, displayText: encodeMeal(operation.meal), deletedAt: null },
+      clientTimestamp: operation.clientTimestamp,
+    };
   }
-
-  // Tombstone.
-  if (existing === undefined) {
-    // The record never reached this server: synthesise a deleted record so
-    // every device converges through pull (and every schema stays valid).
-    const record: MealRecord = {
+  const { deleted: _deleted, serverVersion: _version, acceptedOpId: _accepted, ...meal } =
+    stored ?? { ...placeholderMeal(operation.recordId, operation.clientTimestamp), deleted: true, serverVersion: 0, acceptedOpId: null };
+  return {
+    opId: operation.opId,
+    table: 'diary_entries',
+    recordId: operation.recordId,
+    kind: 'tombstone',
+    snapshot: {
       id: operation.recordId,
-      eatenAt: '1970-01-01T00:00:00.000Z',
-      name: '',
-      kcal: 0,
-      proteinG: 0,
-      carbsG: 0,
-      fatG: 0,
-      fiberG: 0,
-      updatedAt: operation.clientTimestamp,
-      deleted: true,
-      serverVersion: 1,
-      acceptedOpId: operation.opId,
-    };
-    await query(
-      `INSERT INTO meals
-         (user_id, id, eaten_at, name, kcal, protein_g, carbs_g, fat_g, fiber_g,
-          updated_at, deleted, server_version, accepted_op_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, 1, $11)`,
-      [
-        userId,
-        operation.recordId,
-        record.eatenAt,
-        record.name,
-        record.kcal,
-        record.proteinG,
-        record.carbsG,
-        record.fatG,
-        record.fiberG,
-        record.updatedAt,
-        operation.opId,
-      ],
-    );
-    await appendChange(query, userId, record);
-    return { opId: operation.opId, status: 'applied', record };
-  }
-
-  const stored = toRecord(existing);
-  if (operation.clientTimestamp >= stored.updatedAt) {
-    // Not older than the stored row: the tombstone wins.
-    const nextVersion = stored.serverVersion + 1;
-    await query(
-      `UPDATE meals
-       SET deleted = true, updated_at = $3, server_version = $4, accepted_op_id = $5
-       WHERE user_id = $1 AND id = $2`,
-      [userId, operation.recordId, operation.clientTimestamp, nextVersion, operation.opId],
-    );
-    const record: MealRecord = {
-      ...stored,
-      deleted: true,
-      updatedAt: operation.clientTimestamp,
-      serverVersion: nextVersion,
-      acceptedOpId: operation.opId,
-    };
-    await appendChange(query, userId, record);
-    return { opId: operation.opId, status: 'applied', record };
-  }
-
-  // Older tombstone loses; the current record wins.
-  return { opId: operation.opId, status: 'applied', record: stored };
+      displayText: encodeMeal({ ...meal, updatedAt: operation.clientTimestamp }),
+      deletedAt: new Date(operation.clientTimestamp).toISOString(),
+    },
+    clientTimestamp: operation.clientTimestamp,
+  };
 }
 
-export function registerSyncRoutes(app: Hono<AppEnv>, store: SyncStoreApi): void {
-  app.post(
-    '/v1/sync/push',
-    zValidator('json', PushRequestSchema, (result, c) =>
-      result.success ? undefined : invalidRequest(c, result.error),
-    ),
-    async (c) => {
-      const userId = c.get('userId');
-      const { operations } = c.req.valid('json');
-      const accepted = await store.transaction(async (query) => {
-        const results: Array<{ opId: string; status: 'applied' | 'duplicate'; record: MealRecord }> = [];
-        for (const operation of operations) {
-          results.push(await processPushOperation(query, userId, operation));
-        }
-        return results;
-      });
-      return c.json({ accepted }, 200);
-    },
-  );
+async function push(db: Db, userId: string, operations: PushRequest['operations']) {
+  return db.withUser(userId, async (query) => {
+    const seenRows = await query<{ r: unknown }>(`SELECT public.sync_ops_seen($1::uuid[]) AS r`, [
+      operations.map((operation) => operation.opId),
+    ]);
+    const seen = new Set(parseJson<string[]>(seenRows[0]?.r ?? []));
+    const rows = await readRows(query, [...new Set(operations.map((operation) => operation.recordId))]);
 
-  app.post(
-    '/v1/sync/pull',
-    zValidator('json', PullRequestSchema, (result, c) =>
-      result.success ? undefined : invalidRequest(c, result.error),
-    ),
-    async (c) => {
-      const userId = c.get('userId');
-      const { cursor, limit } = c.req.valid('json');
-      // Fetch one extra row to decide `hasMore` without a second query.
-      const rows = await store.query(
-        `SELECT seq::int AS seq, record
-         FROM sync_changes
-         WHERE user_id = $1 AND seq > $2
-         ORDER BY seq
-         LIMIT $3`,
-        [userId, cursor, limit + 1],
-      );
-      const hasMore = rows.length > limit;
-      const page = hasMore ? rows.slice(0, limit) : rows;
-      const last = page.at(-1);
-      return c.json(
-        {
-          rows: page.map((row) => {
-            // postgres.js hands jsonb back as a string, PGlite as an object —
-            // normalise so the wire always carries the record object.
-            const raw = row.record;
-            const record = typeof raw === 'string' ? (JSON.parse(raw) as MealRecord) : (raw as MealRecord);
-            return { seq: Number(row.seq), record };
-          }),
-          cursor: last === undefined ? cursor : Number(last.seq),
-          hasMore,
-        },
-        200,
-      );
-    },
+    const accepted: { opId: string; status: 'applied' | 'duplicate'; record: MealRecord }[] = [];
+    for (const operation of operations) {
+      const row = rows.get(operation.recordId);
+      let status: 'applied' | 'duplicate' = 'applied';
+      if (seen.has(operation.opId)) {
+        status = 'duplicate';
+      } else if (wins(operation, row && toRecord(row))) {
+        await query(`SELECT public.sync_push($1::jsonb)`, [[toEnvelope(operation, row && toRecord(row))]]);
+        seen.add(operation.opId);
+        const fresh = (await readRows(query, [operation.recordId])).get(operation.recordId);
+        if (fresh) rows.set(operation.recordId, fresh);
+      }
+      const current = rows.get(operation.recordId);
+      const record = current && toRecord(current);
+      // A seen operation always has a stored record; anything else is a genuine bug -> 500 INTERNAL.
+      if (!record) throw new Error(`no stored record ${operation.recordId} for operation ${operation.opId}`);
+      accepted.push({ opId: operation.opId, status, record });
+    }
+    return accepted;
+  });
+}
+
+async function pull(db: Db, userId: string, request: PullRequest) {
+  const result = await db.withUser(userId, async (query) => {
+    const rows = await query<{ r: unknown }>(`SELECT public.sync_pull($1::bigint) AS r`, [request.cursor]);
+    return parseJson<{ rows: { snapshot: Omit<MirrorRow, 'recordId'> & { id: string } }[] }>(rows[0]?.r);
+  });
+  const all = result.rows.map(({ snapshot }) => ({
+    seq: Number(snapshot.serverVersion),
+    record: toRecord({ ...snapshot, recordId: snapshot.id }),
+  }));
+  const hasMore = all.length > request.limit;
+  const page = hasMore ? all.slice(0, request.limit) : all;
+  const last = page.at(-1);
+  return {
+    // A row whose text this adapter did not write is skipped (the cursor still moves past it).
+    rows: page.flatMap((row) => (row.record ? [{ seq: row.seq, record: row.record }] : [])),
+    cursor: last === undefined ? request.cursor : last.seq,
+    hasMore,
+  };
+}
+
+export function registerSyncRoutes(app: Hono<ScanAppEnv>, deps: { db: Db }, auth: RequireUserOptions): void {
+  const guard = requireUser(auth);
+
+  app.post('/v1/sync/push', guard, validateJson(PushRequestSchema), async (c) => {
+    try {
+      const accepted = await push(deps.db, c.get('userId'), (c.get('body') as PushRequest).operations);
+      return json(200, { accepted });
+    } catch (error) {
+      // sync_push raises 42501 for an operation aimed at another user's record.
+      if ((error as { code?: string } | null)?.code === '42501') return errorJson(403, 'UNAUTHORIZED');
+      throw error;
+    }
+  });
+
+  app.post('/v1/sync/pull', guard, validateJson(PullRequestSchema), async (c) =>
+    json(200, await pull(deps.db, c.get('userId'), c.get('body') as PullRequest)),
   );
 }

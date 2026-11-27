@@ -8,10 +8,10 @@
 import type { MiddlewareHandler } from 'hono';
 import type { z } from 'zod';
 
-import { loadDevTokens, type TokenMap } from './auth';
+import { loadDevTokens, type TokenMap } from './auth/devTokens';
 import { errorJson, zodIssues } from './http';
 
-export type ScanAppEnv = { Variables: { userId: string; body: unknown } };
+export type ScanAppEnv = { Variables: { userId: string; sessionId?: string; body: unknown } };
 
 /** Parses the body as JSON, then validates it against `schema`; both failures are 400. */
 export function validateJson(schema: z.ZodType): MiddlewareHandler<ScanAppEnv> {
@@ -33,23 +33,42 @@ export function validateJson(schema: z.ZodType): MiddlewareHandler<ScanAppEnv> {
 export interface RequireUserOptions {
   /** Test seam: the dev-token map (default: apps/api/dev-tokens.json, loaded on first use). */
   tokens?: TokenMap;
+  /** Verifies an API-signed access token and its live session (see auth/session.ts). */
+  sessions?: SessionAuthenticator;
+}
+
+export interface SessionAuthenticator {
+  authenticate(accessToken: string): Promise<{ userId: string; sessionId: string } | undefined>;
+}
+
+export function bearerToken(header: string | undefined): string {
+  const value = header ?? '';
+  return value.startsWith('Bearer ') ? value.slice('Bearer '.length).trim() : '';
 }
 
 /**
- * The one authentication point. In this unit it accepts the checked-in dev tokens only
- * when AUTH_DEV_TOKENS=1 (read per request); otherwise every protected route answers 401.
- * A later unit replaces the inside of this function with real session verification.
+ * The one authentication point. A bearer token is accepted when it is
+ *  - a checked-in dev token and AUTH_DEV_TOKENS=1 (read per request; off in production), or
+ *  - an access token this API signed (HS256, sub + sid) whose session row is not revoked or expired.
+ * Everything else answers 401 UNAUTHORIZED. Dev tokens carry no session (`sessionId` stays unset).
  */
 export function requireUser(options: RequireUserOptions = {}): MiddlewareHandler<ScanAppEnv> {
   let tokens: TokenMap | undefined = options.tokens;
   return async (c, next) => {
-    if (process.env.AUTH_DEV_TOKENS !== '1') return errorJson(401, 'UNAUTHORIZED');
-    tokens ??= loadDevTokens();
-    const header = c.req.header('authorization') ?? '';
-    const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : '';
-    const userId = token === '' ? undefined : tokens[token];
-    if (userId === undefined) return errorJson(401, 'UNAUTHORIZED');
-    c.set('userId', userId);
+    const token = bearerToken(c.req.header('authorization'));
+    if (token === '') return errorJson(401, 'UNAUTHORIZED');
+    if (process.env.AUTH_DEV_TOKENS === '1') {
+      tokens ??= loadDevTokens();
+      const devUser = tokens[token];
+      if (devUser !== undefined) {
+        c.set('userId', devUser);
+        return next();
+      }
+    }
+    const claims = await options.sessions?.authenticate(token);
+    if (!claims) return errorJson(401, 'UNAUTHORIZED');
+    c.set('userId', claims.userId);
+    c.set('sessionId', claims.sessionId);
     await next();
   };
 }
