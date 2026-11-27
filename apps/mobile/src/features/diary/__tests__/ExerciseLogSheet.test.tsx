@@ -4,6 +4,7 @@
  * the disabled Save. The model is a test double.
  */
 import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { setEdSafeMode } from '../../../design';
 
 import type { DiaryDayModel } from '../diaryDayModel';
 import { ExerciseLogSheet } from '../screens/ExerciseLogSheet';
@@ -23,6 +24,7 @@ function makeModel(addExercise = jest.fn(async () => undefined)): DiaryDayModel 
     goalKcal: () => null,
     leftKcal: () => null,
     sectionKcal: () => 0,
+    burnedKcal: () => null,
     items: () => [],
     delete: async () => undefined,
     deleteEntry: async () => undefined,
@@ -35,6 +37,10 @@ async function renderSheet(model = makeModel(), onDismiss = jest.fn()) {
   return { model, onDismiss };
 }
 
+afterEach(() => {
+  setEdSafeMode(false);
+});
+
 describe('ExerciseLogSheet screen', () => {
   it('the sheet shows the type field, the duration stepper and the optional kcal', async () => {
     await renderSheet();
@@ -46,7 +52,23 @@ describe('ExerciseLogSheet screen', () => {
     expect(screen.getByTestId('ccstepper.increment')).toBeOnTheScreen();
     expect(screen.getByText('30 min')).toBeOnTheScreen();
     expect(screen.getByTestId('exercise.kcalField')).toBeOnTheScreen();
+    expect(screen.queryByText('Activity and minutes only. Burned kcal is hidden.')).toBeNull();
     expect(screen.getByTestId('exercise.save')).toBeOnTheScreen();
+  });
+
+  it('the burned kcal field hides behind the note in the ED-safe mode and returns when it is off', async () => {
+    setEdSafeMode(true);
+    await renderSheet();
+
+    expect(screen.queryByTestId('exercise.kcalField')).toBeNull();
+    expect(screen.getByText('Activity and minutes only. Burned kcal is hidden.')).toBeOnTheScreen();
+    // The activity fields and Save stay.
+    expect(screen.getByTestId('exercise.typeField')).toBeOnTheScreen();
+    expect(screen.getByTestId('exercise.save')).toBeOnTheScreen();
+
+    setEdSafeMode(false);
+    await waitFor(() => expect(screen.getByTestId('exercise.kcalField')).toBeOnTheScreen());
+    expect(screen.queryByText('Activity and minutes only. Burned kcal is hidden.')).toBeNull();
   });
 
   it('Save stays disabled while the type is empty', async () => {

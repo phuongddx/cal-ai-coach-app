@@ -8,7 +8,7 @@ import { SymbolView } from 'expo-symbols';
 
 import type { CatalogRepository } from '../../../data/repos/catalogRepository';
 import type { Clock, IdGenerator } from '../../../data/repos/sqlDb';
-import { ChipOption, PrimaryButton, Sheet, useTokens } from '../../../design';
+import { ChipOption, PrimaryButton, Sheet, useEdSafeMode, useTokens, space } from '../../../design';
 
 import {
   canSaveCustomFood,
@@ -40,7 +40,9 @@ export function CustomFoodSheet({
   now,
   newId,
 }: CustomFoodSheetProps) {
-  const { colors, space, radius, typography } = useTokens();
+  const { colors, radius, space, typography } = useTokens();
+  const edSafe = useEdSafeMode();
+  const [advancedExpanded, setAdvancedExpanded] = useState(false);
   const model = useMemo(
     () => createCustomFoodModel({ catalog, userId, now, newId }),
     [catalog, userId, now, newId],
@@ -110,41 +112,110 @@ export function CustomFoodSheet({
         ))}
       </View>
 
-      <Field
-        title="kcal"
-        value={draft.kcalText}
-        onChangeText={(text) => patch({ kcalText: text })}
-        identifier="custom.kcalField"
-        keyboardType="numbers-and-punctuation"
-      />
-      <Field
-        title="Protein g"
-        value={draft.proteinText}
-        onChangeText={(text) => patch({ proteinText: text })}
-        identifier="custom.proteinField"
-        keyboardType="number-pad"
-      />
-      <Field
-        title="Carbs g"
-        value={draft.carbsText}
-        onChangeText={(text) => patch({ carbsText: text })}
-        identifier="custom.carbsField"
-        keyboardType="number-pad"
-      />
-      <Field
-        title="Fat g"
-        value={draft.fatText}
-        onChangeText={(text) => patch({ fatText: text })}
-        identifier="custom.fatField"
-        keyboardType="number-pad"
-      />
-      <Field
-        title="Fiber g"
-        value={draft.fiberText}
-        onChangeText={(text) => patch({ fiberText: text })}
-        identifier="custom.fiberField"
-        keyboardType="number-pad"
-      />
+      {edSafe && (
+        <View style={[styles.noteCard, { backgroundColor: colors.accentTint, borderRadius: radius.md }]}>
+          <SymbolView name="eye.slash" size={16} tintColor={colors.accentInk} />
+          <Text style={[typography.footnote, { color: colors.textSecondary, flex: 1 }]}>
+            {'Name and serving only. Nutrition fields fold into \u201CAdvanced\u201D, collapsed and blurred.'}
+          </Text>
+        </View>
+      )}
+
+      {edSafe ? (
+        <>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: advancedExpanded }}
+            onPress={() => setAdvancedExpanded((expanded) => !expanded)}
+            style={styles.advancedHeader}
+          >
+            <Text style={[typography.subhead, { color: colors.textPrimary, fontWeight: '600' }]}>Advanced</Text>
+            <SymbolView
+              name={advancedExpanded ? 'chevron.down' : 'chevron.right'}
+              size={12}
+              weight="semibold"
+              tintColor={colors.textSecondary}
+            />
+          </Pressable>
+          {advancedExpanded && (
+            <>
+              <Field
+                title="kcal"
+                value={draft.kcalText}
+                onChangeText={(text) => patch({ kcalText: text })}
+                identifier="custom.kcalField"
+                keyboardType="numbers-and-punctuation"
+              />
+              <Field
+                title="Protein g"
+                value={draft.proteinText}
+                onChangeText={(text) => patch({ proteinText: text })}
+                identifier="custom.proteinField"
+                keyboardType="number-pad"
+              />
+              <Field
+                title="Carbs g"
+                value={draft.carbsText}
+                onChangeText={(text) => patch({ carbsText: text })}
+                identifier="custom.carbsField"
+                keyboardType="number-pad"
+              />
+              <Field
+                title="Fat g"
+                value={draft.fatText}
+                onChangeText={(text) => patch({ fatText: text })}
+                identifier="custom.fatField"
+                keyboardType="number-pad"
+              />
+              <Field
+                title="Fiber g"
+                value={draft.fiberText}
+                onChangeText={(text) => patch({ fiberText: text })}
+                identifier="custom.fiberField"
+                keyboardType="number-pad"
+              />
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <Field
+            title="kcal"
+            value={draft.kcalText}
+            onChangeText={(text) => patch({ kcalText: text })}
+            identifier="custom.kcalField"
+            keyboardType="numbers-and-punctuation"
+          />
+          <Field
+            title="Protein g"
+            value={draft.proteinText}
+            onChangeText={(text) => patch({ proteinText: text })}
+            identifier="custom.proteinField"
+            keyboardType="number-pad"
+          />
+          <Field
+            title="Carbs g"
+            value={draft.carbsText}
+            onChangeText={(text) => patch({ carbsText: text })}
+            identifier="custom.carbsField"
+            keyboardType="number-pad"
+          />
+          <Field
+            title="Fat g"
+            value={draft.fatText}
+            onChangeText={(text) => patch({ fatText: text })}
+            identifier="custom.fatField"
+            keyboardType="number-pad"
+          />
+          <Field
+            title="Fiber g"
+            value={draft.fiberText}
+            onChangeText={(text) => patch({ fiberText: text })}
+            identifier="custom.fiberField"
+            keyboardType="number-pad"
+          />
+        </>
+      )}
       {draft.basis === 'per_serving' && (
         <Field
           title="Serving grams"
@@ -204,5 +275,13 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center' },
   closeButton: { marginLeft: 'auto', width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   basisRow: { flexDirection: 'row', gap: 8 },
+  noteCard: { flexDirection: 'row', gap: space.md, padding: space.lg, alignItems: 'flex-start' },
+  advancedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 44,
+    paddingHorizontal: space.sm,
+  },
   field: { borderWidth: 1 },
 });

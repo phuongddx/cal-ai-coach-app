@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
-import { QuickActionTile, SectionHeader, Sheet, useTokens, useEdSafeHidden } from '../../../design';
+import { EdSafeCollapse, QuickActionTile, SectionHeader, Sheet, useTokens } from '../../../design';
 
 import { mealName } from '../diaryMath';
 import type { ScanMode } from '../addFoodModel';
@@ -45,7 +45,6 @@ export function AddFoodSheet({
   onDismiss,
 }: AddFoodSheetProps) {
   const { colors, space, radius, typography } = useTokens();
-  const kcalHidden = useEdSafeHidden();
 
   return (
     <Sheet>
@@ -132,11 +131,11 @@ export function AddFoodSheet({
               >
                 {meal.name}
               </Text>
-              {!kcalHidden && (
+              <EdSafeCollapse>
                 <Text style={[typography.caption, { color: colors.textSecondary }]}>
                   {`${meal.kcal} kcal`}
                 </Text>
-              )}
+              </EdSafeCollapse>
             </Pressable>
           ))}
         </ScrollView>
@@ -224,6 +223,12 @@ export function AddFoodSheetRoute({
           now={deps.now}
           newId={deps.newId}
           catalog={deps.catalog}
+          onDescribe={() => {
+            // The describe escape: close the sheets, then the scan hand-over in text mode.
+            setIsSearchPresented(false);
+            onDismiss();
+            onCapture('text');
+          }}
           onSaved={onSaved}
           onDismiss={() => setIsSearchPresented(false)}
         />

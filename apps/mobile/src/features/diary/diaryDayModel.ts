@@ -30,6 +30,8 @@ export type DiaryDayModel = {
   goalKcal(): number | null;
   leftKcal(): number | null;
   sectionKcal(section: DiaryDaySection): number;
+  /** The day's burned-kcal sum (the exercise header figure); null without exercise rows. */
+  burnedKcal(): number | null;
   items(slot: string): DiaryDaySnapshot['sections'][number]['items'];
   /** Tombstone + detail delete — the delete of the food row. */
   delete(item: DiaryDaySnapshot['sections'][number]['items'][number]): Promise<void>;
@@ -97,6 +99,12 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
       return goal === undefined ? null : Math.max(goal - eatenKcalOf(), 0);
     },
     sectionKcal: sectionKcalOf,
+    burnedKcal: () => {
+      if (snapshot.exercises.length === 0) {
+        return null;
+      }
+      return snapshot.exercises.reduce((total, exercise) => total + (exercise.kcalBurned ?? 0), 0);
+    },
     items: (slot: string) => snapshot.sections.find((section) => section.slot === slot)?.items ?? [],
     async delete(item) {
       // Tombstone (not hard delete) keeps the sync history; the detail row

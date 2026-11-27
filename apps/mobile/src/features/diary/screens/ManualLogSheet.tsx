@@ -9,7 +9,7 @@ import { SymbolView } from 'expo-symbols';
 
 import type { DiaryEntryDetail } from '../../../data/repos/diaryEntryRepository';
 import type { IdGenerator } from '../../../data/repos/sqlDb';
-import { PrimaryButton, Sheet, Stepper, useTokens } from '../../../design';
+import { EdSafeCollapse, PrimaryButton, Sheet, Stepper, useEdSafeMode, useTokens, space } from '../../../design';
 
 import { manualKcal, mealName, servingKcal } from '../diaryMath';
 import type { FoodSearchRow } from '../foodSearchModel';
@@ -26,7 +26,8 @@ export type ManualLogSheetProps = {
 const SERVING_RANGE = { min: 1, max: 50 } as const;
 
 export function ManualLogSheet({ row, mealSlot, onSave, onDismiss, newId }: ManualLogSheetProps) {
-  const { colors, typography } = useTokens();
+  const { colors, radius, space, typography } = useTokens();
+  const edSafe = useEdSafeMode();
   const [grams, setGrams] = useState(row.servingGrams ?? 100);
   const [servings, setServings] = useState(1);
 
@@ -85,18 +86,34 @@ export function ManualLogSheet({ row, mealSlot, onSave, onDismiss, newId }: Manu
         </View>
       )}
 
-      <View style={styles.kcalRow}>
-        <Text style={[typography.subhead, { color: colors.textSecondary }]}>kcal</Text>
-        <Text
-          testID="manual.kcal"
-          style={[styles.kcalValue, { color: colors.textPrimary }]}
-        >
-          {`${displayedKcal}`}
-        </Text>
-      </View>
+      <EdSafeCollapse>
+        <View style={styles.kcalRow}>
+          <Text style={[typography.subhead, { color: colors.textSecondary }]}>kcal</Text>
+          <Text
+            testID="manual.kcal"
+            style={[styles.kcalValue, { color: colors.textPrimary }]}
+          >
+            {`${displayedKcal}`}
+          </Text>
+        </View>
+      </EdSafeCollapse>
+
+      {edSafe && (
+        <View style={[styles.noteCard, { backgroundColor: colors.accentTint, borderRadius: radius.md }]}>
+          <SymbolView name="eye.slash" size={16} tintColor={colors.accentInk} />
+          <View style={styles.noteText}>
+            <Text style={[typography.subhead, { color: colors.textPrimary, fontWeight: '600' }]}>
+              No numbers needed.
+            </Text>
+            <Text style={[typography.footnote, { color: colors.textSecondary }]}>
+              {"We'll estimate the energy from the name and amount and keep it hidden, so your plan stays accurate."}
+            </Text>
+          </View>
+        </View>
+      )}
 
       <View testID="manual.save">
-        <PrimaryButton title={`Save to ${mealName(mealSlot)}`} action={save} />
+        <PrimaryButton title={`Add to ${mealName(mealSlot)}`} action={save} />
       </View>
     </Sheet>
   );
@@ -156,6 +173,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   kcalValue: { fontSize: 24, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  noteCard: { flexDirection: 'row', gap: space.md, padding: space.lg, alignItems: 'flex-start' },
+  noteText: { flex: 1, gap: 2 },
   servingRow: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 8 },
   stepButton: {
     width: 32,

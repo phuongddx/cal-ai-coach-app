@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
-import { PrimaryButton, Sheet, useTokens } from '../../../design';
+import { PrimaryButton, Sheet, EdSafeCollapse, useEdSafeMode, useTokens } from '../../../design';
 
 import type { DiaryDayModel } from '../diaryDayModel';
 
@@ -22,6 +22,7 @@ const KCAL_RANGE = { min: 0, max: 5000 } as const;
 
 export function ExerciseLogSheet({ model, onDismiss }: ExerciseLogSheetProps) {
   const { colors, radius, space, typography } = useTokens();
+  const edSafe = useEdSafeMode();
   const [type, setType] = useState('');
   const [durationMin, setDurationMin] = useState(30);
   const [kcalText, setKcalText] = useState('');
@@ -66,7 +67,7 @@ export function ExerciseLogSheet({ model, onDismiss }: ExerciseLogSheetProps) {
           typography.body,
           {
             color: colors.textPrimary,
-            backgroundColor: colors.surface,
+            backgroundColor: colors.fill,
             borderColor: colors.border,
             borderRadius: radius.md,
             paddingVertical: space.md,
@@ -77,26 +78,34 @@ export function ExerciseLogSheet({ model, onDismiss }: ExerciseLogSheetProps) {
 
       <DurationStepper value={durationMin} onValueChange={setDurationMin} />
 
-      <TextInput
-        value={kcalText}
-        onChangeText={setKcalText}
-        placeholder="Calories burned (optional)"
-        placeholderTextColor={colors.textTertiary}
-        keyboardType="number-pad"
-        testID="exercise.kcalField"
-        style={[
-          styles.field,
-          typography.body,
-          {
-            color: colors.textPrimary,
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-            borderRadius: radius.md,
-            paddingVertical: space.md,
-            paddingHorizontal: space.lg,
-          },
-        ]}
-      />
+      <EdSafeCollapse>
+        <TextInput
+          value={kcalText}
+          onChangeText={setKcalText}
+          placeholder="Calories burned (optional)"
+          placeholderTextColor={colors.textTertiary}
+          keyboardType="number-pad"
+          testID="exercise.kcalField"
+          style={[
+            styles.field,
+            typography.body,
+            {
+              color: colors.textPrimary,
+              backgroundColor: colors.fill,
+              borderColor: colors.border,
+              borderRadius: radius.md,
+              paddingVertical: space.md,
+              paddingHorizontal: space.lg,
+            },
+          ]}
+        />
+      </EdSafeCollapse>
+
+      {edSafe && (
+        <Text style={[typography.footnote, { color: colors.textSecondary }]}>
+          Activity and minutes only. Burned kcal is hidden.
+        </Text>
+      )}
 
       <View testID="exercise.save">
         <PrimaryButton title="Save" action={save} disabled={!canSave} />

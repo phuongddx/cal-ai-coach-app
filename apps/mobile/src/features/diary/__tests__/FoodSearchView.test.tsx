@@ -1,12 +1,14 @@
 /**
- * RNTL screen test of FoodSearchView (DY-03): recents before a query, results
- * for a query, the verbatim empty state, the persistent create-custom row and
- * the manual-log flow into the diary write. The catalog is a test double over
- * the seeded-food values the Swift UI tests rely on (Chicken Breast 165).
+ * RNTL screen test of FoodSearchView (DY-03): the Search / Saved / Recent
+ * segment, recents on open, results for a query, the verbatim empty state,
+ * the per-row add button, the escape card, the persistent create-custom row
+ * and the manual-log flow into the diary write. The catalog is a test double
+ * over the seeded-food values the Swift UI tests rely on (Chicken Breast 165).
  */
 import { fireEvent, render, screen, userEvent, waitFor, within } from '@testing-library/react-native';
+import { setEdSafeMode } from '../../../design';
 
-import type { CatalogRepository, Food } from '../../../data/repos/catalogRepository';
+import type { CatalogRepository, CustomFood, Food } from '../../../data/repos/catalogRepository';
 import type { DiaryEntryDetail } from '../../../data/repos/diaryEntryRepository';
 import type { DiaryDeps } from '../deps';
 import { FoodSearchView } from '../screens/FoodSearchView';
@@ -30,12 +32,30 @@ function makeFood(overrides: Partial<Food> = {}): Food {
   };
 }
 
+function makeCustom(overrides: Partial<CustomFood> = {}): CustomFood {
+  return {
+    id: 'custom-1',
+    userId: 'user-1',
+    name: 'Mila Punch',
+    basis: 'per_serving',
+    kcal: 120,
+    proteinG: 0,
+    carbsG: 20,
+    fatG: 0,
+    fiberG: 0,
+    servingGrams: 330,
+    createdAt: NOON,
+    ...overrides,
+  };
+}
+
 function makeCatalog(overrides: Partial<CatalogRepository> = {}): CatalogRepository {
   return {
     searchFoods: async () => [makeFood()],
     recentFoods: async () => [makeFood({ name: 'Overnight Oats', per100gKcal: 150, proteinG: 6, servingGrams: null })],
     customFoods: async () => [],
     saveCustomFood: async () => undefined,
+    ...overrides,
   } as unknown as CatalogRepository;
 }
 
@@ -58,7 +78,7 @@ function makeDeps(overrides: Partial<DiaryDeps> = {}): DiaryDeps {
   };
 }
 
-async function renderSearch(deps: DiaryDeps, onSaved = jest.fn(), onDismiss = jest.fn()) {
+async function renderSearch(deps: DiaryDeps, onSaved = jest.fn(), onDismiss = jest.fn(), onDescribe = jest.fn()) {
   return await render(
     <FoodSearchView
       mealSlot="breakfast"
@@ -69,11 +89,16 @@ async function renderSearch(deps: DiaryDeps, onSaved = jest.fn(), onDismiss = je
       notify={deps.notify}
       now={deps.now}
       newId={deps.newId}
+      onDescribe={onDescribe}
       onSaved={onSaved}
       onDismiss={onDismiss}
     />,
   );
 }
+
+afterEach(() => {
+  setEdSafeMode(false);
+});
 
 describe('FoodSearchView screen', () => {
   it('the search screen shows the Recent card before a query', async () => {
@@ -81,10 +106,32 @@ describe('FoodSearchView screen', () => {
 
     expect(screen.getByTestId('search.back')).toBeOnTheScreen();
     expect(screen.getByTestId('search.field')).toBeOnTheScreen();
-    expect(await screen.findByText('Recent')).toBeOnTheScreen();
+    // The screen opens on the Recent segment.
+    expect(screen.getByTestId('search.segment.recent').props.accessibilityState.selected).toBe(true);
+    expect((await screen.findAllByText('Recent')).length).toBeGreaterThan(0);
     expect(screen.getByLabelText('Add food, Overnight Oats')).toBeOnTheScreen();
     expect(screen.getByText('150 kcal · 6g protein · 100g')).toBeOnTheScreen();
     expect(screen.getByTestId('search.createCustom')).toBeOnTheScreen();
+  });
+
+  it('the segment switches between the search results, the saved customs and the recents', async () => {
+    const catalog = makeCatalog({ customFoods: async () => [makeCustom()] });
+    await renderSearch(makeDeps({ catalog }));
+
+    await userEvent.press(screen.getByTestId('search.segment.saved'));
+    expect(await screen.findByText('Mila Punch')).toBeOnTheScreen();
+    expect(screen.queryByText('150 kcal · 6g protein · 100g')).toBeNull();
+
+    await userEvent.press(screen.getByTestId('search.segment.search'));
+    // No query yet: the search segment holds no list.
+    expect(screen.queryByText('Mila Punch')).toBeNull();
+    expect(screen.queryByText('150 kcal · 6g protein · 100g')).toBeNull();
+
+    await userEvent.type(screen.getByPlaceholderText('Search foods'), 'chicken');
+    expect(await screen.findByText('Results for “chicken”')).toBeOnTheScreen();
+
+    await userEvent.press(screen.getByTestId('search.segment.recent'));
+    expect(await screen.findByText('150 kcal · 6g protein · 100g')).toBeOnTheScreen();
   });
 
   it('a query surfaces the results card', async () => {
@@ -93,7 +140,8 @@ describe('FoodSearchView screen', () => {
 
     expect(await screen.findByText('Results for “chicken”')).toBeOnTheScreen();
     expect(screen.getByLabelText('Add food, Chicken Breast')).toBeOnTheScreen();
-    expect(screen.queryByText('Recent')).toBeNull();
+    // The recent row made way for the results.
+    expect(screen.queryByLabelText('Add food, Overnight Oats')).toBeNull();
   });
 
   it('a query with no matches shows the verbatim empty state and the create entry', async () => {
@@ -104,6 +152,43 @@ describe('FoodSearchView screen', () => {
     expect(screen.getByText('No results for “qqzzxx”')).toBeOnTheScreen();
     expect(screen.getByText('Try a different search or create a custom food.')).toBeOnTheScreen();
     expect(screen.getByTestId('search.createCustom')).toBeOnTheScreen();
+  });
+
+  it('the add button logs the row like the row tap itself', async () => {
+    await renderSearch(makeDeps());
+
+    await userEvent.press(await screen.findByTestId('search.addRow.food-1'));
+    expect(await screen.findByText('Log Overnight Oats')).toBeOnTheScreen();
+  });
+
+  it('the escape card hands over to the describe flow and to the manual entry', async () => {
+    const onDescribe = jest.fn();
+    await renderSearch(makeDeps(), jest.fn(), jest.fn(), onDescribe);
+
+    expect(screen.getByText("Can't find it? Describe it or log manually")).toBeOnTheScreen();
+    await userEvent.press(screen.getByTestId('search.escape.describe'));
+    expect(onDescribe).toHaveBeenCalledTimes(1);
+
+    await userEvent.press(screen.getByTestId('search.escape.manual'));
+    expect(await screen.findByTestId('custom.nameField')).toBeOnTheScreen();
+  });
+
+  it('the search row shows the serving size in the ED-safe mode and the kcal figure when off', async () => {
+    setEdSafeMode(true);
+    await renderSearch(makeDeps());
+
+    // The recent row carries no serving, so the basis string takes the slot.
+    expect(await screen.findByText('100g')).toBeOnTheScreen();
+    expect(screen.queryByText('150 kcal · 6g protein · 100g')).toBeNull();
+
+    // The result row shows its serving size.
+    await userEvent.type(screen.getByPlaceholderText('Search foods'), 'chicken');
+    expect(await screen.findByText('150 g')).toBeOnTheScreen();
+    expect(screen.queryByText('165 kcal · 31g protein · 100g')).toBeNull();
+
+    setEdSafeMode(false);
+    await waitFor(() => expect(screen.getByText('165 kcal · 31g protein · 100g')).toBeOnTheScreen());
+    expect(screen.queryByText('150 g')).toBeNull();
   });
 
   it('a row opens the manual-log sheet with the derived kcal of the default grams', async () => {

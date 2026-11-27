@@ -22,6 +22,7 @@ function makeItem(overrides: Partial<DiaryDayItem> = {}): DiaryDayItem {
     kcal: 320,
     grams: 250,
     confidence: 0.92,
+    source: null,
     isSynced: true,
     loggedAt: NOON,
     entry: {
@@ -86,6 +87,10 @@ function makeModel(
     goalKcal: () => 2150,
     leftKcal: () => 1830,
     sectionKcal: (section) => section.items.reduce((total, item) => total + (item.kcal ?? 0), 0),
+    burnedKcal: () =>
+      snapshot.exercises.length === 0
+        ? null
+        : snapshot.exercises.reduce((total, exercise) => total + (exercise.kcalBurned ?? 0), 0),
     items: (slot) => snapshot.sections.find((section) => section.slot === slot)?.items ?? [],
     delete: async () => undefined,
     deleteEntry: async () => undefined,
@@ -143,11 +148,42 @@ describe('DiaryDayView screen', () => {
     for (const slot of ['breakfast', 'lunch', 'dinner', 'snacks']) {
       expect(screen.getByTestId(`diary.addFood.${slot}`)).toBeOnTheScreen();
     }
-    expect(screen.getByText('Add snack')).toBeOnTheScreen();
+    expect(screen.getByText('Add snacks')).toBeOnTheScreen();
     expect(screen.getByTestId('diary.foodRow')).toBeOnTheScreen();
     expect(screen.getByText('Overnight Oats')).toBeOnTheScreen();
+    // The section header and the food row both show the 320 kcal figure.
+    expect(screen.getAllByText('320 kcal')).toHaveLength(2);
+    expect(screen.getByText('−300 kcal')).toBeOnTheScreen();
+    expect(screen.getByText('300')).toBeOnTheScreen();
     expect(screen.getByTestId('diary.exerciseRow')).toBeOnTheScreen();
     expect(screen.getByTestId('diary.addExercise')).toBeOnTheScreen();
+  });
+
+  it('the scanned food row shows its grams with the confidence badge', async () => {
+    await renderDay();
+
+    expect(screen.getByText('250 g')).toBeOnTheScreen();
+    expect(screen.getByTestId('confidence-badge:compact')).toBeOnTheScreen();
+    expect(screen.queryByText('from search')).toBeNull();
+  });
+
+  it('the search-logged food row shows the source caption when it has no confidence', async () => {
+    const snapshot = makeSnapshot({
+      sections: [
+        { slot: 'breakfast', items: [] },
+        {
+          slot: 'lunch',
+          items: [makeItem({ id: 'entry-2', title: 'Avocado Toast', kcal: 250, grams: null, confidence: null, source: 'manual' })],
+        },
+        { slot: 'dinner', items: [] },
+        { slot: 'snacks', items: [] },
+      ],
+    });
+    await renderDay(makeModel(snapshot));
+
+    expect(screen.getByText('Avocado Toast')).toBeOnTheScreen();
+    expect(screen.getByText('from search')).toBeOnTheScreen();
+    expect(screen.queryByTestId('confidence-badge:compact')).not.toBeOnTheScreen();
   });
 
   it('the food row carries the confidence badge and the sync chip when pending', async () => {
@@ -247,8 +283,8 @@ describe('DiaryDayView screen', () => {
     expect(screen.getByText('464 kcal added')).toBeOnTheScreen();
     expect(recordUpserts).toHaveBeenCalledTimes(1);
     expect(notify).toHaveBeenCalled();
-    // The add-food sheet closed with the receipt (the dashed "Add food" tiles remain).
-    await waitFor(() => expect(screen.queryAllByText('Add food')).toHaveLength(3));
+    // The add-food sheet closed with the receipt (the dashed tiles remain).
+    await waitFor(() => expect(screen.queryByText('to Breakfast')).toBeNull());
 
     // Undo tombstones every entry of the receipt.
     await userEvent.press(screen.getByText('Undo'));
@@ -258,7 +294,9 @@ describe('DiaryDayView screen', () => {
   it('Add exercise opens the exercise sheet', async () => {
     await renderDay();
 
-    await userEvent.press(screen.getByTestId('diary.addExercise'));
+    await userEvent.press(
+      within(screen.getByTestId('diary.addExercise')).getByRole('button'),
+    );
     expect(await screen.findByTestId('exercise.typeField')).toBeOnTheScreen();
   });
 
@@ -268,7 +306,8 @@ describe('DiaryDayView screen', () => {
 
     expect(screen.queryByLabelText(/Eaten 320/)).toBeNull();
     expect(screen.queryByText('320 kcal')).toBeNull();
-    expect(screen.queryByText('300 kcal')).toBeNull();
+    expect(screen.queryByText('−300 kcal')).toBeNull();
+    expect(screen.queryByText('300')).toBeNull();
     // The water-independent surfaces stay.
     expect(screen.getByText('☀️ Breakfast')).toBeOnTheScreen();
   });

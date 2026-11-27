@@ -22,6 +22,8 @@ export type DiaryDayItem = {
   kcal: number | null;
   grams: number | null;
   confidence: number | null;
+  /** The detail payload's source ('scan' | 'manual' | 'relog' | 'cache'), for the row caption. */
+  source: string | null;
   isSynced: boolean;
   loggedAt: Date;
   /** The full mirror row, so the delete path can tombstone without a re-read. */
@@ -82,6 +84,7 @@ export function createDiaryDayLoader(
         kcal: row.detail.kcal,
         grams: row.detail.grams,
         confidence: row.detail.confidence,
+        source: row.detail.source,
         isSynced: entry.acceptedOpId !== null,
         loggedAt: entry.createdAt,
         entry,

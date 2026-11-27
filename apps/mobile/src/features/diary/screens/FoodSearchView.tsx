@@ -1,7 +1,9 @@
 /**
- * FoodSearchView.swift — back chevron + search field, the Recent card before a
- * query, the "Results for “{query}”" card, the verbatim empty state, and the
- * persistent "Create custom food" row. Rows open the manual-log sheet; saving
+ * FoodSearchView.swift — back chevron + search field, the Search / Saved /
+ * Recent segment, the verbatim empty state, the per-row add button, the
+ * dashed escape card (describe / manual) and the persistent "Create custom
+ * food" row. The kcal footnote collapses under ED-Safe into the serving size
+ * (EdSafeCollapse owns that branch); rows open the manual-log sheet; saving
  * writes the diary mirror+outbox path and reports the receipt upward.
  */
 import { useEffect, useMemo, useState } from 'react';
@@ -12,7 +14,7 @@ import type { CatalogRepository } from '../../../data/repos/catalogRepository';
 import type { DiaryEntryDetail, DiaryEntryRepository } from '../../../data/repos/diaryEntryRepository';
 import type { DiaryDetailRepository } from '../../../data/repos/diaryDetailRepository';
 import type { Clock, IdGenerator } from '../../../data/repos/sqlDb';
-import { SearchField, useTokens } from '../../../design';
+import { EdSafeCollapse, SearchField, useEdSafeMode, useTokens } from '../../../design';
 
 import { createManualLogSaver } from '../manualLogModel';
 import type { SavedReceipt } from '../addFoodModel';
@@ -32,9 +34,19 @@ export type FoodSearchViewProps = {
   notify: () => void;
   now: Clock;
   newId: IdGenerator;
+  /** The describe escape's hand-over into the scan flow's text mode. */
+  onDescribe: () => void;
   onSaved: (receipt: SavedReceipt) => void;
   onDismiss: () => void;
 };
+
+type SearchSegment = 'search' | 'saved' | 'recent';
+
+const SEGMENTS: Array<{ value: SearchSegment; label: string }> = [
+  { value: 'search', label: 'Search' },
+  { value: 'saved', label: 'Saved' },
+  { value: 'recent', label: 'Recent' },
+];
 
 export function FoodSearchView({
   model: modelProp,
@@ -46,10 +58,12 @@ export function FoodSearchView({
   notify,
   now,
   newId,
+  onDescribe,
   onSaved,
   onDismiss,
 }: FoodSearchViewProps) {
   const { colors, radius, typography } = useTokens();
+  const edSafe = useEdSafeMode();
   // The model the route omits is built here over the injected catalog — the
   // FoodSearchRoute half of the Swift file.
   const model = useMemo(
@@ -58,9 +72,10 @@ export function FoodSearchView({
   );
   const saveManual = useMemo(
     () => createManualLogSaver({ userId, diaryEntries, diaryDetails, notify, now, newId }),
-    [userId, diaryEntries, diaryDetails, notify, now, newId],
+    [userId, diaryDetails, diaryEntries, notify, now, newId],
   );
 
+  const [segment, setSegment] = useState<SearchSegment>('recent');
   const [manualRow, setManualRow] = useState<FoodSearchRow | null>(null);
   const [isCustomSheetPresented, setIsCustomSheetPresented] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -71,6 +86,15 @@ export function FoodSearchView({
   const trimmed = query.trim();
   const results = model.getResults();
   const recents = model.getRecents();
+  const saved = model.getSaved();
+
+  /** Typing is a search: the segment follows the query out of Recent. */
+  const onQueryChange = (text: string) => {
+    model.setQuery(text);
+    if (text.trim() !== '') {
+      setSegment('search');
+    }
+  };
 
   const onManualSave = (detail: DiaryEntryDetail) => {
     if (isSaving) {
@@ -85,7 +109,7 @@ export function FoodSearchView({
   };
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
+    <View style={[styles.root, { backgroundColor: colors.grouped }]}>
       <View style={styles.header}>
         <Pressable
           accessibilityRole="button"
@@ -99,20 +123,53 @@ export function FoodSearchView({
         <View testID="search.field" style={styles.fieldWrapper}>
           <SearchField
             text={query}
-            onChangeText={(text) => model.setQuery(text)}
+            onChangeText={onQueryChange}
             placeholder="Search foods"
           />
         </View>
       </View>
 
+      <View style={[styles.segmentTrack, { backgroundColor: colors.fill, borderRadius: radius.md }]}>
+        {SEGMENTS.map((option) => {
+          const selected = segment === option.value;
+          return (
+            <Pressable
+              key={option.value}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              testID={`search.segment.${option.value}`}
+              onPress={() => setSegment(option.value)}
+              style={[
+                styles.segmentOption,
+                selected && { backgroundColor: colors.card, borderRadius: radius.sm },
+              ]}
+            >
+              <Text
+                style={[styles.segmentLabel, { color: selected ? colors.textPrimary : colors.textSecondary }]}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
       <ScrollView contentContainerStyle={styles.content}>
-        {trimmed === '' ? (
+        {segment === 'recent' ? (
           <ListCard title="Recent">
             {recents.map((row) => (
               <FoodSearchRowView key={row.id} row={row} leadingIcon="clock" onOpen={() => setManualRow(row)} />
             ))}
           </ListCard>
-        ) : results.length === 0 ? (
+        ) : segment === 'saved' ? (
+          saved.length > 0 ? (
+            <ListCard title="Saved">
+              {saved.map((row) => (
+                <FoodSearchRowView key={row.id} row={row} leadingIcon="fork.knife" onOpen={() => setManualRow(row)} />
+              ))}
+            </ListCard>
+          ) : null
+        ) : trimmed === '' ? null : results.length === 0 ? (
           <View
             testID="search.emptyState"
             style={[styles.emptyState, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.lg }]}
@@ -131,6 +188,31 @@ export function FoodSearchView({
             ))}
           </ListCard>
         )}
+
+        <View style={[styles.escapeCard, { borderColor: colors.border, borderRadius: radius.md }]}>
+          <Pressable
+            accessibilityRole="button"
+            testID="search.escape.describe"
+            onPress={onDescribe}
+            style={styles.escapeRow}
+          >
+            <SymbolView name="pencil.line" size={16} tintColor={colors.accentInk} />
+            <Text style={[styles.escapeText, { color: colors.textPrimary }]}>
+              {"Can't find it? Describe it or log manually"}
+            </Text>
+            <SymbolView name="chevron.right" size={12} weight="semibold" tintColor={colors.textTertiary} />
+          </Pressable>
+          <View style={[styles.escapeDivider, { backgroundColor: colors.separator }]} />
+          <Pressable
+            accessibilityRole="button"
+            testID="search.escape.manual"
+            onPress={() => setIsCustomSheetPresented(true)}
+            style={styles.escapeRow}
+          >
+            <Text style={[styles.escapeManualText, { color: colors.accentInk }]}>Log manually</Text>
+            <SymbolView name="chevron.right" size={12} weight="semibold" tintColor={colors.textTertiary} />
+          </Pressable>
+        </View>
 
         <Pressable
           accessibilityRole="button"
@@ -173,8 +255,9 @@ export function FoodSearchView({
             catalog={catalog}
             userId={userId}
             onCreated={() => {
-              // The pending query re-runs when the custom food is saved.
+              // The pending query re-runs and the Saved segment gains the row.
               void model.applySearch(model.getQuery());
+              void model.loadSaved();
             }}
             onDismiss={() => setIsCustomSheetPresented(false)}
             now={now}
@@ -208,8 +291,12 @@ function FoodSearchRowView({
   onOpen: () => void;
 }) {
   const { colors, typography } = useTokens();
+  const edSafe = useEdSafeMode();
   const basis = row.basis === 'per_serving' ? 'serving' : '100g';
   const footnote = `${row.kcal} kcal · ${Math.round(row.proteinG)}g protein · ${basis}`;
+  // The ED-safe slot: the serving size, or the basis string when the row has
+  // no serving. The kcal figure returns in the same slot when the mode is off.
+  const servingFootnote = row.servingGrams !== null ? `${row.servingGrams} g` : basis;
   return (
     <Pressable
       accessibilityRole="button"
@@ -218,20 +305,33 @@ function FoodSearchRowView({
       onPress={onOpen}
       style={styles.foodRow}
     >
-      <View style={[styles.rowTile, { backgroundColor: colors.surface, borderRadius: 10 }]}>
+      <View style={[styles.rowTile, { backgroundColor: colors.fill, borderRadius: 10 }]}>
         <SymbolView name={leadingIcon} size={14} tintColor={colors.textTertiary} />
       </View>
       <View style={styles.rowText}>
         <Text style={[typography.subhead, { color: colors.textPrimary }]} numberOfLines={1}>
           {row.name}
         </Text>
-        <Text style={[typography.footnote, { color: colors.textSecondary }]} numberOfLines={2}>
-          {footnote}
-        </Text>
+        <EdSafeCollapse>
+          <Text style={[typography.footnote, { color: colors.textSecondary }]} numberOfLines={2}>
+            {footnote}
+          </Text>
+        </EdSafeCollapse>
+        {edSafe && (
+          <Text style={[typography.footnote, { color: colors.textSecondary }]} numberOfLines={2}>
+            {servingFootnote}
+          </Text>
+        )}
       </View>
-      <View style={[styles.plusCircle, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <SymbolView name="plus" size={15} weight="semibold" tintColor={colors.textPrimary} />
-      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Add ${row.name}`}
+        testID={`search.addRow.${row.id}`}
+        onPress={onOpen}
+        style={[styles.addRow, { backgroundColor: colors.accentTint }]}
+      >
+        <SymbolView name="plus" size={15} weight="semibold" tintColor={colors.accentInk} />
+      </Pressable>
     </Pressable>
   );
 }
@@ -241,13 +341,40 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingTop: 8 },
   backButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   fieldWrapper: { flex: 1 },
+  segmentTrack: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 2,
+    gap: 2,
+  },
+  segmentOption: {
+    flex: 1,
+    minHeight: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  segmentLabel: { fontSize: 13, fontWeight: '600' },
   content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24, gap: 12 },
   emptyState: { borderWidth: 1, padding: 20, gap: 8, alignItems: 'center' },
   listCard: { borderWidth: 1, padding: 12, gap: 4 },
   foodRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   rowTile: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1, gap: 2 },
-  plusCircle: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  addRow: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  escapeCard: { borderWidth: 1, borderStyle: 'dashed' },
+  escapeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  escapeText: { flex: 1, fontSize: 14, fontWeight: '500' },
+  escapeDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 12 },
+  escapeManualText: { flex: 1, fontSize: 14, fontWeight: '500' },
   createCustomRow: { borderWidth: 1, borderStyle: 'dashed', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
   createCustomText: { fontSize: 14, fontWeight: '500' },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end' },
