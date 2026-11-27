@@ -90,11 +90,11 @@ export function ChartCard({ points, title = '' }: ChartCardProps) {
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
     >
       {title.length > 0 && (
-        <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       )}
       {width > 0 && points.length > 0 && (
         <Svg width={width} height={CHART_HEIGHT}>
-          {/* Axis grid lines, white 0.05 as in the Swift axes. */}
+          {/* Axis grid lines: the `separator` token. */}
           {[0, 0.5, 1].map((fraction) => {
             const y = PAD_Y + fraction * (CHART_HEIGHT - 2 * PAD_Y);
             return (
@@ -104,7 +104,7 @@ export function ChartCard({ points, title = '' }: ChartCardProps) {
                 y1={y}
                 x2={width}
                 y2={y}
-                stroke="rgba(255,255,255,0.05)"
+                stroke={colors.separator}
                 strokeWidth={1}
               />
             );
@@ -115,7 +115,7 @@ export function ChartCard({ points, title = '' }: ChartCardProps) {
               y1={ys[0] ?? 0}
               x2={xs[last] ?? 0}
               y2={ys[last] ?? 0}
-              stroke={colors.accentLime}
+              stroke={colors.accentStrong}
               strokeWidth={2.5}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -127,7 +127,7 @@ export function ChartCard({ points, title = '' }: ChartCardProps) {
               cx={xs[index] ?? 0}
               cy={ys[index] ?? 0}
               r={index === last ? 8 : 4.5}
-              fill={index === last ? colors.accentLime : 'rgba(255,255,255,0.3)'}
+              fill={index === last ? colors.accentStrong : colors.text3}
             />
           ))}
         </Svg>

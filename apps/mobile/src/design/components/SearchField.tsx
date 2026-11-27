@@ -24,14 +24,14 @@ export function SearchField({ text, onChangeText, placeholder }: SearchFieldProp
         { backgroundColor: colors.card, borderColor: colors.border },
       ]}
     >
-      <SymbolView name="magnifyingglass" size={15} tintColor={colors.textSecondary} />
+      <SymbolView name="magnifyingglass" size={15} tintColor={colors.text2} />
       <TextInput
         accessibilityLabel={placeholder}
         value={text}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={colors.textTertiary}
-        style={[styles.input, { color: colors.textPrimary }]}
+        placeholderTextColor={colors.text3}
+        style={[styles.input, { color: colors.text }]}
       />
     </View>
   );

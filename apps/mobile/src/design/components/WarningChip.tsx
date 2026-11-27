@@ -6,7 +6,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
-import { radius, space, typography, useTokens, withAlpha } from '../tokens';
+import { radius, space, typography, useTokens } from '../tokens';
 
 import { useEdSafeMode } from '../edSafe';
 
@@ -34,11 +34,11 @@ export function WarningChip({ reason, addedKcal }: WarningChipProps) {
       testID="warning-chip"
       style={[
         styles.chip,
-        { backgroundColor: withAlpha(colors.warning, 0.12) },
+        { backgroundColor: colors.cautionTint },
       ]}
     >
-      <SymbolView name="info.circle" size={14} tintColor={colors.warningInk} />
-      <Text style={[styles.text, { color: colors.warningInk }]} numberOfLines={2}>
+      <SymbolView name="info.circle" size={14} tintColor={colors.cautionInk} />
+      <Text style={[styles.text, { color: colors.cautionInk }]} numberOfLines={2}>
         {text}
       </Text>
     </View>

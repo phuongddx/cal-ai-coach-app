@@ -7,34 +7,43 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SymbolView, type SFSymbol } from 'expo-symbols';
 
-import { radius, space, typography, useTokens, withAlpha, type Colors } from '../tokens';
+import { radius, space, typography, useTokens, type Colors } from '../tokens';
+
+import { Icon } from './Icon';
+import type { IconName } from './iconShapes';
 
 export type OptionCardProps = {
   title: string;
   subtitle?: string;
-  icon: string;
+  /** SF Symbol name of the earlier callers. Ignored when `iconName` is given. */
+  icon?: string;
+  /**
+   * Ember canvas glyph for the 48 pt icon tile (`#i-*` of the canvas). When set, the tile draws this
+   * `Icon` and the selected check is the canvas's filled orange check instead of the SF Symbol one.
+   */
+  iconName?: IconName;
   isSelected: boolean;
   onSelect?: () => void;
 };
 
 // Exposed for contract tests: the selected/unselected visual state mapping.
 export function optionCardBorder(colors: Colors, isSelected: boolean): { width: number; color: string } {
-  return isSelected ? { width: 2, color: colors.accentLime } : { width: 1, color: colors.border };
+  return isSelected ? { width: 2, color: colors.accentStrong } : { width: 1, color: colors.border };
 }
 
 export function optionCardIconTile(colors: Colors, isSelected: boolean): string {
-  return isSelected ? withAlpha(colors.accentLime, 0.15) : colors.surface;
+  return isSelected ? colors.accentTint : colors.fill;
 }
 
 export function optionCardIconColor(colors: Colors, isSelected: boolean): string {
-  return isSelected ? colors.accentInk : colors.textSecondary;
+  return isSelected ? colors.accentInk : colors.text2;
 }
 
 export function optionCardA11yLabel(title: string, subtitle: string | undefined, isSelected: boolean): string {
   return `${title}${subtitle != null ? `, ${subtitle}` : ''}, ${isSelected ? 'selected' : 'not selected'}`;
 }
 
-export function OptionCard({ title, subtitle, icon, isSelected, onSelect }: OptionCardProps) {
+export function OptionCard({ title, subtitle, icon, iconName, isSelected, onSelect }: OptionCardProps) {
   const { colors } = useTokens();
   const border = optionCardBorder(colors, isSelected);
   return (
@@ -55,17 +64,31 @@ export function OptionCard({ title, subtitle, icon, isSelected, onSelect }: Opti
       ]}
     >
       <View style={[styles.iconTile, { backgroundColor: optionCardIconTile(colors, isSelected) }]}>
-        <SymbolView name={icon as SFSymbol} size={20} tintColor={optionCardIconColor(colors, isSelected)} />
-      </View>
-      <View style={styles.textColumn}>
-        <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
-        {subtitle != null && (
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
+        {iconName != null ? (
+          <Icon name={iconName} size={22} color={optionCardIconColor(colors, isSelected)} />
+        ) : (
+          icon != null && (
+            <SymbolView name={icon as SFSymbol} size={20} tintColor={optionCardIconColor(colors, isSelected)} />
+          )
         )}
       </View>
-      {isSelected && (
-        <SymbolView name="checkmark.circle.fill" size={20} tintColor={colors.accentLime} />
-      )}
+      <View style={styles.textColumn}>
+        <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+        {subtitle != null && (
+          <Text style={[styles.subtitle, { color: colors.text2 }]}>{subtitle}</Text>
+        )}
+      </View>
+      {isSelected &&
+        (iconName != null ? (
+          <View
+            testID={`option-card:${title}:check`}
+            style={[styles.check, { backgroundColor: colors.accent }]}
+          >
+            <Icon name="check" size={14} color={colors.onAccent} />
+          </View>
+        ) : (
+          <SymbolView name="checkmark.circle.fill" size={20} tintColor={colors.accentStrong} />
+        ))}
     </Pressable>
   );
 }
@@ -83,6 +106,13 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  check: {
+    width: 22,
+    height: 22,
+    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },

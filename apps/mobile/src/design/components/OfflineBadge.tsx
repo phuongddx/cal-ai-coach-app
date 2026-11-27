@@ -17,10 +17,10 @@ export function OfflineBadge() {
       accessible
       accessibilityLabel={offlineBadgeLabel}
       testID="offline-badge"
-      style={[styles.badge, { backgroundColor: colors.surface }]}
+      style={[styles.badge, { backgroundColor: colors.fill }]}
     >
-      <SymbolView name="wifi.slash" size={11} tintColor={colors.textSecondary} />
-      <Text style={[styles.text, { color: colors.textSecondary }]}>{offlineBadgeLabel}</Text>
+      <SymbolView name="wifi.slash" size={11} tintColor={colors.text2} />
+      <Text style={[styles.text, { color: colors.text2 }]}>{offlineBadgeLabel}</Text>
     </View>
   );
 }

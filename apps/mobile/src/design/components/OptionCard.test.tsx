@@ -26,11 +26,9 @@ describe('OptionCard selection state booleans', () => {
   it('maps the selected visual state', () => {
     expect(optionCardBorder(lightColors, true)).toEqual({
       width: 2,
-      color: lightColors.accentLime,
+      color: lightColors.accentStrong,
     });
-    expect(optionCardIconTile(lightColors, true)).toBe(
-      'rgba(180,240,74,0.15)',
-    );
+    expect(optionCardIconTile(lightColors, true)).toBe(lightColors.accentTint);
     expect(optionCardIconColor(lightColors, true)).toBe(lightColors.accentInk);
   });
 
@@ -68,5 +66,24 @@ describe('OptionCard rendering', () => {
     const card = screen.getByTestId('option-card:Lose weight');
     expect(card).toHaveProp('accessibilityLabel', 'Lose weight, not selected');
     expect(optionCardA11yLabel('Lose weight', undefined, false)).toBe('Lose weight, not selected');
+  });
+});
+
+describe('OptionCard iconName (Ember icon tile and selected check)', () => {
+  it('draws the Ember icon in the tile and the filled check when selected', async () => {
+    await render(<OptionCard title="Lose weight" iconName="flame" isSelected />);
+    expect(screen.getByTestId('option-card:Lose weight')).toHaveProp(
+      'accessibilityLabel',
+      'Lose weight, selected',
+    );
+    expect(screen.getByTestId('icon:flame')).toBeOnTheScreen();
+    expect(screen.getByTestId('option-card:Lose weight:check')).toBeOnTheScreen();
+    expect(screen.getByTestId('icon:check')).toBeOnTheScreen();
+  });
+
+  it('draws no check when unselected, and keeps the identifier of the card', async () => {
+    await render(<OptionCard title="Lose weight" iconName="flame" isSelected={false} />);
+    expect(screen.getByTestId('option-card:Lose weight')).toBeOnTheScreen();
+    expect(screen.queryByTestId('option-card:Lose weight:check')).toBeNull();
   });
 });

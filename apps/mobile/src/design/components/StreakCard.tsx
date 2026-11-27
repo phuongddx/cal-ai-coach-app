@@ -8,7 +8,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient as SvgGradient, Rect, Stop } from 'react-native-svg';
 
-import { radius, space, typography, useTokens, withAlpha } from '../tokens';
+import { radius, space, typography, useTokens } from '../tokens';
 
 import { ScaledNumber } from './ScaledNumber';
 
@@ -34,13 +34,13 @@ export function StreakCard({ emoji, streak, title, freezesLeft }: StreakCardProp
       accessible
       accessibilityLabel={streakA11yLabel(streak, freezesLeft)}
       testID="streak-card"
-      style={[styles.card, { borderColor: withAlpha(colors.accentLime, 0.2) }]}
+      style={[styles.card, { borderColor: colors.accentStrong }]}
     >
       <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
         <Defs>
           <SvgGradient id="cc-streak-gradient" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={withAlpha(colors.accentLime, 0.1)} />
-            <Stop offset="1" stopColor={withAlpha(colors.accentLime, 0.05)} />
+            <Stop offset="0" stopColor={colors.accentTint} />
+            <Stop offset="1" stopColor={colors.card} />
           </SvgGradient>
         </Defs>
         <Rect x="0" y="0" width="100%" height="100%" rx={radius.lg} fill="url(#cc-streak-gradient)" />
@@ -49,11 +49,11 @@ export function StreakCard({ emoji, streak, title, freezesLeft }: StreakCardProp
         {emoji}
       </Text>
       <ScaledNumber text={`${streak}`} role="hero" style={{ color: colors.accentInk }} />
-      <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       <Text
         style={[
           styles.chip,
-          { color: colors.accentInk, backgroundColor: withAlpha(colors.accentLime, 0.15) },
+          { color: colors.accentInk, backgroundColor: colors.accentTint },
         ]}
       >
         {streakChipText(freezesLeft)}

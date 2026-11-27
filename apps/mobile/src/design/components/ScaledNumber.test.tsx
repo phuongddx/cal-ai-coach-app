@@ -12,7 +12,7 @@ jest.mock('react/jsx-runtime', () => {
 
 import { render, screen } from '@testing-library/react-native';
 
-import { ScaledNumber } from './ScaledNumber';
+import { fitWidthMinimumFontScale, ScaledNumber } from './ScaledNumber';
 
 describe('ScaledNumber', () => {
   it('renders the hero size', async () => {
@@ -32,5 +32,24 @@ describe('ScaledNumber', () => {
     const number = screen.getByText('1607');
     expect(number).toHaveProp('allowFontScaling', true);
     expect(number).toHaveStyle({ fontVariant: ['tabular-nums'] });
+  });
+
+  // U-71 acceptance: a four-digit remaining number stays on one line and shrinks to fit.
+  // Jest cannot measure wrapping: the Simulator unit U-76 verifies it on a device.
+  it('keeps a four-digit number on one line and shrinks it with fitWidth', async () => {
+    await render(<ScaledNumber text="1607" role="hero" fitWidth />);
+    const number = screen.getByText('1607');
+    expect(number).toHaveProp('numberOfLines', 1);
+    expect(number).toHaveProp('adjustsFontSizeToFit', true);
+    expect(number).toHaveProp('minimumFontScale', 0.5);
+    expect(fitWidthMinimumFontScale).toBe(0.5);
+    expect(number).toHaveStyle({ fontSize: 56 });
+  });
+
+  it('leaves the text free to wrap without fitWidth', async () => {
+    await render(<ScaledNumber text="1607" role="hero" />);
+    const number = screen.getByText('1607');
+    expect(number.props.numberOfLines).toBeUndefined();
+    expect(number.props.adjustsFontSizeToFit).toBeUndefined();
   });
 });

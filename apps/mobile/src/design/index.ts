@@ -5,8 +5,11 @@
  */
 
 export {
+  colorsWithoutEmberCounterpart,
   darkColors,
+  fontFamily,
   getTokens,
+  legacyColorAliases,
   lightColors,
   radius,
   scaledNumberSize,
@@ -16,6 +19,8 @@ export {
   useTokens,
   withAlpha,
   type Colors,
+  type EmberColors,
+  type LegacyColorKey,
   type Scheme,
   type ScaledNumberRole,
   type Tokens,
@@ -31,7 +36,24 @@ export {
   useEdSafeMode,
 } from './edSafe';
 
-export { PrimaryButton, primaryButtonStyle, type PrimaryButtonProps } from './components/PrimaryButton';
+export {
+  PrimaryButton,
+  primaryButtonLabelColor,
+  primaryButtonStyle,
+  type PrimaryButtonProps,
+} from './components/PrimaryButton';
+export {
+  DestructiveButton,
+  destructiveButtonStyle,
+  type DestructiveButtonProps,
+} from './components/DestructiveButton';
+export { EmberCard, emberGlowOpacity, type EmberCardProps } from './components/EmberCard';
+export {
+  GramsField,
+  parseGramsInput,
+  type GramsFieldProps,
+  type GramsServing,
+} from './components/GramsField';
 export {
   SecondaryButton,
   secondaryButtonStyle,
@@ -70,6 +92,7 @@ export {
 export { FoodRow, type FoodRowProps } from './components/FoodRow';
 export { SectionHeader, type SectionHeaderProps } from './components/SectionHeader';
 export {
+  confidenceBadgeHeight,
   confidenceLabel,
   confidenceTier,
   ConfidenceBadge,
@@ -82,7 +105,14 @@ export {
   type WarningChipProps,
 } from './components/WarningChip';
 export { toastVisibleKcalText, Toast, type ToastProps } from './components/Toast';
-export { Sheet, type SheetProps } from './components/Sheet';
+export {
+  Sheet,
+  sheetDetentFraction,
+  sheetDetentHeight,
+  sheetGrabberSize,
+  type SheetDetent,
+  type SheetProps,
+} from './components/Sheet';
 export {
   ChartCard,
   formatChartValue,
@@ -124,6 +154,7 @@ export {
   CalorieRing,
   dayPercentText,
   defaultDayProgress,
+  remainingNumberProps,
   type CalorieRingProps,
   type RingVariant,
 } from './components/CalorieRing';
@@ -134,5 +165,42 @@ export {
   type WeeklyReviewStatsProps,
   type WeeklyStat,
 } from './components/WeeklyReviewStats';
-export { ScaledNumber, type ScaledNumberProps } from './components/ScaledNumber';
+export {
+  fitWidthMinimumFontScale,
+  ScaledNumber,
+  type ScaledNumberProps,
+} from './components/ScaledNumber';
 export { EdSafeCollapse } from './components/EdSafeCollapse';
+export {
+  Icon,
+  iconStrokeWidth,
+  type IconProps,
+} from './components/Icon';
+export { iconNames, iconShapes, type IconName, type IconShape } from './components/iconShapes';
+export {
+  GlassIconButton,
+  glassIconButtonColors,
+  type GlassIconButtonProps,
+  type GlassTone,
+} from './components/GlassIconButton';
+export { SheetHeader, type SheetHeaderProps } from './components/SheetHeader';
+export {
+  Segment,
+  segmentChipHeight,
+  segmentPillHeight,
+  type SegmentOption,
+  type SegmentProps,
+} from './components/Segment';
+export { EdSafeNote, type EdSafeNoteProps } from './components/EdSafeNote';
+export { FillField, fieldDigitWidth, type FillFieldProps } from './components/FillField';
+export {
+  GramsRuler,
+  rulerHeight,
+  rulerMinorEvery,
+  rulerPointsPerUnit,
+  rulerTickOpacity,
+  rulerTicks,
+  rulerValueAfterDrag,
+  snapRulerValue,
+  type GramsRulerProps,
+} from './components/GramsRuler';
