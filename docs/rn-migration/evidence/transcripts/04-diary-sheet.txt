@@ -9,7 +9,7 @@
 
 === the diary sheet shows its date title and the meal sections ===
   ok: the diary sheet is open (date title and Breakfast section)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/DY-01/04-diary-sheet.png (301 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/DY-01-04-diary-sheet.png
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/DY-01/04-diary-sheet.png (300 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/DY-01-04-diary-sheet.png
 
 === flow done — 0 failed ===

@@ -1,0 +1,72 @@
+  ok: simulator already booted
+  ok: simulator ready (A902237E-29DE-4A6F-9E93-23199FC2107F)
+
+=== opening the app via the dev client URL ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== --ccForceOffline: the sync engine reports offline ===
+
+=== opening the app via the dev client URL with launch arguments: --ccForceOffline ===
+  ok: launched com.nextlabs.coachcal with: --ccForceOffline
+An error was encountered processing the command (domain=NSPOSIXErrorDomain, code=60):
+Simulator device failed to open exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081.
+Operation timed out
+Underlying error (domain=NSPOSIXErrorDomain, code=60):
+	The operation couldn’t be completed. Operation timed out
+	Operation timed out
+  note: simctl openurl timed out (attempt 1)
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== deep link: coachcal://debug ===
+  ok: found title 'Debug console' (Heading at y=118.66666666666669)
+  ok: switch --ccForceOffline on the Debug console (1)
+  ok: found text: Ember offline chip follows the engine: offline
+
+=== --ccDisableAnimations: the switch is set at launch ===
+
+=== opening the app via the dev client URL with launch arguments: --ccDisableAnimations ===
+  ok: launched com.nextlabs.coachcal with: --ccDisableAnimations
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== deep link: coachcal://debug ===
+  ok: found title 'Debug console' (Heading at y=118.66666666666669)
+  ok: switch --ccDisableAnimations on the Debug console (1)
+
+=== --ccFixtureCapture: the scan flow uses fixtures ===
+
+=== opening the app via the dev client URL with launch arguments: --ccFixtureCapture ===
+  ok: launched com.nextlabs.coachcal with: --ccFixtureCapture
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== deep link: coachcal://debug ===
+  ok: found title 'Debug console' (Heading at y=118.66666666666669)
+  ok: switch --ccFixtureCapture on the Debug console (1)
+
+=== --ccRequireSignIn: the gate asks for a session (seeded target, no session) ===
+
+=== opening the app via the dev client URL with launch arguments: --ccRequireSignIn ===
+  ok: launched com.nextlabs.coachcal with: --ccRequireSignIn
+  ok: found title 'Sign in to CoachCal' (StaticText at y=354)
+  ok: app is showing 'Sign in to CoachCal' (attempt 1)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-05/launch-args-require-sign-in.png (118 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/PL-05-launch-args-require-sign-in.png
+
+=== deep link: coachcal://debug ===
+  ok: found title 'Debug console' (Heading at y=118.66666666666669)
+  ok: switch --ccRequireSignIn on the Debug console (1)
+
+=== --ccFreshStart: the local data is wiped, so the gate shows onboarding ===
+
+=== opening the app via the dev client URL with launch arguments: --ccFreshStart ===
+  ok: launched com.nextlabs.coachcal with: --ccFreshStart
+  ok: found title 'Track calories with a photo' (StaticText at y=370)
+  ok: app is showing 'Track calories with a photo' (attempt 1)
+  ok: found text: Get started
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-05/launch-args-fresh-start.png (175 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/PL-05-launch-args-fresh-start.png
+
+=== flow done — 0 failed ===
