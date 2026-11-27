@@ -12,4 +12,5 @@ export * from './contracts/lookup';
 export * from './contracts/scan';
 export * from './contracts/vlm';
 export * from './contracts/webhook';
+export * from './auth';
 export * from './sync';
