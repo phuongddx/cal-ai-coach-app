@@ -1,0 +1,40 @@
+{
+  "rows": [
+    {
+      "seq": 12,
+      "record": {
+        "id": "26277672-8328-4b1a-9b77-c2da2631f63c",
+        "eatenAt": "2026-09-13T07:37:00.000Z",
+        "name": "chicken-rice",
+        "kcal": 464,
+        "proteinG": 86.4,
+        "carbsG": 128,
+        "fatG": 12.8,
+        "fiberG": 6.4,
+        "updatedAt": 1768300000000,
+        "deleted": false,
+        "serverVersion": 12,
+        "acceptedOpId": "826fa3c6-d8a7-4405-b28b-9dbcd75bc4c5"
+      }
+    },
+    {
+      "seq": 13,
+      "record": {
+        "id": "41bca976-477b-4405-8523-2c6f98e2b4f7",
+        "eatenAt": "2026-09-12T18:00:00.000Z",
+        "name": "late snack",
+        "kcal": 0,
+        "proteinG": 0,
+        "carbsG": 0,
+        "fatG": 0,
+        "fiberG": 0,
+        "updatedAt": 1768299000000,
+        "deleted": true,
+        "serverVersion": 13,
+        "acceptedOpId": "2947d66a-f80b-42da-8951-679b9b2a5d48"
+      }
+    }
+  ],
+  "cursor": 13,
+  "hasMore": false
+}
