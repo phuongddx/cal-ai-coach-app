@@ -504,6 +504,32 @@ begin
 end;
 $$;
 
+-- Opens a push batch: serialises pushes of the same user for the rest of the transaction (the
+-- adapter decides last-writer-wins from a read, so two concurrent batches must not interleave)
+-- and returns which of the given operation ids the ledger has already acknowledged.
+create or replace function public.sync_ops_seen(p_op_ids uuid[])
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_owner uuid := nullif(current_setting('app.user_id', true), '')::uuid;
+begin
+  if v_owner is null then
+    raise exception 'sync_ops_seen requires an authenticated user' using errcode = '42501';
+  end if;
+  if p_op_ids is null or cardinality(p_op_ids) > 100 then
+    raise exception 'sync_ops_seen expects at most 100 ids' using errcode = 'P0001';
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('coachcal.sync.' || v_owner::text, 0));
+  return coalesce((
+    select jsonb_agg(o.op_id)
+      from public.sync_operations o
+     where o.user_id = v_owner and o.op_id = any (p_op_ids)), '[]'::jsonb);
+end;
+$$;
+
 -- ---------------------------------------------------------------------------
 -- Webhook: validated entry point; apply_webhook_event is no longer executable by the API role
 -- ---------------------------------------------------------------------------
@@ -568,6 +594,7 @@ revoke all on function public.auth_one_time_issue(text, uuid, integer) from publ
 revoke all on function public.auth_one_time_consume(text) from public, coachcal_api;
 revoke all on function public.account_delete() from public, coachcal_api;
 revoke all on function public.sync_records_get(uuid[]) from public, coachcal_api;
+revoke all on function public.sync_ops_seen(uuid[]) from public, coachcal_api;
 revoke all on function public.webhook_apply(jsonb) from public, coachcal_api;
 
 grant execute on function public.auth_sign_in_identity(text, text, text, boolean) to coachcal_api;
@@ -584,4 +611,5 @@ grant execute on function public.auth_one_time_issue(text, uuid, integer) to coa
 grant execute on function public.auth_one_time_consume(text) to coachcal_api;
 grant execute on function public.account_delete() to coachcal_api;
 grant execute on function public.sync_records_get(uuid[]) to coachcal_api;
+grant execute on function public.sync_ops_seen(uuid[]) to coachcal_api;
 grant execute on function public.webhook_apply(jsonb) to coachcal_api;

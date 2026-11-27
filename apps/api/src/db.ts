@@ -17,6 +17,11 @@ export type Query = <Row = Record<string, unknown>>(
 
 export interface Db {
   withUser<T>(userId: string, fn: (query: Query) => Promise<T>): Promise<T>;
+  /**
+   * A transaction with no user set: for the pre-sign-in functions (`auth_*`), which take their
+   * inputs explicitly and validate them because there is no caller yet.
+   */
+  withoutUser<T>(fn: (query: Query) => Promise<T>): Promise<T>;
   close(): Promise<void>;
 }
 
@@ -28,6 +33,12 @@ export function createDb(connectionString: string | undefined = process.env.DATA
     withUser: async <T>(userId: string, fn: (query: Query) => Promise<T>): Promise<T> =>
       (await sql.begin(async (tx) => {
         await tx.unsafe(`SELECT set_config('app.user_id', $1, true)`, [userId]);
+        const query: Query = async (text, params = []) =>
+          (await tx.unsafe(text, [...params] as never[])) as unknown as never[];
+        return fn(query);
+      })) as unknown as T,
+    withoutUser: async <T>(fn: (query: Query) => Promise<T>): Promise<T> =>
+      (await sql.begin(async (tx) => {
         const query: Query = async (text, params = []) =>
           (await tx.unsafe(text, [...params] as never[])) as unknown as never[];
         return fn(query);

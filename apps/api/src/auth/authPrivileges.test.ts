@@ -106,5 +106,10 @@ describeSql('account tables and functions as coachcal_api (SQL-backed)', (harnes
         h.db.withUser(none, (query) => query('SELECT public.sync_records_get($1::uuid[])', [[]])),
       ),
     ).toBe('42501');
+    expect(
+      await sqlState(
+        h.db.withUser(none, (query) => query('SELECT public.sync_ops_seen($1::uuid[])', [[]])),
+      ),
+    ).toBe('42501');
   });
 });
