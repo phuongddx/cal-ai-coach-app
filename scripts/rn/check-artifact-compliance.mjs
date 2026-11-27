@@ -48,15 +48,39 @@ function readPlist(path) {
   }
 }
 
-/** Entitlements embedded in the signature, as an object. A simulator build is ad-hoc signed and carries them. */
+/**
+ * Entitlements of the app, as an object. A device build carries them in the code signature. A simulator build is
+ * ad-hoc signed with an empty entitlement set and keeps the real ones in the `__TEXT,__entitlements` section of
+ * the executable (the "simulated entitlements"), so that is the fallback. `source` says which one was read.
+ */
 function readEntitlements(appPath) {
+  const toObject = (xml) =>
+    JSON.parse(execFileSync('plutil', ['-convert', 'json', '-o', '-', '-'], { encoding: 'utf8', input: xml }));
   try {
-    const xml = execFileSync('codesign', ['-d', '--entitlements', ':-', appPath], {
+    const xml = execFileSync('codesign', ['-d', '--entitlements', '-', '--xml', appPath], {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     });
-    if (!xml.trim()) return null;
-    return JSON.parse(execFileSync('plutil', ['-convert', 'json', '-o', '-', '-'], { encoding: 'utf8', input: xml }));
+    const fromSignature = xml.trim() ? toObject(xml) : {};
+    if (Object.keys(fromSignature).length > 0) return { source: 'code signature', entitlements: fromSignature };
+  } catch {
+    // fall through to the Mach-O section
+  }
+  try {
+    const exe = join(appPath, info?.CFBundleExecutable ?? 'CoachCal');
+    const dump = execFileSync('otool', ['-X', '-s', '__TEXT', '__entitlements', exe], { encoding: 'utf8' });
+    // otool prints 4-byte words in host (little-endian) order: "6d783f3c" is the text "<?xm". A short tail is printed per byte.
+    const bytes = dump.split('\n').flatMap((line) =>
+      line
+        .trim()
+        .split(/\s+/)
+        .slice(1)
+        .flatMap((tok) => (tok.length === 8 ? tok.match(/../g).reverse() : [tok]))
+        .filter((h) => /^[0-9a-f]{2}$/i.test(h))
+        .map((h) => parseInt(h, 16)),
+    );
+    if (bytes.length === 0) return null;
+    return { source: 'Mach-O __entitlements (simulator build)', entitlements: toObject(Buffer.from(bytes).toString('utf8').replace(/\0+$/, '')) };
   } catch {
     return null;
   }
@@ -97,9 +121,10 @@ if (info) {
 }
 
 // ---- Entitlements
-const ent = readEntitlements(app);
-check(ent !== null, 'entitlements are embedded in the signature');
-if (ent) {
+const found = readEntitlements(app);
+check(found !== null, 'entitlements are embedded in the app', found?.source);
+if (found) {
+  const ent = found.entitlements;
   check(ent['com.apple.developer.healthkit'] === true, 'entitlement com.apple.developer.healthkit');
   check(
     ent['com.apple.developer.healthkit.background-delivery'] === true,
