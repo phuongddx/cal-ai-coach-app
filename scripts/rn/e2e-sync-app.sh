@@ -20,7 +20,10 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-UDID="${SIM_UDID:-85024D2F-71DE-43C0-8E11-CE58F4578FC3}"
+# shellcheck source=sim-udid.sh
+source "$(dirname "${BASH_SOURCE[0]}")/sim-udid.sh"
+UDID="${SIM_UDID:-$(sim_udid)}"
+[ -n "$UDID" ] || { echo "no available 'iPhone 17 Pro' on iOS 26.4 (see scripts/rn/sim-udid.sh)"; exit 2; }
 BUNDLE=com.nextlabs.coachcal
 LOG_DIR="${RN_SPIKE_LOG_DIR:-/private/var/folders/nn/n6wtxkdd3n10d78wf4xmygrm0000gp/T/opencode/rn-logs}"
 METRO_LOG="${METRO_LOG:-$LOG_DIR/t6-metro.log}"
