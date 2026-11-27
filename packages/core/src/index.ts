@@ -87,3 +87,5 @@ export function ringProgress(consumed: number, goal: number): number {
 export function kcalLeft(goalKcal: number, consumedKcal: number): number {
   return Math.max(0, roundHalfUp(safe(goalKcal) - safe(consumedKcal)));
 }
+
+export { roundKcal, roundMacro, sumItemKcal, type KcalBearing } from './arithmetic';

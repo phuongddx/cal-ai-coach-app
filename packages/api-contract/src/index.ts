@@ -1,13 +1,15 @@
-import { z } from 'zod';
+/**
+ * Wire contracts shared by the RN app (`apps/mobile`) and the Hono API (`apps/api`).
+ *
+ * `contracts/` and `golden/` are relocated from `supabase/functions/_shared/contracts` and
+ * `supabase/functions/tests/golden` (the legacy Deno backend). Their bodies are identical apart from
+ * the import specifiers. `scripts/rn/parity-check.mjs` diffs the golden copies while both exist.
+ */
 
-/** Uniform error envelope: `{ error: { code, details? } }` (same shape as the Deno backend's `_shared/http.ts`). */
-export const ErrorEnvelopeSchema = z.strictObject({
-  error: z.strictObject({
-    code: z.string().min(1),
-    details: z.unknown().optional(),
-  }),
-});
-
-export type ErrorEnvelope = z.infer<typeof ErrorEnvelopeSchema>;
-
+export * from './contracts/errors';
+export * from './contracts/food';
+export * from './contracts/lookup';
+export * from './contracts/scan';
+export * from './contracts/vlm';
+export * from './contracts/webhook';
 export * from './sync';

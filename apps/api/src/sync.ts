@@ -26,11 +26,20 @@ import type { SqlQuery, SyncStoreApi } from './store';
 
 type AppEnv = { Variables: { userId: string } };
 
-/** Zod failure -> 400 INVALID_REQUEST with the issues as details (spec D4). */
+/** Zod failure -> 400 VALIDATION_ERROR; details are dotted paths (or the message for pathless issues), as in the legacy backend. */
 const invalidRequest = (
   c: { json: (body: unknown, status: 400) => Response },
-  error: { issues: unknown[] },
-): Response => c.json({ error: { code: 'INVALID_REQUEST', details: error.issues } }, 400);
+  error: { issues: { path: PropertyKey[]; message: string }[] },
+): Response =>
+  c.json(
+    {
+      error: {
+        code: 'VALIDATION_ERROR',
+        details: error.issues.map((issue) => issue.path.map(String).join('.') || issue.message),
+      },
+    },
+    400,
+  );
 
 /** Normalises a `meals` row into the wire record. `Number()` accepts both drivers' number/string forms. */
 function toRecord(row: Record<string, unknown>): MealRecord {

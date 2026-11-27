@@ -226,12 +226,12 @@ describe('POST /v1/sync/push and pull', () => {
     expect(rowAt(mine1).record.name).toBe('Overnight oats');
   });
 
-  it('returns 400 INVALID_REQUEST for an unknown key and for an empty batch', async () => {
+  it('returns 400 VALIDATION_ERROR for an unknown key and for an empty batch', async () => {
     const { app } = await makeApp();
     const unknownKey = await post(app, '/v1/sync/push', TOKEN_1, { operations: [], deviceId: 'x' });
     expect(unknownKey.status).toBe(400);
     const errBody = (await unknownKey.json()) as { error: { code: string; details: unknown[] } };
-    expect(errBody.error.code).toBe('INVALID_REQUEST');
+    expect(errBody.error.code).toBe('VALIDATION_ERROR');
     expect(Array.isArray(errBody.error.details)).toBe(true);
 
     const empty = await post(app, '/v1/sync/push', TOKEN_1, { operations: [] });
@@ -280,6 +280,6 @@ describe('POST /v1/sync/push and pull', () => {
     });
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: { code: string } };
-    expect(body.error.code).toBe('INVALID_REQUEST');
+    expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 });

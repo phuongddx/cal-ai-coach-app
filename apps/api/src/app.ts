@@ -28,7 +28,7 @@ export function createApp(deps: AppDeps) {
   app.use('/v1/sync/*', bearerAuth(deps.tokens ?? loadDevTokens()));
   registerSyncRoutes(app, deps.store);
 
-  app.notFound((c) => c.json({ error: { code: 'NOT_FOUND' } }, 404));
+  app.notFound((c) => c.json({ error: { code: 'VALIDATION_ERROR', details: ['route'] } }, 404));
 
   // 500 INTERNAL is reserved for genuine bugs; the stack goes to the server
   // log, never into the body (spec D4 / AGENTS.md invariants). Hono's own
@@ -36,8 +36,8 @@ export function createApp(deps: AppDeps) {
   // get the uniform envelope.
   app.onError((err, c) => {
     if (err instanceof HTTPException) {
-      const code = err.status >= 400 && err.status < 500 ? 'INVALID_REQUEST' : 'INTERNAL';
-      return c.json({ error: { code, details: err.message } }, err.status);
+      const code = err.status >= 400 && err.status < 500 ? 'VALIDATION_ERROR' : 'INTERNAL';
+      return c.json({ error: { code, details: [err.message] } }, err.status);
     }
     console.error(`[api] 500 INTERNAL: ${err instanceof Error ? err.stack : String(err)}`);
     return c.json({ error: { code: 'INTERNAL' } }, 500);
