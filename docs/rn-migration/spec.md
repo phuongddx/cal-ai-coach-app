@@ -21,7 +21,11 @@ or `not-done` with a reason, and every `done` row has evidence from the iOS 26.4
 - Android: not built, not verified. The config keeps the Android block so the door stays open.
 - App Store or TestFlight: nothing is submitted, the bundle id and the App Store Connect record do
   not change, no signing asset is touched.
-- New design: screens copy the SwiftUI app (Ember). No screen is redesigned.
+- Design: every screen follows the Ember design in `docs/design/ember/` (made by Designer,
+  finished 2026-11-24) instead of copying the SwiftUI app. Where Ember has no frame, a screen is
+  derived from the Ember tokens and patterns and the report says so. The SwiftUI app stays the
+  reference for behavior, tests and identifiers. This replaced "screens copy the SwiftUI app" on
+  2026-11-27 at Phương's request.
 - New product features: nothing that the old app does not have is added. The Settings subscription
   card is ported with its inert buttons, as it is today.
 - The web client in `web/` (uncommitted work on `main`) still calls the Supabase functions. It is
@@ -43,6 +47,9 @@ or `not-done` with a reason, and every `done` row has evidence from the iOS 26.4
 | D9 | Google sign-in keeps the browser flow (Google's consent page in `expo-web-browser`, back through `coachcal://auth/google`), not a native Google SDK | The old app used `ASWebAuthenticationSession` through Supabase [verified: `AuthSessionStore.swift`]; no third-party native library to keep up with RN releases |
 | D10 | Dev tokens for the API exist only when `AUTH_DEV_TOKENS=1`; the production image never sets it | `apps/api/dev-tokens.json` is public in this repository [verified] |
 | D11 | `supabase/` is not deleted and not developed further. Its contracts and golden fixtures now live in `packages/`; the parity gate fails if the two golden copies diverge | Not Swift; it goes when the VPS backend runs |
+| D12 | Screens follow the Ember design: `docs/design/ember/tokens.css` is the token source (light and dark, copied one to one into `apps/mobile/src/design/tokens.ts`), the canvas `index.html` holds the frame of each screen, `design-system.md` holds the rules and the component mapping. Behavior, tests and identifiers stay those of the SwiftUI app | Phương asked for it on 2026-11-27 through Zed; the SwiftUI `Tokens.swift` becomes history |
+| D13 | Defaults Phương may change: the paywall shows no sample price (products and prices are read from the store; none exist yet), ED-Safe hides the calorie numbers while weight stays visible, the current app icon stays until the "Ember ring" layers are built | Chosen by Zed on 2026-11-27 |
+| D14 | iOS 26 looks use the way the spike proved (`expo-router/native-tabs`, `expo-glass-effect`); anything the SDK cannot express gets a fallback that the unit records in its findings; the deployment floor stays iOS 18.0 | `design-system.md` handoff note 8; the Live Activity and `ConcentricRectangle` shapes are unverified on SDK 58 |
 
 ## 3. Invariants (carried over from `AGENTS.md`, restated for this stack)
 
@@ -182,6 +189,8 @@ A parity row is `done` only when all of this is true:
    or next to the code, and `parity.tsv` names it.
 3. Its Jest tests pass in CI.
 4. A worker other than the one that built it, or the owner, re-ran the check on the pushed head.
+5. For a screen: a Simulator screenshot of the RN screen stands next to its Ember frame, and the
+   list of deviations from the frame names each one with its reason (since D12, 2026-11-27).
 
 Rows that cannot reach that bar say why and what would get them there: `partial` (runs with a named
 gap) or `not-done` (reason and proposal). Rows for things the old app never had are `n/a` with the
@@ -229,6 +238,11 @@ Read in the repository during this program: `AGENTS.md`, `ARCHITECTURE.md`, the 
 `inventory.md`; `supabase/functions/_shared/contracts/*`, `arithmetic.ts`, `http.ts`, `db.ts`;
 `supabase/functions/deno.json`; Zed's two reports (`coachcal-vps-backend-research.md`,
 `coachcal-react-native-expo-report-2026-11-26.md`).
+
+Design, read on 2026-11-27 when D12 replaced the SwiftUI copy: `docs/design/ember/design-system.md`
+in full, `tokens.css` for light and dark, the frame captions of the canvas `index.html`, `README.md`
+in the same folder. The engineering handoff notes of `design-system.md` were not re-checked against
+the React Native SDK: each unit verifies the API it relies on.
 
 Official docs, through the reports above and the spike (not re-opened for this spec):
 

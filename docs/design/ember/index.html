@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CoachCal Redesign v2 — Ember</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- Icon sprite (Lucide-style 24px strokes; maps to SF Symbols in the handoff table) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.2"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></symbol>
+  <symbol id="i-flip" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.7 9.7 0 0 0-6.7 2.7L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.7 9.7 0 0 0 6.7-2.7L21 16"/><path d="M16 16h5v5"/></symbol>
+  <symbol id="i-flash" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></symbol>
+  <symbol id="i-barcode" viewBox="0 0 24 24"><path d="M3 5v14M7 5v14M10 5v14M14 5v14M17 5v14M21 5v14"/></symbol>
+  <symbol id="i-label" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8h10M7 12h10M7 16h6"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/></symbol>
+  <symbol id="i-sunrise" viewBox="0 0 24 24"><path d="M12 2v6M4.9 10.9l1.4 1.4M2 18h2M20 18h2M19.1 10.9l-1.4 1.4M22 22H2M16 18a4 4 0 0 0-8 0M8 6l4-4 4 4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></symbol>
+  <symbol id="i-apple" viewBox="0 0 24 24"><path d="M12 6.5c-1.5-1.3-4-1.6-5.6-.2C4.3 8 4.6 12 6.2 15.4 7.4 18 9 20.5 10.6 20.5c.8 0 1-.5 1.4-.5s.6.5 1.4.5c1.6 0 3.2-2.5 4.4-5.1C19.4 12 19.7 8 17.6 6.3 16 4.9 13.5 5.2 12 6.5z"/><path d="M12 6.5C12 4.5 13 3 15 2.5"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15v4M17 17h4"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.2-4 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.3 1-3 0 1.4.9 2.5 2.5 2.5z"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5S12.5 5.5 12 3c-.5 2.5-2 4.9-4 6.5S5 13 5 15a7 7 0 0 0 7 7z"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.7 18-8-14a2 2 0 0 0-3.5 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></symbol>
+  <symbol id="i-fork" viewBox="0 0 24 24"><path d="M3 2v7a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6a2 2 0 0 0 2 2h3zm0 0v7"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.7V17c0 .6-.5 1-1 1.2C7.9 18.8 7 20.2 7 22M14 14.7V17c0 .6.5 1 1 1.2 1.1.6 2 2 2 3.8M18 2H6v7a6 6 0 0 0 12 0z"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-eyeoff" viewBox="0 0 24 24"><path d="M9.9 9.9a3 3 0 1 0 4.2 4.2M10.7 5.1A10.4 10.4 0 0 1 12 5c7 0 10 7 10 7a13 13 0 0 1-1.7 2.7M6.6 6.6A13.5 13.5 0 0 0 2 12s3 7 10 7a9.7 9.7 0 0 0 5.4-1.6M2 2l20 20"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+  <symbol id="i-run" viewBox="0 0 24 24"><circle cx="14" cy="4" r="2"/><path d="m7 21 3-6 3 2v5M5 12l3-3 4 1 3 4 4 1M10 15l-1-5"/></symbol>
+  <symbol id="i-scale" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 9a4 4 0 0 1 8 0M12 9l1.5-2"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 22V4a1 1 0 0 1 1-1h12l-2 4 2 4H5"/></symbol>
+  <symbol id="i-ruler" viewBox="0 0 24 24"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.4 2.4 0 0 1 0-3.4l2.6-2.6a2.4 2.4 0 0 1 3.4 0zM14.5 12.5l2-2M11.5 9.5l2-2M8.5 6.5l2-2M17.5 15.5l2-2"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l3-2 3 2 2-2 2 2 3-2 3 2V2l-3 2-3-2-2 2-2-2-3 2z"/><path d="M8 9h8M8 13h6"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></symbol>
+  <symbol id="i-moonsun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"/></symbol>
+  <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10z"/><path d="M2 21c0-3 1.9-5.4 5.2-6"/></symbol>
+  <symbol id="i-dumbbell" viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></symbol>
+  <symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.5"/></symbol>
+</svg>
+
+<header class="canvas-head">
+  <div class="eyebrow">CoachCal · Design System v2 “Ember” · iPhone 390×844 · iOS 26</div>
+  <h1>Neon orange, honest numbers.</h1>
+  <p>One brand colour for the icon, app, widgets and web. Orange fills always carry black labels, and orange text uses a darker “ink” on light backgrounds. The scan loop keeps the confidence badge visible on every scan, lets you type grams directly, and keeps billing one tap from Settings. ED-Safe hides every calorie number, including the four sheets that used to show them.</p>
+  <nav class="toc">
+    <a href="#system">Design system</a><a href="#scan">Scan loop</a><a href="#core">Today · Diary · Progress · Coach</a><a href="#profile">Profile · Settings</a><a href="#billing">Plans · Quota · Cancel</a><a href="#onboarding">Onboarding (9)</a><a href="#glance">Widget · Live Activity</a><a href="#icon">App icon</a><a href="design-system.md">Tokens + handoff</a><a href="research.md">Research note</a>
+  </nav>
+</header>
+
+<!-- ============ 0. DESIGN SYSTEM ============ -->
+<section class="band" id="system">
+  <header><h2>0 · Design system</h2><p>Light, dark and ED-Safe share one set of tokens. Neon orange <b>#FF6A00</b> is only used as a fill (black label, 6.89:1) or as a graphic on dark. For text and lines on light backgrounds there are two darker tokens, <b>accent-ink #B84300</b> (5.47:1) and <b>accent-strong #E35A00</b> (3.67:1). Warning moves to yellow and carbs to teal, so orange always means the brand.</p></header>
+  <div id="ds"></div>
+</section>
+
+<!-- ============ 1. SCAN LOOP ============ -->
+<section class="band" id="scan">
+  <header><h2>1 · Scan loop: Viewfinder → Analyzing → Review → Saved</h2><p>The core of the app. It should take under 5 seconds from shutter to an editable estimate. The confidence badge sits on its own row so it never truncates. Grams can be typed, nudged with 44 pt steppers (the 3-tap 464→508 kcal test path still works), or set by dragging the ruler.</p></header>
+  <div class="row">
+
+    <!-- Viewfinder -->
+    <figure class="frame">
+      <div class="phone dark on-dark" style="background:#000" data-sb>
+        <div class="ph-camera" style="position:absolute;inset:0"></div>
+        <div class="ph-bowl" style="position:absolute;left:55px;top:250px;width:280px;height:280px;border-radius:50%;opacity:.92;filter:saturate(1.05)"></div>
+        <div style="position:absolute;top:62px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;z-index:5">
+          <a class="glassbtn" aria-label="Close" style="background:rgba(0,0,0,.45);color:#fff;border-color:rgba(255,255,255,.12)"><svg class="i"><use href="#i-x"/></svg></a>
+          <span class="chip" style="background:rgba(0,0,0,.55);color:#F7F5F2;height:32px;font-size:13px"><svg class="i sm"><use href="#i-scan"/></svg>2 of 3 free scans left this week</span>
+          <a class="glassbtn" aria-label="Flash off" style="background:rgba(0,0,0,.45);color:#fff;border-color:rgba(255,255,255,.12)"><svg class="i md"><use href="#i-flash"/></svg></a>
+        </div>
+        <!-- brackets -->
+        <svg style="position:absolute;left:39px;top:234px;width:312px;height:312px" viewBox="0 0 312 312" fill="none" stroke="#FF6A00" stroke-width="5" stroke-linecap="round"><path d="M4 52V28A24 24 0 0 1 28 4h24M260 4h24a24 24 0 0 1 24 24v24M308 260v24a24 24 0 0 1-24 24h-24M52 308H28A24 24 0 0 1 4 284v-24"/></svg>
+        <div style="position:absolute;top:566px;left:0;right:0;text-align:center;font:600 15px/1.3 var(--cc-font);color:#F7F5F2">Fit the whole plate in the frame</div>
+        <div style="position:absolute;top:592px;left:0;right:0;text-align:center;font:400 13px/1.3 var(--cc-font);color:#ABA6A0">Good light helps the estimate</div>
+        <!-- modes -->
+        <div style="position:absolute;bottom:150px;left:0;right:0;display:flex;justify-content:center;gap:6px">
+          <span class="chip on">Food</span>
+          <span class="chip" style="background:rgba(42,39,36,.85);color:#F7F5F2">Barcode</span>
+          <span class="chip" style="background:rgba(42,39,36,.85);color:#F7F5F2">Label</span>
+          <span class="chip" style="background:rgba(42,39,36,.85);color:#F7F5F2">Describe</span>
+        </div>
+        <div style="position:absolute;bottom:46px;left:0;right:0;display:flex;justify-content:space-around;align-items:center;padding:0 28px">
+          <a class="glassbtn" aria-label="Choose from library" style="width:52px;height:52px;background:rgba(42,39,36,.85);color:#fff;border-color:transparent"><svg class="i"><use href="#i-image"/></svg></a>
+          <a aria-label="Take photo" style="width:var(--shutter);height:var(--shutter);border-radius:50%;border:4px solid #F7F5F2;display:grid;place-items:center"><span style="width:60px;height:60px;border-radius:50%;background:var(--cc-accent)"></span></a>
+          <a class="glassbtn" aria-label="Switch camera" style="width:52px;height:52px;background:rgba(42,39,36,.85);color:#fff;border-color:transparent"><svg class="i"><use href="#i-flip"/></svg></a>
+        </div>
+      </div>
+      <figcaption>Viewfinder
+        <span>The close button is always shown, the free-scan counter comes from the server, and Describe is now a fourth mode. The fake “1.0×” zoom label is gone. The selected chip is black on orange (6.89:1, was 3.08:1).</span>
+        <i class="fix">#13 close</i><i class="fix">#10 zoom</i><i class="fix">#39 3.08→6.89</i><i class="fix">#11 a11y label</i></figcaption>
+    </figure>
+
+    <!-- Analyzing -->
+    <figure class="frame">
+      <div class="phone dark on-dark" style="background:#000" data-sb>
+        <div class="ph-bowl" style="position:absolute;left:-60px;top:40px;width:510px;height:510px;border-radius:50%;filter:blur(14px) brightness(.55)"></div>
+        <div style="position:absolute;left:95px;top:180px;width:200px;height:200px;border-radius:32px;overflow:hidden;box-shadow:0 0 0 3px #FF6A00, 0 0 60px rgba(255,106,0,.45)" class="ph-bowl"></div>
+        <div style="position:absolute;top:420px;left:24px;right:24px;text-align:center">
+          <div style="font:700 28px/1.15 var(--cc-font);color:#F7F5F2">Reading your plate</div>
+          <div style="font:400 15px/1.4 var(--cc-font);color:#ABA6A0;margin-top:6px">Usually under 5 seconds</div>
+        </div>
+        <div style="position:absolute;top:510px;left:40px;right:40px;display:flex;flex-direction:column;gap:14px;font:600 17px/1.2 var(--cc-font)">
+          <div style="display:flex;gap:12px;align-items:center;color:#F7F5F2"><span style="width:28px;height:28px;border-radius:50%;background:#FF6A00;color:#0B0A09;display:grid;place-items:center"><svg class="i sm" style="stroke-width:3"><use href="#i-check"/></svg></span>Photo uploaded</div>
+          <div style="display:flex;gap:12px;align-items:center;color:#F7F5F2"><span style="width:28px;height:28px;border-radius:50%;border:3px solid #FF6A00;border-right-color:transparent"></span>Finding each food</div>
+          <div style="display:flex;gap:12px;align-items:center;color:#ABA6A0"><span style="width:28px;height:28px;border-radius:50%;border:2px solid #57504A"></span>Estimating portions</div>
+        </div>
+        <div style="position:absolute;bottom:46px;left:16px;right:16px"><a class="btn" style="background:rgba(42,39,36,.9);color:#F7F5F2">Cancel</a></div>
+      </div>
+      <figcaption>Analyzing
+        <span>Each step is ticked off when the server reports that stage, not on a timer. Pending steps are #ABA6A0 on black (8.69:1, was 3.66:1). If the server reports no stages, show only the spinner and the “Usually under 5 seconds” line.</span>
+        <i class="fix">#21 contrast</i><i class="fix">#54 honest steps</i></figcaption>
+    </figure>
+
+    <!-- Review light -->
+    <figure class="frame">
+      <div class="phone plain" data-sb>
+        <div class="scroll" style="padding-bottom:160px">
+          <div class="navbar"><a class="glassbtn" aria-label="Back to camera"><svg class="i"><use href="#i-back"/></svg></a><span class="t">Review</span><a class="glassbtn" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></a></div>
+          <div style="display:flex;gap:14px;align-items:center;margin-top:8px">
+            <div class="thumb ph-bowl" style="width:72px;height:72px;border-radius:18px"></div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:6px;font:700 22px/1.2 var(--cc-font)">Chicken rice bowl <svg class="i sm" style="color:var(--cc-text-3)"><use href="#i-pencil"/></svg></div>
+              <div style="margin-top:8px"><span class="badge hi" data-id="scan.badge"><span class="dot"></span>High confidence</span></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:16px;display:flex;align-items:flex-end;justify-content:space-between;background:var(--cc-grouped);border:0">
+            <div><div style="font:400 13px/1 var(--cc-font);color:var(--cc-text-2)">Total · AI estimate</div><div class="num" style="font:700 44px/1 var(--cc-font-round);margin-top:6px;letter-spacing:-.02em" data-id="scan.totalKcal">624 <small style="font:600 17px var(--cc-font);color:var(--cc-text-2)">kcal</small></div></div>
+            <div style="text-align:right;font:500 13px/1.6 var(--cc-font);color:var(--cc-text-2)"><span style="color:var(--cc-protein)">●</span> P 41 g<br><span style="color:var(--cc-carbs)">●</span> C 72 g<br><span style="color:var(--cc-fat)">●</span> F 17 g</div>
+          </div>
+          <div class="sechead"><span>3 items · tap grams to type</span></div>
+          <!-- item expanded -->
+          <div class="card" style="padding:14px 14px 12px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font:600 17px var(--cc-font)">Jasmine rice</b><span class="num" style="font:600 17px var(--cc-font-round)">234 kcal</span></div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+              <a class="glassbtn" aria-label="Decrease rice by 10 grams" style="border-radius:14px;background:var(--cc-fill);border:0"><svg class="i"><use href="#i-minus"/></svg></a>
+              <div style="flex:1;height:44px;border-radius:14px;border:2px solid var(--cc-accent);display:flex;align-items:center;justify-content:center;gap:4px"><span class="num" style="font:700 22px var(--cc-font-round)">180</span><span style="font:500 15px var(--cc-font);color:var(--cc-text-2)">g</span><span style="width:2px;height:22px;background:var(--cc-accent);margin-left:2px"></span></div>
+              <a class="glassbtn" aria-label="Increase rice by 10 grams" style="border-radius:14px;background:var(--cc-fill);border:0"><svg class="i"><use href="#i-plus"/></svg></a>
+            </div>
+            <!-- ruler -->
+            <div style="position:relative;height:36px;margin-top:10px;overflow:hidden">
+              <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,var(--cc-text-3) 0 1px,transparent 1px 10px);mask:linear-gradient(90deg,transparent,#000 20%,#000 80%,transparent);height:14px;top:6px;opacity:.6"></div>
+              <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,var(--cc-text-2) 0 2px,transparent 2px 50px);mask:linear-gradient(90deg,transparent,#000 20%,#000 80%,transparent);height:22px;top:2px"></div>
+              <div style="position:absolute;left:50%;top:0;width:3px;height:28px;margin-left:-1px;background:var(--cc-accent-strong);border-radius:2px"></div>
+              <div style="position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;font:500 11px var(--cc-font);color:var(--cc-text-2);padding:0 18px"><span>100</span><span>150</span><span style="color:var(--cc-accent-ink);font-weight:700">180</span><span>200</span><span>250</span></div>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:8px"><span class="chip" style="height:32px;font-size:13px">½ cup</span><span class="chip" style="height:32px;font-size:13px">1 cup · 160 g</span><span class="chip" style="height:32px;font-size:13px">1½ cup</span></div>
+          </div>
+          <div class="card" style="margin-top:8px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+            <div style="flex:1"><b style="font:600 17px var(--cc-font)">Roast chicken thigh</b><div style="font:400 13px var(--cc-font);color:var(--cc-text-2);margin-top:2px">320 kcal</div></div>
+            <span class="num" style="height:44px;min-width:86px;border-radius:14px;background:var(--cc-fill);display:grid;place-items:center;font:600 17px var(--cc-font-round)">140 g</span>
+          </div>
+          <div class="card" style="margin-top:8px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+            <div style="flex:1"><b style="font:600 17px var(--cc-font)">Cucumber</b><div style="font:400 13px var(--cc-font);color:var(--cc-text-2);margin-top:2px">70 kcal incl. dressing</div></div>
+            <span class="num" style="height:44px;min-width:86px;border-radius:14px;background:var(--cc-fill);display:grid;place-items:center;font:600 17px var(--cc-font-round)">60 g</span>
+          </div>
+          <a class="btn ghost" style="justify-content:flex-start;padding:0 4px;margin-top:4px;font-size:15px"><svg class="i md"><use href="#i-plus"/></svg>Add a missing item</a>
+        </div>
+        <div class="dock">
+          <div class="seg" style="margin-bottom:10px"><a>Breakfast</a><a class="on" style="color:var(--cc-accent-ink)">Lunch</a><a>Dinner</a><a>Snack</a></div>
+          <a class="btn primary" data-id="scan.save">Save to Lunch</a>
+          <div class="note" style="margin-top:8px"><a style="color:var(--cc-text-2);text-decoration:underline">Something wrong? Report it</a></div>
+        </div>
+      </div>
+      <figcaption>Review (light)
+        <span>The badge sits on its own row and only states confidence (“High confidence”), with no dish type. Grams are a typed field with 44 pt −/+ buttons, a drag ruler and serving chips. Calories are never typed. The meal defaults to the time of day and is tinted orange-ink, not system blue. “Fix Issue” becomes “Report it”, which says what it actually does.</span>
+        <i class="fix">#1 truncation</i><i class="fix">#2 dish claim</i><i class="fix">#3 44pt</i><i class="fix">#4 direct entry</i><i class="fix">#8 meal default</i><i class="fix">#9 honest label</i></figcaption>
+    </figure>
+
+    <!-- Review dark unresolved -->
+    <figure class="frame">
+      <div class="phone plain dark" data-sb>
+        <div class="scroll" style="padding-bottom:160px">
+          <div class="navbar"><a class="glassbtn"><svg class="i"><use href="#i-back"/></svg></a><span class="t">Review</span><a class="glassbtn"><svg class="i"><use href="#i-x"/></svg></a></div>
+          <div style="display:flex;gap:14px;align-items:center;margin-top:8px">
+            <div class="thumb ph-salad" style="width:72px;height:72px;border-radius:18px"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font:700 22px/1.2 var(--cc-font)">Mixed salad</div>
+              <div style="margin-top:8px"><span class="badge md"><span class="dot"></span>Medium confidence</span></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:16px;display:flex;align-items:flex-end;justify-content:space-between">
+            <div><div style="font:400 13px/1 var(--cc-font);color:var(--cc-text-2)">Total · AI estimate</div><div class="num" style="font:700 44px/1 var(--cc-font-round);margin-top:6px">412 <small style="font:600 17px var(--cc-font);color:var(--cc-text-2)">kcal</small></div></div>
+            <div style="text-align:right;font:500 13px/1.6 var(--cc-font);color:var(--cc-text-2)"><span style="color:var(--cc-protein)">●</span> P 18 g<br><span style="color:var(--cc-carbs)">●</span> C 22 g<br><span style="color:var(--cc-fat)">●</span> F 28 g</div>
+          </div>
+          <div class="sechead"><span>3 items</span></div>
+          <div class="card" style="border:1.5px solid var(--cc-error);padding:14px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><b style="font:600 17px var(--cc-font)">Dressing (unsure)</b><span class="badge lo mini"><span class="dot"></span>Low</span></div>
+            <div style="font:400 15px/1.4 var(--cc-font);color:var(--cc-text-2);margin-top:6px">We couldn’t tell if this is oil-based. Oil is the most common miss in photo estimates.</div>
+            <div style="display:flex;gap:8px;margin-top:12px"><a class="btn secondary" style="height:44px;font-size:15px">Oil vinaigrette</a><a class="btn secondary" style="height:44px;font-size:15px">Yogurt dressing</a></div>
+            <a class="btn ghost" style="height:44px;font-size:15px;color:var(--cc-error-ink)">Remove item</a>
+          </div>
+          <div class="card" style="margin-top:8px;padding:12px 14px;display:flex;align-items:center;gap:10px"><div style="flex:1"><b style="font:600 17px var(--cc-font)">Mixed greens</b><div style="font:400 13px var(--cc-font);color:var(--cc-text-2);margin-top:2px">22 kcal</div></div><span class="num" style="height:44px;min-width:86px;border-radius:14px;background:var(--cc-fill);display:grid;place-items:center;font:600 17px var(--cc-font-round)">90 g</span></div>
+          <div class="card" style="margin-top:8px;padding:12px 14px;display:flex;align-items:center;gap:10px"><div style="flex:1"><b style="font:600 17px var(--cc-font)">Feta</b><div style="font:400 13px var(--cc-font);color:var(--cc-text-2);margin-top:2px">158 kcal</div></div><span class="num" style="height:44px;min-width:86px;border-radius:14px;background:var(--cc-fill);display:grid;place-items:center;font:600 17px var(--cc-font-round)">60 g</span></div>
+        </div>
+        <div class="dock">
+          <div class="seg" style="margin-bottom:10px"><a>Breakfast</a><a class="on" style="color:var(--cc-accent-ink)">Lunch</a><a>Dinner</a><a>Snack</a></div>
+          <a class="btn primary disabled">Resolve 1 item to save</a>
+        </div>
+      </div>
+      <figcaption>Review (dark, item needs review)
+        <span>An unresolved item blocks Save, and the button says why. Below 0.5 an item gets its own compact Low badge plus one-tap answers, never a dead end. The medium tier is now yellow, not brand orange.</span>
+        <i class="fix">invariant: unresolved blocks save</i><i class="fix">caution ≠ brand</i></figcaption>
+    </figure>
+
+    <!-- Review ED-safe -->
+    <figure class="frame">
+      <div class="phone plain" data-sb>
+        <div class="scroll">
+          <div class="navbar"><a class="glassbtn"><svg class="i"><use href="#i-back"/></svg></a><span class="t">Review</span><a class="glassbtn"><svg class="i"><use href="#i-x"/></svg></a></div>
+          <div style="display:flex;gap:14px;align-items:center;margin-top:8px">
+            <div class="thumb ph-bowl" style="width:72px;height:72px;border-radius:18px"></div>
+            <div style="flex:1"><div style="font:700 22px/1.2 var(--cc-font)">Chicken rice bowl</div><div style="margin-top:8px"><span class="badge hi"><span class="dot"></span>High confidence</span></div></div>
+          </div>
+          <div class="card" style="margin-top:16px;background:var(--cc-grouped);border:0;display:flex;gap:12px;align-items:center">
+            <span style="width:40px;height:40px;border-radius:12px;background:var(--cc-accent-tint);color:var(--cc-accent-ink);display:grid;place-items:center"><svg class="i"><use href="#i-leaf"/></svg></span>
+            <div style="font:500 15px/1.4 var(--cc-font)">A balanced plate: protein, carbs and veg.<br><span style="color:var(--cc-text-2)">Numbers are hidden in ED-Safe mode.</span></div>
+          </div>
+          <div class="sechead"><span>3 items</span></div>
+          <div class="group">
+            <div class="cell noicon"><span class="lbl">Jasmine rice</span><span class="num" style="height:44px;min-width:86px;border-radius:14px;background:var(--cc-fill);display:grid;place-items:center;font:600 17px var(--cc-font-round)">180 g</span></div>
+            <div class="cell noicon"><span class="lbl">Roast chicken thigh</span><span class="num" style="height:44px;min-width:86px;border-radius:14px;background:var(--cc-fill);display:grid;place-items:center;font:600 17px var(--cc-font-round)">140 g</span></div>
+            <div class="cell noicon"><span class="lbl">Cucumber</span><span class="num" style="height:44px;min-width:86px;border-radius:14px;background:var(--cc-fill);display:grid;place-items:center;font:600 17px var(--cc-font-round)">60 g</span></div>
+          </div>
+        </div>
+        <div class="dock"><div class="seg" style="margin-bottom:10px"><a>Breakfast</a><a class="on" style="color:var(--cc-accent-ink)">Lunch</a><a>Dinner</a><a>Snack</a></div><a class="btn primary">Save to Lunch</a></div>
+      </div>
+      <figcaption>Review (ED-Safe)
+        <span>The total, per-item calories and the macro split are hidden. Confidence and grams stay, as the invariants require. The empty space gets a neutral note about what's on the plate instead of a blank gap.</span>
+        <i class="fix">ED-Safe keeps badge + grams</i></figcaption>
+    </figure>
+
+    <!-- Saved -->
+    <figure class="frame">
+      <div class="phone plain" data-sb>
+        <div class="scroll" style="display:flex;flex-direction:column;align-items:center;padding-top:70px">
+          <div style="width:96px;height:96px;border-radius:50%;background:var(--cc-accent);color:#0B0A09;display:grid;place-items:center;box-shadow:0 0 0 12px var(--cc-accent-tint)"><svg class="i" style="width:48px;height:48px;stroke-width:3"><use href="#i-check"/></svg></div>
+          <div style="font:700 28px/1.2 var(--cc-font);margin-top:28px">Saved to Lunch</div>
+          <div style="font:400 15px var(--cc-font);color:var(--cc-text-2);margin-top:6px">Chicken rice bowl · 624 kcal</div>
+          <div class="ember" style="width:100%;margin-top:28px">
+            <div style="display:flex;justify-content:space-between;font:500 13px var(--cc-font);color:var(--cc-ember-text-2)"><span>Today so far</span><span class="num">1,284 / 2,100 kcal</span></div>
+            <div class="bar" style="margin-top:10px;background:var(--cc-ember-track);height:10px"><i style="width:61%;background:#FF6A00"></i></div>
+            <div style="display:flex;gap:10px;align-items:center;margin-top:16px;font:600 15px var(--cc-font)"><svg class="i" style="color:#FF7A1F"><use href="#i-flame"/></svg>12-day logging streak</div>
+          </div>
+          <div class="card" style="width:100%;margin-top:10px;display:flex;align-items:center;gap:12px;padding:12px 14px">
+            <svg class="i" style="color:var(--cc-text-2)"><use href="#i-undo"/></svg>
+            <div style="flex:1;font:500 15px/1.35 var(--cc-font)">Logged by mistake?<br><span style="color:var(--cc-text-2);font-weight:400;font-size:13px">Undo stays here until you leave</span></div>
+            <a class="chip tint" style="height:44px;padding:0 18px">Undo</a>
+          </div>
+        </div>
+        <div class="dock"><a class="btn primary">Scan another</a><a class="btn ghost" style="margin-top:6px">View diary</a></div>
+      </div>
+      <figcaption>Saved
+        <span>Undo no longer disappears after 4 seconds. It stays until the user leaves this screen. The “Today so far” line sits on the signature ember card and is hidden under ED-Safe. The streak uses an SVG icon instead of an emoji.</span>
+        <i class="fix">#6 undo 4s</i><i class="fix">emoji → icons</i></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ 2. CORE TABS ============ -->
+<section class="band" id="core">
+  <header><h2>2 · Today, Diary, Progress, Coach</h2><p>The tab bar uses the standard iOS 26 floating glass with no custom background. Scan is a separate accessory button next to it. Coach now uses a sparkle icon (was bell) and Profile a person (was gear).</p></header>
+  <div class="row">
+
+    <!-- Today light -->
+    <figure class="frame">
+      <div class="phone" data-sb data-tab="0">
+        <div class="scroll">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:8px"><div><div class="subtitle">Tuesday, 24 Nov</div><div class="largetitle">Today</div></div><a class="glassbtn" aria-label="Open diary"><svg class="i md"><use href="#i-cal"/></svg></a></div>
+          <div style="display:flex;justify-content:space-between;margin:12px 0 14px">
+            <a style="width:44px;height:56px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:600 12px var(--cc-font);color:var(--cc-text-2)">M<b class="num" style="font-size:17px;color:var(--cc-text)">18</b></a>
+            <a style="width:44px;height:56px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:600 12px var(--cc-font);color:var(--cc-text-2)">T<b class="num" style="font-size:17px;color:var(--cc-text)">19</b></a>
+            <a style="width:44px;height:56px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:600 12px var(--cc-font);color:var(--cc-text-2)">W<b class="num" style="font-size:17px;color:var(--cc-text)">20</b></a>
+            <a style="width:44px;height:56px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:600 12px var(--cc-font);color:var(--cc-text-2)">T<b class="num" style="font-size:17px;color:var(--cc-text)">21</b></a>
+            <a style="width:44px;height:56px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:600 12px var(--cc-font);color:var(--cc-text-2)">F<b class="num" style="font-size:17px;color:var(--cc-text)">22</b></a>
+            <a style="width:44px;height:56px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:600 12px var(--cc-font);color:var(--cc-text-2)">S<b class="num" style="font-size:17px;color:var(--cc-text)">23</b></a>
+            <a style="width:44px;height:56px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:600 12px var(--cc-font);background:var(--cc-accent-tint);color:var(--cc-accent-ink)">S<b class="num" style="font-size:17px">24</b></a>
+          </div>
+          <div class="ember" data-id="today.ring">
+            <div style="display:flex;gap:18px;align-items:center">
+              <div class="ring" style="--ring:150px">
+                <svg viewBox="0 0 184 184"><circle cx="92" cy="92" r="76" fill="none" stroke="#3A342F" stroke-width="16"/><circle cx="92" cy="92" r="76" fill="none" stroke="#FF6A00" stroke-width="16" stroke-linecap="round" stroke-dasharray="291 478"/></svg>
+                <div class="center"><div class="num" style="font:700 36px/1 var(--cc-font-round);color:#F7F5F2">816</div><div style="font:500 13px/1.2 var(--cc-font);color:#ABA6A0;margin-top:4px">kcal left</div></div>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:12px;font:500 13px/1.25 var(--cc-font);color:#ABA6A0">
+                <div>Eaten<div class="num" style="font:700 20px var(--cc-font-round);color:#F7F5F2;margin-top:2px">1,284</div></div>
+                <div>Goal<div class="num" style="font:700 20px var(--cc-font-round);color:#F7F5F2;margin-top:2px">2,100</div></div>
+                <div>Burned<div class="num" style="font:700 20px var(--cc-font-round);color:#FF7A1F;margin-top:2px">+180</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:14px 18px">
+            <div class="macro"><div class="top"><span class="k"><i style="background:var(--cc-protein)"></i>Protein</span><span class="v">82 / 130 g</span></div><div class="bar"><i style="width:63%;background:var(--cc-protein)"></i></div></div>
+            <div class="macro"><div class="top"><span class="k"><i style="background:var(--cc-carbs)"></i>Carbs</span><span class="v">140 / 210 g</span></div><div class="bar"><i style="width:67%;background:var(--cc-carbs)"></i></div></div>
+            <div class="macro"><div class="top"><span class="k"><i style="background:var(--cc-fat)"></i>Fat</span><span class="v">38 / 70 g</span></div><div class="bar"><i style="width:54%;background:var(--cc-fat)"></i></div></div>
+            <div class="macro"><div class="top"><span class="k"><i style="background:var(--cc-fiber)"></i>Fiber</span><span class="v">14 / 30 g</span></div><div class="bar"><i style="width:47%;background:var(--cc-fiber)"></i></div></div>
+          </div>
+          <div class="card" style="margin-top:10px;display:flex;align-items:center;gap:12px;padding:12px 14px">
+            <span style="width:40px;height:40px;border-radius:12px;background:var(--cc-info-tint);color:var(--cc-info-ink);display:grid;place-items:center"><svg class="i"><use href="#i-drop"/></svg></span>
+            <div style="flex:1"><b style="font:600 16px var(--cc-font)">Water</b><div class="num" style="font:400 13px var(--cc-font);color:var(--cc-text-2);margin-top:2px">1.25 of 2 L</div></div>
+            <a class="chip" style="height:44px">+ 250 ml</a>
+          </div>
+          <div class="sechead"><span>Meals</span><a>Diary</a></div>
+          <div class="card" style="padding:4px 14px">
+            <div class="foodrow"><div class="thumb ph-bowl"></div><div class="meta"><b>Chicken rice bowl</b><span>Lunch · 12:40 <span class="badge hi mini"><span class="dot"></span>High</span></span></div><div class="kc">624</div></div>
+          </div>
+        </div>
+      </div>
+      <figcaption>Today (light)
+        <span>The signature ember card shows the ring at 6.51:1 (lime was 1.35:1). Macros sit in a 2×2 grid so “Protein” and “32/130 g” never wrap, and fiber joins the grid. Week-strip cells are 44 pt. The Health Score placeholder is removed until a score engine exists.</span>
+        <i class="fix">#14 word breaks</i><i class="fix">#15 fiber</i><i class="fix">#18 placeholder</i><i class="fix">#38 ring 1.35→6.51</i><i class="fix">#41 44pt</i><i class="fix">#65 water 1.25 L</i></figcaption>
+    </figure>
+
+    <!-- Today dark -->
+    <figure class="frame">
+      <div class="phone dark" data-sb data-tab="0">
+        <div class="scroll">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:8px"><div><div class="subtitle">Tuesday, 24 Nov</div><div class="largetitle">Today</div></div><span class="chip" style="height:32px;font-size:13px;background:var(--cc-caution-tint);color:var(--cc-caution-ink)">Offline · syncs later</span></div>
+          <div class="ember" style="margin-top:16px">
+            <div style="display:flex;gap:18px;align-items:center">
+              <div class="ring" style="--ring:150px"><svg viewBox="0 0 184 184"><circle cx="92" cy="92" r="76" fill="none" stroke="#3A342F" stroke-width="16"/><circle cx="92" cy="92" r="76" fill="none" stroke="#FF6A00" stroke-width="16" stroke-linecap="round" stroke-dasharray="291 478"/></svg>
+                <div class="center"><div class="num" style="font:700 36px/1 var(--cc-font-round)">816</div><div style="font:500 13px/1.2 var(--cc-font);color:#ABA6A0;margin-top:4px">kcal left</div></div></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:12px;font:500 13px/1.25 var(--cc-font);color:#ABA6A0">
+                <div>Eaten<div class="num" style="font:700 20px var(--cc-font-round);color:#F7F5F2;margin-top:2px">1,284</div></div>
+                <div>Goal<div class="num" style="font:700 20px var(--cc-font-round);color:#F7F5F2;margin-top:2px">2,100</div></div>
+                <div>Burned<div class="num" style="font:700 20px var(--cc-font-round);color:#FF7A1F;margin-top:2px">+180</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:14px 18px">
+            <div class="macro"><div class="top"><span class="k"><i style="background:var(--cc-protein)"></i>Protein</span><span class="v">82 / 130 g</span></div><div class="bar"><i style="width:63%;background:var(--cc-protein)"></i></div></div>
+            <div class="macro"><div class="top"><span class="k"><i style="background:var(--cc-carbs)"></i>Carbs</span><span class="v">140 / 210 g</span></div><div class="bar"><i style="width:67%;background:var(--cc-carbs)"></i></div></div>
+            <div class="macro"><div class="top"><span class="k"><i style="background:var(--cc-fat)"></i>Fat</span><span class="v">38 / 70 g</span></div><div class="bar"><i style="width:54%;background:var(--cc-fat)"></i></div></div>
+            <div class="macro"><div class="top"><span class="k"><i style="background:var(--cc-fiber)"></i>Fiber</span><span class="v">14 / 30 g</span></div><div class="bar"><i style="width:47%;background:var(--cc-fiber)"></i></div></div>
+          </div>
+          <div class="card" style="margin-top:10px;display:flex;align-items:center;gap:12px;padding:12px 14px">
+            <span style="width:40px;height:40px;border-radius:12px;background:var(--cc-accent-tint);color:var(--cc-accent-ink);display:grid;place-items:center"><svg class="i"><use href="#i-flame"/></svg></span>
+            <div style="flex:1"><b style="font:600 16px var(--cc-font)">12-day streak</b><div style="font:400 13px var(--cc-font);color:var(--cc-text-2);margin-top:2px">1 freeze available</div></div>
+          </div>
+          <div class="sechead"><span>Meals</span><a>Diary</a></div>
+          <div class="card" style="padding:4px 14px">
+            <div class="foodrow"><div class="thumb ph-oats"></div><div class="meta"><b>Overnight oats</b><span>Breakfast · 8:05 <span class="badge md mini"><span class="dot"></span>Medium</span></span></div><div class="kc">410</div></div>
+            <div class="foodrow" style="border-top:1px solid var(--cc-separator)"><div class="thumb ph-bowl"></div><div class="meta"><b>Chicken rice bowl</b><span>Lunch · 12:40 · syncs later</span></div><div class="kc">624</div></div>
+          </div>
+        </div>
+      </div>
+      <figcaption>Today (dark, offline)
+        <span>Dark mode uses true black with warm cards. The offline state is a yellow caution chip, and “syncs later” is #ABA6A0 (7.18:1, was 2.84:1).</span>
+        <i class="fix">#37 tertiary contrast</i></figcaption>
+    </figure>
+
+    <!-- Today ED-safe -->
+    <figure class="frame">
+      <div class="phone" data-sb data-tab="0">
+        <div class="scroll">
+          <div style="margin-top:8px"><div class="subtitle">Tuesday, 24 Nov</div><div class="largetitle">Today</div></div>
+          <div class="ember" style="margin-top:16px">
+            <div style="display:flex;gap:18px;align-items:center">
+              <div class="ring" style="--ring:150px"><svg viewBox="0 0 184 184"><circle cx="92" cy="92" r="76" fill="none" stroke="#3A342F" stroke-width="16"/><circle cx="92" cy="92" r="76" fill="none" stroke="#FF6A00" stroke-width="16" stroke-linecap="round" stroke-dasharray="291 478"/></svg>
+                <div class="center"><div style="font:700 22px/1.1 var(--cc-font);color:#F7F5F2">On track</div><div style="font:500 13px/1.2 var(--cc-font);color:#ABA6A0;margin-top:4px">2 of 3 meals</div></div></div>
+              <div style="flex:1;font:400 15px/1.45 var(--cc-font);color:#ABA6A0">Steady meals keep energy even. <span style="color:#F7F5F2">Dinner is next.</span></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:14px 18px">
+            <div class="macro"><div class="top"><span class="k"><i style="background:var(--cc-protein)"></i>Protein</span><span class="v">82 / 130 g</span></div><div class="bar"><i style="width:63%;background:var(--cc-protein)"></i></div></div>
+            <div class="macro"><div class="top"><span class="k"><i style="background:var(--cc-carbs)"></i>Carbs</span><span class="v">140 / 210 g</span></div><div class="bar"><i style="width:67%;background:var(--cc-carbs)"></i></div></div>
+            <div class="macro"><div class="top"><span class="k"><i style="background:var(--cc-fat)"></i>Fat</span><span class="v">38 / 70 g</span></div><div class="bar"><i style="width:54%;background:var(--cc-fat)"></i></div></div>
+            <div class="macro"><div class="top"><span class="k"><i style="background:var(--cc-fiber)"></i>Fiber</span><span class="v">14 / 30 g</span></div><div class="bar"><i style="width:47%;background:var(--cc-fiber)"></i></div></div>
+          </div>
+          <div class="card" style="margin-top:10px;display:flex;align-items:center;gap:12px;padding:12px 14px">
+            <span style="width:40px;height:40px;border-radius:12px;background:var(--cc-info-tint);color:var(--cc-info-ink);display:grid;place-items:center"><svg class="i"><use href="#i-drop"/></svg></span>
+            <div style="flex:1"><b style="font:600 16px var(--cc-font)">Water</b><div style="font:400 13px var(--cc-font);color:var(--cc-text-2);margin-top:2px">5 of 8 glasses</div></div><a class="chip" style="height:44px">+ 1 glass</a>
+          </div>
+          <div class="sechead"><span>Meals</span><a>Diary</a></div>
+          <div class="card" style="padding:4px 14px">
+            <div class="foodrow"><div class="thumb ph-oats"></div><div class="meta"><b>Overnight oats</b><span>Breakfast · 8:05 <span class="badge md mini"><span class="dot"></span>Medium</span></span></div></div>
+            <div class="foodrow" style="border-top:1px solid var(--cc-separator)"><div class="thumb ph-bowl"></div><div class="meta"><b>Chicken rice bowl</b><span>Lunch · 12:40 <span class="badge hi mini"><span class="dot"></span>High</span></span></div></div>
+          </div>
+        </div>
+      </div>
+      <figcaption>Today (ED-Safe)
+        <span>The ring reads “On track · 2 of 3 meals” and shows no number or goal. Macro grams, water, streak and badges stay, as the toggle copy promises. There is never a red “over” state.</span>
+        <i class="fix">ED-Safe: no kcal</i></figcaption>
+    </figure>
+
+    <!-- Diary -->
+    <figure class="frame">
+      <div class="phone sheetbg" data-sb style="background:#2b2724">
+        <div style="position:absolute;top:58px;left:0;right:0;bottom:0;background:var(--cc-grouped);border-radius:38px 38px 0 0;padding:8px 16px 0;overflow:hidden">
+          <div style="width:36px;height:5px;border-radius:3px;background:var(--cc-grabber);margin:0 auto 8px"></div>
+          <div class="navbar"><a class="glassbtn" aria-label="Previous day"><svg class="i"><use href="#i-back"/></svg></a><span class="t">Tue, 24 Nov</span><a class="glassbtn" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></a></div>
+          <div class="card" style="display:flex;text-align:center;padding:12px 6px;margin-top:6px">
+            <div style="flex:1"><div style="font:400 13px var(--cc-font);color:var(--cc-text-2)">Eaten</div><div class="num" style="font:700 20px var(--cc-font-round);margin-top:4px">1,284</div></div>
+            <div style="flex:1;border-left:1px solid var(--cc-separator)"><div style="font:400 13px var(--cc-font);color:var(--cc-text-2)">Goal</div><div class="num" style="font:700 20px var(--cc-font-round);margin-top:4px">2,100</div></div>
+            <div style="flex:1;border-left:1px solid var(--cc-separator)"><div style="font:400 13px var(--cc-font);color:var(--cc-text-2)">Left</div><div class="num" style="font:700 20px var(--cc-font-round);margin-top:4px;color:var(--cc-accent-ink)">816</div></div>
+          </div>
+          <div class="sechead" style="margin-top:18px"><span style="display:flex;gap:6px;align-items:center;color:var(--cc-text);font-size:15px"><svg class="i sm"><use href="#i-sunrise"/></svg>Breakfast</span><span class="num">410 kcal</span></div>
+          <div class="card" style="padding:2px 14px">
+            <div class="foodrow"><div class="thumb ph-oats" style="width:44px;height:44px"></div><div class="meta"><b>Overnight oats</b><span>260 g <span class="badge md mini"><span class="dot"></span>Medium</span></span></div><div class="kc">410</div></div>
+          </div>
+          <div class="sechead"><span style="display:flex;gap:6px;align-items:center;color:var(--cc-text);font-size:15px"><svg class="i sm"><use href="#i-sun"/></svg>Lunch</span><span class="num">624 kcal</span></div>
+          <div class="card" style="padding:2px 14px">
+            <div class="foodrow"><div class="thumb ph-bowl" style="width:44px;height:44px"></div><div class="meta"><b>Chicken rice bowl</b><span>380 g <span class="badge hi mini"><span class="dot"></span>High</span></span></div><div class="kc">624</div></div>
+            <div class="foodrow" style="border-top:1px solid var(--cc-separator)"><div class="thumb ph-toast" style="width:44px;height:44px"></div><div class="meta"><b>Avocado toast</b><span>1 slice · from search</span></div><div class="kc">250</div></div>
+          </div>
+          <div class="sechead"><span style="display:flex;gap:6px;align-items:center;color:var(--cc-text);font-size:15px"><svg class="i sm"><use href="#i-moon"/></svg>Dinner</span></div>
+          <a class="btn" style="height:48px;border:1.5px dashed var(--cc-separator);color:var(--cc-accent-ink);font-size:15px;border-radius:14px"><svg class="i md"><use href="#i-plus"/></svg>Add dinner</a>
+          <div class="sechead"><span style="display:flex;gap:6px;align-items:center;color:var(--cc-text);font-size:15px"><svg class="i sm"><use href="#i-run"/></svg>Exercise</span><span class="num">−180 kcal</span></div>
+          <div class="card" style="padding:12px 14px;display:flex;justify-content:space-between;font:500 16px var(--cc-font)"><span>Brisk walk · 40 min</span><span class="num" style="color:var(--cc-text-2)">180</span></div>
+        </div>
+      </div>
+      <figcaption>Diary day (sheet, large detent)
+        <span>A visible system grabber (it was invisible in light mode). SVG meal icons replace the emoji. Every row carries its own confidence or source. “Add” uses one dashed style everywhere.</span>
+        <i class="fix">#46 grabber</i><i class="fix">#24 dashed</i><i class="fix">#25 detents</i></figcaption>
+    </figure>
+
+    <!-- Progress -->
+    <figure class="frame">
+      <div class="phone" data-sb data-tab="1">
+        <div class="scroll">
+          <div class="largetitle" style="margin-top:8px">Progress</div>
+          <div class="seg" style="margin:12px 0 12px"><a>Week</a><a class="on">Month</a><a>3M</a><a>Year</a></div>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font:400 13px var(--cc-font);color:var(--cc-text-2)">Weight trend</div><div class="num" style="font:700 28px var(--cc-font-round);margin-top:4px">80.6 <small style="font:500 15px var(--cc-font);color:var(--cc-text-2)">kg</small></div><div style="font:600 13px var(--cc-font);color:var(--cc-success-ink);margin-top:2px">−1.8 kg in 30 days</div></div><a class="chip tint" style="height:44px">Log weight</a></div>
+            <svg viewBox="0 0 326 150" style="width:100%;height:150px;margin-top:10px" aria-label="Weight trend from 82.4 to 80.6 kilograms over 30 days">
+              <g stroke="var(--cc-separator)" stroke-width="1"><path d="M0 20H300M0 65H300M0 110H300"/></g>
+              <g font-family="-apple-system" font-size="11" fill="var(--cc-text-2)"><text x="304" y="24">83</text><text x="304" y="69">82</text><text x="304" y="114">81</text><text x="0" y="146">27 Oct</text><text x="252" y="146">24 Nov</text></g>
+              <path d="M6 30 L46 40 L86 34 L126 58 L166 66 L206 88 L246 100 L286 117 L286 130 L6 130Z" fill="var(--cc-accent)" opacity=".10"/>
+              <path d="M6 30 L46 40 L86 34 L126 58 L166 66 L206 88 L246 100 L286 117" fill="none" stroke="var(--cc-accent-strong)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+              <circle cx="286" cy="117" r="6" fill="var(--cc-accent-strong)" stroke="var(--cc-card)" stroke-width="3"/>
+            </svg>
+          </div>
+          <div class="card" style="margin-top:10px">
+            <div style="display:flex;justify-content:space-between"><div style="font:400 13px var(--cc-font);color:var(--cc-text-2)">Weekly energy</div><div style="font:500 13px var(--cc-font);color:var(--cc-text-2)">avg <b class="num" style="color:var(--cc-text)">1,980</b> kcal</div></div>
+            <div style="display:flex;align-items:flex-end;gap:10px;height:110px;margin-top:12px;position:relative">
+              <div style="position:absolute;left:0;right:0;top:16px;border-top:1.5px dashed var(--cc-text-3)"></div>
+              <div style="flex:1;height:82%;background:var(--cc-accent-strong);border-radius:6px"></div><div style="flex:1;height:90%;background:var(--cc-accent-strong);border-radius:6px"></div><div style="flex:1;height:76%;background:var(--cc-accent-strong);border-radius:6px"></div><div style="flex:1;height:94%;background:var(--cc-accent-strong);border-radius:6px"></div><div style="flex:1;height:70%;background:var(--cc-accent-strong);border-radius:6px"></div><div style="flex:1;height:86%;background:var(--cc-accent-strong);border-radius:6px"></div><div style="flex:1;height:52%;background:var(--cc-fill);border-radius:6px;border:1.5px dashed var(--cc-text-3)"></div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:6px;font:500 12px var(--cc-font);color:var(--cc-text-2);text-align:center"><span style="flex:1">M</span><span style="flex:1">T</span><span style="flex:1">W</span><span style="flex:1">T</span><span style="flex:1">F</span><span style="flex:1">S</span><span style="flex:1;color:var(--cc-accent-ink);font-weight:700">S</span></div>
+          </div>
+          <div class="sechead"><span>Badges</span><a>All</a></div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+            <div class="card" style="text-align:center;padding:12px 6px"><svg class="i lg" style="color:var(--cc-accent-ink)"><use href="#i-camera"/></svg><div style="font:600 13px var(--cc-font);margin-top:6px">First scan</div></div>
+            <div class="card" style="text-align:center;padding:12px 6px"><svg class="i lg" style="color:var(--cc-accent-ink)"><use href="#i-flame"/></svg><div style="font:600 13px var(--cc-font);margin-top:6px">7-day streak</div></div>
+            <div class="card" style="text-align:center;padding:12px 6px;color:var(--cc-text-2)"><svg class="i lg"><use href="#i-lock"/></svg><div style="font:600 13px var(--cc-font);margin-top:6px">30 days</div></div>
+          </div>
+        </div>
+      </div>
+      <figcaption>Progress
+        <span>The y-axis fits the data (80–83 kg), so the trend is readable instead of flat. Every chart uses one accent family, accent-strong at 3.67:1. Today's partial bar is dashed. Charts need an audio-graph descriptor for VoiceOver.</span>
+        <i class="fix">#16 flat chart</i><i class="fix">#19 one hue</i><i class="fix">#44 audio graph</i></figcaption>
+    </figure>
+
+    <!-- Coach -->
+    <figure class="frame">
+      <div class="phone" data-sb data-tab="2">
+        <div class="scroll">
+          <div style="margin-top:8px"><div class="subtitle">Good afternoon</div><div class="largetitle">Coach</div></div>
+          <div class="ember" style="margin-top:14px">
+            <div style="font:600 13px var(--cc-font);color:#FF7A1F;letter-spacing:.02em">THIS WEEK</div>
+            <div style="font:700 22px/1.25 var(--cc-font);margin-top:8px">Protein hit target on 5 of 7 days. Your best week yet.</div>
+            <div style="display:flex;gap:10px;margin-top:16px">
+              <div style="flex:1;background:#2A2724;border-radius:14px;padding:10px 12px"><div class="num" style="font:700 22px var(--cc-font-round)">19</div><div style="font:500 12px var(--cc-font);color:#ABA6A0">meals logged</div></div>
+              <div style="flex:1;background:#2A2724;border-radius:14px;padding:10px 12px"><div class="num" style="font:700 22px var(--cc-font-round)">5/7</div><div style="font:500 12px var(--cc-font);color:#ABA6A0">protein days</div></div>
+              <div style="flex:1;background:#2A2724;border-radius:14px;padding:10px 12px"><div class="num" style="font:700 22px var(--cc-font-round)">12</div><div style="font:500 12px var(--cc-font);color:#ABA6A0">day streak</div></div>
+            </div>
+          </div>
+          <div class="sechead"><span>Insights</span></div>
+          <div class="card" style="display:flex;gap:12px;border-left:4px solid var(--cc-accent)">
+            <span style="width:40px;height:40px;border-radius:12px;background:var(--cc-accent-tint);color:var(--cc-accent-ink);display:grid;place-items:center;flex:none"><svg class="i"><use href="#i-sunrise"/></svg></span>
+            <div><b style="font:600 16px var(--cc-font)">Breakfast is your lightest meal</b><div style="font:400 15px/1.4 var(--cc-font);color:var(--cc-text-2);margin-top:4px">On days with a 400+ kcal breakfast you snacked less after 9 pm.</div><a style="display:inline-flex;align-items:center;gap:4px;margin-top:8px;font:600 15px var(--cc-font);color:var(--cc-accent-ink);min-height:44px">See the days <svg class="i sm"><use href="#i-chev"/></svg></a></div>
+          </div>
+          <div class="card" style="display:flex;gap:12px;margin-top:8px;border-left:4px solid var(--cc-accent)">
+            <span style="width:40px;height:40px;border-radius:12px;background:var(--cc-info-tint);color:var(--cc-info-ink);display:grid;place-items:center;flex:none"><svg class="i"><use href="#i-drop"/></svg></span>
+            <div><b style="font:600 16px var(--cc-font)">Water dips on weekends</b><div style="font:400 15px/1.4 var(--cc-font);color:var(--cc-text-2);margin-top:4px">Saturday and Sunday average 0.9 L.</div><a style="display:inline-flex;align-items:center;gap:4px;margin-top:8px;font:600 15px var(--cc-font);color:var(--cc-accent-ink);min-height:44px">Set a reminder <svg class="i sm"><use href="#i-chev"/></svg></a></div>
+          </div>
+          <div style="font:400 12px/1.4 var(--cc-font);color:var(--cc-text-2);margin-top:12px;padding:0 4px">Insights come from your own logs. They are not medical advice.</div>
+        </div>
+      </div>
+      <figcaption>Coach
+        <span>No emoji in the greeting. Each insight now ends in one action, since the tab had no controls before. The weekly review sits on the ember card. The tab icon is a sparkle (was bell).</span>
+        <i class="fix">#31 tab icon</i><i class="fix">emoji</i></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ 3. PROFILE / SETTINGS ============ -->
+<section class="band" id="profile">
+  <header><h2>3 · Profile, Settings and the ED-Safe leak fixes</h2><p>Every row now does something. Rows with a value open a picker, and rows without an action lose their chevron. The subscription card has working Change plan and Cancel actions.</p></header>
+  <div class="row">
+    <figure class="frame">
+      <div class="phone" data-sb data-tab="3">
+        <div class="scroll">
+          <div class="largetitle" style="margin-top:8px">Profile</div>
+          <div class="card" style="display:flex;gap:14px;align-items:center;margin-top:12px" data-id="profile.userCard">
+            <div style="width:56px;height:56px;border-radius:50%;background:var(--cc-accent);color:#0B0A09;display:grid;place-items:center;font:700 22px var(--cc-font)">M</div>
+            <div style="flex:1"><b style="font:600 17px var(--cc-font)">Minh</b><div style="font:400 13px var(--cc-font);color:var(--cc-text-2);margin-top:2px">CoachCal Plus · renews 12 Dec</div></div>
+            <svg class="i chev" style="color:var(--cc-text-3)"><use href="#i-chev"/></svg>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">
+            <div class="card" style="padding:12px"><div class="num" style="font:700 20px var(--cc-font-round)">2,100</div><div style="font:500 12px var(--cc-font);color:var(--cc-text-2)">kcal / day</div></div>
+            <div class="card" style="padding:12px"><div class="num" style="font:700 20px var(--cc-font-round)">80.6</div><div style="font:500 12px var(--cc-font);color:var(--cc-text-2)">kg now</div></div>
+            <div class="card" style="padding:12px"><div class="num" style="font:700 20px var(--cc-font-round)">76</div><div style="font:500 12px var(--cc-font);color:var(--cc-text-2)">kg goal</div></div>
+          </div>
+          <div class="sechead"><span>Plan</span></div>
+          <div class="group">
+            <div class="cell"><span class="ic" style="background:#FF6A00;color:#0B0A09"><svg class="i"><use href="#i-target"/></svg></span><span class="lbl">Daily target</span><span class="val num">2,100 kcal</span><svg class="i chev"><use href="#i-chev"/></svg></div>
+            <div class="cell"><span class="ic" style="background:var(--cc-fat)"><svg class="i"><use href="#i-chart"/></svg></span><span class="lbl">Macro split</span><span class="val">30/45/25</span><svg class="i chev"><use href="#i-chev"/></svg></div>
+            <div class="cell"><span class="ic" style="background:var(--cc-fiber)"><svg class="i"><use href="#i-flag"/></svg></span><span class="lbl">Goal weight</span><span class="val num">76 kg</span><svg class="i chev"><use href="#i-chev"/></svg></div>
+          </div>
+          <div class="sechead"><span>App</span></div>
+          <div class="group">
+            <div class="cell"><span class="ic" style="background:#E5243B"><svg class="i"><use href="#i-heart"/></svg></span><span class="lbl">Apple Health</span><span class="val" style="color:var(--cc-success-ink)">Connected</span><svg class="i chev"><use href="#i-chev"/></svg></div>
+            <div class="cell"><span class="ic" style="background:#5F5B57"><svg class="i"><use href="#i-ruler"/></svg></span><span class="lbl">Units</span><div class="seg" style="width:140px;padding:2px"><a class="on" style="height:30px">kg</a><a style="height:30px">lb</a></div></div>
+            <div class="cell"><span class="ic" style="background:#5F5B57"><svg class="i"><use href="#i-help"/></svg></span><span class="lbl">Settings</span><svg class="i chev"><use href="#i-chev"/></svg></div>
+          </div>
+        </div>
+      </div>
+      <figcaption>Profile
+        <span>The name comes from the account (no more hard-coded “Alex”). Apple Health shows its real status. Units is a real kg/lb control, so imperial needs engineering. The tab icon is a person.</span>
+        <i class="fix">#28 units</i><i class="fix">#56 Alex</i><i class="fix">#57 Health</i><i class="fix">#62 dead rows</i></figcaption>
+    </figure>
+
+    <figure class="frame">
+      <div class="phone" data-sb>
+        <div class="scroll" style="padding-bottom:40px">
+          <div class="navbar"><a class="glassbtn" aria-label="Back to Profile"><svg class="i"><use href="#i-back"/></svg></a><span class="t">Settings</span><span style="width:44px"></span></div>
+          <div class="sechead" style="margin-top:8px"><span>Subscription</span></div>
+          <div class="card" style="padding:16px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><b style="font:700 17px var(--cc-font)">CoachCal Plus · Yearly</b><div style="font:400 15px/1.45 var(--cc-font);color:var(--cc-text-2);margin-top:4px">Renews 12 Dec 2026 for <b style="color:var(--cc-text)">$39.99</b>.<br>Billed by Apple. No hidden fees.</div></div><span class="badge hi mini">Active</span></div>
+            <div style="display:flex;gap:8px;margin-top:14px"><a class="btn secondary" style="height:44px;font-size:15px">Change plan</a><a class="btn destructive" style="height:44px;font-size:15px" data-id="settings.cancelSubscription">Cancel subscription</a></div>
+            <a class="btn ghost" style="height:44px;font-size:15px;margin-top:4px">Billing history · Restore purchases</a>
+          </div>
+          <div class="sechead"><span>Wellbeing</span></div>
+          <div class="group">
+            <div class="cell" style="align-items:flex-start;padding:14px 16px"><span class="ic" style="background:var(--cc-fat)"><svg class="i"><use href="#i-eyeoff"/></svg></span><span class="lbl">ED-Safe mode<small>Hides every calorie number in the app, widgets and Live Activities. You keep confidence, grams, water and streaks.</small></span><span class="toggle" data-id="settings.edSafeToggle"></span></div>
+            <div class="cell" style="align-items:flex-start;padding:14px 16px"><span class="ic" style="background:#FF6A00;color:#0B0A09"><svg class="i"><use href="#i-run"/></svg></span><span class="lbl">Add burned calories back<small>Exercise from Apple Health raises today's target.</small></span><span class="toggle on"></span></div>
+          </div>
+          <div class="sechead"><span>Your data</span></div>
+          <div class="group">
+            <div class="cell"><span class="ic" style="background:#2563EB"><svg class="i"><use href="#i-download"/></svg></span><span class="lbl">Export diary as CSV</span><svg class="i chev"><use href="#i-chev"/></svg></div>
+            <div class="cell"><span class="ic" style="background:#5F5B57"><svg class="i"><use href="#i-help"/></svg></span><span class="lbl">Help and FAQ</span><svg class="i chev"><use href="#i-chev"/></svg></div>
+            <div class="cell"><span class="ic" style="background:#5F5B57"><svg class="i"><use href="#i-mail"/></svg></span><span class="lbl">Contact us</span><svg class="i chev"><use href="#i-chev"/></svg></div>
+            <div class="cell destructive"><span class="ic" style="background:#E5243B"><svg class="i"><use href="#i-trash"/></svg></span><span class="lbl">Delete account</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption>Settings
+        <span>The subscription card shows the renewal date and price together, with Change plan, Cancel subscription, Billing history and Restore. The ED-Safe copy now also covers widgets. Labels are in sentence case. A failed export shows an inline error row (not drawn here).</span>
+        <i class="fix">#52 inert billing</i><i class="fix">#26 case</i><i class="fix">#60 silent fail</i></figcaption>
+    </figure>
+
+    <figure class="frame">
+      <div class="phone" data-sb style="background:var(--cc-grouped)">
+        <div class="scroll">
+          <div class="navbar"><a class="glassbtn" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></a><span class="t">Add to Dinner</span><span style="width:44px"></span></div>
+          <div style="height:44px;border-radius:12px;background:var(--cc-fill);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--cc-text-2);font:400 17px var(--cc-font);margin-top:6px"><svg class="i md"><use href="#i-search"/></svg><span style="color:var(--cc-text)">salmon</span></div>
+          <div class="seg" style="margin-top:12px"><a class="on">Search</a><a>Saved</a><a>Recent</a></div>
+          <div class="sechead" style="margin-top:16px"><span>Results</span></div>
+          <div class="group"><div class="cell noicon" style="padding:10px 16px"><span class="lbl">Salmon fillet, baked<small>Generic</small></span><span class="num" style="font:600 15px var(--cc-font-round);color:var(--cc-text-2)">100 g</span><a class="glassbtn" aria-label="Add Salmon fillet, baked" style="background:var(--cc-accent-tint);color:var(--cc-accent-ink);border:0"><svg class="i md"><use href="#i-plus"/></svg></a></div><div class="cell noicon" style="padding:10px 16px"><span class="lbl">Smoked salmon<small>Generic</small></span><span class="num" style="font:600 15px var(--cc-font-round);color:var(--cc-text-2)">50 g</span><a class="glassbtn" aria-label="Add Smoked salmon" style="background:var(--cc-accent-tint);color:var(--cc-accent-ink);border:0"><svg class="i md"><use href="#i-plus"/></svg></a></div><div class="cell noicon" style="padding:10px 16px"><span class="lbl">Salmon poke bowl<small>Restaurant</small></span><span class="num" style="font:600 15px var(--cc-font-round);color:var(--cc-text-2)">1 bowl</span><a class="glassbtn" aria-label="Add Salmon poke bowl" style="background:var(--cc-accent-tint);color:var(--cc-accent-ink);border:0"><svg class="i md"><use href="#i-plus"/></svg></a></div><div class="cell noicon" style="padding:10px 16px"><span class="lbl">Salmon sushi roll<small>Generic</small></span><span class="num" style="font:600 15px var(--cc-font-round);color:var(--cc-text-2)">6 pcs</span><a class="glassbtn" aria-label="Add Salmon sushi roll" style="background:var(--cc-accent-tint);color:var(--cc-accent-ink);border:0"><svg class="i md"><use href="#i-plus"/></svg></a></div></div>
+          <div class="card" style="margin-top:12px;display:flex;gap:10px;align-items:center;background:transparent;border:1.5px dashed var(--cc-separator)"><svg class="i md" style="color:var(--cc-accent-ink)"><use href="#i-pencil"/></svg><span style="flex:1;font:500 15px var(--cc-font)">Can't find it? Describe it or log manually</span><svg class="i chev" style="color:var(--cc-text-3)"><use href="#i-chev"/></svg></div>
+        </div>
+      </div>
+      <figcaption>Food search (ED-Safe)
+        <span>Leak fixed: result rows showed “206 kcal” under ED-Safe. Rows now show the serving size, and the next step opens the same grams control as Review. With ED-Safe off, kcal returns in the same slot.</span>
+        <i class="fix">ED-Safe leak 1/4</i><i class="fix">Add food grid gap</i></figcaption>
+    </figure>
+
+    <figure class="frame">
+      <div class="phone" data-sb style="background:var(--cc-grouped)">
+        <div class="scroll" style="padding-bottom:140px">
+          <div class="navbar"><a class="glassbtn" aria-label="Back"><svg class="i"><use href="#i-back"/></svg></a><span class="t">Log manually</span><span style="width:44px"></span></div>
+          <div class="seg" style="margin-top:6px"><a class="on">Food</a><a>Exercise</a><a>Custom food</a></div>
+          <div class="sechead" style="margin-top:16px"><span>Food</span></div>
+          <div class="group">
+            <div class="cell noicon"><span class="lbl">Name</span><span class="val" style="color:var(--cc-text)">Grandma's pho</span></div>
+            <div class="cell noicon"><span class="lbl">Amount</span><span class="val num" style="color:var(--cc-text)">1 large bowl</span></div>
+            <div class="cell noicon"><span class="lbl">Meal</span><span class="val" style="color:var(--cc-accent-ink)">Dinner</span><svg class="i chev"><use href="#i-chev"/></svg></div>
+          </div>
+          <div class="card" style="margin-top:12px;display:flex;gap:12px;align-items:flex-start;background:var(--cc-accent-tint);border:0">
+            <svg class="i" style="color:var(--cc-accent-ink);flex:none"><use href="#i-eyeoff"/></svg>
+            <div style="font:400 15px/1.45 var(--cc-font)"><b style="font-weight:600">No numbers needed.</b> We'll estimate the energy from the name and amount and keep it hidden, so your plan stays accurate.</div>
+          </div>
+          <div class="sechead" style="margin-top:18px"><span>Same rule on the other tabs</span></div>
+          <div class="group">
+            <div class="cell noicon"><span class="lbl">Exercise<small>Activity and minutes only. Burned kcal is hidden.</small></span></div>
+            <div class="cell noicon"><span class="lbl">Custom food<small>Name and serving only. Nutrition fields fold into “Advanced”, collapsed and blurred.</small></span></div>
+          </div>
+        </div>
+        <div class="dock grouped"><a class="btn primary">Add to Dinner</a></div>
+      </div>
+      <figcaption>Manual log (ED-Safe)
+        <span>Leaks fixed: the Manual log, Exercise and Custom food sheets asked the user to type kcal. Under ED-Safe the kcal field is removed and the estimate is computed server-side, hidden. That closes all four leaks.</span>
+        <i class="fix">ED-Safe leaks 2–4/4</i></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ 4. BILLING ============ -->
+<section class="band" id="billing">
+  <header><h2>4 · Quota, Plans, Cancel: transparent billing</h2><p>Every billing surface has a close button. Price and trial terms sit together (App Review 3.1.2(c)). Restore is one tap. Manual logging stays free and is always offered. Cancelling uses StoreKit's in-app manage-subscriptions sheet and asks no guilt-trip questions (5.6). <b>All prices are placeholders.</b> The owner still owns the paywall copy.</p></header>
+  <div class="row">
+    <figure class="frame">
+      <div class="phone sheetbg" data-sb style="background:#2b2724">
+        <div style="position:absolute;left:0;right:0;bottom:0;height:520px;background:var(--cc-bg);border-radius:38px 38px 0 0;padding:8px 20px 0">
+          <div style="width:36px;height:5px;border-radius:3px;background:var(--cc-grabber);margin:0 auto 4px"></div>
+          <div style="display:flex;justify-content:flex-end"><a class="glassbtn" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></a></div>
+          <div style="width:64px;height:64px;border-radius:20px;background:var(--cc-accent-tint);color:var(--cc-accent-ink);display:grid;place-items:center"><svg class="i lg"><use href="#i-scan"/></svg></div>
+          <div style="font:700 26px/1.2 var(--cc-font);margin-top:16px" data-id="scan.quotaTitle">You've used this week's 3 free scans</div>
+          <div style="font:400 17px/1.45 var(--cc-font);color:var(--cc-text-2);margin-top:8px">Scans reset Monday. You can still log anything by search, barcode or description, for free.</div>
+          <div style="position:absolute;left:20px;right:20px;bottom:34px">
+            <a class="btn primary">See plans</a>
+            <a class="btn secondary" style="margin-top:10px">Log manually, free</a>
+          </div>
+        </div>
+      </div>
+      <figcaption>Quota reached (sheet)
+        <span>It has a close button and can be swiped down. The limit (“3”) and the reset day come from the server. The free path has the same weight as the upgrade.</span>
+        <i class="fix">#5 no close</i><i class="fix">#7 hard-coded 3</i></figcaption>
+    </figure>
+
+    <figure class="frame">
+      <div class="phone plain" data-sb>
+        <div class="scroll" style="padding-bottom:200px">
+          <div class="navbar"><a class="btn ghost" style="width:auto;padding:0 4px;font-size:15px">Restore</a><span></span><a class="glassbtn" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></a></div>
+          <div class="ember" style="margin-top:4px;padding:22px">
+            <div style="font:600 13px var(--cc-font);color:#FF7A1F;letter-spacing:.04em">COACHCAL PLUS</div>
+            <div style="font:700 26px/1.2 var(--cc-font);margin-top:8px">Unlimited scans and a coach who shows the maths.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px;margin:18px 4px;font:500 16px/1.35 var(--cc-font)">
+            <div style="display:flex;gap:10px"><svg class="i" style="color:var(--cc-accent-ink)"><use href="#i-check"/></svg>Unlimited photo, barcode and label scans</div>
+            <div style="display:flex;gap:10px"><svg class="i" style="color:var(--cc-accent-ink)"><use href="#i-check"/></svg>Weekly coach review and insights</div>
+            <div style="display:flex;gap:10px"><svg class="i" style="color:var(--cc-accent-ink)"><use href="#i-check"/></svg>CSV export and Apple Health sync</div>
+            <div style="display:flex;gap:10px;color:var(--cc-text-2)"><svg class="i"><use href="#i-info"/></svg>Manual logging is free on every plan</div>
+          </div>
+          <a style="display:flex;align-items:center;gap:12px;border:2px solid var(--cc-accent);border-radius:18px;padding:14px 16px;background:var(--cc-accent-tint)">
+            <span style="width:24px;height:24px;border-radius:50%;background:var(--cc-accent);display:grid;place-items:center;color:#0B0A09"><svg class="i sm" style="stroke-width:3"><use href="#i-check"/></svg></span>
+            <div style="flex:1"><b style="font:700 17px var(--cc-font)">Yearly</b><div style="font:400 13px/1.4 var(--cc-font);color:var(--cc-text-2)">7 days free, then $39.99 / year</div></div>
+            <div style="text-align:right"><b class="num" style="font:700 17px var(--cc-font-round)">$3.33</b><div style="font:400 12px var(--cc-font);color:var(--cc-text-2)">per month</div></div>
+          </a>
+          <a style="display:flex;align-items:center;gap:12px;border:1.5px solid var(--cc-separator);border-radius:18px;padding:14px 16px;margin-top:8px">
+            <span style="width:24px;height:24px;border-radius:50%;border:2px solid var(--cc-text-3)"></span>
+            <div style="flex:1"><b style="font:700 17px var(--cc-font)">Monthly</b><div style="font:400 13px var(--cc-font);color:var(--cc-text-2)">$7.99 / month, no trial</div></div>
+            <b class="num" style="font:700 17px var(--cc-font-round)">$7.99</b>
+          </a>
+        </div>
+        <div class="dock">
+          <a class="btn primary">Start 7-day free trial</a>
+          <div class="note">Free for 7 days, then $39.99/year. We'll remind you 2 days before you're charged. Cancel any time in Settings.<br><a style="color:var(--cc-text-2);text-decoration:underline">Terms</a> · <a style="color:var(--cc-text-2);text-decoration:underline">Privacy</a></div>
+        </div>
+      </div>
+      <figcaption>Plans / paywall
+        <span>Price and trial sit on the same line as the plan and are repeated under the button. Restore and Close are always visible. Nothing is pre-ticked except the plan choice. Prices are placeholders.</span>
+        <i class="fix">3.1.2(c)</i><i class="fix">5.6 no dark patterns</i></figcaption>
+    </figure>
+
+    <figure class="frame">
+      <div class="phone plain" data-sb>
+        <div class="scroll">
+          <div class="navbar"><a class="glassbtn" aria-label="Back"><svg class="i"><use href="#i-back"/></svg></a><span class="t">Cancel subscription</span><span style="width:44px"></span></div>
+          <div style="font:700 26px/1.2 var(--cc-font);margin-top:16px">Here's what happens if you cancel</div>
+          <div class="card" style="margin-top:16px;display:flex;flex-direction:column;gap:14px;font:400 16px/1.4 var(--cc-font)">
+            <div style="display:flex;gap:12px"><svg class="i" style="color:var(--cc-success-ink)"><use href="#i-check"/></svg><span>Plus stays on until <b>12 Dec 2026</b>. You won't be charged again.</span></div>
+            <div style="display:flex;gap:12px"><svg class="i" style="color:var(--cc-success-ink)"><use href="#i-check"/></svg><span>Your diary, weight and streaks are kept.</span></div>
+            <div style="display:flex;gap:12px"><svg class="i" style="color:var(--cc-success-ink)"><use href="#i-check"/></svg><span>Manual logging stays free. Photo scans drop to 3 a week.</span></div>
+          </div>
+          <div style="font:400 13px/1.45 var(--cc-font);color:var(--cc-text-2);margin:12px 4px">Apple handles the cancellation. The next step opens Apple's subscription sheet inside CoachCal.</div>
+        </div>
+        <div class="dock"><a class="btn destructive">Cancel subscription</a><a class="btn secondary" style="margin-top:10px">Keep Plus</a></div>
+      </div>
+      <figcaption>Cancel flow
+        <span>One informational step, then Apple's in-app manage-subscriptions sheet. No survey wall and no “are you sure?” loop. The destructive and keep options carry equal visual weight.</span>
+        <i class="fix">#52 real cancel</i></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ 5. ONBOARDING ============ -->
+<section class="band" id="onboarding">
+  <header><h2>5 · Onboarding: 9 steps</h2><p>Steps share one scaffold: a progress rail, a back button, a large title, and one pinned primary button. The plan step is honest and shows the real formula instead of a fake progress bar. ED-Safe can be chosen at step 7, before any number is shown.</p></header>
+  <div class="row" id="onb"></div>
+</section>
+
+<!-- ============ 6. WIDGET / LIVE ACTIVITY ============ -->
+<section class="band" id="glance" style="background:#D9D4CE">
+  <header><h2>6 · Widgets and Live Activity</h2><p>The widget shows the brand ring for the first time. The Live Activity covers the compact, minimal, expanded and Lock Screen presentations. The ED-Safe flag still travels in the content state, so the ED-Safe variants show “On track” and no number.</p></header>
+  <div id="glanceRow" class="row"></div>
+</section>
+
+<!-- ============ 7. APP ICON ============ -->
+<section class="band" id="icon">
+  <header><h2>7 · App icon: “Ember ring”</h2><p>One idea: an open progress ring that also reads as a C, with an ember dot where the ring stops. It is built as two layers (background plus foreground) for Icon Composer, so Liquid Glass can add its own highlight. The layers are square, unmasked and opaque. Default, Dark, Clear and Tinted variants keep the same shapes.</p></header>
+  <div class="row" id="iconRow"></div>
+</section>
+
+<script src="screens.js"></script>
+</body>
+</html>
