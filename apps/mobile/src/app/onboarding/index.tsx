@@ -7,6 +7,7 @@ import { getDebugFlags } from '../../debug/launchArgs';
 import { DEMO_USER_ID } from '../../data/repos/seedDataManager';
 import { notifyLocalMutation } from '../../data/sync/runtime';
 import { OnboardingFlowView } from '../../features/onboarding/OnboardingFlowView';
+import { getRootController } from '../../platform/rootRuntime';
 import { requestHealthAccess } from '../../features/onboarding/healthAccess';
 import { createOnboardingModel } from '../../features/onboarding/onboardingModel';
 
@@ -35,5 +36,15 @@ export default function OnboardingRoute() {
       }),
     [],
   );
-  return <OnboardingFlowView model={model} onFinished={() => router.replace('/')} />;
+  return (
+    <OnboardingFlowView
+      model={model}
+      onFinished={() => {
+        // Mark onboarding complete first (Swift's completeOnboarding()): the gate then already has a
+        // target, so the shell is unguarded when the navigation runs and the router does not bounce back.
+        getRootController().completeOnboarding();
+        router.replace('/');
+      }}
+    />
+  );
 }
