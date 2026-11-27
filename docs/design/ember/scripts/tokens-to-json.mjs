@@ -43,8 +43,14 @@ const out = {
   font: { text: root["cc-font"], rounded: root["cc-font-round"] },
   space: pick(/^s\d+$/, (k) => k),
   radius: pick(/^r-/, (k) => k.slice(2)),
-  size: pick(/^(tap|btn|shutter|ring|ring-stroke)$/, camel),
+  size: pick(/^(tap|btn|shutter|ring|ring-stroke|fab|ring-md|ring-md-stroke|ring-sm|ring-sm-stroke|macro-bar)$/, camel),
+  type: Object.fromEntries(Object.entries(root).filter(([k]) => k.startsWith("t-")).map(([k, v]) => {
+    const m = v.match(/^(\d{3})\s+([\d.]+)px\/([\d.]+)px\s+var\(--cc-font(-round)?\)$/);
+    if (!m) throw new Error(`--${k} is not "weight sizepx/linepx var(--cc-font[-round])": ${v}`);
+    return [camel(k.slice(2)), { size: +m[2], lineHeight: +m[3], weight: +m[1], family: m[4] ? "rounded" : "text" }];
+  })),
   cssVar,
+  typeVar: Object.fromEntries(Object.keys(root).filter((k) => k.startsWith("t-")).map((k) => [camel(k.slice(2)), `--${k}`])),
 };
 writeFileSync("tokens.json", JSON.stringify(out, null, 2) + "\n");
-console.log(`tokens.json: ${Object.keys(color.light).length} colours × 4 modes, ${Object.keys(out.space).length} spaces, ${Object.keys(out.radius).length} radii, ${Object.keys(out.size).length} sizes`);
+console.log(`tokens.json: ${Object.keys(color.light).length} colours × 4 modes, ${Object.keys(out.space).length} spaces, ${Object.keys(out.radius).length} radii, ${Object.keys(out.size).length} sizes, ${Object.keys(out.type).length} type styles`);
