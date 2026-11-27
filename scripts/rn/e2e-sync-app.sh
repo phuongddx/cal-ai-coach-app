@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 # App-driven end-to-end sync scenario (spike item 4, steps 1-5), run on the iOS Simulator.
 #
-# Prerequisites: the dev client is installed on the booted simulator, Metro runs and
-# writes its output to $METRO_LOG, `axe` is installed, scripts/start-api.sh is NOT
-# running (this script starts a fresh PostgreSQL + API itself, then stops only the API
-# for the offline step so the data survives).
+# The app side reads the shipped local schema (U-12): the mirror `diary_entries` (+ the nutrition in
+# `diary_entry_details`), the outbox `pending_ops` (`quarantined` column) and the single-row
+# `sync_state` (`pull_cursor`). This script was repointed from the spike tables in unit U-23 and has
+# NOT been run: that unit has no Simulator. The first run on a Simulator is the check.
 #
-#   bash scripts/e2e-sync-app.sh 2>&1 | tee evidence/item4/e2e-app-transcript.txt
+# Prerequisites: the dev client is installed on the booted simulator, Metro runs and
+# writes its output to $METRO_LOG, `axe` is installed, scripts/rn/start-api.sh is NOT
+# running (this script starts a fresh PostgreSQL + API itself, then stops only the API
+# for the offline step so the data survives). The dev client talks to the API as the debug user
+# (`extra.apiToken` = spike-dev-token); the server numbers operations from one global sequence, so on
+# the fresh cluster A and C get versions 1 and 2.
+#
+#   bash scripts/rn/e2e-sync-app.sh 2>&1 | tee evidence/item4/e2e-app-transcript.txt
 #
 # Deep links: `xcrun simctl openurl` opens coachcal://debug?action=<name>. When iOS asks
 # "Open in CoachCal?" the script presses Open with `axe tap --label Open`.
@@ -19,6 +26,7 @@ LOG_DIR="${RN_SPIKE_LOG_DIR:-/private/var/folders/nn/n6wtxkdd3n10d78wf4xmygrm000
 METRO_LOG="${METRO_LOG:-$LOG_DIR/t6-metro.log}"
 EVID="${EVID:-$ROOT/evidence/item4}"
 BASE=http://127.0.0.1:8787
+STATE_FILE="$LOG_DIR/api-dev.state"
 T1=spike-dev-token
 PG_BIN="${PG_BIN:-/opt/homebrew/opt/postgresql@17/bin}"
 A=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
@@ -65,10 +73,12 @@ link() { # action [extra query]
 
 app_db() { find "$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data)/Documents/SQLite" -name coachcal.db | head -1; }
 q() { sqlite3 "$(app_db)" "$1"; }
-outbox_pending() { q "select count(*) from outbox where state='pending'"; }
-outbox_quarantined() { q "select count(*) from outbox where state='quarantined'"; }
-app_cursor() { q "select value from sync_state where key='cursor'"; }
-meals_dump() { q "select name||' | '||kcal||' kcal | deleted='||deleted from meals order by eaten_at"; }
+outbox_pending() { q "select count(*) from pending_ops where quarantined=0"; }
+outbox_quarantined() { q "select count(*) from pending_ops where quarantined=1"; }
+app_cursor() { q "select pull_cursor from sync_state where id=1"; }
+# name | kcal | deleted flag, one row per diary entry (the nutrition lives in diary_entry_details).
+MEAL_SELECT="select e.display_text||' | '||coalesce(d.kcal,'?')||' kcal | deleted='||(e.deleted_at is not null) from diary_entries e left join diary_entry_details d on d.entry_id=e.id"
+meals_dump() { q "$MEAL_SELECT order by e.created_at"; }
 
 json_get() {
   node -e '
@@ -82,21 +92,23 @@ post() { curl -sS -X POST "$BASE$1" -H "Authorization: Bearer $2" -H 'content-ty
 # Stop or restart only the API process; PostgreSQL keeps running so the rows stay.
 api_down() {
   # shellcheck disable=SC1091
-  source "$LOG_DIR/t3-dev-api.state"
+  source "$STATE_FILE"
   kill "$API_PID" >/dev/null 2>&1 || true
   lsof -ti :8787 -sTCP:LISTEN | xargs kill >/dev/null 2>&1 || true
   sleep 1
 }
 api_up() {
-  # shellcheck disable=SC1091
-  source "$LOG_DIR/t3-dev-api.state"
+  # The same environment scripts/rn/start-api.sh gives the API; fresh secrets are fine (dev tokens).
   (
     cd "$ROOT/apps/api"
-    DATABASE_URL="$DB_URL" PORT=8787 nohup npx tsx src/index.ts >>"$LOG_DIR/t3-api.log" 2>&1 &
-    echo $! >"$LOG_DIR/t3-api.pid"
+    DATABASE_URL="postgres://coachcal_api@127.0.0.1:5433/coachcal" PORT=8787 AUTH_DEV_TOKENS=1 VLM_PROVIDER=fixture \
+      AUTH_JWT_SECRET="$(openssl rand -hex 32)" AUTH_ENCRYPTION_KEY="$(openssl rand -hex 32)" \
+      RC_WEBHOOK_SIGNING_SECRET="$(openssl rand -hex 32)" OTP_SENDER=log \
+      nohup npx tsx src/index.ts >>"$LOG_DIR/api-dev.log" 2>&1 &
+    echo $! >"$LOG_DIR/api-dev.pid"
   )
   for _ in $(seq 1 60); do curl -fs "$BASE/health" >/dev/null 2>&1 && break; sleep 0.5; done
-  sed -i '' "s/^API_PID=.*/API_PID=$(cat "$LOG_DIR/t3-api.pid")/" "$LOG_DIR/t3-dev-api.state"
+  sed -i '' "s/^API_PID=.*/API_PID=$(cat "$LOG_DIR/api-dev.pid")/" "$STATE_FILE"
 }
 relaunch_app() {
   xcrun simctl terminate "$UDID" "$BUNDLE" >/dev/null 2>&1 || true
@@ -111,8 +123,8 @@ relaunch_app() {
 }
 
 step "0. Fresh start: new PostgreSQL + API, empty app state"
-bash "$ROOT/scripts/start-api.sh" stop >/dev/null 2>&1 || true
-bash "$ROOT/scripts/start-api.sh" | sed 's/^/  /' | grep -E 'ready|API:'
+bash "$ROOT/scripts/rn/start-api.sh" stop >/dev/null 2>&1 || true
+bash "$ROOT/scripts/rn/start-api.sh" | sed 's/^/  /' | grep -E 'ready|API:'
 curl -fs "$BASE/health" && echo
 relaunch_app
 link reset
@@ -147,17 +159,35 @@ echo "  --- force-stop and relaunch the app (server still down) ---"
 relaunch_app
 echo "  app meals after the relaunch:"; meals_dump | sed 's/^/    /'
 expect "outbox survives the kill" 3 "$(outbox_pending)"
-expect "B present"  "Protein shake | 210.0 kcal | deleted=0" "$(q "select name||' | '||kcal||' kcal | deleted='||deleted from meals where id='$B'")"
-expect "A edited"   "450.0" "$(q "select kcal from meals where id='$A'")"
-expect "C gone locally" 0 "$(q "select count(*) from meals where id='$C' and deleted=0")"
-expect "C tombstone queued" 1 "$(q "select count(*) from outbox where record_id='$C' and kind='tombstone' and state='pending'")"
+expect "B present"  "Protein shake | 210 kcal | deleted=0" "$(q "$MEAL_SELECT where e.id='$B'")"
+expect "A edited"   "450" "$(q "select kcal from diary_entry_details where entry_id='$A'")"
+expect "C gone locally" 0 "$(q "select count(*) from diary_entries where id='$C' and deleted_at is null")"
+expect "C tombstone queued" 1 "$(q "select count(*) from pending_ops where record_id='$C' and kind='tombstone' and quarantined=0")"
 show_ember
 shot e2e-2b-after-relaunch-offline
-# Keep the three pending operations: they are the push body replayed in step 4.
+# Keep the three pending operations: they are the push body replayed in step 4. The wire operation is
+# rebuilt from the outbox row and the mirror + details rows (the outbox keeps only the mirror
+# snapshot). Unverified without a Simulator: a body the server rejects fails step 4 loudly.
 node -e '
   const rows = JSON.parse(process.argv[1] || "[]");
-  process.stdout.write(JSON.stringify({ operations: rows.map((r) => JSON.parse(r.payload)) }));
-' "$(sqlite3 -json "$(app_db)" "select payload from outbox where state='pending' order by queue_seq")" >"$EVID/e2e-replay-body.json"
+  const iso = (v) => new Date(/Z|[+-]\d\d:?\d\d$/.test(String(v)) ? String(v) : String(v).replace(" ", "T") + "Z").toISOString();
+  const ops = rows.map((r) => {
+    const stamp = new Date(iso(r.client_timestamp)).getTime();
+    const base = { opId: r.op_id, recordId: r.record_id, kind: r.kind, clientTimestamp: stamp };
+    if (r.kind === "tombstone") return base; // a tombstone carries no meal
+    return {
+      ...base,
+      meal: {
+        id: r.record_id,
+        eatenAt: iso(r.created_at),
+        name: r.display_text,
+        kcal: r.kcal ?? 0, proteinG: r.protein_g ?? 0, carbsG: r.carbs_g ?? 0, fatG: r.fat_g ?? 0, fiberG: r.fiber_g ?? 0,
+        updatedAt: stamp,
+      },
+    };
+  });
+  process.stdout.write(JSON.stringify({ operations: ops }));
+' "$(sqlite3 -json "$(app_db)" "select p.op_id, p.record_id, p.kind, p.client_timestamp, e.created_at, e.display_text, d.kcal, d.protein_g, d.carbs_g, d.fat_g, d.fiber_g from pending_ops p join diary_entries e on e.id=p.record_id left join diary_entry_details d on d.entry_id=p.record_id where p.quarantined=0 order by p.created_at")" >"$EVID/e2e-replay-body.json"
 echo "  replay body saved: $EVID/e2e-replay-body.json ($(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1])).operations.length)' "$EVID/e2e-replay-body.json") operations)"
 
 step "3. API back, foreground app, force-online, sync — 3 operations pushed, outbox 0"
@@ -203,8 +233,8 @@ echo "  second-device push: $SECOND" | cut -c1-500
 expect "second device accepted" applied "$(json_get accepted.0.status <<<"$SECOND")"
 link sync
 echo "  app meals now:"; meals_dump | sed 's/^/    /'
-expect "app pulled the second-device edit" "Protein shake (edited on device 2) | 260.0 kcal | deleted=0" \
-  "$(q "select name||' | '||kcal||' kcal | deleted='||deleted from meals where id='$B'")"
+expect "app pulled the second-device edit" "Protein shake (edited on device 2) | 260 kcal | deleted=0" \
+  "$(q "$MEAL_SELECT where e.id='$B'")"
 expect "outbox still empty" 0 "$(outbox_pending)"
 sleep 1
 shot e2e-5-second-device-edit
