@@ -10,7 +10,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { setEdSafeMode } from '../../../design';
 import type { UserTarget } from '../../../data/repos/targetRepository';
 import { ScanFab } from '../ScanFab';
-import { TODAY_BOTTOM_INSET, TodayView } from '../TodayView';
+import { FAB_BOTTOM_PADDING } from '../ScanFab';
+import { TODAY_BOTTOM_INSET, TodayView, todayBottomPadding } from '../TodayView';
 import { createTodayModel, type TodayMeal, type TodayModel, type TodayReaders } from '../todayModel';
 
 const metrics = { frame: { x: 0, y: 0, width: 402, height: 874 }, insets: { top: 62, left: 0, right: 0, bottom: 34 } };
@@ -174,8 +175,11 @@ describe('TodayView', () => {
     await render(inProvider(<TodayView model={model} />));
     const style = screen.getByTestId('today.scroll').props.contentContainerStyle;
     const flat = Array.isArray(style) ? Object.assign({}, ...style.flat()) : style;
-    expect(flat.paddingBottom).toBe(TODAY_BOTTOM_INSET);
+    expect(flat.paddingBottom).toBe(todayBottomPadding(34)); // the jest safe-area mock has a 34pt bottom inset
     expect(TODAY_BOTTOM_INSET).toBe(48);
+    // the list clears the whole Scan button (offset + height) plus the xl5 gap, and grows with the safe area
+    expect(todayBottomPadding(0)).toBe(FAB_BOTTOM_PADDING + 56 + 48);
+    expect(todayBottomPadding(34)).toBe(34 + FAB_BOTTOM_PADDING + 56 + 48);
   });
 });
 

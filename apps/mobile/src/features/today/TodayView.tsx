@@ -23,6 +23,7 @@ import {
   SectionHeader,
   StreakCard,
   radius,
+  size,
   space,
   typography,
   useTokens,
@@ -30,6 +31,7 @@ import {
 } from '../../design';
 import { WaterCard, WaterLogSheet } from '../diary/screens/WaterCard';
 
+import { FAB_BOTTOM_PADDING } from './ScanFab';
 import { goalSubheadText, headerDateText, mealMeta } from './todayFormat';
 import {
   consumedKcal,
@@ -56,8 +58,18 @@ export type TodayViewProps = {
   onOpenHealthSettings?: () => void;
 };
 
-/** Content bottom inset = CCSpace.xl5: the Scan button floats above the tab bar, clear of the last row. */
+/** CCSpace.xl5: the gap the Swift list keeps between the last row and the Scan button. */
 export const TODAY_BOTTOM_INSET = 48;
+
+/**
+ * Bottom padding of the list. SwiftUI's TabView insets the list for the tab bar by itself; here the
+ * scroll view runs `contentInsetAdjustmentBehavior="never"` under the native tab bar, so the padding
+ * carries the whole stack: the bottom safe area, the Scan button's offset and height
+ * (ScanFab: 28pt above the safe area, `size.fab` tall), then the xl5 gap. Evidence: TD-01 today-light-bottom.
+ */
+export function todayBottomPadding(safeAreaBottom: number): number {
+  return safeAreaBottom + FAB_BOTTOM_PADDING + size.fab + TODAY_BOTTOM_INSET;
+}
 
 export function TodayView({
   model,
@@ -95,7 +107,7 @@ export function TodayView({
         contentInsetAdjustmentBehavior="never"
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + space.sm, paddingBottom: TODAY_BOTTOM_INSET },
+          { paddingTop: insets.top + space.sm, paddingBottom: todayBottomPadding(insets.bottom) },
         ]}
       >
         <Header
