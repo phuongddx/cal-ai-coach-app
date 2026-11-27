@@ -1,0 +1,5 @@
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        5.663 s, estimated 8 s
+Ran all test suites matching src/__tests__/rootLayoutGate.test.tsx.
