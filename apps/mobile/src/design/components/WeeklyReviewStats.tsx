@@ -23,6 +23,12 @@ export type WeeklyReviewStatsProps = {
   daysOnTarget: number;
   weeksAllLogged: number;
   kgThisWeek: number;
+  /**
+   * The row sits on an `EmberCard` (dark in both modes): values in `accent`, captions in `emberText2`
+   * so they read on the ember card, like `CalorieRing`'s `onEmber`. Off by default (accentInk / text2).
+   * The ED-safe stat swap is the same in both looks.
+   */
+  onEmber?: boolean;
 };
 
 /** The pure stat-visibility core so both ED-safe branches are assertable
@@ -67,8 +73,11 @@ export function WeeklyReviewStats({
   daysOnTarget,
   weeksAllLogged,
   kgThisWeek,
+  onEmber = false,
 }: WeeklyReviewStatsProps) {
   const { colors } = useTokens();
+  const valueColor = onEmber ? colors.accent : colors.accentInk;
+  const labelColor = onEmber ? colors.emberText2 : colors.text2;
   const edSafeMode = useEdSafeMode();
   const stats = visibleStats(daysLogged, daysOnTarget, weeksAllLogged, kgThisWeek, edSafeMode);
   return (
@@ -79,9 +88,9 @@ export function WeeklyReviewStats({
     >
       {stats.map((stat) => (
         <View key={stat.id} style={styles.stat} accessible>
-          <Text style={[styles.value, { color: colors.accentInk }]}>{stat.value}</Text>
+          <Text style={[styles.value, { color: valueColor }]}>{stat.value}</Text>
           <Text
-            style={[styles.label, { color: colors.text2 }]}
+            style={[styles.label, { color: labelColor }]}
             testID={`weekly-stat:${stat.id}`}
           >
             {stat.label}

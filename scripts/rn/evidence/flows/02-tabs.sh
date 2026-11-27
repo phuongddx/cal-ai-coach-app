@@ -2,6 +2,9 @@
 # Flow 02 — the three other tabs and back to Today (parity PL-01 evidence).
 # Label taps do not register on the glass tab bar (spike pitfall 15), so every tab is tapped at
 # the center of its RadioButton frame found in the accessibility dump.
+# A tab is recognised by what its own screen shows (U-79): Progress has a title "Progress"; Coach and
+# Profile have no title of their own (the tab name only exists in the tab bar), so they are
+# recognised by their first section heading, which no other tab shows.
 # Saves: PL-01/02-tab-progress.png, PL-01/02-tab-coach.png, PL-01/02-tab-profile.png
 set -uo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib.sh"
@@ -9,11 +12,13 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib.sh"
 sim_boot
 app_open "Today" 90
 
-for tab in Progress Coach Profile; do
+for entry in "Progress|Progress" "Coach|TODAY'S INSIGHTS" "Profile|GOALS & TARGETS"; do
+  tab="${entry%%|*}"
+  marker="${entry#*|}"
   step "tab: $tab"
   tap_label_xy "$tab" RadioButton || continue
   sleep 1.5
-  expect_title "$tab" 10
+  expect_title "$marker" 10
   shot PL-01 "02-tab-$(tr '[:upper:]' '[:lower:]' <<<"$tab")"
 done
 

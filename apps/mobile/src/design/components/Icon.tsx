@@ -1,5 +1,5 @@
 /**
- * Icon of the Ember canvas (`<symbol id="i-…">` of `docs/design/ember/index.html`, 51 of them).
+ * Icon of the Ember canvas (`<symbol id="i-…">` of `docs/design/ember/index.html`, 52 of them).
  * 24 x 24 viewBox, 2 px round strokes, drawn with react-native-svg; the shapes are in
  * `iconShapes.ts`, copied verbatim and compared with the canvas by `Icon.test.tsx`.
  *

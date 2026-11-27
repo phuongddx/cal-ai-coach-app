@@ -31,6 +31,9 @@ export type SettingsDetailViewProps = {
   model: SettingsModel;
 };
 
+/** The billing buttons are display-only and disabled; `action` is required, so they pass this. */
+const noAction = () => undefined;
+
 export function SettingsDetailView({ model }: SettingsDetailViewProps) {
   useSyncExternalStore(model.subscribe, model.getRevision);
   const { colors } = useTokens();
@@ -156,8 +159,14 @@ export function SettingsDetailView({ model }: SettingsDetailViewProps) {
           </Text>
           <View style={styles.subscriptionButtons}>
             {/* Display-only (T-P07-05): no purchase code exists; the buttons are present but inert. */}
-            <SecondaryButton title="Change plan" testID="settings.changePlan" />
-            <SecondaryButton title="Cancel subscription" bordered testID="settings.cancelSubscription" />
+            <SecondaryButton title="Change plan" testID="settings.changePlan" action={noAction} disabled />
+            <SecondaryButton
+              title="Cancel subscription"
+              bordered
+              testID="settings.cancelSubscription"
+              action={noAction}
+              disabled
+            />
           </View>
           <View testID="settings.billingNote">
             <BannerNote text={settingsCopy.billingNote} />

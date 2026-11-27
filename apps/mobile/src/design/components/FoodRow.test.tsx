@@ -59,4 +59,25 @@ describe('FoodRow', () => {
     await render(<FoodRow title="Coffee" />);
     expect(screen.queryByText(/kcal/, { includeHiddenElements: true })).toBeNull();
   });
+
+  it('draws no chip by default and the chip label when given', async () => {
+    const { rerender } = await render(<FoodRow title="Oats" />);
+    expect(screen.queryByTestId('food-row-chip:Oats', { includeHiddenElements: true })).toBeNull();
+    await rerender(<FoodRow title="Oats" chip="Edited" />);
+    expect(screen.getByTestId('food-row-chip:Oats', { includeHiddenElements: true })).toHaveTextContent('Edited');
+  });
+
+  it('keeps the chip of the caller identifier and shows the chip under ED-safe', async () => {
+    await render(<FoodRow title="Oats" kcal={300} chip="Edited" chipTestID="diary.editedChip.7" />);
+    await act(async () => {
+      setEdSafeMode(true);
+    });
+    expect(screen.getByTestId('diary.editedChip.7', { includeHiddenElements: true })).toHaveTextContent('Edited');
+    expect(screen.queryByText('300 kcal', { includeHiddenElements: true })).toBeNull();
+  });
+
+  it('ignores an empty chip', async () => {
+    await render(<FoodRow title="Oats" chip="" />);
+    expect(screen.queryByTestId('food-row-chip:Oats', { includeHiddenElements: true })).toBeNull();
+  });
 });

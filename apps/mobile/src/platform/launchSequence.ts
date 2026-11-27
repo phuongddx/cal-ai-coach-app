@@ -4,6 +4,9 @@
  * order. The real steps are wired in `rootRuntime.ts`; nothing here touches a native module.
  *
  * Order, which the root gate depends on:
+ *  0. read the process arguments once and apply them to the debug flags (PL-05, U-79): an argument wins
+ *     over a flag set earlier in this launch; everything below sees the merged flags. An empty list (the
+ *     native module is missing) changes nothing;
  *  1. (`--ccFreshStart` only) wipe the local data, as Swift removes the database files. A failed wipe is
  *     logged and the launch continues.
  *  2. load the session (the keychain);
@@ -14,9 +17,13 @@
  */
 import type { Session } from '../data/auth/types';
 import { DEMO_USER_ID } from '../data/repos/seedDataManager';
-import type { DebugFlags } from '../debug/launchArgs';
+import { applyLaunchArguments, loadLaunchArguments, type DebugFlags } from '../debug/launchArgs';
 
 export type LaunchDeps = {
+  /** `loadLaunchArguments`: the process arguments of this launch. Defaults to the real reader. */
+  loadLaunchArguments?: () => Promise<readonly string[]>;
+  /** `applyLaunchArguments`: merges them into the debug flags that `flags()` reads. Defaults to the real one. */
+  applyLaunchArguments?: (argv: readonly string[]) => void;
   flags: () => Readonly<DebugFlags>;
   /** `getSessionStore().load()`. */
   loadSession: () => Promise<Session | null>;
@@ -52,6 +59,10 @@ export function targetOwners(session: Session | null): string[] {
 }
 
 export async function runLaunchSequence(deps: LaunchDeps): Promise<LaunchResult> {
+  // A reader that fails leaves the flags as they are: the launch must not hang on a debug facility.
+  const argv = await (deps.loadLaunchArguments ?? loadLaunchArguments)().catch(() => []);
+  (deps.applyLaunchArguments ?? applyLaunchArguments)(argv);
+
   const flags = deps.flags();
   if (flags.freshStart) {
     // Swift never hangs here: a failed removal is ignored and the launch goes on. A rejected wipe must

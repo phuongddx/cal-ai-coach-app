@@ -12,7 +12,9 @@ jest.mock('react/jsx-runtime', () => {
 
 import { render, screen, userEvent } from '@testing-library/react-native';
 
-import { ChipOption } from './ChipOption';
+import { size } from '../tokens';
+
+import { ChipOption, chipHeight, chipHitSlop } from './ChipOption';
 
 describe('ChipOption', () => {
   it('marks the selected chip', async () => {
@@ -34,5 +36,14 @@ describe('ChipOption', () => {
     await render(<ChipOption title="Maintain" isSelected={false} onSelect={onSelect} />);
     await userEvent.press(screen.getByTestId('chip-option:Maintain'));
     expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it('has a target of at least 44 pt: the drawn height plus the hit slop', async () => {
+    await render(<ChipOption title="Gain" isSelected={false} />);
+    const chip = screen.getByTestId('chip-option:Gain');
+    expect(chipHeight + 2 * chipHitSlop).toBeGreaterThanOrEqual(size.tap);
+    expect(chip).toHaveProp('hitSlop', { top: chipHitSlop, bottom: chipHitSlop });
+    expect(chip).toHaveStyle({ minHeight: chipHeight, minWidth: size.tap });
+    expect(size.tap).toBe(44);
   });
 });

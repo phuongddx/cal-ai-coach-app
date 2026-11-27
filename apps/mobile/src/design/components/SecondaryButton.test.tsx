@@ -15,12 +15,12 @@ jest.mock('react/jsx-runtime', () => {
 
 import { render, screen, userEvent } from '@testing-library/react-native';
 
-import { SecondaryButton, secondaryButtonStyle } from './SecondaryButton';
+import { SecondaryButton, secondaryButtonStyle, secondaryDisabledOpacity } from './SecondaryButton';
 import { lightColors } from '../tokens';
 
 describe('SecondaryButton', () => {
   it('passes testID to the Pressable', async () => {
-    await render(<SecondaryButton title="Skip" testID="scan.skip" />);
+    await render(<SecondaryButton title="Skip" testID="scan.skip" action={() => undefined} />);
     expect(screen.getByTestId('scan.skip')).toBe(screen.getByRole('button'));
   });
 
@@ -32,11 +32,11 @@ describe('SecondaryButton', () => {
   });
 
   it('shows a border only in the bordered variant', async () => {
-    const { rerender } = await render(<SecondaryButton title="Skip" bordered />);
+    const { rerender } = await render(<SecondaryButton title="Skip" bordered action={() => undefined} />);
     expect(screen.getByRole('button')).toHaveStyle({
       borderColor: lightColors.border,
     });
-    await rerender(<SecondaryButton title="Skip" />);
+    await rerender(<SecondaryButton title="Skip" action={() => undefined} />);
     expect(screen.getByRole('button')).toHaveStyle({
       borderColor: 'transparent',
     });
@@ -69,9 +69,28 @@ describe('SecondaryButton', () => {
     expect(screen.getByText('Skip')).toHaveStyle({ color: lightColors.text });
   });
 
-  // design-system.md audit #52: a button without an action is not offered as pressable.
-  it('is exposed as disabled without an action', async () => {
-    await render(<SecondaryButton title="Skip" />);
-    expect(screen.getByRole('button').props.accessibilityState).toEqual({ disabled: true });
+  it('is enabled by default and says so to assistive tech', async () => {
+    await render(<SecondaryButton title="Skip" action={() => undefined} />);
+    expect(screen.getByRole('button').props.accessibilityState).toEqual({ disabled: false });
+  });
+
+  // design-system.md audit #52: a button that cannot act says so instead of looking pressable.
+  it('disabled: dimmed, ignores presses and reports accessibilityState.disabled', async () => {
+    const action = jest.fn();
+    await render(<SecondaryButton title="Change plan" action={action} disabled />);
+    const button = screen.getByRole('button');
+    expect(button.props.accessibilityState).toEqual({ disabled: true });
+    expect(button).toHaveStyle({ opacity: secondaryDisabledOpacity });
+    await userEvent.press(button);
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it('maps the disabled visual state: dimmed, and a press does not change it', () => {
+    expect(secondaryButtonStyle(false, lightColors, false, true)).toEqual(
+      expect.objectContaining({ opacity: secondaryDisabledOpacity }),
+    );
+    expect(secondaryButtonStyle(false, lightColors, true, true)).toEqual(
+      expect.objectContaining({ opacity: secondaryDisabledOpacity }),
+    );
   });
 });
