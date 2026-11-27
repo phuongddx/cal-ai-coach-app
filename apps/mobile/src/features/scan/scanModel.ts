@@ -71,6 +71,14 @@ export function mealKcalOf(state: ScanState): number {
   return (state.result?.items ?? []).reduce((total, candidate) => total + itemKcalOf(state, candidate.id), 0);
 }
 
+/** Protein, carbs and fat of the meal from the CURRENT grams, whole grams (the review's macro dots). */
+export function mealMacrosOf(state: ScanState): { proteinG: number; carbsG: number; fatG: number } {
+  const items = state.result?.items ?? [];
+  const sum = (pick: (per100g: ResultItem['source']['per100g']) => number): number =>
+    Math.round(items.reduce((total, candidate) => total + KcalArithmetic.macroGrams(pick(candidate.source.per100g), candidate.grams), 0));
+  return { proteinG: sum((per100g) => per100g.proteinG), carbsG: sum((per100g) => per100g.carbsG), fatG: sum((per100g) => per100g.fatG) };
+}
+
 export function hasHiddenFat(state: ScanState): boolean {
   return state.result?.items.some((candidate) => candidate.source.hiddenFatLikely) ?? false;
 }
@@ -235,7 +243,7 @@ export function createScanModel(options: ScanModelOptions) {
     });
   }
 
-  function captureCorrection(kind: CorrectionKind, note: string, itemId: number): void {
+  function captureCorrection(kind: CorrectionKind, note: string, itemId: number, options?: { includePhoto?: boolean }): void {
     const result = state.result;
     if (result === null || !result.items.some((candidate) => candidate.id === itemId)) return;
     set({
@@ -243,7 +251,9 @@ export function createScanModel(options: ScanModelOptions) {
         ...result,
         // Resolving the flagged concern is the only path off "Review needed".
         items: result.items.map((candidate) =>
-          candidate.id === itemId ? { ...candidate, correction: { kind, note }, isUnresolved: false } : candidate,
+          candidate.id === itemId
+            ? { ...candidate, correction: options?.includePhoto ? { kind, note, includePhoto: true } : { kind, note }, isUnresolved: false }
+            : candidate,
         ),
       },
     });
@@ -314,16 +324,22 @@ export function createScanModel(options: ScanModelOptions) {
     }
   }
 
+  /** A second Undo press while the first is still writing must not tombstone twice. */
+  let isUndoing = false;
+
   /** Tombstones the just-written entries and deletes their detail rows. */
   async function undo(): Promise<void> {
-    if (persistence === undefined) return;
-    for (const entryId of state.savedEntryIds) {
+    if (persistence === undefined || state.savedEntryIds.length === 0 || isUndoing) return;
+    isUndoing = true;
+    const entryIds = state.savedEntryIds;
+    for (const entryId of entryIds) {
       const entry: DiaryEntry | null = await persistence.fetchEntry(entryId).catch(() => null);
       if (entry !== null) await persistence.tombstone(entry, { now: now() }).catch(() => undefined);
       await persistence.deleteDetail(entryId).catch(() => undefined);
     }
     notify?.();
     set({ savedEntryIds: [], savedKcal: null, phase: { kind: 'review' } });
+    isUndoing = false;
     await endLiveActivityImmediately();
     await loadSavedContext();
   }
@@ -423,6 +439,7 @@ export function createScanModel(options: ScanModelOptions) {
 
     itemKcal: (itemId: number) => itemKcalOf(state, itemId),
     mealKcal: () => mealKcalOf(state),
+    mealMacros: () => mealMacrosOf(state),
     hasHiddenFat: () => hasHiddenFat(state),
     hiddenFatAddedKcal: () => hiddenFatAddedKcal(state),
     hasUnresolved: () => hasUnresolved(state),

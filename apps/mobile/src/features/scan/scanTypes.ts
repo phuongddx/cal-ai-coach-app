@@ -24,16 +24,19 @@ export type ScanPhase =
   | { kind: 'quotaReached'; entitlement: EntitlementState }
   | { kind: 'failed'; failure: ScanFailure };
 
-export type CorrectionKind = 'wrongFood' | 'portionOff' | 'missingItem' | 'other';
-export const CORRECTION_KINDS: readonly CorrectionKind[] = ['wrongFood', 'portionOff', 'missingItem', 'other'];
+/** The reasons of "Report a problem" (Ember frames s-fix-*): the Swift `missingItem` is Stage A2 and not offered. */
+export type CorrectionKind = 'wrongFood' | 'portionOff' | 'notEaten' | 'nutritionOff' | 'other';
+export const CORRECTION_KINDS: readonly CorrectionKind[] = ['wrongFood', 'portionOff', 'notEaten', 'nutritionOff', 'other'];
 export const CORRECTION_KIND_TITLE: Record<CorrectionKind, string> = {
   wrongFood: 'Wrong food',
-  portionOff: 'Portion way off',
-  missingItem: 'Missing item',
+  portionOff: 'Wrong amount',
+  notEaten: "Shouldn't be here",
+  nutritionOff: 'Nutrition looks off',
   other: 'Something else',
 };
 
-export type Correction = { kind: CorrectionKind; note: string };
+/** `includePhoto` is set only when the person turned the toggle on; nothing is transmitted (no report endpoint exists). */
+export type Correction = { kind: CorrectionKind; note: string; includePhoto?: boolean };
 
 export type ScanItem = ScanResponse['items'][number];
 

@@ -405,6 +405,37 @@ describe('ScanModel transitions', () => {
     expect(model.isSaveEnabled()).toBe(true);
   });
 
+  it('a second undo while one is running tombstones each entry once', async () => {
+    const persistence = fakePersistence();
+    const model = makeModel({ persistence, notify: jest.fn() });
+    model.receive(twoItemResponse());
+    await model.save();
+    await Promise.all([model.undo(), model.undo()]);
+    expect(persistence.tombstone).toHaveBeenCalledTimes(2);
+    expect(persistence.deleteDetail).toHaveBeenCalledTimes(2);
+    await model.undo();
+    expect(persistence.tombstone).toHaveBeenCalledTimes(2);
+  });
+
+  it('mealMacros sums the macros of the current grams in whole grams', () => {
+    const model = makeModel();
+    model.receive(twoItemResponse());
+    expect(model.mealMacros()).toEqual({ proteinG: 34, carbsG: 68, fatG: 17 });
+    model.setGrams(350, 0);
+    expect(model.mealMacros()).toEqual({ proteinG: 37, carbsG: 74, fatG: 19 });
+    model.removeItem(1);
+    expect(model.mealMacros()).toEqual({ proteinG: 35, carbsG: 70, fatG: 18 });
+  });
+
+  it('captureCorrection keeps includePhoto only when it was turned on', () => {
+    const model = makeModel();
+    model.receive(twoItemResponse());
+    model.captureCorrection('notEaten', '', 0, { includePhoto: false });
+    expect(model.getState().result?.items[0]?.correction).toEqual({ kind: 'notEaten', note: '' });
+    model.captureCorrection('nutritionOff', 'too low', 0, { includePhoto: true });
+    expect(model.getState().result?.items[0]?.correction).toEqual({ kind: 'nutritionOff', note: 'too low', includePhoto: true });
+  });
+
   it('undo without persistence does nothing', async () => {
     const model = makeModel();
     model.receive(twoItemResponse());

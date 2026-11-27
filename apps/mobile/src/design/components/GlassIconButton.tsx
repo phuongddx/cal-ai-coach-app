@@ -24,6 +24,8 @@ export type GlassIconButtonProps = {
   icon: IconName;
   onPress?: () => void;
   accessibilityLabel: string;
+  /** Optional spoken value (the flip button says which camera is in use). */
+  accessibilityValueText?: string;
   testID?: string;
   tone?: GlassTone;
   /** Diameter in points; never below 44 (`--tap`). The viewfinder's library button is 52. */
@@ -71,6 +73,7 @@ export function GlassIconButton({
   icon,
   onPress,
   accessibilityLabel,
+  accessibilityValueText,
   testID,
   tone = 'onSurface',
   diameter = sizes.tap,
@@ -83,6 +86,7 @@ export function GlassIconButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      accessibilityValue={accessibilityValueText === undefined ? undefined : { text: accessibilityValueText }}
       testID={testID}
       onPress={onPress}
       style={({ pressed }) => [
