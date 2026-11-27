@@ -28,6 +28,9 @@
   --cc-segment-selected: #FFFFFF;  /* NEW 27/11 (round 3): selected pill of a segmented control. Light = card white on the fill track */
   --cc-on-media: #FFFFFF;          /* NEW 27/11 (round 3): glyphs/labels of glass buttons over a photo or the camera. Same in every mode; always on --cc-media-scrim */
   --cc-media-scrim: rgba(0,0,0,.45); /* NEW 27/11 (round 3): glass fill behind --cc-on-media. Over a pure-white photo it composites to #8C8C8C: white glyph 3.4:1 (graphic min 3:1) */
+  --cc-media-scrim-strong: rgba(0,0,0,.55); /* NEW 27/11 (round 4): pill that carries TEXT over the camera or a photo (viewfinder scan counter). Over pure white it composites to #737373: on-media text 4.74:1 */
+  --cc-apple-health: #FF2D55;      /* NEW 27/11 (round 4): Apple Health icon tile (Apple's system pink). Same in every mode; white glyph 3.65:1 (graphic min 3:1). Never text */
+  --cc-ember-tile: #2A2724;        /* NEW 27/11 (round 4): stat tile inside the ember card (Coach weekly review). Same in every mode; ember-text 13.65:1, ember-text-2 6.15:1 */
   --cc-border: rgba(20,18,16,.08);
   --cc-separator: rgba(20,18,16,.12);
   --cc-text: #141210;              /* 18.69:1 */
@@ -55,8 +58,32 @@
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px; --s10: 40px; --s12: 48px;
   /* Radii — concentric with iOS 26 controls */
   --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-xl: 28px; --r-pill: 999px;
+  --r-btn: 18px;                   /* NEW 27/11 (round 4): full-width button (height --btn 56) and the 36-high chip */
   /* Sizes */
   --tap: 44px; --btn: 56px; --shutter: 76px; --ring: 184px; --ring-stroke: 16px;
+  /* NEW 27/11 (round 4). Rings: --ring = Today light hero; --ring-md = kcal ring on the ember card (Today dark, Coach);
+     --ring-sm = onboarding target ring. Stroke is the rendered width. Macro bar radius = height / 2 */
+  --fab: 62px; --ring-md: 150px; --ring-md-stroke: 13px; --ring-sm: 120px; --ring-sm-stroke: 12px; --macro-bar: 8px;
+
+  /* Type scale — NEW 27/11 (round 4). weight size/line-height family, at the default Dynamic Type size (Large).
+     Use as font: var(--t-body). iOS: map each to its text style so it scales; the num-* styles are SF Pro Rounded
+     + monospaced digits and scale with the text style named in design-system.md */
+  --t-large-title: 700 34px/41px var(--cc-font);
+  --t-title1: 700 28px/34px var(--cc-font);
+  --t-title2: 700 22px/28px var(--cc-font);
+  --t-title3: 600 20px/25px var(--cc-font);
+  --t-headline: 600 17px/22px var(--cc-font);
+  --t-body: 400 17px/22px var(--cc-font);
+  --t-callout: 400 16px/21px var(--cc-font);
+  --t-subheadline: 400 15px/20px var(--cc-font);
+  --t-footnote: 400 13px/18px var(--cc-font);
+  --t-caption1: 500 12px/16px var(--cc-font);
+  --t-caption2: 500 11px/13px var(--cc-font);
+  --t-num-xl: 700 44px/44px var(--cc-font-round);   /* kcal left on the light ring */
+  --t-num-lg: 700 36px/36px var(--cc-font-round);   /* kcal left on the ember ring */
+  --t-num-md: 700 22px/28px var(--cc-font-round);   /* ember stat tile value */
+  --t-num-sm: 700 20px/25px var(--cc-font-round);   /* Eaten / Goal, item kcal */
+  --t-num-body: 600 17px/22px var(--cc-font-round); /* grams, list kcal */
 }
 
 .dark {
