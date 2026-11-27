@@ -209,6 +209,7 @@ export {
   type ScaledNumberProps,
 } from './components/ScaledNumber';
 export { EdSafeCollapse } from './components/EdSafeCollapse';
+export { EdSafeAlternate, type EdSafeAlternateProps } from './components/EdSafeAlternate';
 export {
   Icon,
   iconStrokeWidth,
