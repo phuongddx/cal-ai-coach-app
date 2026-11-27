@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Throwaway PostgreSQL 17 + the CoachCal API (spike sync routes and the scan pipeline).
+# Throwaway PostgreSQL 17 + the CoachCal API (auth, sync, scan, webhook).
 #
 #   scripts/rn/start-api.sh          # initdb into a temp dir, port 5433, API on 8787
 #   scripts/rn/start-api.sh stop     # stop both, delete the cluster dir, free both ports
@@ -10,11 +10,11 @@
 #      coachcal_api (the API connection: no table privileges, EXECUTE on the SQL functions).
 #   3. Create the database `coachcal` owned by coachcal_owner and run
 #      apps/api/migrations/*.sql as coachcal_owner (npx tsx src/migrate.ts).
-#   4. Apply the spike schema (apps/api/src/schema.sql) as the owner and grant it to the API
-#      role, so the spike sync routes keep working.
-#   5. Start the API on 8787 as coachcal_api with AUTH_DEV_TOKENS=1 and VLM_PROVIDER=fixture.
-#   6. Write TEST_OWNER_URL and TEST_API_URL into an env file other commands can source.
-#      Default $TMPDIR/coachcal-rn-api.env, override with RN_API_ENV_FILE. The Jest suites
+#   4. Start the API on 8787 as coachcal_api: random per-run AUTH_JWT_SECRET, AUTH_ENCRYPTION_KEY and
+#      RC_WEBHOOK_SIGNING_SECRET, OTP_SENDER=log (the code is printed to the API log), Apple and
+#      Google unset (their routes answer 503), AUTH_DEV_TOKENS=1, VLM_PROVIDER=fixture.
+#   5. Write TEST_OWNER_URL, TEST_API_URL, API_BASE_URL and API_LOG into an env file other commands
+#      can source. Default $TMPDIR/coachcal-rn-api.env, override with RN_API_ENV_FILE. The Jest suites
 #      read the same file when the variables are not already set; the file is deleted on stop.
 #
 # Nothing is registered as a service; the cluster lives in a temp dir and is deleted on stop.
@@ -82,19 +82,14 @@ STATE
 
   (cd "$ROOT/apps/api" && DATABASE_URL="$OWNER_URL" npx tsx src/migrate.ts)
 
-  # The spike sync routes (meals, sync_ops, sync_changes) run as coachcal_api: create the
-  # spike tables as the owner, then grant them. The scan tables get no such grant.
-  "$PG_BIN/psql" -h 127.0.0.1 -p "$PG_PORT" -U coachcal_owner -d "$DB_NAME" \
-    -v ON_ERROR_STOP=1 -q -f "$ROOT/apps/api/src/schema.sql"
-  "$PG_BIN/psql" -h 127.0.0.1 -p "$PG_PORT" -U coachcal_owner -d "$DB_NAME" -v ON_ERROR_STOP=1 -q \
-    -c "GRANT SELECT, INSERT, UPDATE, DELETE ON meals, sync_ops, sync_changes TO coachcal_api;" \
-    -c "GRANT USAGE, SELECT ON SEQUENCE sync_changes_seq_seq TO coachcal_api;"
-  echo "[start-api] migrations and the spike schema applied"
+  echo "[start-api] migrations applied"
 
   echo "[start-api] starting the API on port $API_PORT"
   (
     cd "$ROOT/apps/api"
     DATABASE_URL="$API_URL" PORT="$API_PORT" AUTH_DEV_TOKENS=1 VLM_PROVIDER=fixture \
+      AUTH_JWT_SECRET="$(openssl rand -hex 32)" AUTH_ENCRYPTION_KEY="$(openssl rand -hex 32)" \
+      RC_WEBHOOK_SIGNING_SECRET="$(openssl rand -hex 32)" OTP_SENDER=log \
       nohup npx tsx src/index.ts >"$LOG_DIR/api-dev.log" 2>&1 &
     echo $! >"$LOG_DIR/api-dev.pid"
   )
@@ -110,6 +105,7 @@ STATE
 export TEST_OWNER_URL=$OWNER_URL
 export TEST_API_URL=$API_URL
 export API_BASE_URL=http://127.0.0.1:$API_PORT
+export API_LOG=$LOG_DIR/api-dev.log
 ENV
 
   echo "[start-api] ready."
@@ -117,7 +113,8 @@ ENV
   echo "  PostgreSQL:   owner $OWNER_URL"
   echo "                api   $API_URL"
   echo "  Env file:     $ENV_FILE  (source it for TEST_OWNER_URL and TEST_API_URL)"
-  echo "  Tokens:       apps/api/dev-tokens.json (spike-dev-token, spike-dev-token-2)"
+  echo "  Sign-in:      OTP codes are printed to the API log (OTP_SENDER=log); Apple and Google are unset"
+  echo "  Dev tokens:   apps/api/dev-tokens.json (AUTH_DEV_TOKENS=1, local only)"
   echo "  Stop both:    $ROOT/scripts/rn/start-api.sh stop"
   echo "  Logs:         $LOG_DIR/api-postgres.log, $LOG_DIR/api-dev.log"
 }

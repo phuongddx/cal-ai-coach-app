@@ -1,0 +1,107 @@
+# CoachCal backend on one VPS: API + PostgreSQL 17 + Caddy (automatic HTTPS).
+#
+#   cp ../.env.example .env   # fill it in (see docs/rn-migration/deploy-vps.md), then:
+#   docker compose up -d --build
+#
+# Only Caddy publishes ports (80 and 443). PostgreSQL and the API are reachable on the internal
+# network only.
+name: ${COMPOSE_PROJECT_NAME:-coachcal}
+
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      COACHCAL_OWNER_PASSWORD: ${COACHCAL_OWNER_PASSWORD:?set COACHCAL_OWNER_PASSWORD}
+      COACHCAL_API_PASSWORD: ${COACHCAL_API_PASSWORD:?set COACHCAL_API_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Runs once, when the data directory is empty: creates the two roles and the database.
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [internal]
+
+  # One-shot: applies apps/api/migrations as coachcal_owner. The API container never sees the owner password.
+  migrate:
+    build:
+      context: ../../..
+      dockerfile: apps/api/Dockerfile
+    image: coachcal-api:local
+    restart: "no"
+    command: ["node", "--import", "tsx", "src/migrate.ts"]
+    environment:
+      DATABASE_URL: postgres://coachcal_owner:${COACHCAL_OWNER_PASSWORD}@postgres:5432/coachcal
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal]
+
+  api:
+    image: coachcal-api:local
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://coachcal_api:${COACHCAL_API_PASSWORD}@postgres:5432/coachcal
+      HOST: 0.0.0.0
+      PORT: "8787"
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?set PUBLIC_BASE_URL, for instance https://api.example.com}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?set AUTH_JWT_SECRET}
+      AUTH_ENCRYPTION_KEY: ${AUTH_ENCRYPTION_KEY:?set AUTH_ENCRYPTION_KEY}
+      RC_WEBHOOK_SIGNING_SECRET: ${RC_WEBHOOK_SIGNING_SECRET:?set RC_WEBHOOK_SIGNING_SECRET}
+      OTP_SENDER: ${OTP_SENDER:-resend}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      OTP_FROM: ${OTP_FROM:-}
+      APPLE_BUNDLE_ID: ${APPLE_BUNDLE_ID:-}
+      APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
+      APPLE_KEY_ID: ${APPLE_KEY_ID:-}
+      APPLE_PRIVATE_KEY_PATH: ${APPLE_PRIVATE_KEY_PATH:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      VLM_PROVIDER: ${VLM_PROVIDER:-gemini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+      GEMINI_ESCALATION_MODEL: ${GEMINI_ESCALATION_MODEL:-}
+      USDA_FDC_API_KEY: ${USDA_FDC_API_KEY:-}
+      FATSECRET_CLIENT_ID: ${FATSECRET_CLIENT_ID:-}
+      FATSECRET_CLIENT_SECRET: ${FATSECRET_CLIENT_SECRET:-}
+      OFF_USER_AGENT: ${OFF_USER_AGENT:-CoachCal/1.0}
+    volumes:
+      # The Apple .p8 key lives in deploy/secrets/ (git-ignored by the *.p8 rule); mounted read-only.
+      - ./secrets:/run/secrets:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks: [internal]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN, for instance api.example.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_started
+    networks: [internal]
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:

@@ -1,53 +1,50 @@
 /**
- * The Hono app, built without a listener so tests can drive it with
- * `app.request(...)` and `index.ts` can serve it.
+ * The Hono app, built without a listener so tests can drive it with `app.request(...)` and
+ * `index.ts` can serve it.
  *
- * Deps are injected: the store (the `query(sql, params)` port) and the token
- * map, so tests run on PGlite with the checked-in dev tokens.
+ * Deps are injected (database, session service, providers, mail sender, webhook secret) so tests run
+ * against the real SQL functions with stub providers. Every route except /health, /v1/auth/* sign-in
+ * routes and /webhooks/revenuecat sits behind `requireUser`.
  */
-import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 
-import { bearerAuth, loadDevTokens, type TokenMap } from './auth';
+import { registerAuthRoutes, type AuthDeps } from './auth/routes';
+import type { TokenMap } from './auth/devTokens';
+import type { CascadeTiers } from './grounding/cascade';
 import { preflight } from './http';
 import type { ScanAppEnv } from './middleware';
 import { registerScanRoutes } from './scan/route';
-import type { ScanDeps } from './scan/pipeline';
 import { registerSyncRoutes } from './sync';
-import type { SyncStoreApi } from './store';
-
-type AppEnv = { Variables: { userId: string } };
+import { registerWebhookRoute } from './webhook/route';
 
 export type AppDeps = {
-  store: SyncStoreApi;
+  auth: AuthDeps;
+  /** HMAC secret of the purchase-provider webhook (RC_WEBHOOK_SIGNING_SECRET). */
+  webhookSecret: Buffer | string;
+  /** Test seam: the dev-token map (honoured only while AUTH_DEV_TOKENS=1). */
   tokens?: TokenMap;
-  /** The scan pipeline and lookups (/v1/scan, /v1/barcode/resolve, /v1/foods/search); omitted: not mounted. */
-  scan?: ScanDeps;
+  /** Test seam: substitutes the grounding tiers of the scan routes. */
+  tiers?: CascadeTiers;
 };
 
 export function createApp(deps: AppDeps) {
-  const app = new Hono<AppEnv>();
+  const app = new Hono<ScanAppEnv>();
+  const { db, sessions } = deps.auth;
+  const guard = { tokens: deps.tokens, sessions };
 
   app.get('/health', (c) => c.json({ ok: true, service: 'coachcal-api' }));
 
-  app.use('/v1/sync/*', bearerAuth(deps.tokens ?? loadDevTokens()));
-  registerSyncRoutes(app, deps.store);
-
-  if (deps.scan) {
-    // One sub-app so the scan routes carry their own context type; `requireUser` guards each.
-    const scanApp = new Hono<ScanAppEnv>();
-    scanApp.options('/v1/*', (c) => preflight(c.req.raw) ?? c.body(null, 204));
-    registerScanRoutes(scanApp, deps.scan, { tokens: deps.tokens });
-    app.route('/', scanApp);
-  }
+  app.options('/v1/*', (c) => preflight(c.req.raw) ?? c.body(null, 204));
+  registerAuthRoutes(app, deps.auth, guard);
+  registerSyncRoutes(app, { db }, guard);
+  registerScanRoutes(app, { db, tiers: deps.tiers }, guard);
+  registerWebhookRoute(app, { db, secret: deps.webhookSecret });
 
   app.notFound((c) => c.json({ error: { code: 'VALIDATION_ERROR', details: ['route'] } }, 404));
 
-  // 500 INTERNAL is reserved for genuine bugs; the stack goes to the server
-  // log, never into the body (spec D4 / AGENTS.md invariants). Hono's own
-  // HTTPExceptions (e.g. malformed JSON body -> 400) keep their status and
-  // get the uniform envelope.
+  // 500 INTERNAL is reserved for genuine bugs; the stack goes to the server log, never into the
+  // body (AGENTS.md invariants). Hono's own HTTPExceptions keep their status with the uniform envelope.
   app.onError((err, c) => {
     if (err instanceof HTTPException) {
       const code = err.status >= 400 && err.status < 500 ? 'VALIDATION_ERROR' : 'INTERNAL';
