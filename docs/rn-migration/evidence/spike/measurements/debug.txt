@@ -1,0 +1,28 @@
+# CoachCalSpike measurements — debug build (2026-11-27 01:43:14 +07)
+# Simulator iPhone 17 Pro, iOS 26.4, UDID 85024D2F-71DE-43C0-8E11-CE58F4578FC3. All numbers are Simulator numbers.
+# app: /Users/ddphuong/Library/Developer/Xcode/DerivedData/CoachCalSpike-fhyapvehhugeyhekdxsjhsdmxfkm/Build/Products/Debug-iphonesimulator/CoachCalSpike.app
+
+## Size (debug)
+metric          value
+app (.app)      197540 kB  (192.9 MB)
+zipped (.zip)   38548 kB  (37.6 MB)
+
+## Idle memory after 15s (pid 7418)
+metric               value
+physical footprint   265.0M
+unavailable
+rss (ps)             455760 kB  (445.1 MB)
+
+## Cold start (5 runs: terminate -> launch -> first-render.txt appears)
+run 1: 3811 ms
+run 2: 3341 ms
+run 3: 3390 ms
+run 4: 3591 ms
+run 5: 3259 ms
+median: 3390 ms (of 3811 3341 3390 3591 3259)
+
+Notes: cold start is host time from the simctl launch call until first-render.txt appears;
+it includes simctl overhead, it is not a frame time (spec D6). Debug runs include the
+Metro bundle load unless the bundle was already cached by the dev client.
+
+# note added by the owner 2026-11-27: the stray "unavailable" line under the footprint is a printing bug of scripts/measure.sh (pipefail plus an early awk exit). The footprint value on the line above it is real. The script is fixed; this file is the raw output of the run.

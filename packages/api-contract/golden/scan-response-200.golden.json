@@ -1,0 +1,30 @@
+{
+  "scanId": "aa000000-0000-4000-8000-000000000001",
+  "kind": "photo",
+  "items": [
+    {
+      "label": "chicken-rice",
+      "grams": 320,
+      "gramsBasis": "estimated",
+      "confidence": 0.92,
+      "hiddenFatLikely": false,
+      "source": "cache",
+      "per100g": {
+        "kcal": 145,
+        "proteinG": 27,
+        "carbsG": 40,
+        "fatG": 4,
+        "fiberG": 2
+      },
+      "kcal": 464,
+      "proteinG": 86.4,
+      "carbsG": 128,
+      "fatG": 12.8,
+      "fiberG": 6.4,
+      "unresolved": false
+    }
+  ],
+  "mealKcal": 464,
+  "scanConfidence": 0.92,
+  "note": null
+}

@@ -1,0 +1,9 @@
+[spike] {"ts":"2026-11-26T18:25:33.629Z","item":"health","event":"action-start","data":{"name":"health-save"}}
+[spike] {"ts":"2026-11-26T18:25:33.645Z","item":"health","event":"health-save","data":{"code":"unauthorized"}}
+[spike] {"ts":"2026-11-26T18:25:33.645Z","item":"health","event":"action-done","data":{"name":"health-save","status":"error","summary":"unauthorized: meal write not authorized — call requestMealAuthorization() first"}}
+[spike] {"ts":"2026-11-26T18:25:38.071Z","item":"health","event":"action-start","data":{"name":"health-read"}}
+[spike] {"ts":"2026-11-26T18:25:38.086Z","item":"health","event":"health-read","data":{"code":"unauthorized"}}
+[spike] {"ts":"2026-11-26T18:25:38.086Z","item":"health","event":"action-done","data":{"name":"health-read","status":"error","summary":"unauthorized: meal read not authorized — call requestMealAuthorization() first"}}
+[spike] {"ts":"2026-11-26T18:25:42.486Z","item":"health","event":"action-start","data":{"name":"health-delete"}}
+[spike] {"ts":"2026-11-26T18:25:42.501Z","item":"health","event":"health-delete","data":{"code":"unauthorized"}}
+[spike] {"ts":"2026-11-26T18:25:42.501Z","item":"health","event":"action-done","data":{"name":"health-delete","status":"error","summary":"unauthorized: meal delete not authorized — call requestMealAuthorization() first"}}

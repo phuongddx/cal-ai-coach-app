@@ -1,0 +1,46 @@
+ LOG  [spike] {"ts":"2026-11-26T18:00:22.620Z","item":"ui","event":"first-render","data":{"iso":"2026-11-26T18:00:22.610Z","uri":"file:///Users/ddphuong/Library/Developer/CoreSimulator/Devices/85024D2F-71DE-43C0-8E11-CE58F4578FC3/data/Containers/Data/Application/BA699F38-BDD0-4D7A-B552-1C8F7E8DBFDD/Documents/first-render.txt"}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:22.724Z","item":"sync","event":"binding-started","data":{}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:22.753Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:30.850Z","item":"sync","event":"action-start","data":{"name":"reset"}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:30.922Z","item":"sync","event":"reset","data":{"meals":0,"outbox":0,"cursor":0}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:30.923Z","item":"sync","event":"action-done","data":{"name":"reset","status":"ok","summary":"Reset: meals, outbox, cursor and forced-offline cleared"}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:30.954Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:36.460Z","item":"sync","event":"action-start","data":{"name":"seed"}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:36.524Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:36.552Z","item":"sync","event":"seed","data":{"a":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","c":"cccccccc-cccc-4ccc-8ccc-cccccccccccc","outbox":2}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:36.553Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:36.553Z","item":"sync","event":"action-done","data":{"name":"seed","status":"ok","summary":"Seeded A (Overnight oats) and C (Chicken rice bowl); outbox = 2"}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:44.803Z","item":"sync","event":"action-start","data":{"name":"sync"}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:44.819Z","item":"sync","event":"sync-started","data":{"forcedOffline":false}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:44.879Z","item":"sync","event":"sync-finished","data":{"status":"synced","pushed":0,"pulled":0,"outbox":0,"cursor":2,"quarantined":0,"detail":null}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:44.880Z","item":"sync","event":"action-done","data":{"name":"sync","status":"ok","summary":"Sync synced: pushed 0, pulled 0, outbox = 0, cursor = 2"}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:55.558Z","item":"sync","event":"action-start","data":{"name":"force-offline"}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:55.592Z","item":"sync","event":"force-offline","data":{"forcedOffline":true}}
+ LOG  [spike] {"ts":"2026-11-26T18:00:55.592Z","item":"sync","event":"action-done","data":{"name":"force-offline","status":"ok","summary":"Forced offline: isOnline() = false, the server is untouched"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:04.366Z","item":"sync","event":"action-start","data":{"name":"add-meal"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:04.426Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:04.451Z","item":"sync","event":"add-meal","data":{"id":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","outbox":1,"pending":true}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:04.451Z","item":"sync","event":"action-done","data":{"name":"add-meal","status":"ok","summary":"Added B (Protein shake, 210 kcal); outbox = 1"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:06.861Z","item":"sync","event":"action-start","data":{"name":"edit-meal"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:06.907Z","item":"sync","event":"edit-meal","data":{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","kcal":450,"updatedAt":1795716066876,"outbox":2}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:06.909Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:06.910Z","item":"sync","event":"action-done","data":{"name":"edit-meal","status":"ok","summary":"Edited A to 450 kcal; outbox = 2"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:11.380Z","item":"sync","event":"action-start","data":{"name":"delete-meal"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:11.429Z","item":"sync","event":"delete-meal","data":{"id":"cccccccc-cccc-4ccc-8ccc-cccccccccccc","outbox":3}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:11.438Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:11.438Z","item":"sync","event":"action-done","data":{"name":"delete-meal","status":"ok","summary":"Deleted C (tombstone queued); outbox = 3"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:21.133Z","item":"ui","event":"first-render","data":{"iso":"2026-11-26T18:01:21.079Z","uri":"file:///Users/ddphuong/Library/Developer/CoreSimulator/Devices/85024D2F-71DE-43C0-8E11-CE58F4578FC3/data/Containers/Data/Application/BA699F38-BDD0-4D7A-B552-1C8F7E8DBFDD/Documents/first-render.txt"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:21.283Z","item":"sync","event":"binding-started","data":{}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:21.335Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:38.400Z","item":"sync","event":"action-start","data":{"name":"force-online"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:38.412Z","item":"sync","event":"force-online","data":{"forcedOffline":false}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:38.412Z","item":"sync","event":"action-done","data":{"name":"force-online","status":"ok","summary":"Back online: isOnline() follows the network again"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:40.864Z","item":"sync","event":"action-start","data":{"name":"sync"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:40.877Z","item":"sync","event":"sync-started","data":{"forcedOffline":false}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:40.934Z","item":"sync","event":"sync-finished","data":{"status":"synced","pushed":0,"pulled":0,"outbox":0,"cursor":5,"quarantined":0,"detail":null}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:40.934Z","item":"sync","event":"action-done","data":{"name":"sync","status":"ok","summary":"Sync synced: pushed 0, pulled 0, outbox = 0, cursor = 5"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:58.731Z","item":"sync","event":"action-start","data":{"name":"sync"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:58.755Z","item":"sync","event":"sync-started","data":{"forcedOffline":false}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:58.853Z","item":"widget","event":"widget-publish","data":{"date":"2026-11-27","entries":2,"nextEntryAt":"2026-11-27T17:00:00.000Z"}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:58.900Z","item":"sync","event":"sync-finished","data":{"status":"synced","pushed":0,"pulled":1,"outbox":0,"cursor":6,"quarantined":0,"detail":null}}
+ LOG  [spike] {"ts":"2026-11-26T18:01:58.901Z","item":"sync","event":"action-done","data":{"name":"sync","status":"ok","summary":"Sync synced: pushed 0, pulled 1, outbox = 0, cursor = 6"}}

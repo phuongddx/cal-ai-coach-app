@@ -1,0 +1,16 @@
+{
+  "name": "@coachcal/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pure TypeScript domain logic shared by the RN app, the web client and the Hono API. No react-native, no node imports.",
+  "type": "commonjs",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "ts-jest": "^29.4.0"
+  }
+}

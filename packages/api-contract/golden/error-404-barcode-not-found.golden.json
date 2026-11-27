@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "BARCODE_NOT_FOUND",
+    "details": [
+      "no grounding source resolved this barcode"
+    ]
+  }
+}

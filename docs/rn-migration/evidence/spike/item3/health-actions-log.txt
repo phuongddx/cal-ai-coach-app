@@ -1,0 +1,48 @@
+[spike] {"ts":"2026-11-26T18:22:35.419Z","item":"health","event":"action-start","data":{"name":"health-save"}}
+[spike] {"ts":"2026-11-26T18:22:37.466Z","item":"health","event":"health-save","data":{"code":"saveFailed"}}
+[spike] {"ts":"2026-11-26T18:22:37.466Z","item":"health","event":"action-done","data":{"name":"health-save","status":"error","summary":"saveFailed: saving meal c1a7a0e2-4b1d-4f0e-9a21-6f5c8d2e3b10 failed: Error: Error Domain=com.apple.healthkit Code=5 \"Authorization is not determined\" UserInfo={NSLocalizedDescription=Authorization is not determined}"}}
+[spike] {"ts":"2026-11-26T18:24:00.882Z","item":"health","event":"action-start","data":{"name":"health-save"}}
+[spike] {"ts":"2026-11-26T18:24:00.957Z","item":"health","event":"health-save","data":{"code":"saveFailed"}}
+[spike] {"ts":"2026-11-26T18:24:00.957Z","item":"health","event":"action-done","data":{"name":"health-save","status":"error","summary":"saveFailed: saving meal c1a7a0e2-4b1d-4f0e-9a21-6f5c8d2e3b10 failed: Error: Error Domain=com.apple.healthkit Code=5 \"Authorization is not determined\" UserInfo={NSLocalizedDescription=Authorization is not determined}"}}
+[spike] {"ts":"2026-11-26T18:25:33.629Z","item":"health","event":"action-start","data":{"name":"health-save"}}
+[spike] {"ts":"2026-11-26T18:25:33.645Z","item":"health","event":"health-save","data":{"code":"unauthorized"}}
+[spike] {"ts":"2026-11-26T18:25:33.645Z","item":"health","event":"action-done","data":{"name":"health-save","status":"error","summary":"unauthorized: meal write not authorized — call requestMealAuthorization() first"}}
+[spike] {"ts":"2026-11-26T18:25:38.071Z","item":"health","event":"action-start","data":{"name":"health-read"}}
+[spike] {"ts":"2026-11-26T18:25:38.086Z","item":"health","event":"health-read","data":{"code":"unauthorized"}}
+[spike] {"ts":"2026-11-26T18:25:38.086Z","item":"health","event":"action-done","data":{"name":"health-read","status":"error","summary":"unauthorized: meal read not authorized — call requestMealAuthorization() first"}}
+[spike] {"ts":"2026-11-26T18:25:42.486Z","item":"health","event":"action-start","data":{"name":"health-delete"}}
+[spike] {"ts":"2026-11-26T18:25:42.501Z","item":"health","event":"health-delete","data":{"code":"unauthorized"}}
+[spike] {"ts":"2026-11-26T18:25:42.501Z","item":"health","event":"action-done","data":{"name":"health-delete","status":"error","summary":"unauthorized: meal delete not authorized — call requestMealAuthorization() first"}}
+[spike] {"ts":"2026-11-26T18:25:53.112Z","item":"health","event":"action-start","data":{"name":"health-request"}}
+[spike] {"ts":"2026-11-26T18:25:53.159Z","item":"health","event":"health-request","data":{"code":"queryFailed"}}
+[spike] {"ts":"2026-11-26T18:25:53.159Z","item":"health","event":"action-done","data":{"name":"health-request","status":"error","summary":"queryFailed: authorization request failed: Error: Error Domain=NSInvalidArgumentException Code=0 \"(null)\""}}
+[spike] {"ts":"2026-11-26T18:27:27.664Z","item":"health","event":"action-start","data":{"name":"health-request"}}
+[spike] {"ts":"2026-11-26T18:28:56.230Z","item":"health","event":"health-request","data":{"requested":true}}
+[spike] {"ts":"2026-11-26T18:28:56.239Z","item":"health","event":"action-done","data":{"name":"health-request","status":"ok","summary":"Health authorization sheet completed (grant state re-checked per call)"}}
+[spike] {"ts":"2026-11-26T18:29:06.101Z","item":"health","event":"action-start","data":{"name":"health-save"}}
+[spike] {"ts":"2026-11-26T18:29:06.223Z","item":"health","event":"health-save","data":{"saved":true,"healthKitUuid":"54CE85A5-7A53-41F4-9512-E9193A9BFA84","mealHealthUuid":"8240a7d7-1dcd-4527-9e52-f37bb420ade5"}}
+[spike] {"ts":"2026-11-26T18:29:06.223Z","item":"health","event":"action-done","data":{"name":"health-save","status":"ok","summary":"Saved Chicken rice bowl (624 kcal) to Health"}}
+[spike] {"ts":"2026-11-26T18:29:13.149Z","item":"health","event":"action-start","data":{"name":"health-save"}}
+[spike] {"ts":"2026-11-26T18:29:13.192Z","item":"health","event":"health-save","data":{"saved":false,"healthKitUuid":"54CE85A5-7A53-41F4-9512-E9193A9BFA84","mealHealthUuid":"8240a7d7-1dcd-4527-9e52-f37bb420ade5"}}
+[spike] {"ts":"2026-11-26T18:29:13.193Z","item":"health","event":"action-done","data":{"name":"health-save","status":"ok","summary":"Already in Health (retry, no double save)"}}
+[spike] {"ts":"2026-11-26T18:29:23.685Z","item":"health","event":"action-start","data":{"name":"health-read"}}
+[spike] {"ts":"2026-11-26T18:29:23.731Z","item":"health","event":"health-read","data":{"dayKey":"2026-11-27","meals":[{"mealId":"8240a7d7-1dcd-4527-9e52-f37bb420ade5","name":"Chicken rice bowl","eatenAt":"2026-11-27T05:40:00.000Z","kcal":624,"proteinG":38,"carbsG":70,"fatG":18,"fiberG":0,"healthKitUuid":"54CE85A5-7A53-41F4-9512-E9193A9BFA84","unknownUnits":[]}]}}
+[spike] {"ts":"2026-11-26T18:29:23.732Z","item":"health","event":"action-done","data":{"name":"health-read","status":"ok","summary":"Read 1 meal(s) from Health for 2026-11-27"}}
+[spike] {"ts":"2026-11-26T18:31:02.325Z","item":"health","event":"action-start","data":{"name":"health-delete"}}
+[spike] {"ts":"2026-11-26T18:31:02.461Z","item":"health","event":"health-delete","data":{"deleted":1}}
+[spike] {"ts":"2026-11-26T18:31:02.461Z","item":"health","event":"action-done","data":{"name":"health-delete","status":"ok","summary":"Deleted 1 correlation(s) for Chicken rice bowl"}}
+[spike] {"ts":"2026-11-26T18:31:08.862Z","item":"health","event":"action-start","data":{"name":"health-read"}}
+[spike] {"ts":"2026-11-26T18:31:08.908Z","item":"health","event":"health-read","data":{"dayKey":"2026-11-27","meals":[]}}
+[spike] {"ts":"2026-11-26T18:31:08.908Z","item":"health","event":"action-done","data":{"name":"health-read","status":"ok","summary":"Read 0 meal(s) from Health for 2026-11-27"}}
+[spike] {"ts":"2026-11-26T18:36:56.114Z","item":"health","event":"action-start","data":{"name":"health-save"}}
+[spike] {"ts":"2026-11-26T18:36:56.268Z","item":"health","event":"health-save","data":{"saved":true,"healthKitUuid":"D6DE4722-EB13-4D7E-8F54-A9CC60A50694","mealHealthUuid":"8240a7d7-1dcd-4527-9e52-f37bb420ade5"}}
+[spike] {"ts":"2026-11-26T18:36:56.268Z","item":"health","event":"action-done","data":{"name":"health-save","status":"ok","summary":"Saved Chicken rice bowl (624 kcal) to Health"}}
+[spike] {"ts":"2026-11-26T18:37:03.549Z","item":"health","event":"action-start","data":{"name":"health-read"}}
+[spike] {"ts":"2026-11-26T18:37:03.596Z","item":"health","event":"health-read","data":{"dayKey":"2026-11-27","meals":[{"mealId":"8240a7d7-1dcd-4527-9e52-f37bb420ade5","name":"Chicken rice bowl","eatenAt":"2026-11-27T05:40:00.000Z","kcal":624,"proteinG":38,"carbsG":70,"fatG":18,"fiberG":0,"healthKitUuid":"D6DE4722-EB13-4D7E-8F54-A9CC60A50694","unknownUnits":[]}]}}
+[spike] {"ts":"2026-11-26T18:37:03.596Z","item":"health","event":"action-done","data":{"name":"health-read","status":"ok","summary":"Read 1 meal(s) from Health for 2026-11-27"}}
+[spike] {"ts":"2026-11-26T18:37:10.940Z","item":"health","event":"action-start","data":{"name":"health-delete"}}
+[spike] {"ts":"2026-11-26T18:37:11.002Z","item":"health","event":"health-delete","data":{"deleted":1,"deletedSamples":4}}
+[spike] {"ts":"2026-11-26T18:37:11.002Z","item":"health","event":"action-done","data":{"name":"health-delete","status":"ok","summary":"Deleted 1 correlation(s) and 4 sample(s) for Chicken rice bowl"}}
+[spike] {"ts":"2026-11-26T18:37:18.376Z","item":"health","event":"action-start","data":{"name":"health-read"}}
+[spike] {"ts":"2026-11-26T18:37:18.421Z","item":"health","event":"health-read","data":{"dayKey":"2026-11-27","meals":[]}}
+[spike] {"ts":"2026-11-26T18:37:18.421Z","item":"health","event":"action-done","data":{"name":"health-read","status":"ok","summary":"Read 0 meal(s) from Health for 2026-11-27"}}

@@ -1,0 +1,14 @@
+{
+  "event": {
+    "id": "evt-golden-initial-purchase-0001",
+    "type": "INITIAL_PURCHASE",
+    "data": {
+      "app_user_id": "bf4c7ac2-1d3e-4a2b-9c1d-5e6f7a8b9c0d",
+      "entitlement_ids": [
+        "coachcal_pro"
+      ],
+      "expiration_at_ms": 1798761600000,
+      "product_id": "coachcal_pro_monthly"
+    }
+  }
+}
