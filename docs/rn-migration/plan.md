@@ -111,6 +111,7 @@ unit), `trail.tsv` (decision log) and `briefs/U-*.md`, all on branch `rn/orchest
 GOAL        packages/core holds every pure engine of CoachCalCore with the Swift tests ported, so
             neither the app nor the API ever needs the Swift versions.
 SCOPE       writable: packages/core/**, apps/mobile/src/data/widget/snapshotFromMeals.ts and its test,
+            apps/mobile/src/widgets/CaloriesWidget.tsx (type and field renames only, when the snapshot shape changes),
             docs/rn-migration/findings/U-10.md, docs/rn-migration/parity-detail/core.md
             forbidden: everything else
 CONTEXT     Swift sources (read in full): native/Modules/CoachCalCore/Sources/CoachCalCore/
@@ -179,7 +180,7 @@ ACCEPTANCE  each Deno test file listed has a Jest twin file with one case per De
             bash scripts/rn/start-api.sh && bash scripts/rn/smoke-scan.sh && bash scripts/rn/start-api.sh stop
             ends with every step ok and both ports free; apps/api/.env.example lists every variable
             with a one-line meaning and no value
-VERIFY      npm test --workspace @coachcal/api with TEST_DATABASE_URL set by start-api.sh;
+VERIFY      npm test --workspace @coachcal/api with TEST_OWNER_URL and TEST_API_URL set by start-api.sh;
             npm run typecheck; npm run parity:check
 TIMEBOX     6 hours
 ```
@@ -207,7 +208,8 @@ CONTEXT     Native config of the old app: native/App/CoachCal/Info.plist, Suppor
             Info.plist and .entitlements, native/Project.swift; the shell in native/App/CoachCal/
             MainShell.swift and RootView.swift. Spike recipe and pitfalls: docs/rn-migration/spike/
             build-recipe.md. Machine facts: docs/rn-migration/spec.md section 11.
-SHAPE       Dependencies to add with `npx expo install` in apps/mobile: @tanstack/react-query, zustand,
+SHAPE       npm script `migrate` in apps/api: "tsx src/migrate.ts" (U-11 writes the file).
+            Dependencies to add with `npx expo install` in apps/mobile: @tanstack/react-query, zustand,
             expo-camera, expo-image-picker, expo-image-manipulator, expo-apple-authentication,
             expo-web-browser, expo-secure-store, expo-notifications, expo-background-task,
             expo-file-system, expo-sharing. For apps/api: jose. Nothing else; a missing package is a
@@ -273,8 +275,10 @@ CONTEXT     Swift (read in full): native/Modules/CoachCalDesignSystem/Sources/Co
             Snapshots: native/App/CoachCalTests/__Snapshots__/** (71 PNG). Existing TS:
             apps/mobile/src/features/ember/tokens.ts and format.ts (spike).
 SHAPE       src/design/tokens.ts (every token of Tokens.swift as a const object for light and dark,
-            useTokens() hook that follows useColorScheme), src/design/edSafe.ts (exports edSafeMode()
-            and edSafeHidden() only; a Zustand store behind them, not persisted yet), and
+            useTokens() hook that follows useColorScheme; the spike's features/ember/tokens.ts is not
+            touched, U-33 removes it), src/design/edSafe.ts (edSafeMode(), edSafeHidden(), and the
+            hooks useEdSafeMode() and useEdSafeHidden() over useSyncExternalStore; module state, no
+            dependency, not persisted yet), and
             src/design/components/<Name>.tsx, one per CC component, same name without the CC prefix,
             same props and variants, drawn with react-native, react-native-svg, expo-symbols and
             expo-glass-effect only. Accessibility identifiers stay identical to the Swift ones

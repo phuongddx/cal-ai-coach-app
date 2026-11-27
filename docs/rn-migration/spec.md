@@ -54,7 +54,7 @@ or `not-done` with a reason, and every `done` row has evidence from the iOS 26.4
 | I4 | Only `diary_entries` syncs (mirror rows and tombstones); every other table is local-only | The sync wire contract has one record type (`packages/api-contract/src/sync.ts`) |
 | I5 | The gate order in the scan pipeline is fixed: preflight, JSON parse, schema (400), auth (401), quota (402 `FREE_LIMIT_REACHED`), kind routing (barcode never reaches a VLM), grounding cascade, arithmetic, self-parse, `persist_scan`, 200 | Ported test by test from `scan-gates.test.ts` and `analyze-food.e2e.test.ts` |
 | I6 | The displayed kcal is always recomputed from the current grams on the client; the response kcal is never the display source after an edit | The scan reducer owns grams; a test edits grams and asserts the recomputed figure; parity with the server rule is a test in `packages/core` |
-| I7 | ED-safe has one API; components own the policy branch, feature code has none | `apps/mobile/src/design/edSafe.ts` exports `edSafeMode()` and `edSafeHidden()` only; the ED-safe sweep screenshots of the old app are the reference |
+| I7 | ED-safe has one API; components own the policy branch, feature code has none | `apps/mobile/src/design/edSafe.ts` is the only file that exports ED-safe functions: `edSafeMode()` and `edSafeHidden()` for plain code, `useEdSafeMode()` and `useEdSafeHidden()` for components (through `useSyncExternalStore`); the ED-safe sweep screenshots of the old app are the reference |
 | I8 | Photo, health and kcal text never leave the device through telemetry | The telemetry seam is an allow-list with payload scrubbing, as in `AppEnvironment.swift`; no feature imports Sentry or PostHog |
 | I9 | Privacy manifest and usage strings stay in the app bundle | `app.config.ts` plugins; `scripts/rn/check-artifact-compliance.mjs` reads the built `.app` |
 | I10 | Strict wire decoding on both ends | Server: zod `strictObject`. Client: every response is parsed with the same schema from `packages/api-contract`; unknown keys fail |
@@ -206,7 +206,7 @@ proven, so a problem with them cannot block everything else.
 
 | Risk or call | Default applied | Who decides otherwise |
 |---|---|---|
-| Disk: 7.5 GB free on 2026-11-27; one native build costs about 5.3 GB [spike] | One native build slot for the whole program; worker worktrees clone `node_modules` with an APFS clone instead of installing; the `iPhone Duo` Simulator holds 11 GB and is not touched | Phương may erase unused Simulators |
+| Disk: 15 GB free on the data volume on 2026-11-27 [verified: `df -h /System/Volumes/Data`]; one native build costs about 5.3 GB [spike]; three other projects build on the same machine | One native build slot for the whole program; worker worktrees clone `node_modules` with an APFS clone instead of installing; other projects' DerivedData and Simulators are not touched (the `iPhone Duo` Simulator alone holds 11 GB) | Phương may erase Simulators he no longer uses |
 | Only one Simulator and one native build at a time | Feature units are JS-only and verify with Jest and `tsc`; screenshots come from serial evidence units | nobody; it is the machine |
 | Third-party native libraries on RN 0.88 with Xcode 27.1 | Only `@kingstinct/react-native-healthkit` and the Nitro modules it needs; first-party Expo packages otherwise | U-13 proves the build |
 | `expo-camera` code scanning and `expo-background-task` on SDK 58 | Used as documented; U-13 and U-42 read the docs in `node_modules` before relying on them | the unit that finds a blocker reports it |
@@ -218,7 +218,7 @@ proven, so a problem with them cannot block everything else.
 ## 12. Docs read for this spec
 
 Read in the repository during this program: `AGENTS.md`, `ARCHITECTURE.md`, the spike's `spec.md`,
-`plan.md`, `report.md`, `build-recipe.md`, `findings/T1` to `T6`; `native/` sources listed in
+`plan.md`, `report.md`, `build-recipe.md`, `findings/T1` to `T4` and `T6`; `native/` sources listed in
 `inventory.md`; `supabase/functions/_shared/contracts/*`, `arithmetic.ts`, `http.ts`, `db.ts`;
 `supabase/functions/deno.json`; Zed's two reports (`coachcal-vps-backend-research.md`,
 `coachcal-react-native-expo-report-2026-11-26.md`).
