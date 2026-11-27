@@ -4,11 +4,14 @@
  *    `text` in dark, with the `border` hairline and a `text` glyph.
  *  - `overMedia`: the dark glass over a photo or the camera (black at 45%, light glyph).
  *
- * There is no blur package, so the glass is a translucent fill (findings U-71b); the canvas's
- * `backdrop-filter: blur(20px)` is not drawn.
+ * Glass (decision D14, U-72): on iOS 26, where `isLiquidGlassAvailable()` is true, the button draws a
+ * native `GlassView` (`expo-glass-effect`, as `features/ember/EmberView.tsx` does) behind the glyph.
+ * Everywhere else (iOS 18, Android, Jest) the glass is the translucent fill of findings U-71b; the
+ * canvas's `backdrop-filter: blur(20px)` is not drawn there.
  */
 
-import { Pressable, StyleSheet } from 'react-native';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { Platform, Pressable, StyleSheet } from 'react-native';
 
 import { darkColors, size as sizes, useTokens, withAlpha, type Colors } from '../tokens';
 
@@ -48,6 +51,22 @@ export function glassIconButtonColors(
   };
 }
 
+/** Liquid Glass shipped with iOS 26; older systems keep the translucent fill (D14). */
+export const nativeGlassMinIos = 26;
+
+/**
+ * The native glass is only asked for on iOS 26 and later, and only when the native module says it is
+ * there; a missing native module counts as "no".
+ */
+export function hasNativeGlass(): boolean {
+  if (Platform.OS !== 'ios' || !(Number.parseInt(String(Platform.Version), 10) >= nativeGlassMinIos)) return false;
+  try {
+    return isLiquidGlassAvailable();
+  } catch {
+    return false;
+  }
+}
+
 export function GlassIconButton({
   icon,
   onPress,
@@ -59,6 +78,7 @@ export function GlassIconButton({
   const { colors, isDark } = useTokens();
   const glass = glassIconButtonColors(colors, isDark, tone);
   const edge = Math.max(diameter, sizes.tap);
+  const nativeGlass = hasNativeGlass();
   return (
     <Pressable
       accessibilityRole="button"
@@ -71,12 +91,23 @@ export function GlassIconButton({
           width: edge,
           height: edge,
           borderRadius: edge / 2,
-          backgroundColor: glass.background,
-          borderColor: glass.border,
+          // With the native glass the fill and the hairline belong to the glass, not to this view.
+          backgroundColor: nativeGlass ? 'transparent' : glass.background,
+          borderColor: nativeGlass ? 'transparent' : glass.border,
+          overflow: 'hidden',
           opacity: pressed ? 0.7 : 1,
         },
       ]}
     >
+      {nativeGlass && (
+        <GlassView
+          testID={testID === undefined ? undefined : `${testID}:glass`}
+          glassEffectStyle="regular"
+          colorScheme={tone === 'overMedia' ? 'dark' : isDark ? 'dark' : 'light'}
+          pointerEvents="none"
+          style={StyleSheet.absoluteFill}
+        />
+      )}
       <Icon name={icon} size={22} color={glass.glyph} />
     </Pressable>
   );

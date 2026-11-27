@@ -14,21 +14,11 @@ export const MEAL_SLOTS: readonly MealSlot[] = ['breakfast', 'lunch', 'dinner', 
 /** `ScanMode` of the Swift app: the viewfinder pills plus the describe (text) path. */
 export type ScanMode = 'photo' | 'barcode' | 'label' | 'text';
 
-export type AnalyzingStep = 'detecting' | 'reading' | 'checking' | 'confirming';
-export const ANALYZING_STEPS: readonly AnalyzingStep[] = ['detecting', 'reading', 'checking', 'confirming'];
-
-export const ANALYZING_STEP_TITLE: Record<AnalyzingStep, string> = {
-  detecting: 'Detecting food',
-  reading: 'Reading nutrition',
-  checking: 'Checking accuracy',
-  confirming: 'Confirming with a second pass',
-};
-
 export type ScanFailure = 'barcodeNotFound' | 'analysisFailure';
 
 export type ScanPhase =
   | { kind: 'capture' }
-  | { kind: 'analyzing'; step: AnalyzingStep }
+  | { kind: 'analyzing' }
   | { kind: 'review' }
   | { kind: 'saved' }
   | { kind: 'quotaReached'; entitlement: EntitlementState }

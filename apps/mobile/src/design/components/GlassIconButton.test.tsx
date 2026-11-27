@@ -11,11 +11,11 @@ jest.mock('react/jsx-runtime', () => {
 });
 
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 
 import { darkColors, lightColors, withAlpha } from '../tokens';
 
-import { glassIconButtonColors, GlassIconButton } from './GlassIconButton';
+import { glassIconButtonColors, GlassIconButton, hasNativeGlass } from './GlassIconButton';
 
 const mockUseColorScheme = useColorScheme as jest.MockedFunction<typeof useColorScheme>;
 
@@ -73,5 +73,36 @@ describe('GlassIconButton', () => {
     });
     await render(<GlassIconButton icon="back" accessibilityLabel="Back" testID="surface" />);
     expect(screen.getByTestId('surface')).toHaveStyle({ backgroundColor: withAlpha(lightColors.card, 0.78) });
+  });
+});
+
+describe('GlassIconButton native glass (D14)', () => {
+  const original = Object.getOwnPropertyDescriptor(Platform, 'Version');
+  const setVersion = (value: string | number | undefined) =>
+    Object.defineProperty(Platform, 'Version', { configurable: true, get: () => value });
+  afterEach(() => {
+    if (original) Object.defineProperty(Platform, 'Version', original);
+  });
+
+  it('draws the native glass on iOS 26 and keeps the pressable the target of the testID', async () => {
+    setVersion('26.5');
+    expect(hasNativeGlass()).toBe(true);
+    await render(<GlassIconButton icon="x" tone="overMedia" accessibilityLabel="Close" testID="g" />);
+    expect(screen.getByTestId('g:glass')).toBeOnTheScreen();
+    expect(screen.getByTestId('g')).toHaveProp('accessibilityRole', 'button');
+    expect(screen.getByTestId('g')).toHaveStyle({ width: 44, height: 44, backgroundColor: 'transparent' });
+  });
+
+  it('falls back to the translucent fill on iOS 18', async () => {
+    setVersion('18.4');
+    expect(hasNativeGlass()).toBe(false);
+    await render(<GlassIconButton icon="x" tone="overMedia" accessibilityLabel="Close" testID="g" />);
+    expect(screen.queryByTestId('g:glass')).toBeNull();
+    expect(screen.getByTestId('g')).toHaveStyle({ backgroundColor: withAlpha(darkColors.bg, 0.45) });
+  });
+
+  it('does not ask the native module when the system version is unknown', () => {
+    setVersion(undefined);
+    expect(hasNativeGlass()).toBe(false);
   });
 });
