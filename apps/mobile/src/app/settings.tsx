@@ -16,6 +16,7 @@ import { createCsvExportService } from '../data/repos/csvExport';
 import { readAppSetting, writeAppSetting } from '../data/repos/engagementRepository';
 import { DEMO_USER_ID } from '../data/repos/seedDataManager';
 import { edSafeMode, setEdSafeMode } from '../design';
+import { prepareCsvExport } from '../platform/csv/csvExportFile';
 import { useAppEnvironment } from '../platform/appEnvironment';
 
 import { SettingsDetailView } from '../features/profile/SettingsDetailView';
@@ -45,10 +46,13 @@ export default function SettingsRoute() {
       // remote step off — the model already ran the server cascade as step 1.
       resetLocalData: () => environment.resetLocalData({ deleteRemote: false }),
       signOut: () => getAuthServices().signOut(),
-      csvExportAction: async () =>
-        new TextDecoder().decode(
-          await createCsvExportService((await getDataEnvironment()).db).buildFullExportCSV(ownerId),
-        ),
+      // The export: the generator's output becomes the cache file the export row shares
+      // (SettingsDetailView.swift pre-computes `exportedCSV` in `.task`, the same shape).
+      csvExportAction: () =>
+        prepareCsvExport({
+          buildCsv: async () =>
+            createCsvExportService((await getDataEnvironment()).db).buildFullExportCSV(ownerId),
+        }),
     });
   }, [environment]);
   useEffect(() => {
