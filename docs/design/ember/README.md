@@ -40,13 +40,23 @@ A screen with no frame (editing a food in the diary, the export error, dark vari
 and billing) is derived from the tokens and the patterns of the nearest frame. The unit says so in
 its findings and in the parity table (`derived`).
 
-## Decisions taken for Phương on 2026-11-27 (he may change them)
+## Decisions taken for Phương on 2026-11-27, and his approval of the same day
+
+Phương approved Ember on 2026-11-27. The three decisions below were taken for him by Zed before
+that, and they stand.
 
 - **Prices.** The paywall never shows the sample prices of the canvas. The old app has no products
   and no StoreKit configuration, so the screens read product ids and prices from the store at run
   time; creating the products is on the follow-up list.
 - **ED-Safe** hides the calorie numbers as the frames show. Weight stays visible, as in the app today.
-- **App icon.** The current icon stays until the "Ember ring" layers are built in Icon Composer.
+- **App icon.** The app icon becomes "Ember ring" as soon as Designer delivers the complete set,
+  the four appearances. A step that needs Icon Composer by hand is written down for Phương. Until
+  then the current icon stays.
+
+Designer is adding to this project: the edit sheet of a food in the diary, the CSV export error
+state, the dark variants of onboarding and billing, the high-contrast tokens, a `tokens.json` and
+the complete icon. The app builds each of those screens now from the tokens and the patterns of the
+nearest frame, and corrects it when its frame arrives.
 
 ## What never changes
 

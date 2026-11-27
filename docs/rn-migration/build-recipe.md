@@ -76,6 +76,18 @@ Run from the repo root unless stated.
 9. `expo-doctor` also checks the `expo` package against the SDK patch line (`~58.1.0` for SDK 58 on
    2026-11-27, not `~58.0.26`).
 
+## A local Expo module changes the native build (U-79)
+
+`apps/mobile/modules/<name>/` is autolinked by Expo with no change to `app.config.ts` or any
+`package.json`: it needs `expo-module.config.json`, `ios/<Name>.podspec` and a Swift `Module`
+subclass. The first build after adding one is a full `expo prebuild` + `pod install` + build in the
+native worktree (the development client has to be rebuilt; Metro alone never sees native code).
+Measured in U-79: `prepare` plus `pod install`, then `expo run:ios` 12:00 (`Build Succeeded`, 0 errors,
+2 warnings), the disk 29 GB free before, 12 GB right after the build and 17 GB after
+`native-slot.sh release`. A JS-only change after that needs no rebuild. A build that predates the module
+still runs: `requireOptionalNativeModule` returns `null` and the reader answers an empty list. Jest never
+loads the native module; tests install a stand-in at `globalThis.expo.modules.<Name>`.
+
 ## State on 2026-11-27
 
 Verified in the promotion PR: `npm test` (140 tests), `npm run typecheck` and `npm run parity:check`

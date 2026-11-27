@@ -1,6 +1,6 @@
 import type { Session } from '../data/auth/types';
 import { DEMO_USER_ID } from '../data/repos/seedDataManager';
-import { DEFAULT_DEBUG_FLAGS, type DebugFlags } from '../debug/launchArgs';
+import { DEFAULT_DEBUG_FLAGS, flagsFromArguments, type DebugFlags } from '../debug/launchArgs';
 import { runLaunchSequence, targetOwners, type LaunchDeps } from './launchSequence';
 
 const SESSION = { user: { id: 'user-1' } } as unknown as Session;
@@ -9,6 +9,11 @@ function makeDeps(overrides: Partial<Omit<LaunchDeps, 'flags'>> & { flags?: Part
   const calls: string[] = [];
   const { flags, ...rest } = overrides;
   const deps: LaunchDeps = {
+    loadLaunchArguments: async () => {
+      calls.push('arguments');
+      return [];
+    },
+    applyLaunchArguments: () => undefined,
     flags: () => ({ ...DEFAULT_DEBUG_FLAGS, ...flags }),
     loadSession: async () => {
       calls.push('session');
@@ -39,7 +44,7 @@ describe('launch sequence (PL-01)', () => {
   it('loads the session, reads the stored flag, reads the target, then starts the data binding', async () => {
     const { deps, calls } = makeDeps();
     await runLaunchSequence(deps);
-    expect(calls).toEqual(['session', 'flag', 'edSafe:false', 'target', 'binding']);
+    expect(calls).toEqual(['arguments', 'session', 'flag', 'edSafe:false', 'target', 'binding']);
   });
 
   it('starts the data binding (which starts the sync triggers) exactly once', async () => {
@@ -89,7 +94,7 @@ describe('launch sequence (PL-01)', () => {
     });
     const result = await runLaunchSequence(deps);
     expect(result).toMatchObject({ session: null, edSafe: false, hasTargets: false });
-    expect(calls).toEqual(['edSafe:false', 'binding']);
+    expect(calls).toEqual(['arguments', 'edSafe:false', 'binding']);
   });
 
   it('marks onboarding pending only for --ccSeedNoTargets (Swift: DEBUG and no seeded targets)', async () => {
@@ -100,7 +105,7 @@ describe('launch sequence (PL-01)', () => {
   it('wipes the local data first under --ccFreshStart, as Swift removes the database files', async () => {
     const { deps, calls } = makeDeps({ flags: { freshStart: true } });
     await runLaunchSequence(deps);
-    expect(calls).toEqual(['wipe', 'session', 'flag', 'edSafe:false', 'target', 'binding']);
+    expect(calls).toEqual(['arguments', 'wipe', 'session', 'flag', 'edSafe:false', 'target', 'binding']);
   });
 
   it('still opens the gate when the --ccFreshStart wipe fails (Swift never hangs on this path)', async () => {
@@ -112,7 +117,7 @@ describe('launch sequence (PL-01)', () => {
       },
     });
     const result = await runLaunchSequence(deps);
-    expect(calls).toEqual(['session', 'flag', 'edSafe:false', 'target', 'binding']);
+    expect(calls).toEqual(['arguments', 'session', 'flag', 'edSafe:false', 'target', 'binding']);
     expect(result).toMatchObject({ session: null, hasTargets: false });
     expect(warn).toHaveBeenCalledTimes(1);
     warn.mockRestore();
@@ -122,5 +127,60 @@ describe('launch sequence (PL-01)', () => {
     const { deps, calls } = makeDeps();
     (await runLaunchSequence(deps)).stop();
     expect(calls.at(-1)).toBe('stop');
+  });
+
+  it('reads the process arguments once, applies them, and then reads the flags (PL-05)', async () => {
+    const order: string[] = [];
+    let live: DebugFlags = { ...DEFAULT_DEBUG_FLAGS };
+    const loadLaunchArguments = jest.fn(async () => {
+      order.push('load');
+      return ['/path/CoachCal', '--ccEDSafe'];
+    });
+    const applyLaunchArguments = jest.fn((argv: readonly string[]) => {
+      order.push('apply');
+      live = { ...live, ...flagsFromArguments(argv) };
+    });
+    const { deps } = makeDeps({
+      loadLaunchArguments,
+      applyLaunchArguments,
+      flags: undefined,
+      readStoredEdSafe: async () => {
+        order.push('stored');
+        return false;
+      },
+    });
+    deps.flags = () => {
+      order.push('flags');
+      return live;
+    };
+    const result = await runLaunchSequence(deps);
+    expect(loadLaunchArguments).toHaveBeenCalledTimes(1);
+    expect(applyLaunchArguments).toHaveBeenCalledWith(['/path/CoachCal', '--ccEDSafe']);
+    expect(order.slice(0, 3)).toEqual(['load', 'apply', 'flags']);
+    expect(order.indexOf('stored')).toBeGreaterThan(order.indexOf('apply'));
+    expect(result.edSafe).toBe(true);
+  });
+
+  it('keeps the stored ED-safe mode when the arguments do not mention it, and --ccEDSafe forces it on', async () => {
+    const stored = makeDeps({ readStoredEdSafe: async () => true, loadLaunchArguments: async () => ['/path/CoachCal'] });
+    expect((await runLaunchSequence(stored.deps)).edSafe).toBe(true);
+
+    const forced = makeDeps({
+      readStoredEdSafe: async () => false,
+      flags: { edSafe: true },
+      loadLaunchArguments: async () => ['/path/CoachCal', '--ccEDSafe'],
+    });
+    expect((await runLaunchSequence(forced.deps)).edSafe).toBe(true);
+  });
+
+  it('keeps launching when the argument reader fails (an old build has no native module)', async () => {
+    const { deps, calls } = makeDeps({
+      loadLaunchArguments: async () => {
+        throw new Error('native');
+      },
+    });
+    const result = await runLaunchSequence(deps);
+    expect(result).toMatchObject({ session: null, edSafe: false });
+    expect(calls).toEqual(['session', 'flag', 'edSafe:false', 'target', 'binding']);
   });
 });
