@@ -27,7 +27,11 @@ for pair in "$@"; do
   fi
 done
 echo "package files changed vs main: $(git diff --name-only origin/main...HEAD | grep -cE 'package(-lock)?\.json' || true)"
-bash scripts/rn/clone-node-modules.sh "$R/rn-expo" "$R/$name" >"$L/clone-$name.log" 2>&1 || { echo "clone failed"; tail -2 "$L/clone-$name.log"; }
-echo "node_modules entries $(ls "$R/$name/node_modules" | wc -l | tr -d ' ')"
+if [ "${INTEGRATE_NODE_MODULES:-1}" = "1" ]; then
+  bash scripts/rn/clone-node-modules.sh "$R/rn-expo" "$R/$name" >"$L/clone-$name.log" 2>&1 || { echo "clone failed"; tail -2 "$L/clone-$name.log"; }
+  echo "node_modules entries $(ls "$R/$name/node_modules" | wc -l | tr -d ' ')"
+else
+  echo "node_modules: skipped (INTEGRATE_NODE_MODULES=0; use it for a docs-only tree)"
+fi
 echo "listeners on 5433/8787: $(lsof -nP -iTCP:5433 -iTCP:8787 -sTCP:LISTEN | grep -c LISTEN || true)"
 uptime | sed 's/.*load averages*: /load /'
