@@ -1,0 +1,44 @@
+{
+  "fdcId": 173430,
+  "description": "Butter, without salt",
+  "dataType": "Foundation",
+  "gtinUpc": null,
+  "foodNutrients": [
+    {
+      "nutrientId": 2047,
+      "nutrientName": "Energy (Atwater General Factors)",
+      "unitName": "KCAL",
+      "value": 645
+    },
+    {
+      "nutrientId": 2048,
+      "nutrientName": "Energy (Atwater Specific Factors)",
+      "unitName": "KCAL",
+      "value": 603
+    },
+    {
+      "nutrientId": 1003,
+      "nutrientName": "Protein",
+      "unitName": "G",
+      "value": 0.85
+    },
+    {
+      "nutrientId": 1004,
+      "nutrientName": "Total lipid (fat)",
+      "unitName": "G",
+      "value": 81.11
+    },
+    {
+      "nutrientId": 1005,
+      "nutrientName": "Carbohydrate, by difference",
+      "unitName": "G",
+      "value": 0.06
+    },
+    {
+      "nutrientId": 1079,
+      "nutrientName": "Fiber, total dietary",
+      "unitName": "G",
+      "value": 0
+    }
+  ]
+}
