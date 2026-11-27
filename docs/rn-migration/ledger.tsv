@@ -63,3 +63,4 @@ ts	unit	state	branch	pr	head	by	evidence
 2026-11-27T12:47:40Z		owner-w4c	running	rn/owner-w4c	33	-	CoachCal	parity.tsv seven rows; plan.md phase 4 (U-71b, U-79, the three stages, the owner decisions); state after the fourth drain
 2026-11-27T12:49:UTC	owner-w4c	landed	rn/owner-w4c	33	a1ca52c	CoachCal	parity 18 done, 57 partial; phase 4 stages and owner decisions on main; tree equals the branch tree
 2026-11-27T12:54:34Z		owner-approved	running	rn/owner-ember-approved	35	-	CoachCal	spec D13 and D15, design README, parity PL-17 and DY-08, plan decisions and U-80
+2026-11-27T12:55:17Z		designer-handoff	running	-	-	-	Designer	thread 5c4e9346, receipt 89fd8cf4: the full list of missing frames and the handoff format (tokens.css with a third block, figure.frame in the canvas, 1024 icon without alpha, a source per appearance)
