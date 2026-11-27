@@ -67,7 +67,7 @@ Shared files have one writer per wave. "Only" means nobody else edits it in that
 | `package.json`, `package-lock.json`, `apps/*/package.json` | U-13 only | nobody (frozen) | the owner, through a dependency unit |
 | `apps/mobile/app.config.ts`, `apps/mobile/plugins/**` | U-13 only | U-13 follow-ups only | the unit that holds the native slot |
 | `apps/mobile/src/app/**` | U-13 (skeleton) | U-14 adds nothing; U-20 owns `sign-in.tsx` | each feature owns its route file; `_layout.tsx` files belong to U-51 |
-| `apps/mobile/src/design/**` | U-22 only | U-22 follow-ups | frozen; U-30 adds a `testID` prop to the two buttons |
+| `apps/mobile/src/design/**` | U-22, then U-71 and U-71b in phase 4 | U-22 follow-ups | frozen; U-30 adds a `testID` prop to the two buttons |
 | `apps/mobile/src/data/db/**`, `src/data/repos/**` | nobody | U-12 only | frozen, except U-23: `sqlDb.ts`, `syncMergeRepository.ts` and the demo owner constant of `seedDataManager.ts` |
 | `apps/mobile/src/data/sync/**` | nobody | U-12: `store.sqlite.ts`, `repository.ts` only | U-23 |
 | `apps/mobile/src/data/api/**`, `src/data/auth/**` | nobody | U-20 only | frozen, except U-23: `syncClient.ts` and `syncTransport.test.ts` |
@@ -461,23 +461,73 @@ Units, in order; U-71 first because every other unit reads its tokens:
 | Unit | Rows | Goal | Needs |
 |---|---|---|---|
 | U-71 Ember design system (Worker-S1) | PL-06, PL-07 | `apps/mobile/src/design/tokens.ts` holds every token of `tokens.css` for light and dark, one to one, under names that keep today's keys working; the design components follow the component mapping and the color rules of `design-system.md`; the token test compares with `tokens.css`; a `SideBySide` evidence helper renders an RN frame and its Ember frame | nothing |
-| U-72 Scan on Ember | SC-01 to SC-07 | the six frames of the scan loop and Describe mode | U-71 |
+| U-71b Ember components, second batch (Worker-S1) | PL-07 | the icon set of the canvas, `GlassIconButton`, `SheetHeader`, `Segment`, `EdSafeNote`, `FillField`, `GramsRuler` and the icon tile of `OptionCard`, built once in `src/design` for every restyle unit | U-71 |
+| U-72 Scan on Ember | SC-01 to SC-07 | the six frames of the scan loop and Describe mode | U-71, U-71b |
 | U-73 Onboarding on Ember | OB-01 to OB-10 | the nine steps | U-71 |
 | U-74 Diary sheets on Ember | DY-01 to DY-07 | Diary day, add food, food search, manual log, exercise, custom food, water; the ED-Safe leak fixes | U-71 |
 | U-75 Progress and Coach on Ember | PG-01 to PG-04, CH-01 | both tabs, the chart tokens, the Coach actions | U-71 |
 | U-76 Today on Ember | TD-01 | the three Today frames, the tab bar icons of the design (Coach `sparkles`, Profile `person.crop.circle`) | U-33 merged, U-71 |
 | U-77 Profile, Settings and Billing on Ember | PR-01 to PR-03 | Profile, Settings, the quota sheet, the paywall, the cancel flow | U-71 |
-| U-78 Widgets and Live Activity on Ember (native slot) | PL-11, PL-12 | small, medium and Lock Screen widgets, the ED-Safe variants, the Live Activity in both places; the launch-argument reader | U-71, the native slot |
+| U-78 Widgets and Live Activity on Ember (native slot) | PL-11, PL-12 | small, medium and Lock Screen widgets, the ED-Safe variants, the Live Activity in both places | U-71, the native slot |
+| U-79 The native launch-argument reader (Worker-S2; native slot and Simulator slot) | PL-05 | a local Expo module reads the process arguments once at launch; the nine `--cc*` arguments work on a device as they did in the SwiftUI app; the harness passes them to `simctl launch` | nothing |
 
-Topology of phase 4: U-71 owns `apps/mobile/src/design/**`. After it merges, each restyle unit owns
-its feature tree and its route files, and may change a design component only through a finding to
-the owner. `apps/mobile/src/app/(tabs)/_layout.tsx` belongs to U-76.
+Topology of phase 4: U-71 owned `apps/mobile/src/design/**`, and U-71b owns it until it merges. A
+restyle unit owns its feature tree and its route files, and changes a design component only through
+a finding to the owner. `apps/mobile/src/app/(tabs)/_layout.tsx` belongs to U-76.
+
+How the restyle units run (decided on 2026-11-27 in the evening). The machine has one Simulator and
+U-79 held it, so a restyle unit has three stages in one thread and one pull request, and it merges
+at the end of the third:
+
+- Stage A, JS only: the code and its Jest tests, as far as the design components on the branch
+  allow. A control that does not exist yet stays as today's control, restyled with tokens, and is
+  listed in the findings under "Needs a design component". The unit never builds it inside the
+  feature.
+- Stage A2: once U-71b is on `main`, the unit merges `main` and swaps the shared components in.
+- Stage B, with the Simulator slot: the evidence rows of its frames written with
+  `scripts/rn/evidence/side-by-side.mjs`, the fixes they need, and `run-all.sh` at `0 failed`.
+
+Copy follows the frame where the frame shows that screen, except the onboarding copy, which OB-01
+locks. A test never changes its sentence; it may change the strings and the visual values it
+expects.
+
+Decisions the owner took for the behaviors the frames add. Each brief holds the ones of its unit.
+
+| The frame needs | Decision |
+|---|---|
+| Analyzing ticks only stages the server reports | the dwell timer goes and the screen shows only what the client observes (U-72); server stages are a backend follow-up |
+| The free-scan counter of the viewfinder and the "Free scans" row of the plan reveal | not shown until the server sends the limit before a scan; a pre-scan entitlement read is a backend follow-up |
+| Serving chips on the items of the review | the scan contract carries no servings and the VLM vocabulary is strict: contract and backend follow-up |
+| Onboarding "Prefer not to say" | follow-up: a new path through `TargetsEngine`, whose behavior tests are locked |
+| Metric and Imperial units in onboarding | follow-up: unit conversion across the app |
+| A meal-reminders toggle | follow-up: no stored preference exists, and `refreshNotifications()` has no caller yet (PL-10) |
+| The percent readout of onboarding step 8 | removed with the fake progress; the identifier is recorded as removed |
+| One Food / Exercise / Custom food segment in the diary | follow-up: it moves three sheets and their `*.close` identifiers |
+| Editing a food in the diary | follow-up: the app has no edit sheet today |
+| The Export tap shares a file | U-77 binds the tap to `exportCsvAndShare`; today it shares the text, as before U-42 |
+| `SecondaryButton` without an action in Settings | `action` becomes required in U-77; the billing buttons stay inert until products exist |
+| The label of the ring | U-76 decides between "remaining" and the frame's "kcal left" |
 
 Evidence of phase 4: for every frame, a Simulator screenshot of the RN screen next to the Ember
 frame (light, dark and ED-Safe where the design has them), and a list of deviations with reasons.
 Each restyle unit writes its rows with `node scripts/rn/evidence/side-by-side.mjs` into
 `docs/rn-migration/evidence/ember/<unit>.md` (the tool refuses a missing frame or a screenshot over
 700 KB); the final report gathers those pages.
+
+## State after the fourth drain (2026-11-27, evening)
+
+Merged, each after an independent review and the full gates with PostgreSQL 17 on an integration
+tree: PR 27 (U-33 Today, `e34ebda`), PR 30 (U-61b frame catalog, `d25536d`), PR 31 (U-71 Ember
+design system, `a0f210f`), PR 32 (U-42 HealthKit, notifications, CSV, `2458805`). Parity table: 18
+done, 57 partial, 12 todo, 1 n/a.
+
+Running: U-79 (Worker-S2, native and Simulator slots), U-71b (Worker-S1), stage A of U-73
+(Worker-G1) and of U-74 (Worker-G2). Queued in the order the workers free up: U-72 after U-71b,
+U-77 after U-73, U-75 after U-74, U-76 and U-78 after U-79, then the A2 and B stages.
+
+Still open from the fourth wave: `refreshNotifications()` has no caller; the Export tap shares text;
+the harness flows 06 and 07 of U-33 wait on `rn/u-33-harness` (cherry-pick `006ca49`, the branch
+carries a reverted commit in its history); `features/ember` and `src/spike` go in U-24.
 
 ## Waves 5 to 7 (outline; scoped at the drain before each)
 
@@ -494,7 +544,7 @@ Each restyle unit writes its rows with `node scripts/rn/evidence/side-by-side.mj
 | U-43 widget and Live Activity | PL-11, PL-12 | native slot; small widget with midnight rollover and ED-safe variant; Live Activity UI |
 | U-50 telemetry | PL-09 | native slot; allow-list seam first, Sentry and PostHog adapters after |
 | U-51 composition root, shell, debug console | PL-01, PL-02, PL-05 | see "Units of wave 4" above; the native reader of the launch arguments waits for the native slot |
-| U-52, U-53 evidence sweeps | every screen row | simulator slot, one at a time; light, dark and ED-safe screenshots per screen next to the SwiftUI snapshots; fix units for what they find |
+| U-52, U-53 evidence sweeps | every screen row | superseded on 2026-11-27: stage B of each restyle unit captures every screen next to its Ember frame (the SwiftUI snapshots are no longer the reference); what a sweep finds beyond those frames becomes its own fix unit |
 | U-60 parity audit | QA-01, QA-04 | a worker that built none of the feature reads every Swift source against the detail files and lists what is missing |
 | U-61 CI completion | QA-02, QA-03 | API integration tests on a PostgreSQL 17 service in RN CI; evidence flows runnable from CI artifacts |
 | U-70 cleanup | CL-01 | tag first, then one PR |
