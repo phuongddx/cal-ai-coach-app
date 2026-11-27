@@ -85,14 +85,62 @@
       </div>
       <div class="dock"><a class="btn primary">Open Mail</a><a class="btn secondary disabled" aria-disabled="true" style="margin-top:10px;color:var(--cc-text-2)">Resend link in 0:42</a><a class="btn ghost" style="margin-top:2px">Use a different email</a></div></div>`;
 
+  /* ---- 12b · e-mail code path (27/11, round 4): the path the app builds now ---- */
+  const alertLine = (t) => `<div role="alert" style="display:flex;gap:8px;align-items:flex-start;margin:10px 4px 0;font:400 15px/1.4 var(--cc-font);color:var(--cc-error-ink)">${ic("alert", "md")}<span>${t}</span></div>`;
+  const codeEmailPhone = (cls, state) => {
+    const err = state === "error";
+    return `<div class="phone plain ${cls}" data-sb><div class="scroll" style="padding:0 20px">
+      <div class="navbar" style="margin:0 -4px"><a class="glassbtn" aria-label="Back">${ic("back")}</a><span></span><span style="width:44px"></span></div>
+      <div style="font:700 28px/1.2 var(--cc-font);margin-top:12px">Continue with email</div>
+      <div style="font:400 17px/1.45 var(--cc-font);color:var(--cc-text-2);margin-top:8px">We'll email you a 6-digit code. If you're new, the same code creates your account.</div>
+      ${input({ lbl: "Email", value: "minh@example.com", focus: !err, error: err })}
+      ${err ? alertLine("We couldn't send the code. Check the address and try again.") : ""}
+      </div>
+      <div class="dock"><a class="btn primary">Send code</a></div></div>`;
+  };
+  const codeCells = (digits, { focusAt = -1, error = false } = {}) => {
+    const cell = (i) => {
+      const d = digits[i] || "";
+      const border = error ? "var(--cc-error)" : i === focusAt ? "var(--cc-accent)" : "transparent";
+      const caret = i === focusAt && !d ? `<span aria-hidden="true" style="display:inline-block;width:2px;height:28px;background:var(--cc-accent)"></span>` : "";
+      return `<span style="width:48px;height:58px;border-radius:12px;background:var(--cc-fill);border:2px solid ${border};display:grid;place-items:center;font:600 28px/1 var(--cc-font-round);font-variant-numeric:tabular-nums;color:var(--cc-text)${i === 3 ? ";margin-left:10px" : ""}">${d}${caret}</span>`;
+    };
+    return `<div role="textbox" aria-label="6-digit code" aria-invalid="${error}" style="display:flex;gap:8px;justify-content:center;margin-top:24px">${[0, 1, 2, 3, 4, 5].map(cell).join("")}</div>`;
+  };
+  const codePhone = (cls, state) => {
+    const err = state === "error";
+    const digits = err ? "482917" : "48291";
+    return `<div class="phone plain ${cls}" data-sb><div class="scroll" style="padding:0 20px">
+      <div class="navbar" style="margin:0 -4px"><a class="glassbtn" aria-label="Back to email">${ic("back")}</a><span></span><span style="width:44px"></span></div>
+      <div style="font:700 28px/1.2 var(--cc-font);margin-top:12px">Enter the code</div>
+      <div style="font:400 17px/1.45 var(--cc-font);color:var(--cc-text-2);margin-top:8px">We sent a 6-digit code to <b style="color:var(--cc-text);font-weight:600">minh@example.com</b>.</div>
+      ${codeCells(digits, { focusAt: err ? -1 : 5, error: err })}
+      ${err ? alertLine("That code is wrong or has expired. Check the latest email, or send a new code.") : ""}
+      <div style="font:400 15px/1.45 var(--cc-font);color:var(--cc-text-2);margin:16px 4px 0">Can't find it? Look in Junk or Promotions.</div>
+      </div>
+      <div class="dock">${err ? `<a class="btn primary">Verify</a>` : `<a class="btn primary disabled" aria-disabled="true">Verify</a>`}
+        ${err ? `<a class="btn ghost" style="margin-top:6px">Send a new code</a>` : `<a class="btn ghost disabled" aria-disabled="true" style="margin-top:6px;color:var(--cc-text-2)">Resend code in 0:42</a>`}
+        <a class="btn ghost" style="margin-top:2px">Use a different email</a></div></div>`;
+  };
+  put("authCodeRow", [
+    fig("auth-code-email-light", "Email step (light)", "After “Continue with email”. One field, email keyboard, <code>textContentType</code> emailAddress / <code>autoComplete</code> email. “Send code” is docked above the keyboard and stays enabled; an empty or malformed address gets the same inline line as a failed send. No password, no Sign in / Create account switch: new and known addresses take the same path.", codeEmailPhone("", "focus"), ["one path", "no password"]),
+    fig("auth-code-email-dark", "Email step (dark)", "Same tokens as the password screens: field on ccFill, accent focus ring and caret.", codeEmailPhone("dark", "focus")),
+    fig("auth-code-sendfail-light", "Code could not be sent (light)", "Network error, rate limit or a rejected address all show this one line under the field, announced with <code>role=alert</code>. It never says whether the address has an account.", codeEmailPhone("", "error"), ["inline error", "no account leak"]),
+    fig("auth-code-sendfail-dark", "Code could not be sent (dark)", "Error ink #FF7088 on black.", codeEmailPhone("dark", "error")),
+    fig("auth-code-entry-light", "Code entry (light)", "Six cells, drawn over ONE hidden text field (<code>keyboardType</code> number-pad, <code>textContentType</code> oneTimeCode, <code>autoComplete</code> one-time-code, maxLength 6), so paste and the keyboard's code suggestion fill all six at once and VoiceOver reads one field, “6-digit code”. Cells are split 3 + 3 for reading. The address sits in the sentence instead of a field; “Use a different email” and Back both return to the email step. Verify enables at 6 digits; no auto-submit (parity with today). Resend counts down from 60 s.", codePhone("", "entry"), ["one field", "paste + autofill", "44pt+"]),
+    fig("auth-code-entry-dark", "Code entry (dark)", "Cells on ccFill; the focused cell gets the accent ring and caret.", codePhone("dark", "entry")),
+    fig("auth-code-error-light", "Wrong or expired code (light)", "All six cells take the error border and the line under them says only that the code is wrong or expired. The digits stay so the person can fix a typo; typing again clears the error. “Send a new code” is drawn after the 60 s timer has run out; while it runs, the countdown from the entry frame shows instead.", codePhone("", "error"), ["inline error", "keeps digits"]),
+    fig("auth-code-error-dark", "Wrong or expired code (dark)", "Error border #FF7088 and the same line.", codePhone("dark", "error")),
+  ].join(""));
+
   put("authRow", [
     fig("auth-signin-light", "Sign in (light)", "Reached from Welcome → “I already have an account”, from Profile when signed out, and before the first scan if the account is required. Apple first (HIG), then Google, then email. In the app use the native buttons: <code>AppleAuthenticationButton</code> (expo-apple-authentication, style BLACK on light / WHITE on dark, corner radius 14) and Google's own button assets, so both brands are drawn by their owners. No skip button is drawn: if guest use is allowed, add a ghost “Not now” under the email row.", signinPhone(""), ["Apple first", "brand buttons", "44pt+"]),
     fig("auth-signin-dark", "Sign in (dark)", "Apple button flips to white with black text, Google to its dark theme (#131314 fill, #8E918F border, #E3E3E3 text), as both guidelines require.", signinPhone("dark")),
-    fig("auth-email-light", "Email + password (light)", "One screen for both: the segment switches between Sign in and Create account. Email keyboard with autofill (<code>textContentType</code> username / password, <code>autoComplete</code> email / current-password) so iCloud Keychain and passkeys can fill it. The eye button shows the password (44 pt).", emailPhone("", "focus"), ["autofill", "show password"]),
-    fig("auth-email-dark", "Email + password (dark)", "Fields sit on ccFill. The focus ring is accent (a graphic, 3:1+), the caret too.", emailPhone("dark", "focus")),
-    fig("auth-error-light", "Wrong password (light)", "The error is inline under the field, in error-ink with an icon, and is announced (<code>role=alert</code>). It never says which of the two was wrong. The button stays enabled; after 5 tries the server rate-limits and the note says so.", emailPhone("", "error"), ["inline error", "no account leak"]),
-    fig("auth-error-dark", "Wrong password (dark)", "Error ink #FF7088 on black is 7.3:1.", emailPhone("dark", "error")),
-    fig("auth-reset-light", "Reset link sent (light)", "After “Forgot password?”. Open Mail is primary; Resend unlocks after 60 s and counts down so a tap never looks broken. Dark follows the same tokens.", resetPhone("")),
+    fig("auth-email-light", "Reference only · Email + password (light)", "One screen for both: the segment switches between Sign in and Create account. Email keyboard with autofill (<code>textContentType</code> username / password, <code>autoComplete</code> email / current-password) so iCloud Keychain and passkeys can fill it. The eye button shows the password (44 pt).", emailPhone("", "focus"), ["autofill", "show password"]),
+    fig("auth-email-dark", "Reference only · Email + password (dark)", "Fields sit on ccFill. The focus ring is accent (a graphic, 3:1+), the caret too.", emailPhone("dark", "focus")),
+    fig("auth-error-light", "Reference only · Wrong password (light)", "The error is inline under the field, in error-ink with an icon, and is announced (<code>role=alert</code>). It never says which of the two was wrong. The button stays enabled; after 5 tries the server rate-limits and the note says so.", emailPhone("", "error"), ["inline error", "no account leak"]),
+    fig("auth-error-dark", "Reference only · Wrong password (dark)", "Error ink #FF7088 on black is 7.3:1.", emailPhone("dark", "error")),
+    fig("auth-reset-light", "Reference only · Reset link sent (light)", "After “Forgot password?”. Open Mail is primary; Resend unlocks after 60 s and counts down so a tap never looks broken. Dark follows the same tokens.", resetPhone("")),
   ].join(""));
 
   /* ======================= 13 · PROFILE: EDIT GOAL SHEET ======================= */

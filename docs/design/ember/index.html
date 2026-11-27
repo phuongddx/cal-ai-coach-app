@@ -70,7 +70,7 @@
   <h1>Neon orange, honest numbers.</h1>
   <p>One brand colour for the icon, app, widgets and web. Orange fills always carry black labels, and orange text uses a darker “ink” on light backgrounds. The scan loop keeps the confidence badge visible on every scan, lets you type grams directly, and keeps billing one tap from Settings. ED-Safe hides every calorie number, including the four sheets that used to show them.</p>
   <nav class="toc">
-    <a href="#system">Design system</a><a href="#scan">Scan loop</a><a href="#core">Today · Diary · Progress · Coach</a><a href="#profile">Profile · Settings</a><a href="#billing">Plans · Quota · Cancel</a><a href="#onboarding">Onboarding (9)</a><a href="#glance">Widget · Live Activity</a><a href="#icon">App icon</a><a href="#diaryedit">Diary edit</a><a href="#export">Export errors</a><a href="#darkmode">Dark: Onboarding · Billing</a><a href="#hc">High Contrast</a><a href="#auth">Sign in</a><a href="#target">Edit goal</a><a href="#scansheets">Describe · Report</a><a href="#paywallstates">Paywall: no price</a><a href="#glance2">Widget ED · LA steps</a><a href="#darkmore">Dark: Profile · Settings</a><a href="design-system.md">Tokens + handoff</a><a href="research.md">Research note</a>
+    <a href="#system">Design system</a><a href="#scan">Scan loop</a><a href="#core">Today · Diary · Progress · Coach</a><a href="#profile">Profile · Settings</a><a href="#billing">Plans · Quota · Cancel</a><a href="#onboarding">Onboarding (9)</a><a href="#glance">Widget · Live Activity</a><a href="#icon">App icon</a><a href="#diaryedit">Diary edit</a><a href="#export">Export errors</a><a href="#darkmode">Dark: Onboarding · Billing</a><a href="#hc">High Contrast</a><a href="#auth">Sign in (email code)</a><a href="#target">Edit goal</a><a href="#scansheets">Describe · Report</a><a href="#paywallstates">Paywall: no price</a><a href="#glance2">Widget ED · LA steps</a><a href="#darkmore">Dark: Profile · Settings</a><a href="design-system.md">Tokens + handoff</a><a href="research.md">Research note</a>
   </nav>
 </header>
 
@@ -756,8 +756,11 @@
 
 <!-- ============ 12–17 · ROUND 3 (27/11/2026) ============ -->
 <section class="band" id="auth">
-  <header><h2>12 · Sign in: Apple, Google, email</h2><p>One entry screen, then an email screen that handles both sign-in and create-account. Brand buttons follow Apple's and Google's own rules (native buttons in the app). Errors are inline and never say which field was wrong.</p></header>
+  <header><h2>12 · Sign in: Apple, Google, email code</h2><p>One entry screen, then email sign-in with a 6-digit code: type the address, tap Send code, type the code, tap Verify. New and known addresses take the same path, so there is no Create account switch. Brand buttons follow Apple's and Google's own rules (native buttons in the app). Errors are inline and never say whether an address has an account.</p></header>
   <div class="row" id="authRow"></div>
+  <h3 style="font:600 17px/1.3 var(--cc-font);margin:40px 0 6px">Email code: the path built now (27/11, round 4)</h3>
+  <p style="font:400 14px/1.5 var(--cc-font);color:#5F5B57;max-width:900px;margin-bottom:20px">The entry screen (first two frames above) is built as drawn. The email + password, wrong password and reset frames above are kept only as reference for a possible future password sign-in; they are not built now.</p>
+  <div class="row" id="authCodeRow"></div>
 </section>
 <section class="band" id="target">
   <header><h2>13 · Profile: edit goal sheet</h2><p>Goal weight and pace in one sheet, with the new daily target shown live before saving. ED-Safe hides the kcal only. Goals under the healthy range are clamped with a calm explanation.</p></header>

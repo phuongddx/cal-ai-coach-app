@@ -38,13 +38,17 @@ const slug = (text) =>
       pick: '.phone',
       nth: index,
       section: (el.closest('section') || {}).id || '',
+      id: (el.closest('figure') || {}).id || '',
       caption: firstLine(el.closest('figure')?.querySelector('figcaption')) || firstLine(el.parentElement.querySelector(':scope > figcaption, :scope > b')),
     }));
+    // The whole figure: a frame can hold several cards (the steps of the Live Activity), and its
+    // first child alone would lose the others.
     const glance = [...document.querySelectorAll('#glance figure.frame')].map((el, index) => ({
       kind: 'glanceable',
-      pick: '#glance figure.frame > :first-child',
+      pick: '#glance figure.frame',
       nth: index,
       section: 'glance',
+      id: el.id || '',
       caption: firstLine(el.querySelector('figcaption')),
     }));
     // A frame of any other section that holds no phone (a widget, a Live Activity, a step list).
@@ -56,6 +60,7 @@ const slug = (text) =>
       pick: 'figure.frame:not(:has(.phone))',
       nth: [...document.querySelectorAll('figure.frame:not(:has(.phone))')].indexOf(el),
       section: (el.closest('section') || {}).id || '',
+      id: el.id || '',
       caption: firstLine(el.querySelector('figcaption')) || el.id || 'frame',
     }));
     return phones.concat(glance).concat(others);
@@ -66,15 +71,45 @@ const slug = (text) =>
     return;
   }
   fs.mkdirSync(out, { recursive: true });
+  // A frame keeps the number it had in the committed manifest, so a frame added in the middle of
+  // the canvas does not shift the numbers the catalog and the units cite. The identity of a frame
+  // is the id of its figure; the caption serves only for a frame without an id, because Designer
+  // may reword a caption. A new frame takes the number after the highest one already taken.
+  const manifestPath = path.join(out, 'manifest.json');
+  const previous = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : [];
+  const oldNumber = new Map(
+    previous.map((entry) => [`${entry.section}|${entry.id || entry.caption}`, Number.parseInt(entry.file, 10)]),
+  );
+  const taken = new Set();
+  const numbers = frames.map((frame) => {
+    const old = oldNumber.get(`${frame.section}|${frame.id || frame.caption}`);
+    if (old !== undefined && !taken.has(old)) {
+      taken.add(old);
+      return old;
+    }
+    return null;
+  });
+  let next = Math.max(0, ...taken) + 1;
   const manifest = [];
-  for (const frame of frames) {
-    const name = `${String(manifest.length + 1).padStart(2, '0')}-${frame.section}-${slug(frame.caption) || 'frame'}.png`;
+  for (const [index, frame] of frames.entries()) {
+    if (numbers[index] === null) {
+      numbers[index] = next;
+      taken.add(next);
+      next += 1;
+    }
+    const name = `${String(numbers[index]).padStart(2, '0')}-${frame.section}-${slug(frame.caption) || 'frame'}.png`;
     const element = page.locator(frame.pick).nth(frame.nth);
     await element.scrollIntoViewIfNeeded();
     await element.screenshot({ path: path.join(out, name) });
-    manifest.push({ file: name, kind: frame.kind, section: frame.section, caption: frame.caption });
+    manifest.push({ file: name, kind: frame.kind, section: frame.section, id: frame.id, caption: frame.caption });
   }
-  fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+  // A frame that left the canvas takes its picture with it.
+  const kept = new Set(manifest.map((entry) => entry.file));
+  for (const file of fs.readdirSync(out)) {
+    if (/^\d{2,3}-.*\.png$/.test(file) && !kept.has(file)) fs.rmSync(path.join(out, file));
+  }
+  manifest.sort((a, b) => Number.parseInt(a.file, 10) - Number.parseInt(b.file, 10));
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
   console.log(`captured ${manifest.length} frames (${frames.filter((f) => f.kind === 'screen').length} screens, ${frames.filter((f) => f.kind === 'glanceable').length} glanceables)`);
   await browser.close();
 })().catch((error) => {
