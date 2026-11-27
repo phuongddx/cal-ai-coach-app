@@ -8,7 +8,7 @@ import { type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
-import { space, typography, useTokens } from '../tokens';
+import { radius, space, typography, useTokens } from '../tokens';
 
 import { useEdSafeMode } from '../edSafe';
 
@@ -18,9 +18,21 @@ export type FoodRowProps = {
   kcal?: number;
   compactBadge?: ReactNode;
   syncPending?: boolean;
+  /** Short label drawn on the row under the meta, such as "Edited". */
+  chip?: string;
+  /** Identifier of the chip when the caller must keep its own (`diary.editedChip.<id>`). Default `food-row-chip:<title>`. */
+  chipTestID?: string;
 };
 
-export function FoodRow({ title, meta, kcal, compactBadge, syncPending = false }: FoodRowProps) {
+export function FoodRow({
+  title,
+  meta,
+  kcal,
+  compactBadge,
+  syncPending = false,
+  chip,
+  chipTestID,
+}: FoodRowProps) {
   const { colors } = useTokens();
   const edSafeMode = useEdSafeMode();
   return (
@@ -41,6 +53,14 @@ export function FoodRow({ title, meta, kcal, compactBadge, syncPending = false }
           </Text>
         )}
         {compactBadge}
+        {chip != null && chip.length > 0 && (
+          <View
+            testID={chipTestID ?? `food-row-chip:${title}`}
+            style={[styles.chip, { backgroundColor: colors.fill }]}
+          >
+            <Text style={[styles.chipText, { color: colors.text2 }]}>{chip}</Text>
+          </View>
+        )}
       </View>
       {syncPending && (
         <View style={styles.syncPending}>
@@ -82,6 +102,15 @@ const styles = StyleSheet.create({
   },
   meta: {
     ...typography.footnote,
+  },
+  chip: {
+    alignSelf: 'flex-start',
+    borderRadius: radius.full,
+    paddingHorizontal: space.sm,
+    paddingVertical: 2,
+  },
+  chipText: {
+    ...typography.caption,
   },
   syncPending: {
     flexDirection: 'row',

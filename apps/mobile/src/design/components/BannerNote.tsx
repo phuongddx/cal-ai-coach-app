@@ -1,5 +1,5 @@
 /**
- * CCBannerNote (Components/Cards.swift). Footnote banner in three variants.
+ * CCBannerNote (Components/Cards.swift). Footnote banner in five variants (`caution` and `error` added for the goal-floor card and the export errors).
  * The `markdown` prop is the Swift `init(markdown:)` form: locked-banner copy
  * leads with a bold **markdown** clause, which this renderer inlines without
  * printing the asterisks.
@@ -9,7 +9,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { radius, space, typography, useTokens, type Colors } from '../tokens';
 
-export type BannerVariant = 'success' | 'neutral' | 'info';
+export type BannerVariant = 'success' | 'neutral' | 'info' | 'caution' | 'error';
 
 export type BannerNoteProps = {
   text: string;
@@ -25,6 +25,10 @@ function bannerBackground(colors: Colors, variant: BannerVariant): string {
       return colors.fill;
     case 'info':
       return colors.infoTint;
+    case 'caution':
+      return colors.cautionTint;
+    case 'error':
+      return colors.errorTint;
   }
 }
 
@@ -36,6 +40,10 @@ function bannerBorder(colors: Colors, variant: BannerVariant): string {
       return colors.border;
     case 'info':
       return colors.info;
+    case 'caution':
+      return colors.caution;
+    case 'error':
+      return colors.error;
   }
 }
 

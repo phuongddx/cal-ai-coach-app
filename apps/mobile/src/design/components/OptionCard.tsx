@@ -31,12 +31,19 @@ export function optionCardBorder(colors: Colors, isSelected: boolean): { width: 
   return isSelected ? { width: 2, color: colors.accentStrong } : { width: 1, color: colors.border };
 }
 
-export function optionCardIconTile(colors: Colors, isSelected: boolean): string {
-  return isSelected ? colors.accentTint : colors.fill;
+/** Card fill: the frames tint the whole selected card (`accentTint`); unselected stays `card`. */
+export function optionCardBackground(colors: Colors, isSelected: boolean): string {
+  return isSelected ? colors.accentTint : colors.card;
 }
 
+/** Icon tile: orange `accent` disc on the tinted selected card (frames 21/22/24), `fill` otherwise. */
+export function optionCardIconTile(colors: Colors, isSelected: boolean): string {
+  return isSelected ? colors.accent : colors.fill;
+}
+
+/** Glyph ink: `onAccent` on the orange tile when selected, `text2` otherwise. */
 export function optionCardIconColor(colors: Colors, isSelected: boolean): string {
-  return isSelected ? colors.accentInk : colors.text2;
+  return isSelected ? colors.onAccent : colors.text2;
 }
 
 export function optionCardA11yLabel(title: string, subtitle: string | undefined, isSelected: boolean): string {
@@ -57,7 +64,7 @@ export function OptionCard({ title, subtitle, icon, iconName, isSelected, onSele
       style={[
         styles.card,
         {
-          backgroundColor: colors.card,
+          backgroundColor: optionCardBackground(colors, isSelected),
           borderWidth: border.width,
           borderColor: border.color,
         },
