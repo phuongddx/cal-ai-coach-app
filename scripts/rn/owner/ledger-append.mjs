@@ -22,13 +22,15 @@ const ledgerHeader = readFileSync(join(dir, 'ledger.tsv'), 'utf8').split('\n')[0
 const trailHeader = readFileSync(join(dir, 'trail.tsv'), 'utf8').split('\n')[0].split('\t');
 
 const ledgerLines = ledger.map((row) => {
-  const fields = Array.isArray(row) ? row : ledgerHeader.map((h) => row[h] ?? '');
-  if (fields.length !== ledgerHeader.length) throw new Error(`ledger row has ${fields.length} cells, header ${ledgerHeader.length}`);
+  const names = ledgerHeader.slice(1);
+  const fields = Array.isArray(row) ? row : names.map((h) => row[h] ?? '');
+  if (fields.length !== names.length) throw new Error(`ledger row has ${fields.length} cells, expected ${names.length}`);
   return [ts, ...fields].map(cell).join('\t');
 });
 const trailLines = trail.map((row) => {
-  const fields = Array.isArray(row) ? row : trailHeader.map((h) => row[h] ?? '');
-  if (fields.length !== trailHeader.length) throw new Error(`trail row has ${fields.length} cells, header ${trailHeader.length}`);
+  const names = trailHeader.slice(1);
+  const fields = Array.isArray(row) ? row : names.map((h) => row[h] ?? '');
+  if (fields.length !== names.length) throw new Error(`trail row has ${fields.length} cells, expected ${names.length}`);
   return [ts, ...fields].map(cell).join('\t');
 });
 appendFileSync(join(dir, 'ledger.tsv'), `${ledgerLines.join('\n')}\n`);
