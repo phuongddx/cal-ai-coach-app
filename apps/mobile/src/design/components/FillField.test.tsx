@@ -129,6 +129,7 @@ describe('FillField error border and focus ring (U-71g)', () => {
     await fireEvent(screen.getByTestId('age'), 'focus');
     expect(screen.getByTestId('age').parent as never).toHaveStyle({ height: 56, paddingHorizontal: 16 });
     expect(screen.getByTestId('age.ring')).toHaveProp('pointerEvents', 'none');
+    expect(screen.getByTestId('age.ring')).toHaveStyle({ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 });
   });
 
   it('draws the error border in the error ink, in both schemes, and it wins over focus', async () => {
