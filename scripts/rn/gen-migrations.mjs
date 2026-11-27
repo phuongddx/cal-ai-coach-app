@@ -4,7 +4,7 @@
  *
  * `node scripts/rn/gen-migrations.mjs`
  *   1. runs `drizzle-kit generate` in apps/mobile against
- *      apps/mobile/src/data/db/schema.ts (fresh output directory),
+ *      apps/mobile/src/data/db/schema.ts (a temporary output directory),
  *   2. concatenates the generated SQL files in file-name order into
  *      apps/mobile/src/data/db/migrations.ts as
  *      `export const MIGRATIONS: readonly { id: string; sql: string }[]`,
@@ -13,8 +13,8 @@
  *      array line — the generated file is never edited by hand.
  *
  * `node scripts/rn/gen-migrations.mjs --check`
- *   regenerates into a temporary directory, rebuilds the bundle in memory and
- *   exits 1 when the committed migrations.ts differs. The bundle content does
+ *   regenerates and rebuilds the bundle in memory, then exits 1 when the committed
+ *   migrations.ts differs. The bundle content does
  *   not depend on drizzle-kit's random migration file names (ids are the
  *   zero-padded file-order index), so the check is deterministic.
  *
@@ -90,7 +90,7 @@ function buildBundle(outDir) {
   return `${HEADER}${entries.join(',\n')},\n];\n`;
 }
 
-const outDir = checkMode ? mkdtempSync(join(tmpdir(), 'coachcal-migrations-')) : join(mobileDir, 'src', 'data', 'db', 'migrations');
+const outDir = mkdtempSync(join(tmpdir(), 'coachcal-migrations-'));
 
 try {
   generate(outDir);
@@ -114,7 +114,6 @@ try {
     }
   }
 } finally {
-  if (checkMode && existsSync(outDir)) {
-    rmSync(outDir, { recursive: true, force: true });
-  }
+  // The kit's own output (SQL, snapshot, journal) is never kept: migrations.ts is the only copy.
+  rmSync(outDir, { recursive: true, force: true });
 }
