@@ -25,7 +25,14 @@ echo "tests slower than 15 s (would time out at the usual limit): $(grep -oE '\(
 grep -E "\((1[5-9]|[2-9][0-9]|[0-9]{3,})(\.[0-9]+)? s\)" "$L/$P-test.log" | head -10
 
 npm run typecheck >"$L/$P-typecheck.log" 2>&1
-echo "typecheck exit=$?  tsc errors: $(grep -c 'error TS' "$L/$P-typecheck.log")"
+tc=$?
+if [ "$tc" != "0" ] && grep -q "was not rewritten within" "$L/$P-typecheck.log"; then
+  # The typed-routes step has a 120 s watchdog; a loaded machine trips it before tsc runs. One rerun.
+  echo "typecheck stopped at the typed-routes watchdog; rerunning once"
+  npm run typecheck >"$L/$P-typecheck-2.log" 2>&1
+  tc=$?
+fi
+echo "typecheck exit=$tc  tsc errors: $(cat "$L/$P-typecheck.log" "$L/$P-typecheck-2.log" 2>/dev/null | grep -c 'error TS')"
 
 npm run parity:check >"$L/$P-parity.log" 2>&1
 echo "parity exit=$?"
