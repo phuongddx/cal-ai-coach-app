@@ -4,6 +4,7 @@
  * from here, so a save and the sync engine share one connection and one transaction window.
  * Nothing native runs at import time. U-51 folds this into the React environment.
  */
+import { getDebugFlags } from '../debug/launchArgs';
 import { createCatalogRepository, type CatalogRepository } from './repos/catalogRepository';
 import { createDiaryEntryRepository, type DiaryEntryRepository } from './repos/diaryEntryRepository';
 import { createEngagementRepository, type EngagementRepository } from './repos/engagementRepository';
@@ -26,7 +27,11 @@ export type DataEnvironment = {
   now: Clock;
 };
 
-const now: Clock = () => new Date();
+/** The real clock, or the instant of `--ccFixedClock` (`AppEnvironment` injects `clock = { fixedClock }`). */
+const now: Clock = () => {
+  const fixed = getDebugFlags().fixedClock;
+  return fixed === null ? new Date() : new Date(fixed);
+};
 
 let environment: DataEnvironment | null = null;
 
