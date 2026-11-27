@@ -9,22 +9,22 @@
   tap 'Progress' (RadioButton) at (158, 822) from frame x=110.66666666666669 y=795 w=95 h=54
   ok: tap at (158, 822)
   ok: found title 'Progress' (StaticText at y=370)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/PL-01/02-tab-progress.png (577 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/PL-01-02-tab-progress.png
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-01/02-tab-progress.png (582 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/PL-01-02-tab-progress.png
 
 === tab: Coach ===
   tap 'Coach' (RadioButton) at (243, 822) from frame x=196.33333333333334 y=795 w=95.000000000000028 h=54
   ok: tap at (243, 822)
   ok: found title 'TODAY'S INSIGHTS' (Heading at y=370)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/PL-01/02-tab-coach.png (420 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/PL-01-02-tab-coach.png
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-01/02-tab-coach.png (426 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/PL-01-02-tab-coach.png
 
 === tab: Profile ===
   tap 'Profile' (RadioButton) at (329, 822) from frame x=282 y=795 w=95 h=54
   ok: tap at (329, 822)
   ok: found title 'GOALS & TARGETS' (Heading at y=370)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/PL-01/02-tab-profile.png (328 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-79/docs/rn-migration/evidence/tmp/PL-01-02-tab-profile.png
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-01/02-tab-profile.png (334 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/PL-01-02-tab-profile.png
 
 === back to Today ===
   tap 'Today' (RadioButton) at (72, 822) from frame x=25 y=795 w=95 h=54

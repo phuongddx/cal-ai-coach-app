@@ -17,6 +17,16 @@ registerBuiltinSpikeActions();
 export const unstable_settings = { anchor: '(tabs)' };
 
 /**
+ * Where a guarded screen is sent. Without a `redirectTo`, expo-router sends a guarded screen to the
+ * anchor (`(tabs)`), and when the anchor is guarded too, to the FIRST unguarded file route in alphabetical
+ * order. That is `debug`, which sorts before `onboarding` and `sign-in` and is never guarded: a fresh
+ * install landed on the Debug console (U-81). The navigator state is born from the launch URL (`/`, so
+ * `(tabs)`) while the gate still shows the spinner, so the guard always has to move it: name the gate's
+ * route as the destination of every group.
+ */
+const GATE_HOME = { wait: '/', 'sign-in': '/sign-in', onboarding: '/onboarding', shell: '/' } as const;
+
+/**
  * The root gate (PL-01, `RootView.swift`). The launch sequence runs once at mount (session, stored
  * flags, target, data binding: `src/platform/launchSequence.ts`); until it is done the gate shows a
  * spinner. Then `decideRootGate` picks one of three groups of routes and `Stack.Protected` mounts only
@@ -27,6 +37,7 @@ export default function RootLayout() {
   const router = useRouter();
   const controller = getRootController();
   const route = useRootGateRoute(controller);
+  const home = GATE_HOME[route];
   const { colors } = useTokens();
   const environment = useMemo(() => createAppEnvironment(() => router.push('/scan')), [router]);
 
@@ -49,13 +60,13 @@ export default function RootLayout() {
         </View>
       ) : (
         <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Protected guard={route === 'sign-in'}>
+          <Stack.Protected guard={route === 'sign-in'} redirectTo={home}>
             <Stack.Screen name="sign-in" />
           </Stack.Protected>
-          <Stack.Protected guard={route === 'onboarding'}>
+          <Stack.Protected guard={route === 'onboarding'} redirectTo={home}>
             <Stack.Screen name="onboarding/index" />
           </Stack.Protected>
-          <Stack.Protected guard={route === 'shell'}>
+          <Stack.Protected guard={route === 'shell'} redirectTo={home}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="scan/index" options={{ presentation: 'fullScreenModal' }} />
             <Stack.Screen name="diary" options={{ presentation: 'formSheet', sheetGrabberVisible: true }} />
