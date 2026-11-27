@@ -35,8 +35,8 @@ export interface SettingsModelDeps {
   readSetting: (key: string) => Promise<string | null>;
   /** The route binds the account-deletion API call (best-effort cascade step 1). */
   deleteAccount: () => Promise<void>;
-  /** The route binds the sync store's reset (best-effort cascade step 2). */
-  resetSyncStore: () => Promise<void>;
+  /** The route binds the platform's full local reset with the remote step off (best-effort cascade step 2: every table, both stored flags, the widget, the root gate). */
+  resetLocalData: () => Promise<void>;
   /** The route binds the auth services' sign-out (best-effort cascade step 3). */
   signOut: () => Promise<void>;
   /** The route binds the CSV export service; the model shares exactly what it produces. */
@@ -49,6 +49,8 @@ export class SettingsModel {
   readonly burnAddBackStorageKey: string;
   wellnessPolicyOn: boolean;
   burnAddBackOn = false;
+  /** The failed wellness write's message, shown by the screen; null after a good write. */
+  wellnessWriteError: string | null = null;
   /** The loaded export; null until the injected action resolves (the row stays disabled). */
   exportedCsv: string | null = null;
 
@@ -87,10 +89,19 @@ export class SettingsModel {
   /**
    * The toggle's single mutation path: persist '1'/'0' first, then apply the
    * design flag (the Switch flips when the flag applies, so a failed write
-   * never shows an applied policy).
+   * never shows an applied policy). A failed write is recorded for the screen
+   * (wellnessWriteError) and rethrown: the view's handler catches it, so no
+   * rejection is ever unhandled.
    */
   async setWellnessPolicy(on: boolean): Promise<void> {
-    await this.deps.writeSetting(this.deps.policyStorageKey, on ? '1' : '0');
+    try {
+      await this.deps.writeSetting(this.deps.policyStorageKey, on ? '1' : '0');
+    } catch (error) {
+      this.wellnessWriteError = error instanceof Error ? error.message : 'The setting could not be saved.';
+      this.touch();
+      throw error;
+    }
+    this.wellnessWriteError = null;
     this.deps.applyPolicyFlag(on);
     this.wellnessPolicyOn = on;
     this.touch();
@@ -113,19 +124,23 @@ export class SettingsModel {
   }
 
   // -- Account reset (T-P07-04) ----------------------------------------------
-  // The confirmed destructive action. The cascade and the sign-out are
+  // The confirmed destructive action. The chain keeps the order the dialog
+  // promises: server cascade → the platform's full local reset (every table,
+  // both stored flags, the widget, the root gate — PR-22's flow, which the
+  // route binds with the remote step off) → sign-out. Every step is
   // best-effort and unconditional — a cascade failure (offline, already
-  // deleted, …) must never skip the next step, since the user-visible promise
-  // is "this device forgets you". U-51 replaces the route's binding with its
-  // full reset flow (every local-only table + post-reset routing).
+  // deleted, …) must never skip the next, since the user-visible promise is
+  // "this device forgets you". The reset against the real store is proven in
+  // settingsReset.test.ts.
 
-  /** The confirmed reset: server cascade → local store wipe → sign-out, then the in-memory flags clear. */
+  /** The confirmed reset: server cascade → full local reset → sign-out, then the in-memory flags clear. */
   async resetAccount(): Promise<void> {
     await this.step(this.deps.deleteAccount);
-    await this.step(this.deps.resetSyncStore);
+    await this.step(this.deps.resetLocalData);
     await this.step(this.deps.signOut);
     this.wellnessPolicyOn = false;
     this.burnAddBackOn = false;
+    this.wellnessWriteError = null;
     this.exportedCsv = null;
     this.touch();
   }

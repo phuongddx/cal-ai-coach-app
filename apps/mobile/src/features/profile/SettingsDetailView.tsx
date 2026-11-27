@@ -72,15 +72,28 @@ export function SettingsDetailView({ model }: SettingsDetailViewProps) {
             </Text>
             <Switch
               value={policyOn}
-              onValueChange={(on) => void model.setWellnessPolicy(on)}
+              onValueChange={(on) => {
+                // The model records a failed write (wellnessWriteError) and
+                // rethrows; this catch is the handler's guard so no rejection
+                // is ever unhandled.
+                void model.setWellnessPolicy(on).catch(() => undefined);
+              }}
               trackColor={{ true: colors.macroFat, false: undefined }}
-              testID="settings.wellnessToggle"
+              testID="settings.edSafeToggle"
               accessibilityLabel={wellnessAnnouncement(policyOn)}
             />
           </View>
           <Text style={[typography.footnote, { color: colors.textSecondary }]}>
             {settingsCopy.wellnessDescription}
           </Text>
+          {model.wellnessWriteError !== null && (
+            <View testID="settings.wellnessError">
+              {/* RN-only: the Swift write is a synchronous UserDefaults set; the
+                  async database write can fail and the screen says so instead of
+                  silently keeping a dead switch. */}
+              <BannerNote text={model.wellnessWriteError} />
+            </View>
+          )}
         </View>
 
         <SectionHeader title="Health" />

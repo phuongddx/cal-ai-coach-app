@@ -3,13 +3,14 @@
  * Swift case, same behavior sentence. The Swift cases that inspect views with
  * ViewInspector render the RN screens here; the pure-model cases stay pure.
  *
- * The wellness storage key and the policy API names never appear under
- * features/profile (the acceptance grep pins that): the app-wide key literal
- * lives in the route file (`src/app/settings.tsx`) and reaches the model as the
- * injected `policyStorageKey`, so the twins assert the '1'/'0' format and the
- * storage calls against the injected key. See
- * docs/rn-migration/parity-detail/profile-settings.md for the key and the
- * identifier table.
+ * The wellness policy branch never decides what this feature shows (standing
+ * order rule 20): the app-wide key literal lives in the route file
+ * (`src/app/settings.tsx`) and reaches the model as the injected
+ * `policyStorageKey`, so the twins assert the '1'/'0' format and the storage
+ * calls against the injected key. The switch's identifier carries the Swift
+ * string (`settings.edSafeToggle`) — an identifier containing edSafe is
+ * correct. See docs/rn-migration/parity-detail/profile-settings.md for the key
+ * and the identifier table.
  *
  * Dual-react preamble: jest-expo pins `react-native` but not `react`; app-side
  * requests are re-pointed onto the renderer's copy. See findings/U-22.md.
@@ -84,8 +85,8 @@ function makeSettingsModel(overrides: Partial<SettingsModelDeps> = {}) {
     deleteAccount: async () => {
       order.push('deleteAccount');
     },
-    resetSyncStore: async () => {
-      order.push('resetStore');
+    resetLocalData: async () => {
+      order.push('resetLocalData');
     },
     signOut: async () => {
       order.push('signOut');
@@ -135,7 +136,7 @@ describe('settings (SettingsTests twin)', () => {
 
     const { model } = makeSettingsModel();
     await render(<SettingsDetailView model={model} />);
-    const toggle = screen.getByTestId('settings.wellnessToggle');
+    const toggle = screen.getByTestId('settings.edSafeToggle');
     expect(toggle.props.accessibilityLabel).toBe('ED-Safe Mode, off');
   });
 
@@ -173,29 +174,30 @@ describe('settings (SettingsTests twin)', () => {
 
     await model.resetAccount();
 
-    // The server cascade, the local store wipe and the sign-out run in order,
-    // best-effort: a failed step never skips the next one.
+    // The server cascade, the full local reset (every table, both stored flags,
+    // the widget and the root gate — the platform's reset flow) and the
+    // sign-out run in order, best-effort: a failed step never skips the next.
     expect(order).toEqual([
       `write:${POLICY_KEY}=1`,
       'policy:on',
       `write:${BURN_ADD_BACK_KEY}=1`,
       '# export',
       'deleteAccount',
-      'resetStore',
+      'resetLocalData',
       'signOut',
     ]);
     expect(model.wellnessPolicyOn).toBe(false);
     expect(model.burnAddBackOn).toBe(false);
 
-    // The full local wipe (every local-only table) and the post-reset routing
-    // belong to U-51's reset flow, which replaces this binding.
+    // The full local wipe against the real store (every one of the fifteen
+    // tables and both stored flags) is proven in settingsReset.test.ts.
     const failing = makeSettingsModel({
       deleteAccount: async () => {
         throw new Error('network down');
       },
     });
     await failing.model.resetAccount();
-    expect(failing.order).toEqual(['resetStore', 'signOut']);
+    expect(failing.order).toEqual(['resetLocalData', 'signOut']);
   });
 
   // testSubscriptionCardRendersDisplayOnly

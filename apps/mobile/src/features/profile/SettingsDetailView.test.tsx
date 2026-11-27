@@ -43,7 +43,7 @@ function makeModel(overrides: Partial<SettingsModelDeps> = {}) {
     writeSetting: jest.fn(async () => undefined),
     readSetting: jest.fn(async () => null),
     deleteAccount: jest.fn(async () => undefined),
-    resetSyncStore: jest.fn(async () => undefined),
+    resetLocalData: jest.fn(async () => undefined),
     signOut: jest.fn(async () => undefined),
     csvExportAction: jest.fn(async () => '# user_targets\nid\n'),
     ...overrides,
@@ -72,7 +72,7 @@ describe('settings screen', () => {
     expect(screen.getByText('Contact us')).toBeOnTheScreen();
 
     expect(screen.getByTestId('settings.wellnessCard')).toBeOnTheScreen();
-    expect(screen.getByTestId('settings.wellnessToggle')).toBeOnTheScreen();
+    expect(screen.getByTestId('settings.edSafeToggle')).toBeOnTheScreen();
     expect(screen.getByTestId('settings.burnAddBackToggle')).toBeOnTheScreen();
     expect(screen.getByTestId('settings.burnAddBackNote')).toBeOnTheScreen();
     expect(screen.getByTestId('settings.row.export')).toBeOnTheScreen();
@@ -94,16 +94,37 @@ describe('settings screen', () => {
     await render(<SettingsDetailView model={model} />);
 
     await act(async () => {
-      fireEvent(screen.getByTestId('settings.wellnessToggle'), 'valueChange', true);
+      fireEvent(screen.getByTestId('settings.edSafeToggle'), 'valueChange', true);
     });
     expect(deps.writeSetting).toHaveBeenCalledWith('wellness.policy.key', '1');
-    await waitFor(() => expect(screen.getByTestId('settings.wellnessToggle').props.value).toBe(true));
+    await waitFor(() => expect(screen.getByTestId('settings.edSafeToggle').props.value).toBe(true));
 
     await act(async () => {
-      fireEvent(screen.getByTestId('settings.wellnessToggle'), 'valueChange', false);
+      fireEvent(screen.getByTestId('settings.edSafeToggle'), 'valueChange', false);
     });
     expect(deps.writeSetting).toHaveBeenCalledWith('wellness.policy.key', '0');
-    await waitFor(() => expect(screen.getByTestId('settings.wellnessToggle').props.value).toBe(false));
+    await waitFor(() => expect(screen.getByTestId('settings.edSafeToggle').props.value).toBe(false));
+  });
+
+  it('shows the model error and keeps the switch off when the wellness write fails', async () => {
+    const { model, deps } = makeModel({
+      writeSetting: jest.fn(async () => {
+        throw new Error('disk full');
+      }),
+    });
+    await render(<SettingsDetailView model={model} />);
+
+    // The handler catches the rejection (no unhandled rejection escapes), the
+    // model records the error, the screen shows it, and the failed write never
+    // shows an applied policy.
+    await act(async () => {
+      fireEvent(screen.getByTestId('settings.edSafeToggle'), 'valueChange', true);
+    });
+    expect(deps.applyPolicyFlag).not.toHaveBeenCalled();
+    expect(model.wellnessWriteError).toBe('disk full');
+    await waitFor(() => expect(screen.getByTestId('settings.wellnessError')).toBeOnTheScreen());
+    expect(screen.getByText('disk full')).toBeOnTheScreen();
+    expect(screen.getByTestId('settings.edSafeToggle').props.value).toBe(false);
   });
 
   it('persists the burn add-back switch under its storage key', async () => {
@@ -137,7 +158,7 @@ describe('settings screen', () => {
     await userEvent.press(screen.getByTestId('settings.row.deleteAccount'));
     await userEvent.press(screen.getByTestId('settings.deleteConfirm'));
     expect(deps.deleteAccount).toHaveBeenCalledTimes(1);
-    expect(deps.resetSyncStore).toHaveBeenCalledTimes(1);
+    expect(deps.resetLocalData).toHaveBeenCalledTimes(1);
     expect(deps.signOut).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(settingsCopy.deleteAccountTitle)).toBeNull();
   });
