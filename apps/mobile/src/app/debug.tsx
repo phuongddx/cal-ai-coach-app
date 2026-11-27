@@ -32,7 +32,7 @@ export default function SpikeConsoleScreen() {
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={styles.content}
     >
-      <Text style={[styles.h1, { color: c.text }]}>Spike console</Text>
+      <Text style={[styles.h1, { color: c.text }]}>Debug console</Text>
       {CARDS.map(({ item, title }) => {
         const run = runs[item];
         const mine = actions.filter((a) => a.item === item);
