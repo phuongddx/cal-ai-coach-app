@@ -49,3 +49,5 @@ ts	unit	state	branch	pr	head	by	evidence
 2026-11-27T11:52:54Z	U-71	running	rn/u-71-ember-design	-	43ba369	Worker-S1	docs/rn-migration/briefs/U-71.md (thread 2da38c10, receipt a8b439a6)
 2026-11-27T11:52:54Z	U-61b	running	rn/u-61b-frames	-	43ba369	Worker-G2	docs/rn-migration/briefs/U-61b.md (thread 0407d064, receipt 0d057f59)
 2026-11-27T11:52:54Z	U-42	running	rn/u-42-health	-	43ba369	Worker-G1	docs/rn-migration/briefs/U-42.md (thread faeb80ff, receipt 505319a6)
+2026-11-27T11:57:24Z	U-33	fail	rn/u-33-today	27	59e9c76	CoachCal (owner)	PR 27 holds the Today screen with tests and two commits outside the brief (design system ring number, diary route fix); the owner keeps the diary fix and asked for the design change to be reverted by a revert commit; independent review running
+2026-11-27T11:57:24Z	U-33	running	rn/u-33-today	27	-	Worker-S2	rework: revert f9de230, fix the findings, push the harness changes on rn/u-33-harness, rerun the three gates (thread 9347cb89, receipt 1eca10ca)
