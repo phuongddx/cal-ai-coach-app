@@ -16,7 +16,9 @@
     "api": "npm run dev --workspace @coachcal/api",
     "mobile": "npm run start --workspace @coachcal/mobile",
     "test:api": "npm run test --workspace @coachcal/api",
-    "test:mobile": "npm run test --workspace @coachcal/mobile"
+    "test:mobile": "npm run test --workspace @coachcal/mobile",
+    "parity:check": "node scripts/rn/parity-check.mjs",
+    "parity:write": "node scripts/rn/parity-check.mjs --write"
   },
   "devDependencies": {
     "@testing-library/react-native": "^14.1.0",
