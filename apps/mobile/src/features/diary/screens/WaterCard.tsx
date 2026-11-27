@@ -7,9 +7,9 @@
  */
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Icon, Sheet, SheetHeader, size, space, useTokens } from '../../../design';
+import { Icon, Sheet, SheetHeader, size, space, useEdSafeMode, useTokens } from '../../../design';
 
-import { glassesLogged, GLASS_ML } from '../waterModel';
+import { glassesLogged, litresText, GLASS_ML } from '../waterModel';
 
 /**
  * WaterDropletTile — the frame's 40 pt info-tint tile with the droplet glyph
@@ -43,11 +43,19 @@ export type WaterCardProps = {
 
 export function WaterCard({ waterMl, glasses, onTap }: WaterCardProps) {
   const { colors, radius, typography } = useTokens();
+  const edSafe = useEdSafeMode();
   const logged = glassesLogged(waterMl);
+  // The Today frame: litres in the normal mode, glasses under ED-Safe. The
+  // mode read is the third documented stay (findings, U-74 §10) until
+  // EdSafeAlternate is on main.
+  const copy = edSafe
+    ? `${logged} of ${glasses} glasses`
+    : `${litresText(waterMl)} of ${litresText(glasses * GLASS_ML)} L`;
+  const chip = edSafe ? '+ 1 glass' : '+ 250 ml';
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Water, ${logged} of ${glasses} glasses`}
+      accessibilityLabel={`Water, ${copy}`}
       testID="today.waterCard"
       onPress={onTap}
       style={[
@@ -58,11 +66,14 @@ export function WaterCard({ waterMl, glasses, onTap }: WaterCardProps) {
       <WaterDropletTile />
       <View style={styles.cardText}>
         <Text style={[typography.headline, { color: colors.textPrimary }]}>Water</Text>
-        <Text style={[typography.subhead, { color: colors.textSecondary }]}>
-          {`${logged} of ${glasses} glasses`}
-        </Text>
+        <Text style={[typography.subhead, { color: colors.textSecondary }]}>{copy}</Text>
       </View>
-      <Icon name="chev" size={12} color={colors.textTertiary} />
+      {/* The frame's "+ 250 ml" / "+ 1 glass" chip: a 44 pt display target on
+          the card (the quick-add lives in the log sheet — the card's props are
+          frozen, so the whole card taps into the sheet). */}
+      <View style={[styles.chip, { backgroundColor: colors.fill, borderRadius: radius.pill }]}>
+        <Text style={[styles.chipText, { color: colors.textPrimary }]}>{chip}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -142,6 +153,13 @@ function QuickAddTile({
 const styles = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: space.lg, borderWidth: 1, padding: space.lg },
   cardText: { flex: 1, gap: 2 },
+  chip: {
+    minHeight: size.tap,
+    paddingHorizontal: space.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipText: { fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
   summaryRow: { flexDirection: 'row', alignItems: 'center', gap: space.lg, paddingVertical: space.sm },
   summaryText: { gap: 4 },
   tileRow: { flexDirection: 'row', gap: space.sm },

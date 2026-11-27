@@ -43,12 +43,12 @@ const DAY_MS = 86_400_000;
 /** The undo window of the delete and edit toasts (the d-deleted / d-saved frames: five seconds). */
 const UNDO_WINDOW_MS = 5000;
 
-/** The canvas's meal icons (no emoji); the 51-icon set carries no carrot, so snacks draws the apple. */
+/** The canvas's meal icons; the frames map the four slots sunrise, sun, moon, carrot. */
 const SLOT_ICONS: Record<string, IconName> = {
   breakfast: 'sunrise',
   lunch: 'sun',
   dinner: 'moon',
-  snacks: 'apple',
+  snacks: 'carrot',
 };
 
 /**
@@ -228,7 +228,7 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
         <View style={styles.toastOverlay} pointerEvents="box-none" testID="diary.toast.undo">
           <Toast
             title={`${undoToast.item.title} deleted`}
-            kcalText={`Removed from ${mealName(undoToast.item.mealSlot)}`}
+            message={`Removed from ${mealName(undoToast.item.mealSlot)}`}
             onUndo={() => {
               void model.undoDelete(undoToast.item);
               setUndoToast(null);
@@ -241,7 +241,7 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
         <View style={styles.toastOverlay} pointerEvents="box-none" testID="diary.toast.undoEdit">
           <Toast
             title="Changes saved"
-            kcalText={`${undoToast.name} · ${undoToast.grams} g`}
+            message={`${undoToast.name} · ${undoToast.grams} g`}
             onUndo={() => {
               void model.writeEntry(undoToast.prev.entry, undoToast.prev.detail);
               setUndoToast(null);
@@ -383,13 +383,10 @@ function FoodItemRow({
             item.confidence !== null ? <ConfidenceBadge confidence={item.confidence} compact /> : undefined
           }
           syncPending={!item.isSynced}
+          chip={edited ? 'Edited' : undefined}
+          chipTestID={edited ? `diary.editedChip.${item.id}` : undefined}
         />
       </Pressable>
-      {edited && (
-        <View testID={`diary.editedChip.${item.id}`} style={styles.editedChip}>
-          <Text style={[typography.caption, { color: colors.textSecondary }]}>Edited</Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -452,6 +449,5 @@ const styles = StyleSheet.create({
   exerciseText: { flex: 1, gap: 2 },
   exerciseKcal: { fontWeight: '500', fontVariant: ['tabular-nums'] },
   toastOverlay: { position: 'absolute', top: 8, left: 16, right: 16 },
-  editedChip: { paddingHorizontal: 12, paddingVertical: 1, alignSelf: 'flex-start', marginTop: -2 },
   sheetBackdrop: { flex: 1, justifyContent: 'flex-end' },
 });
