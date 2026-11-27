@@ -81,3 +81,23 @@ Adaptation: as in the diary feature, the DS `PrimaryButton` receives the feature
 a wrapper View carrying the same string (`progress.logWeight`, `progress.saveWeight`). The Swift
 WeightLogSheet wheel, the weekly-energy columns and the achievements views carry no identifiers —
 their a11y labels port instead (wheel value, `M: 543 kcal`, streak/badge/photos labels).
+
+## U-75 identifier changes (Ember restyle, 2026-11-27)
+
+Added, with the reason:
+
+| Identifier | Element | Reason |
+|---|---|---|
+| `progress.range` | the range Segment (Week / Month / 3M / Year) | U-75 new behavior (frame 11) |
+| `progress.range.<week\|month\|3m\|year>` | the Segment's options | the DS Segment's per-option testID convention |
+| `coach.seeDays.<kind>` | the "See the days" action row of an insight card | U-75 new behavior (frame 12); `<kind>` is the seeded insight kind (streak, protein render with the seed; hydration holds no days and shows no row) |
+| `coach.dayList` | the expanded local day list under the card | U-75 new behavior (frame 12) |
+
+Removed: none. Every identifier of U-40 survives with the same string. Placement moves, same
+string: `chart-card` now rides on the feature chart root (`screens/WeightChart.tsx`) and
+`badge-tile:<name>` on the feature badge tiles (`screens/AchievementsView.tsx`) — both because the
+design-system components (`ChartCard`, `BadgeTile`) lack the Ember shape and `src/design` is
+read-only for this unit (findings U-75, "Needs a design component"). `progress.logWeight`,
+`progress.saveWeight`, `progress.closeWeightSheet`, `streak-card`, `weekly-review-stats`,
+`weekly-stat:<id>` and `insight-card:<variant>` are unchanged on their DS components or wrapper
+Views.

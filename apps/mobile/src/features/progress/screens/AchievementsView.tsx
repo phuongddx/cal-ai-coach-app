@@ -1,13 +1,26 @@
 /**
- * AchievementsView.swift — ENG-01/02 achievements surface: the streak hero
- * (with freeze chip), the earned + locked badge grids, and the disabled
- * progress-photos row (ENG2-01 is v2 — the planner choice renders the row
- * disabled).
+ * AchievementsView.swift — ENG-01/02 achievements surface on Ember (frame
+ * 11): the streak hero (with freeze chip), one "Badges" grid — earned tiles
+ * first, then locked, Swift order — with the Ember icon set in place of
+ * emoji, and the disabled progress-photos row (ENG2-01 is v2 — the planner
+ * choice renders the row disabled). The tile is drawn here because the
+ * design-system BadgeTile takes an emoji string only — the gap is recorded
+ * in findings U-75 under "Needs a design component"; the tile keeps
+ * BadgeTile's testID and accessibility label.
  */
 import { StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
-import { BadgeTile, SectionHeader, StreakCard, radius, useTokens } from '../../../design';
+import {
+  Icon,
+  SectionHeader,
+  StreakCard,
+  badgeA11yLabel,
+  radius,
+  space,
+  useTokens,
+  type IconName,
+} from '../../../design';
 
 import type { Badge } from '../../../data/repos/engagementRepository';
 import type { ProgressModel } from '../progressModel';
@@ -26,25 +39,28 @@ export function lockedDaysLeft(badge: Badge): number {
   return Math.max(badge.target - badge.progress, 0);
 }
 
-/** AchievementsView.emoji — the badge code's tile emoji. */
-export function badgeEmoji(code: string): string {
+/** The Ember icon of a badge tile (frame 11: camera, flame; locked: lock). */
+export function badgeIcon(code: string, isLocked: boolean): IconName {
+  if (isLocked) {
+    return 'lock';
+  }
   switch (code) {
     case 'first-scan':
-      return '📸';
+      return 'camera';
     case 'streak-7':
     case 'streak-30':
-      return '🔥';
+      return 'flame';
     case 'water-habit':
-      return '💧';
+      return 'drop';
     case 'scans-50':
-      return '🎯';
+      return 'target';
     default:
-      return '🏅';
+      return 'trophy';
   }
 }
 
 export function AchievementsView({ model }: AchievementsViewProps) {
-  const { colors, space } = useTokens();
+  const { space } = useTokens();
   const { streak, badges } = model.getSnapshot();
 
   const earned = badges.filter((badge) => badge.earnedAt !== null);
@@ -61,17 +77,10 @@ export function AchievementsView({ model }: AchievementsViewProps) {
         />
       )}
 
-      {earned.length > 0 && (
+      {badges.length > 0 && (
         <>
-          <SectionHeader title="Earned badges" />
-          <BadgeGrid badges={earned} locked={false} />
-        </>
-      )}
-
-      {locked.length > 0 && (
-        <>
-          <SectionHeader title="Unlock next" />
-          <BadgeGrid badges={locked} locked />
+          <SectionHeader title="Badges" />
+          <BadgeGrid badges={[...earned, ...locked]} lockedCount={locked.length} />
         </>
       )}
 
@@ -81,25 +90,56 @@ export function AchievementsView({ model }: AchievementsViewProps) {
 }
 
 /** 3-column grid that wraps regardless of how many badges are earned or locked. */
-function BadgeGrid({ badges, locked }: { badges: Badge[]; locked: boolean }) {
+function BadgeGrid({ badges, lockedCount }: { badges: Badge[]; lockedCount: number }) {
   return (
     <View style={styles.grid}>
-      {badges.map((badge) => (
-        <View key={badge.id} style={styles.gridCell}>
-          <BadgeTile
-            emoji={badgeEmoji(badge.code)}
-            name={badge.label}
-            detail={locked ? `${lockedDaysLeft(badge)} days left` : (badge.detail ?? '')}
-            isLocked={locked}
-          />
-        </View>
-      ))}
+      {badges.map((badge, index) => {
+        const isLocked = index >= badges.length - lockedCount;
+        return (
+          <View key={badge.id} style={styles.gridCell}>
+            <BadgeTileEmber badge={badge} isLocked={isLocked} />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+/** The Ember badge tile: an Ember icon instead of BadgeTile's emoji string. */
+function BadgeTileEmber({ badge, isLocked }: { badge: Badge; isLocked: boolean }) {
+  const { colors, space, typography: type } = useTokens();
+  const detail = isLocked ? `${lockedDaysLeft(badge)} days left` : (badge.detail ?? '');
+  const ink = isLocked ? colors.text2 : colors.accentInk;
+  return (
+    <View
+      accessible
+      accessibilityLabel={badgeA11yLabel(badge.label, isLocked, detail)}
+      testID={`badge-tile:${badge.label}`}
+      style={[
+        styles.tile,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          opacity: isLocked ? 0.5 : 1,
+        },
+      ]}
+    >
+      <Icon name={badgeIcon(badge.code, isLocked)} size={24} color={ink} />
+      <Text
+        style={[type.subhead, styles.tileName, { color: isLocked ? colors.text2 : colors.text }]}
+        numberOfLines={1}
+      >
+        {badge.label}
+      </Text>
+      {detail.length > 0 && (
+        <Text style={[type.caption, styles.tileDetail, { color: colors.text2 }]}>{detail}</Text>
+      )}
     </View>
   );
 }
 
 function ProgressPhotosRow() {
-  const { colors, radius, space, typography } = useTokens();
+  const { colors, radius, space, typography: type } = useTokens();
   return (
     <View
       accessible
@@ -118,8 +158,8 @@ function ProgressPhotosRow() {
     >
       <SymbolView name="camera" size={20} tintColor={colors.textSecondary} style={styles.cameraIcon} />
       <View style={styles.photosText}>
-        <Text style={[typography.subhead, { color: colors.textPrimary }]}>Progress photos</Text>
-        <Text style={[typography.caption, { color: colors.textTertiary }]}>Coming later</Text>
+        <Text style={[type.subhead, { color: colors.text }]}>Progress photos</Text>
+        <Text style={[type.caption, { color: colors.textTertiary }]}>Coming later</Text>
       </View>
     </View>
   );
@@ -129,6 +169,17 @@ const styles = StyleSheet.create({
   stack: {},
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   gridCell: { width: '31.5%', flexGrow: 1 },
+  tile: {
+    alignItems: 'center',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    flexGrow: 1,
+    paddingVertical: space.md,
+    paddingHorizontal: space.sm,
+    gap: space.xs,
+  },
+  tileName: { fontWeight: '500' },
+  tileDetail: { textAlign: 'center' },
   photosRow: {
     flexDirection: 'row',
     alignItems: 'center',
