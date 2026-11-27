@@ -11,7 +11,7 @@
  * inside the same transaction — the Swift pull snapshot carries no nutrition,
  * the RN wire record does.
  */
-import { eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 
 import {
   compareCanonicalVersions,
@@ -117,12 +117,68 @@ export async function applyAcknowledgement(tx: SqlTx, acknowledgement: PushAckno
   await tx.delete(pendingOps).where(eq(pendingOps.opId, acknowledgement.opId));
 }
 
+/** What `applyAcknowledgedRecord` did to the mirror row. */
+export type AcknowledgedRecordOutcome =
+  /** The op was not in the outbox (acknowledged twice): nothing changed. */
+  | 'unknown'
+  /** A newer local op is still pending for the record: the op is gone, the mirror is untouched. */
+  | 'kept'
+  /** The op won: the local content stays and the canonical version is stamped. */
+  | 'stamped'
+  /** The op lost: the record the server keeps now sits in the mirror row (written like a pulled row). */
+  | 'applied';
+
+/**
+ * A push acknowledgement together with the record the server answered with (the RN wire returns the
+ * stored record for every operation; a losing operation is answered `applied` with the winner's
+ * record and no version of its own).
+ *
+ * - The acknowledged op leaves the outbox in every case.
+ * - Another pending op for the same record means the user edited again: the mirror stays as it is.
+ * - Otherwise a winning op (`acceptedOpId` is its own id) keeps the local content and stamps the
+ *   version, as the Swift acknowledgement does; a losing op writes the returned record into the
+ *   mirror the way a pulled row is written, even when its version is not newer: the server is the
+ *   authority on an operation it has answered, and skipping it would keep this device's rejected
+ *   text under the winner's version for good.
+ */
+export async function applyAcknowledgedRecord(
+  tx: SqlTx,
+  acknowledgement: PushAcknowledgement,
+  record: PullResponse['rows'][number],
+  owner: string,
+  at: Date,
+): Promise<AcknowledgedRecordOutcome> {
+  const operations = await tx.select().from(pendingOps).where(eq(pendingOps.opId, acknowledgement.opId)).limit(1);
+  const operation = operations[0];
+  if (operation === undefined) return 'unknown';
+
+  const newer = await tx
+    .select({ opId: pendingOps.opId })
+    .from(pendingOps)
+    .where(and(eq(pendingOps.recordId, operation.recordId), ne(pendingOps.opId, acknowledgement.opId)))
+    .limit(1);
+  if (newer.length > 0) {
+    await tx.delete(pendingOps).where(eq(pendingOps.opId, acknowledgement.opId));
+    return 'kept';
+  }
+
+  if (acknowledgement.acceptedOpId.toUpperCase() === acknowledgement.opId.toUpperCase()) {
+    await applyAcknowledgement(tx, acknowledgement, at);
+    return 'stamped';
+  }
+
+  await tx.delete(pendingOps).where(eq(pendingOps.opId, acknowledgement.opId));
+  await applyPulledRow(tx, record, owner, at, { force: true });
+  return 'applied';
+}
+
 /** Swift applyPulledRow. Returns true when the row was applied (inserted or updated). */
 export async function applyPulledRow(
   tx: SqlTx,
   pulled: PullResponse['rows'][number],
   owner: string,
   at: Date,
+  options: { /** Apply even when the record is not newer than the mirror (an acknowledged losing op). */ force?: boolean } = {},
 ): Promise<boolean> {
   const recordId = pulled.recordId;
   const pending = await tx
@@ -140,7 +196,7 @@ export async function applyPulledRow(
   const local = entries[0];
   if (local !== undefined) {
     const localVersion = version(local.serverVersion, local.acceptedOpId);
-    if (!isNewer(remote, localVersion)) {
+    if (options.force !== true && !isNewer(remote, localVersion)) {
       return false;
     }
     const updated: DiaryEntry = {

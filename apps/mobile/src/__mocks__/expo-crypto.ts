@@ -16,7 +16,7 @@ export const digestStringAsync = jest.fn(
 );
 
 /** The secure random source `newUuid` uses: Node's CSPRNG fills the view in place and returns it. */
-export const getRandomValues = jest.fn(<T extends ArrayBufferView>(typedArray: T): T => {
+export const getRandomValues = jest.fn(<T extends Uint8Array>(typedArray: T): T => {
   randomFillSync(typedArray);
   return typedArray;
 });

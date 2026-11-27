@@ -20,22 +20,31 @@
 import { asc, eq, sql } from 'drizzle-orm';
 
 import type { Meal, MealRecord, PullResponse, SyncOperation } from '@coachcal/api-contract';
+import type { PullResponse as MergePullResponse } from '@coachcal/core';
 import type { DiaryEntry, DiaryEntryDetail } from '../repos/diaryEntryRepository';
 
 import { diaryEntryDetails, diaryEntries, pendingOps, syncState } from '../db/schema';
 import { entryToRow, rowToEntry, rowToDetail } from '../repos/diaryEntryRepository';
-import { applyAcknowledgement, applyPulledRow, enqueueDiaryOp } from '../repos/syncMergeRepository';
+import { applyAcknowledgedRecord, applyPulledRow, enqueueDiaryOp } from '../repos/syncMergeRepository';
 import { fromIso, inTransaction, toIso, type SqlDb } from '../repos/sqlDb';
 import type { LocalMeal, OutboxEntry, SyncStore } from './types';
 
 type Db = SqlDb;
 
 /**
- * Single-account device: mirror rows carry this owner until the auth unit
- * lands (Swift gets it from the session). The demo user id from
- * SeedDataManager keeps the seed and the sync writes consistent.
+ * The owner mirror rows carry when no session exists (fixture and debug mode). The demo user id from
+ * SeedDataManager keeps the seed and the sync writes consistent. With a signed-in user the runtime
+ * passes that user's id through `SqliteSyncStoreOptions.ownerId` and this constant is never read.
  */
-const LOCAL_OWNER_ID = 'de000000-0000-4000-8000-000000000001';
+export const LOCAL_OWNER_ID = 'de000000-0000-4000-8000-000000000001';
+
+export type SqliteSyncStoreOptions = {
+  /**
+   * The user id new mirror rows are written for (Swift: the session's user id). Read on every write,
+   * so a sign-in after the store was built takes effect at once. Defaults to the demo owner.
+   */
+  ownerId?: () => string;
+};
 
 /** Wire meals carry no slot; derive the details row's slot from eatenAt. */
 function mealSlotFor(eatenAtIso: string): string {
@@ -46,10 +55,13 @@ function mealSlotFor(eatenAtIso: string): string {
   return 'snacks';
 }
 
-function mealToEntry(meal: Meal, extras: { deletedAt: Date | null; serverVersion: number; acceptedOpId: string | null; now: Date }): DiaryEntry {
+function mealToEntry(
+  meal: Meal,
+  extras: { owner: string; deletedAt: Date | null; serverVersion: number; acceptedOpId: string | null; now: Date },
+): DiaryEntry {
   return {
     id: meal.id,
-    userId: LOCAL_OWNER_ID,
+    userId: extras.owner,
     displayText: meal.name,
     createdAt: new Date(meal.eatenAt),
     updatedAt: new Date(meal.updatedAt),
@@ -101,13 +113,14 @@ async function readDetail(tx: Db, entryId: string): Promise<DiaryEntryDetail | n
   return rows[0] === undefined ? null : rowToDetail(rows[0]);
 }
 
-export function createSqliteSyncStore(db: Db): SyncStore {
+export function createSqliteSyncStore(db: Db, options: SqliteSyncStoreOptions = {}): SyncStore {
+  const ownerId = options.ownerId ?? (() => LOCAL_OWNER_ID);
   return {
     /** Local write = one transaction: mirror row + detail row + pending op. */
     async recordUpsert(meal, op) {
       await inTransaction(db, async (tx) => {
         const at = new Date(op.clientTimestamp);
-        const entry = mealToEntry(meal, { deletedAt: null, serverVersion: 0, acceptedOpId: null, now: at });
+        const entry = mealToEntry(meal, { owner: ownerId(), deletedAt: null, serverVersion: 0, acceptedOpId: null, now: at });
         await tx.insert(diaryEntries).values(entryToRow(entry)).onConflictDoUpdate({ target: diaryEntries.id, set: entryToRow(entry) });
         await tx
           .insert(diaryEntryDetails)
@@ -133,7 +146,7 @@ export function createSqliteSyncStore(db: Db): SyncStore {
         const entry = existing === null
           ? {
               id: recordId,
-              userId: LOCAL_OWNER_ID,
+              userId: ownerId(),
               displayText: '',
               createdAt: at,
               updatedAt: at,
@@ -230,19 +243,30 @@ export function createSqliteSyncStore(db: Db): SyncStore {
     },
 
     /**
-     * Push acks, one transaction, the Swift acknowledgement rules: stamp the
-     * acked canonical version onto the mirror row (only when newer) and
-     * delete the op; the content itself arrives with the next pull.
+     * Push acks, one transaction. Every acknowledged op leaves the outbox. When no newer op is pending
+     * for the record, the record the server returned is applied: a winning op keeps its local content
+     * and gets the canonical version stamped; a losing op (the server answers `applied` with the
+     * winner's record) has that record written into the mirror and the details rows like a pulled row,
+     * so this device does not keep its rejected text under the winner's version. With a newer op
+     * pending the mirror stays untouched.
      */
     async applyPushAcks(entries) {
       await inTransaction(db, async (tx) => {
         for (const { op, record } of entries) {
-          await applyAcknowledgement(tx, {
-            opId: op.opId,
-            serverVersion: record.serverVersion,
-            acceptedOpId: record.acceptedOpId ?? '',
-            duplicate: false,
-          }, new Date(record.updatedAt));
+          const outcome = await applyAcknowledgedRecord(
+            tx,
+            { opId: op.opId, serverVersion: record.serverVersion, acceptedOpId: record.acceptedOpId ?? '', duplicate: false },
+            pulledRowFor(record),
+            ownerId(),
+            new Date(record.updatedAt),
+          );
+          if (outcome === 'applied' && !record.deleted) {
+            const detail = detailForMeal(mealFromRecord(record), 'sync');
+            await tx
+              .insert(diaryEntryDetails)
+              .values({ ...detail })
+              .onConflictDoUpdate({ target: diaryEntryDetails.entryId, set: { ...detail } });
+          }
         }
       });
     },
@@ -255,22 +279,7 @@ export function createSqliteSyncStore(db: Db): SyncStore {
     async applyPullPage(rows: PullResponse['rows'], newCursor: number) {
       await inTransaction(db, async (tx) => {
         for (const { record } of rows) {
-          const applied = await applyPulledRow(
-            tx,
-            {
-              table: 'diary_entries',
-              recordId: record.id,
-              snapshot: {
-                id: record.id,
-                displayText: record.name,
-                deletedAt: record.deleted ? toIso(new Date(record.updatedAt)) : null,
-                serverVersion: record.serverVersion,
-                acceptedOpId: record.acceptedOpId,
-              },
-            },
-            LOCAL_OWNER_ID,
-            new Date(),
-          );
+          const applied = await applyPulledRow(tx, pulledRowFor(record), ownerId(), new Date());
           // Details are local-only (I4): write them only for rows the merge
           // actually applied, and only for live content — a tombstone never
           // carries nutrition.
@@ -322,6 +331,21 @@ export function createSqliteSyncStore(db: Db): SyncStore {
         await tx.delete(syncState);
         await tx.insert(syncState).values({ id: 1, pullCursor: 0 });
       });
+    },
+  };
+}
+
+/** The merge repository's pulled-row shape for a wire meal record. */
+function pulledRowFor(record: MealRecord): MergePullResponse['rows'][number] {
+  return {
+    table: 'diary_entries',
+    recordId: record.id,
+    snapshot: {
+      id: record.id,
+      displayText: record.name,
+      deletedAt: record.deleted ? toIso(new Date(record.updatedAt)) : null,
+      serverVersion: record.serverVersion,
+      acceptedOpId: record.acceptedOpId,
     },
   };
 }
