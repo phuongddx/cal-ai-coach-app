@@ -9,7 +9,7 @@
  * `variant="text"` is the sign-in field (frame 108): the value at 17/400 across the whole box, for an
  * e-mail address. The default `number` variant is the numeric field of onboarding, unchanged. While the
  * input is focused a 2 pt `accent` ring is drawn over the box edge; `error` draws the same ring in
- * `error` (frames 110 and 114 measure #E5243B, the `error` token, not `errorInk`, which is the ink of
+ * `error` (frames 110 and 114 draw the `error` token, not `errorInk`, which is the ink of
  * the message text). The ring is an overlay, so it never moves the content.
  */
 

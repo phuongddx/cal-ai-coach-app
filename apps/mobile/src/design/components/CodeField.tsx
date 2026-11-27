@@ -9,7 +9,7 @@
  *
  * While the input is focused the next empty cell (the last cell once the code is complete) takes a 2 pt
  * `accent` border and, when empty, the caret (frame 112). `error` turns all six borders to `error`
- * (frames 114 and 115 measure #E5243B, the `error` token), whatever the focus.
+ * (frames 114 and 115 draw the `error` token), whatever the focus.
  *
  * testIDs: `<testID>` (the input), `<testID>.cells`, `<testID>.group.0|1`, `<testID>.cell.0..5`,
  * `<testID>.digit.0..5` and `<testID>.caret`.
