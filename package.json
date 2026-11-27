@@ -28,5 +28,9 @@
     "test-renderer": "^1.0.0",
     "ts-jest": "^29.4.0",
     "typescript": "~6.0.3"
+  },
+  "overrides": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   }
 }
