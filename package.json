@@ -12,7 +12,8 @@
   },
   "scripts": {
     "test": "npm run test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typed-routes": "node scripts/rn/gen-typed-routes.mjs",
+    "typecheck": "npm run typed-routes && npm run typecheck --workspaces --if-present",
     "api": "npm run dev --workspace @coachcal/api",
     "mobile": "npm run start --workspace @coachcal/mobile",
     "test:api": "npm run test --workspace @coachcal/api",
@@ -23,8 +24,10 @@
   "devDependencies": {
     "@testing-library/react-native": "^14.1.0",
     "@types/jest": "^30.0.0",
+    "drizzle-kit": "^0.31.11",
     "jest": "^30.5.2",
     "jest-expo": "^58.0.16",
+    "sql.js": "^1.17.0",
     "test-renderer": "^1.0.0",
     "ts-jest": "^29.4.0",
     "typescript": "~6.0.3"
