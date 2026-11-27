@@ -74,6 +74,16 @@ that has to be repeated in briefs belongs here.
     its repositories, its API client, its clock and its flags through the constructor (Jest builds it
     with test doubles); its route file gets the real ones from `getDataEnvironment()` and
     `getDebugFlags()`. After a write through a repository, call `notifyLocalMutation()`.
+20. The ED-safe rule for feature code (I7) is about calls, not about letters. No file under
+    `apps/mobile/src/features/**` may call `edSafeMode(`, `edSafeHidden(`, `useEdSafeMode(` or
+    `useEdSafeHidden(`. An accessibility identifier, a copy key or a stored key that merely
+    contains `edSafe` is correct: the Swift app has `settings.edSafeToggle` and the stored key
+    `edSafeMode`. Never rename one to satisfy a grep. Hide a calorie framing with `EdSafeCollapse`
+    from `src/design`.
+21. A unit that runs the built development app checks first that the app holds every native module
+    the code on `main` requires (look into `Frameworks/` of the built app; `uuid.ts` needs
+    `ExpoCrypto`). If one is missing, stop and ask the owner for the native slot. Do not weaken the
+    code to fit an old build.
 
 ## Report format
 

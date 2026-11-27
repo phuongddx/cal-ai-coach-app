@@ -35,3 +35,6 @@ ts	unit	state	branch	pr	head	by	evidence
 2026-11-27T08:22:UTC	U-40	running	rn/u-40-progress-coach	-	78f7952	Worker-G2	docs/rn-migration/briefs/U-40.md
 2026-11-27T08:22:UTC	U-41	running	rn/u-41-profile-settings	-	78f7952	Worker-G1	docs/rn-migration/briefs/U-41.md
 2026-11-27T08:22:UTC	U-51	running	rn/u-51-root	-	78f7952	Worker-S1	docs/rn-migration/briefs/U-51.md
+2026-11-27T09:12:UTC	U-33	fail	rn/u-33-today	-	-	CoachCal (owner)	blocked after 38 minutes: the built development app predates expo-crypto and every id crashes (Cannot find native module ExpoCrypto); the Today screen and its tests are committed locally (8ca43ce); evidence not captured
+2026-11-27T09:12:UTC	U-33	running	rn/u-33-today	-	-	Worker-S2	continues with the native slot and the Simulator slot: rebuild the development client, then the evidence (thread 1b4c1ad3, receipt 42f2005a)
+2026-11-27T09:12:UTC	U-51	fail	rn/u-51-root	22	10654ef	CoachCal (owner)	the pushed head fails typecheck (three TS2322 in src/platform/launchSequence.test.ts) in CI and on the owner machine; rework sent to Worker-S1 in thread 496517fb (receipt c6c7e128)
