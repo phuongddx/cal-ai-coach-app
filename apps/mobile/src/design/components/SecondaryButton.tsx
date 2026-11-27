@@ -1,11 +1,17 @@
 /**
- * CCSecondaryButton + CCSecondaryButtonStyle (Components/Buttons.swift).
- * Muted label, optional 1pt border; 0.7 opacity while pressed.
+ * CCSecondaryButton + CCSecondaryButtonStyle, in Ember (canvas `.btn.secondary`): `fill`
+ * background, `text` label, 56 pt, radius 18; the bordered variant adds the 1 pt `border`.
+ *
+ * `action` stays optional in the type because `features/profile/SettingsDetailView.tsx` still
+ * renders two buttons without one and `features/**` is outside this unit. design-system.md asks
+ * for the empty default to go (audit #52): a button without `action` is exposed as disabled
+ * instead of looking pressable and doing nothing, and the profile restyle unit makes the prop
+ * required once it passes one (findings/U-71.md, open question).
  */
 
 import { Pressable, Text, type StyleProp, type ViewStyle } from 'react-native';
 
-import { radius, space, typography, useTokens } from '../tokens';
+import { radius, size, space, typography, useTokens, type Colors } from '../tokens';
 
 export type SecondaryButtonProps = {
   title: string;
@@ -15,16 +21,20 @@ export type SecondaryButtonProps = {
   testID?: string;
 };
 
-/** The CCSecondaryButtonStyle visual mapping, exposed for contract tests. */
+/** The secondary button's visual mapping, exposed for contract tests. */
 export function secondaryButtonStyle(
   bordered: boolean,
-  borderColor: string,
+  colors: Colors,
   pressed: boolean,
 ): StyleProp<ViewStyle> {
   return {
+    backgroundColor: colors.fill,
     borderWidth: 1,
-    borderColor: bordered ? borderColor : 'transparent',
-    borderRadius: radius.md,
+    borderColor: bordered ? colors.border : 'transparent',
+    borderRadius: radius.button,
+    minHeight: size.btn,
+    alignItems: 'center',
+    justifyContent: 'center',
     opacity: pressed ? 0.7 : 1,
   };
 }
@@ -34,18 +44,15 @@ export function SecondaryButton({ title, bordered = false, action, testID }: Sec
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={action == null ? { disabled: true } : undefined}
       testID={testID}
       onPress={action}
-      style={({ pressed }) =>
-        secondaryButtonStyle(bordered, colors.border, pressed)
-      }
+      style={({ pressed }) => secondaryButtonStyle(bordered, colors, pressed)}
     >
       <Text
         style={{
-          ...typography.subhead,
-          fontWeight: '500',
-          color: colors.textSecondary,
-          paddingVertical: space.md,
+          ...typography.headline,
+          color: colors.text,
           paddingHorizontal: space.xl,
         }}
       >

@@ -7,7 +7,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SymbolView, type SFSymbol } from 'expo-symbols';
 
-import { radius, space, typography, useTokens, withAlpha, type Colors } from '../tokens';
+import { radius, space, typography, useTokens, type Colors } from '../tokens';
 
 export type OptionCardProps = {
   title: string;
@@ -19,15 +19,15 @@ export type OptionCardProps = {
 
 // Exposed for contract tests: the selected/unselected visual state mapping.
 export function optionCardBorder(colors: Colors, isSelected: boolean): { width: number; color: string } {
-  return isSelected ? { width: 2, color: colors.accentLime } : { width: 1, color: colors.border };
+  return isSelected ? { width: 2, color: colors.accentStrong } : { width: 1, color: colors.border };
 }
 
 export function optionCardIconTile(colors: Colors, isSelected: boolean): string {
-  return isSelected ? withAlpha(colors.accentLime, 0.15) : colors.surface;
+  return isSelected ? colors.accentTint : colors.fill;
 }
 
 export function optionCardIconColor(colors: Colors, isSelected: boolean): string {
-  return isSelected ? colors.accentInk : colors.textSecondary;
+  return isSelected ? colors.accentInk : colors.text2;
 }
 
 export function optionCardA11yLabel(title: string, subtitle: string | undefined, isSelected: boolean): string {
@@ -58,13 +58,13 @@ export function OptionCard({ title, subtitle, icon, isSelected, onSelect }: Opti
         <SymbolView name={icon as SFSymbol} size={20} tintColor={optionCardIconColor(colors, isSelected)} />
       </View>
       <View style={styles.textColumn}>
-        <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
         {subtitle != null && (
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
+          <Text style={[styles.subtitle, { color: colors.text2 }]}>{subtitle}</Text>
         )}
       </View>
       {isSelected && (
-        <SymbolView name="checkmark.circle.fill" size={20} tintColor={colors.accentLime} />
+        <SymbolView name="checkmark.circle.fill" size={20} tintColor={colors.accentStrong} />
       )}
     </Pressable>
   );

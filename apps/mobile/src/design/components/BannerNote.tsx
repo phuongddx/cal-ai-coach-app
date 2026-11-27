@@ -7,7 +7,7 @@
 
 import { StyleSheet, Text, View } from 'react-native';
 
-import { radius, space, typography, useTokens, withAlpha, type Colors } from '../tokens';
+import { radius, space, typography, useTokens, type Colors } from '../tokens';
 
 export type BannerVariant = 'success' | 'neutral' | 'info';
 
@@ -20,22 +20,22 @@ export type BannerNoteProps = {
 function bannerBackground(colors: Colors, variant: BannerVariant): string {
   switch (variant) {
     case 'success':
-      return withAlpha(colors.success, 0.1);
+      return colors.successTint;
     case 'neutral':
-      return 'rgba(255,255,255,0.04)';
+      return colors.fill;
     case 'info':
-      return withAlpha(colors.info, 0.1);
+      return colors.infoTint;
   }
 }
 
 function bannerBorder(colors: Colors, variant: BannerVariant): string {
   switch (variant) {
     case 'success':
-      return withAlpha(colors.success, 0.2);
+      return colors.success;
     case 'neutral':
       return colors.border;
     case 'info':
-      return withAlpha(colors.info, 0.2);
+      return colors.info;
   }
 }
 
@@ -64,7 +64,7 @@ export function BannerNote({ text, variant = 'neutral', markdown = false }: Bann
       ]}
     >
       {markdown ? (
-        <Text style={[styles.text, { color: colors.textPrimary }]}>
+        <Text style={[styles.text, { color: colors.text }]}>
           {markdownSegments(text).map((segment, index) => (
             <Text
               key={index}
@@ -75,7 +75,7 @@ export function BannerNote({ text, variant = 'neutral', markdown = false }: Bann
           ))}
         </Text>
       ) : (
-        <Text style={[styles.text, { color: colors.textPrimary }]}>{text}</Text>
+        <Text style={[styles.text, { color: colors.text }]}>{text}</Text>
       )}
     </View>
   );

@@ -7,7 +7,7 @@ import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
-import { radius, space, typography, useTokens, withAlpha } from '../tokens';
+import { radius, space, typography, useTokens } from '../tokens';
 
 import { useEdSafeMode } from '../edSafe';
 
@@ -31,7 +31,7 @@ export function Toast({
   onUndo,
   onDismiss,
 }: ToastProps) {
-  const { colors } = useTokens();
+  const { colors, isDark } = useTokens();
   const edSafeMode = useEdSafeMode();
   const visibleKcalText = toastVisibleKcalText(kcalText, edSafeMode);
   const dismissRef = useRef(onDismiss);
@@ -52,21 +52,21 @@ export function Toast({
       style={[
         styles.toast,
         {
-          backgroundColor: colors.card,
-          shadowColor: '#000000',
+          backgroundColor: colors.elevated,
+          shadowColor: isDark ? colors.bg : colors.text,
           shadowOpacity: 0.4,
           shadowRadius: 32,
           shadowOffset: { width: 0, height: 8 },
         },
       ]}
     >
-      <View style={[styles.iconTile, { backgroundColor: withAlpha(colors.success, 0.2) }]}>
+      <View style={[styles.iconTile, { backgroundColor: colors.successTint }]}>
         <SymbolView name="checkmark" size={16} weight="semibold" tintColor={colors.successInk} />
       </View>
       <View style={styles.textColumn}>
-        <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
         {visibleKcalText != null && (
-          <Text style={[styles.kcal, { color: colors.textSecondary }]}>{visibleKcalText}</Text>
+          <Text style={[styles.kcal, { color: colors.text2 }]}>{visibleKcalText}</Text>
         )}
       </View>
       {onUndo != null && (

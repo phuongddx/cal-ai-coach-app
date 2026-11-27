@@ -1,6 +1,6 @@
 /**
  * CCMacroBar (Components/Progress.swift). One capsule per macro; track is
- * scheme-dependent, fill width clamps to the goal and never drops below the
+ * the `fill` token (Ember `.bar`, `#core`), fill width clamps to the goal and never drops below the
  * bar height. Accessibility-hidden like the Swift bar (the mini card reads it).
  */
 
@@ -19,13 +19,13 @@ export type MacroBarProps = {
 export function macroFillColor(colors: Colors, macro: Macro): string {
   switch (macro) {
     case 'protein':
-      return colors.macroProtein;
+      return colors.protein;
     case 'carbs':
-      return colors.macroCarbs;
+      return colors.carbs;
     case 'fat':
-      return colors.macroFat;
+      return colors.fat;
     case 'fiber':
-      return colors.macroFiber;
+      return colors.fiber;
   }
 }
 
@@ -36,8 +36,7 @@ export function macroFillFraction(value: number, goal: number): number {
 
 export function MacroBar({ macro, value, goal }: MacroBarProps) {
   const { colors } = useTokens();
-  const dark = colors.background === '#000000';
-  const track = dark ? 'rgba(255,255,255,0.1)' : colors.surface;
+  const track = colors.fill;
   return (
     <View
       accessibilityElementsHidden

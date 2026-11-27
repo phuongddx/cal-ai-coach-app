@@ -26,8 +26,7 @@ export const macroLabels: Record<Macro, string> = {
 const round = (n: number) => Math.round(n);
 
 export function MacroMiniCard({ macro, value, goal }: MacroMiniCardProps) {
-  const { colors } = useTokens();
-  const dark = colors.background === '#000000';
+  const { colors, isDark } = useTokens();
   const label = macroLabels[macro];
   return (
     <View
@@ -46,12 +45,12 @@ export function MacroMiniCard({ macro, value, goal }: MacroMiniCardProps) {
         <Text
           style={[
             styles.label,
-            { color: dark ? macroFillColor(colors, macro) : colors.textSecondary },
+            { color: isDark ? macroFillColor(colors, macro) : colors.text2 },
           ]}
         >
           {label}
         </Text>
-        <Text style={[styles.value, { color: colors.textPrimary }]}>
+        <Text style={[styles.value, { color: colors.text }]}>
           {`${round(value)}/${round(goal)}g`}
         </Text>
       </View>

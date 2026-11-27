@@ -15,8 +15,8 @@ jest.mock('react/jsx-runtime', () => {
 
 import { render, screen, userEvent } from '@testing-library/react-native';
 
-import { PrimaryButton, primaryButtonStyle } from './PrimaryButton';
-import { lightColors } from '../tokens';
+import { PrimaryButton, primaryButtonLabelColor, primaryButtonStyle } from './PrimaryButton';
+import { darkColors, lightColors, radius, size } from '../tokens';
 
 describe('PrimaryButton', () => {
   it('renders its title as a button', async () => {
@@ -37,31 +37,57 @@ describe('PrimaryButton', () => {
     expect(action).toHaveBeenCalledTimes(1);
   });
 
-  it('does not fire while disabled and shows the 0.4 style', async () => {
+  it('does not fire while disabled and shows the disabled fill', async () => {
     const action = jest.fn();
     await render(<PrimaryButton title="Save entry" action={action} disabled />);
     const button = screen.getByRole('button');
     expect(button.props.accessibilityState.disabled).toBe(true);
     await userEvent.press(button);
     expect(action).not.toHaveBeenCalled();
-    expect(primaryButtonStyle(lightColors.accentLime, false, false)).toEqual(
-      expect.objectContaining({ opacity: 0.4 }),
+    expect(primaryButtonStyle(lightColors, false, false)).toEqual(
+      expect.objectContaining({ backgroundColor: lightColors.fill, opacity: 1 }),
     );
   });
 
   it('maps the pressed/enabled visual state like CCPrimaryButtonStyle', () => {
-    expect(primaryButtonStyle(lightColors.accentLime, false, true)).toEqual(
+    expect(primaryButtonStyle(lightColors, false, true)).toEqual(
       expect.objectContaining({
-        backgroundColor: lightColors.accentLime,
+        backgroundColor: lightColors.accent,
         opacity: 1,
         transform: [{ scale: 1 }],
       }),
     );
-    expect(primaryButtonStyle(lightColors.accentLime, true, true)).toEqual(
+    expect(primaryButtonStyle(lightColors, true, true)).toEqual(
       expect.objectContaining({
+        backgroundColor: lightColors.accentPressed,
         transform: [{ scale: 0.96 }],
         opacity: 1,
       }),
     );
+  });
+
+  // Ember canvas `.btn.primary`: accent fill, onAccent label (never white), 56 pt, radius 18.
+  it('draws the Ember primary button in both schemes', async () => {
+    for (const colors of [lightColors, darkColors]) {
+      expect(primaryButtonStyle(colors, false, true)).toEqual(
+        expect.objectContaining({
+          backgroundColor: colors.accent,
+          minHeight: 56,
+          borderRadius: 18,
+        }),
+      );
+      expect(primaryButtonLabelColor(colors, true)).toBe(colors.onAccent);
+      expect(primaryButtonLabelColor(colors, true)).not.toBe(colors.card);
+      expect(primaryButtonLabelColor(colors, false)).toBe(colors.text2);
+    }
+    expect(size.btn).toBe(56);
+    expect(radius.button).toBe(18);
+    await render(<PrimaryButton title="Save entry" />);
+    expect(screen.getByRole('button')).toHaveStyle({
+      backgroundColor: lightColors.accent,
+      minHeight: 56,
+      borderRadius: 18,
+    });
+    expect(screen.getByText('Save entry')).toHaveStyle({ color: lightColors.onAccent });
   });
 });

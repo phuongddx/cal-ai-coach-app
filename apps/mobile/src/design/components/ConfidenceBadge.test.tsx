@@ -45,8 +45,9 @@ describe('ConfidenceBadge rendering', () => {
     await render(<ConfidenceBadge confidence={0.92} compact />);
     expect(screen.getByTestId('confidence-badge:compact')).toBeOnTheScreen();
     expect(screen.getByTestId('confidence-badge:compact')).toHaveStyle({
-      paddingVertical: 4,
-      paddingHorizontal: 8,
+      minHeight: 22,
+      paddingLeft: 8,
+      paddingRight: 8,
     });
     expect(screen.getByText('High — single item', { includeHiddenElements: true })).toBeOnTheScreen();
   });

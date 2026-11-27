@@ -81,7 +81,7 @@ export function WeeklyReviewStats({
         <View key={stat.id} style={styles.stat} accessible>
           <Text style={[styles.value, { color: colors.accentInk }]}>{stat.value}</Text>
           <Text
-            style={[styles.label, { color: colors.textSecondary }]}
+            style={[styles.label, { color: colors.text2 }]}
             testID={`weekly-stat:${stat.id}`}
           >
             {stat.label}

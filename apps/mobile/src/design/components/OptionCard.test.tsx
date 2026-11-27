@@ -26,11 +26,9 @@ describe('OptionCard selection state booleans', () => {
   it('maps the selected visual state', () => {
     expect(optionCardBorder(lightColors, true)).toEqual({
       width: 2,
-      color: lightColors.accentLime,
+      color: lightColors.accentStrong,
     });
-    expect(optionCardIconTile(lightColors, true)).toBe(
-      'rgba(180,240,74,0.15)',
-    );
+    expect(optionCardIconTile(lightColors, true)).toBe(lightColors.accentTint);
     expect(optionCardIconColor(lightColors, true)).toBe(lightColors.accentInk);
   });
 

@@ -6,7 +6,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SymbolView, type SFSymbol } from 'expo-symbols';
 
-import { radius, space, typography, useTokens, withAlpha } from '../tokens';
+import { radius, space, typography, useTokens } from '../tokens';
 
 export type QuickActionTileProps = {
   title: string;
@@ -32,10 +32,10 @@ export function QuickActionTile({
         styles.tile,
         {
           backgroundColor: isHighlighted
-            ? withAlpha(colors.accentLime, 0.1)
+            ? colors.accentTint
             : colors.card,
           borderColor: isHighlighted
-            ? withAlpha(colors.accentLime, 0.3)
+            ? colors.accentStrong
             : colors.border,
         },
       ]}
@@ -43,12 +43,12 @@ export function QuickActionTile({
       <SymbolView
         name={icon as SFSymbol}
         size={28}
-        tintColor={isHighlighted ? colors.accentInk : colors.textPrimary}
+        tintColor={isHighlighted ? colors.accentInk : colors.text}
       />
       <Text
         style={[
           styles.title,
-          { color: isHighlighted ? colors.accentInk : colors.textSecondary },
+          { color: isHighlighted ? colors.accentInk : colors.text2 },
         ]}
       >
         {title}

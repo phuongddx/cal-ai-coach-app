@@ -8,7 +8,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
-import { size, useTokens, withAlpha } from '../tokens';
+import { size, space, useTokens } from '../tokens';
 
 import { ScaledNumber } from './ScaledNumber';
 import { useEdSafeMode } from '../edSafe';
@@ -21,7 +21,15 @@ export type CalorieRingProps = {
   variant?: RingVariant;
   /** Fraction of day elapsed; defaults to the real clock in ED-safe mode. */
   dayProgress?: number;
+  /**
+   * Optional. Draw for the Ember hero card (dark in both modes): `emberTrack`, an `accent`
+   * arc and `emberText` labels. Off by default (plain card: `fill` track, `accentStrong` arc).
+   */
+  onEmber?: boolean;
 };
+
+/** Props the ring passes to the remaining-number ScaledNumber (asserted in the unit test). */
+export const remainingNumberProps = { role: 'hero', fitWidth: true } as const;
 
 const ringGeometry: Record<RingVariant, { size: number; stroke: number }> = {
   hero: { size: size.ringHero, stroke: size.ringHeroStroke },
@@ -73,11 +81,14 @@ export function CalorieRing({
   goal,
   variant = 'hero',
   dayProgress,
+  onEmber = false,
 }: CalorieRingProps) {
   const { colors } = useTokens();
   const edSafeMode = useEdSafeMode();
-  const dark = colors.background === '#000000';
-  const trackColor = dark ? 'rgba(255,255,255,0.1)' : colors.surface;
+  const trackColor = onEmber ? colors.emberTrack : colors.fill;
+  const arcColor = onEmber ? colors.accent : colors.accentStrong;
+  const primaryText = onEmber ? colors.emberText : colors.text;
+  const secondaryText = onEmber ? colors.emberText2 : colors.text2;
   const geometry = ringGeometry[variant];
   const radius = (geometry.size - geometry.stroke) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -105,7 +116,7 @@ export function CalorieRing({
           cx={geometry.size / 2}
           cy={geometry.size / 2}
           r={radius}
-          stroke={colors.accentLime}
+          stroke={arcColor}
           strokeWidth={geometry.stroke}
           strokeLinecap="round"
           fill="none"
@@ -114,12 +125,12 @@ export function CalorieRing({
         />
       </Svg>
       {edSafeMode ? (
-        <View style={[styles.center, { paddingHorizontal: geometry.stroke + 8 }]} pointerEvents="none">
-          <Text style={[styles.onTrack, { color: colors.textPrimary }]}>On track</Text>
+        <View style={[styles.center, { paddingHorizontal: geometry.stroke + space.sm }]} pointerEvents="none">
+          <Text style={[styles.onTrack, { color: primaryText }]}>On track</Text>
           <Text
             numberOfLines={1}
             adjustsFontSizeToFit
-            style={[styles.dayPercent, { color: colors.textSecondary }]}
+            style={[styles.dayPercent, { color: secondaryText }]}
           >
             {dayPercentText(edSafeDayProgress)}
           </Text>
@@ -127,13 +138,13 @@ export function CalorieRing({
       ) : (
         variant === 'hero' &&
         remaining != null && (
-          <View style={[styles.center, { paddingHorizontal: geometry.stroke + 8 }]} pointerEvents="none">
+          <View style={[styles.center, { paddingHorizontal: geometry.stroke + space.sm }]} pointerEvents="none">
             <ScaledNumber
               text={`${remaining}`}
-              role="hero"
-              style={{ color: colors.textPrimary }}
+              {...remainingNumberProps}
+              style={{ color: primaryText }}
             />
-            <Text style={[styles.dayPercent, { color: colors.textSecondary }]}>remaining</Text>
+            <Text style={[styles.dayPercent, { color: secondaryText }]}>remaining</Text>
           </View>
         )
       )}
@@ -148,6 +159,10 @@ const styles = StyleSheet.create({
   },
   center: {
     position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
