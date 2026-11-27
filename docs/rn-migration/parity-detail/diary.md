@@ -83,6 +83,7 @@ live-diary join and its localtime day grouping are part of the behavior under te
 | Behavior | Swift source | TypeScript | Jest case |
 |---|---|---|---|
 | Quick-add delta clamped so the day total never goes below 0 ml; additive ledger rows | `TodayModel.logWaterDelta` | `waterModel.ts` (`createWaterModel`) | `__tests__/DiaryWaterExercise.test.ts` › "water quick add day total and clamp at zero" (see findings: the rule runs through the water model, Today is U-33) |
+| The card shows litres ("1.25 of 2 L") with "+ 250 ml" in the normal mode, glasses ("5 of 8 glasses") with "+ 1 glass" under ED-Safe (Ember frames 07/09; litres helper `litresText`) | — (frame addition) | `screens/WaterCard.tsx` | `__tests__/WaterCard.test.tsx` › "the card shows litres with the +250 ml chip in the normal mode"; "the card shows glasses with the +1 glass chip in the ED-safe mode and returns when it is off" |
 | Droplet tile (the frame's info-tint tile), ±250 ml chips, goal from targets (default 8) | `WaterCard.swift` / `WaterLogSheet.swift` | `screens/WaterCard.tsx` + `waterModel.ts` (`GLASS_ML`, `DEFAULT_GLASSES`) | `__tests__/WaterCard.test.tsx` › "the card shows the droplet tile, the glasses copy and the goal caption"; `__tests__/WaterLogSheet.test.tsx` › "the sheet shows the tile, the glasses and the day total"; chips: "the minus tile hands −250 to the quick-add" / "the plus tile hands +250 to the quick-add" |
 | Water has no kcal framing and stays visible under ED-safe; the droplet tile is accessibility-hidden | `WaterCard.swift` | `screens/WaterCard.tsx` | policy by construction (no calorie ring reuse); tile a11y-hidden |
 | Card tap opens the log sheet; Close dismisses | `TodayView.swift` (mount, U-33) / `WaterLogSheet` | `screens/WaterCard.tsx` | `__tests__/WaterCard.test.tsx` › "a tap hands over to the log sheet"; `__tests__/WaterLogSheet.test.tsx` › "Close dismisses the sheet" |
@@ -122,7 +123,7 @@ call sites (pager buttons, water tiles, custom-food fields).
 | `diary.edit.save` | the edit sheet's save wrapper (added A2, DY-08) | `screens/DiaryEditSheet.tsx` |
 | `diary.toast` | saved toast | `screens/DiaryDayView.tsx` wrapper View around `Toast` |
 | `diary.toast.undo` / `diary.toast.undoEdit` | the delete's and the edit's five-second undo toasts (added in the frames addendum, DY-08) | `screens/DiaryDayView.tsx` |
-| `diary.editedChip.<id>` | the "Edited" label of an edited row (added in the frames addendum, DY-08) | `screens/DiaryDayView.tsx` |
+| `diary.editedChip.<id>` | the "Edited" chip on an edited row — carried by the DS `FoodRow`'s `chipTestID` since U-71d (added in the frames addendum, DY-08) | `screens/DiaryDayView.tsx` |
 | `addfood.close` | sheet close | `screens/AddFoodSheet.tsx` |
 | `addfood.title` | the sheet bar's title (DS `SheetHeader` pattern, A2) | `screens/AddFoodSheet.tsx` |
 | `addfood.tile.photo` / `.barcode` / `.label` / `.describe` / `.search` | quick-action tiles | `screens/AddFoodSheet.tsx` wrapper Views around `QuickActionTile` |
