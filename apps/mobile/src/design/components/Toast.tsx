@@ -1,6 +1,7 @@
 /**
  * CCToast (Components/Content.swift). Saved-entry toast with undo; auto-dismiss
- * after 4 s. ED-safe drops the kcal line.
+ * after 4 s. ED-safe drops the kcal line. An optional `message` is a second line shown in every mode
+ * (the name and grams of an edited entry) unless it carries a calorie figure, which ED-safe still hides.
  */
 
 import { useEffect, useRef } from 'react';
@@ -14,6 +15,8 @@ import { useEdSafeMode } from '../edSafe';
 export type ToastProps = {
   title: string;
   kcalText?: string;
+  /** Second line under the title, shown in every mode unless it holds a calorie figure (then ED-safe hides it). */
+  message?: string;
   undoTitle?: string;
   onUndo?: () => void;
   onDismiss?: () => void;
@@ -24,9 +27,21 @@ export function toastVisibleKcalText(kcalText: string | undefined, edSafeMode: b
   return edSafeMode ? undefined : kcalText;
 }
 
+/** True when the text states a calorie figure: "kcal" anywhere, or a number followed by cal / kcal / calories / kJ. */
+export function carriesCalorieFigure(text: string): boolean {
+  return /\bkcal\b/i.test(text) || /\d\s*(?:k?cal(?:ories)?|kj)\b/i.test(text);
+}
+
+/** The pure ED-safe rule for the message line: kept in every mode, hidden under ED-safe only if it holds kcal. */
+export function toastVisibleMessage(message: string | undefined, edSafeMode: boolean): string | undefined {
+  if (message == null || message.length === 0) return undefined;
+  return edSafeMode && carriesCalorieFigure(message) ? undefined : message;
+}
+
 export function Toast({
   title,
   kcalText,
+  message,
   undoTitle = 'Undo',
   onUndo,
   onDismiss,
@@ -34,6 +49,8 @@ export function Toast({
   const { colors, isDark } = useTokens();
   const edSafeMode = useEdSafeMode();
   const visibleKcalText = toastVisibleKcalText(kcalText, edSafeMode);
+  const visibleMessage = toastVisibleMessage(message, edSafeMode);
+  const spoken = [title, visibleMessage, visibleKcalText].filter((line) => line != null).join('. ');
   const dismissRef = useRef(onDismiss);
   dismissRef.current = onDismiss;
 
@@ -48,7 +65,7 @@ export function Toast({
     <View
       testID="toast"
       accessibilityRole="alert"
-      accessibilityLabel={visibleKcalText == null ? title : `${title}. ${visibleKcalText}`}
+      accessibilityLabel={spoken}
       style={[
         styles.toast,
         {
@@ -65,6 +82,11 @@ export function Toast({
       </View>
       <View style={styles.textColumn}>
         <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+        {visibleMessage != null && (
+          <Text testID="toast:message" style={[styles.kcal, { color: colors.text2 }]}>
+            {visibleMessage}
+          </Text>
+        )}
         {visibleKcalText != null && (
           <Text style={[styles.kcal, { color: colors.text2 }]}>{visibleKcalText}</Text>
         )}

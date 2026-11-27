@@ -11,6 +11,9 @@ jest.mock('react/jsx-runtime', () => {
 });
 
 import { render, screen } from '@testing-library/react-native';
+import { StyleSheet, useColorScheme } from 'react-native';
+
+import { getTokens } from '../tokens';
 
 import { visibleStats, WeeklyReviewStats, kgValue } from './WeeklyReviewStats';
 import { setEdSafeMode } from '../edSafe';
@@ -70,5 +73,37 @@ describe('WeeklyReviewStats rendering', () => {
     );
     expect(screen.queryByTestId('weekly-stat:kg', { includeHiddenElements: true })).toBeNull();
     expect(screen.queryByTestId('weekly-stat:target', { includeHiddenElements: true })).toBeNull();
+  });
+});
+
+describe('WeeklyReviewStats onEmber', () => {
+  const colorOf = (node: { props: { style?: unknown } }) =>
+    (StyleSheet.flatten(node.props.style as never) as { color?: string }).color;
+  const mockScheme = useColorScheme as jest.MockedFunction<typeof useColorScheme>;
+  afterEach(() => mockScheme.mockReturnValue('light'));
+
+  it.each(['light', 'dark'] as const)('reads accentInk / text2 on a plain card by default (%s)', async (scheme) => {
+    mockScheme.mockReturnValue(scheme);
+    await render(<WeeklyReviewStats daysLogged={5} daysOnTarget={4} weeksAllLogged={2} kgThisWeek={0.42} />);
+    const colors = getTokens(scheme).colors;
+    expect(colorOf(screen.getByTestId('weekly-stat:days'))).toBe(colors.text2);
+    expect(colorOf(screen.getByText('5'))).toBe(colors.accentInk);
+  });
+
+  it.each(['light', 'dark'] as const)('reads accent / emberText2 on the ember card (%s)', async (scheme) => {
+    mockScheme.mockReturnValue(scheme);
+    await render(<WeeklyReviewStats daysLogged={5} daysOnTarget={4} weeksAllLogged={2} kgThisWeek={0.42} onEmber />);
+    const colors = getTokens(scheme).colors;
+    expect(colorOf(screen.getByTestId('weekly-stat:days'))).toBe(colors.emberText2);
+    expect(colorOf(screen.getByText('5'))).toBe(colors.accent);
+  });
+
+  it('keeps the ED-safe swap on the ember card', async () => {
+    await render(<WeeklyReviewStats daysLogged={5} daysOnTarget={4} weeksAllLogged={2} kgThisWeek={0.42} onEmber />);
+    await act(async () => {
+      setEdSafeMode(true);
+    });
+    expect(screen.getByTestId('weekly-stat:weeks', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.queryByTestId('weekly-stat:kg', { includeHiddenElements: true })).toBeNull();
   });
 });

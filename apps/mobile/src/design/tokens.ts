@@ -1,163 +1,152 @@
 /**
- * CoachCal design tokens — the TypeScript copy of `docs/design/ember/tokens.css`
- * (Ember, decision D12). Light = `:root`, dark = `.dark`; a variable that `.dark` does not
- * redeclare keeps its `:root` value, so each scheme below lists every variable. The token test
- * (`__tests__/tokens.test.ts`) READS tokens.css and compares every variable on both sides:
- * change a value here or there and it fails. Naming: `--cc-accent-ink` is `accentInk`,
- * `--s4` is `space[4]`, `--r-md` is `radius.md`, `--ring-stroke` is `size.ringStroke`.
+ * CoachCal design tokens, built from the chain of Ember (decision D12, rule 22):
  *
- * Keys of the earlier SwiftUI port (`accentLime`, `textPrimary`, `surface`, `warning`, ...)
- * stay as aliases of the Ember value with the same meaning (`legacyColorAliases`), so a screen
- * that is not restyled yet still renders, only in the Ember colors. A legacy key with no Ember
- * counterpart keeps its value (`colorsWithoutEmberCounterpart`). No key is deleted in U-71.
+ *   docs/design/ember/tokens.css -> tokens.json -> emberTokens.generated.ts (node scripts/rn/gen-tokens.mjs)
+ *   -> this file -> the keys the app reads.
  *
- * High-contrast values of design-system.md are not ported: React Native has no increased-
- * contrast trigger (docs/rn-migration/findings/U-71.md).
+ * No color, space, radius, size or text style is written by hand here: every group is read from `emberTokens`.
+ * What the chain does not hold lives in `tokensWithoutSource.ts` (one register, pinned by the token
+ * test). Naming: `--cc-accent-ink` is `accentInk`, `--s4` is `space[4]`, `--r-md` is `radius.md`,
+ * `--ring-stroke` is `size.ringStroke`.
+ *
+ * Four color modes follow the cascade of tokens.css: `light`, `dark`, `highContrastLight` and
+ * `highContrastDark`. The last two apply while iOS Increase Contrast is on (`highContrast.ts`);
+ * space, radius, size and font never change with contrast.
+ *
+ * Keys of the earlier SwiftUI port (`accentLime`, `textPrimary`, `surface`, `warning`, ...) stay as
+ * aliases of the Ember value with the same meaning (`legacyColorAliases`), so a screen that is not
+ * restyled yet still renders. No key is deleted.
  */
 
 import { useColorScheme } from 'react-native';
 
+import { emberTokens } from './emberTokens.generated';
+import { useHighContrast } from './highContrast';
+import {
+  colorValuesWithoutSource,
+  colorsWithoutEmberCounterpart,
+  radiusWithoutSource,
+  scaledNumberSize,
+  sizeWithoutSource,
+} from './tokensWithoutSource';
+
+export { withAlpha } from './color';
+export { colorsWithoutEmberCounterpart, scaledNumberSize, type ScaledNumberRole } from './tokensWithoutSource';
+
 export type Scheme = 'light' | 'dark';
 
-/** 4-pt grid: `--s1`..`--s12` as `space[1]`..`space[12]`, plus the keys the app already uses. */
+const { color, font, space: emberSpace, radius: emberRadius, size: emberSize, type: emberType } = emberTokens;
+
+/** 4-pt grid: `--s1`..`--s12` as `space[1]`..`space[12]`, plus the earlier names of the same steps. */
 export const space = {
-  1: 4,
-  2: 8,
-  3: 12,
-  4: 16,
-  5: 20,
-  6: 24,
-  8: 32,
-  10: 40,
-  12: 48,
+  1: emberSpace.s1,
+  2: emberSpace.s2,
+  3: emberSpace.s3,
+  4: emberSpace.s4,
+  5: emberSpace.s5,
+  6: emberSpace.s6,
+  8: emberSpace.s8,
+  10: emberSpace.s10,
+  12: emberSpace.s12,
   // Earlier keys, same values as the numbered scale.
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  xl2: 24,
-  xl3: 32,
-  xl4: 40,
-  xl5: 48,
+  xs: emberSpace.s1,
+  sm: emberSpace.s2,
+  md: emberSpace.s3,
+  lg: emberSpace.s4,
+  xl: emberSpace.s5,
+  xl2: emberSpace.s6,
+  xl3: emberSpace.s8,
+  xl4: emberSpace.s10,
+  xl5: emberSpace.s12,
 } as const;
 
 /** Radii `--r-*` (concentric with iOS 26 controls); `full` is the earlier name of `pill`. */
 export const radius = {
-  sm: 10,
-  md: 14,
-  lg: 20,
-  xl: 28,
-  pill: 999,
-  full: 999,
-  /** Buttons and chips: the canvas `.btn` and `.chip` use 18 (no CSS variable). */
-  button: 18,
+  ...emberRadius,
+  full: emberRadius.pill,
+  /** The earlier name of `btn` (`--r-btn`): buttons, chips and segments. */
+  button: emberRadius.btn,
+  ...radiusWithoutSource,
 } as const;
 
 /**
- * Sizes: `--tap`, `--btn`, `--shutter`, `--ring`, `--ring-stroke`. The rest are earlier keys:
- * `tapTarget`, `ringHero` and `ringHeroStroke` follow their Ember counterparts, the others have
- * none and keep their value (`macroBarHeight` is 8 as the canvas `.bar` draws it).
+ * Sizes of tokens.css (`--tap`, `--btn`, `--shutter`, `--ring`, `--ring-stroke`, `--fab`, `--ring-md`,
+ * `--ring-md-stroke`, `--ring-sm`, `--ring-sm-stroke`, `--macro-bar`), then the earlier keys, each
+ * following the Ember size whose meaning it kept: `tapTarget`, `ringHero`, `ringHeroStroke`,
+ * `ringCompact` (the 120 pt ring, `--ring-sm`), `ringCompactStroke` and `macroBarHeight`. The goal
+ * ring (56 pt) has no variable: it stays in `tokensWithoutSource.ts`.
  */
 export const size = {
-  tap: 44,
-  btn: 56,
-  shutter: 76,
-  ring: 184,
-  ringStroke: 16,
-  tapTarget: 44,
-  fab: 56,
-  ringHero: 184,
-  ringCompact: 120,
-  ringGoal: 56,
-  ringHeroStroke: 16,
-  ringCompactStroke: 8,
-  ringGoalStroke: 6,
-  macroBarHeight: 8,
+  ...emberSize,
+  tapTarget: emberSize.tap,
+  ringHero: emberSize.ring,
+  ringHeroStroke: emberSize.ringStroke,
+  ringCompact: emberSize.ringSm,
+  ringCompactStroke: emberSize.ringSmStroke,
+  macroBarHeight: emberSize.macroBar,
+  ...sizeWithoutSource,
 } as const;
+
+/** The sixteen text styles of tokens.css (`--t-*`), by their name in tokens.json: `largeTitle` ... `numBody`. */
+export type TextStyleName = keyof typeof emberType;
+
+export type EmberTextStyle = {
+  fontSize: number;
+  lineHeight: number;
+  fontWeight: '400' | '500' | '600' | '700';
+  /** `rounded` is SF Pro Rounded (`--cc-font-round`), `text` the system font (`--cc-font`). */
+  family: 'text' | 'rounded';
+};
+
+/** Exposed as `useTokens().type` and as `textStyles`. `--t-large-title` is `type.largeTitle`, `--t-num-md` is `type.numMd`; the values come from the chain. */
+export const textStyles = Object.fromEntries(
+  (Object.keys(emberType) as TextStyleName[]).map((name) => {
+    const { size: fontSize, lineHeight, weight, family } = emberType[name];
+    return [name, { fontSize, lineHeight, fontWeight: String(weight) as EmberTextStyle['fontWeight'], family }];
+  }),
+) as Record<TextStyleName, EmberTextStyle>;
+
+/** Typography roles (CCTypography.Role), the earlier names, with the Ember text style each reads. */
+export type TypographyRole =
+  | 'title' // type.largeTitle
+  | 'heading' // type.title2
+  | 'headline' // type.headline
+  | 'body' // type.body
+  | 'subhead' // type.subheadline
+  | 'footnote' // type.footnote
+  | 'caption' // type.caption1
+  | 'tabLabel'; // type.caption2
+
+export type TypographyStyle = Pick<EmberTextStyle, 'fontSize' | 'fontWeight'>;
+
+/** The text style of the design each earlier role follows. */
+export const typographyRoleSource = {
+  title: 'largeTitle',
+  heading: 'title2',
+  headline: 'headline',
+  body: 'body',
+  subhead: 'subheadline',
+  footnote: 'footnote',
+  caption: 'caption1',
+  tabLabel: 'caption2',
+} as const satisfies Record<TypographyRole, TextStyleName>;
+
+/** Size and weight only (no line height), so a screen that spreads a role keeps its layout. */
+export const typography = Object.fromEntries(
+  (Object.keys(typographyRoleSource) as TypographyRole[]).map((role) => {
+    const { fontSize, fontWeight } = textStyles[typographyRoleSource[role]];
+    return [role, { fontSize, fontWeight }];
+  }),
+) as Record<TypographyRole, TypographyStyle>;
 
 /** `--cc-font` and `--cc-font-round`, verbatim. React Native takes the system font on iOS. */
 export const fontFamily = {
-  text: '-apple-system, "SF Pro Text", "SF Pro Display", system-ui, "Inter", "Segoe UI", sans-serif',
-  round: 'ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif',
+  text: font.text,
+  round: font.rounded,
 } as const;
 
-/** Typography roles (CCTypography.Role) with the iOS system text style each maps to. */
-export type TypographyRole =
-  | 'title' // .largeTitle.weight(.semibold)
-  | 'heading' // .title2.weight(.semibold)
-  | 'headline' // .headline
-  | 'body' // .body
-  | 'subhead' // .subheadline
-  | 'footnote' // .footnote
-  | 'caption' // .caption.weight(.medium)
-  | 'tabLabel'; // .caption2.weight(.medium)
-
-export type TypographyStyle = {
-  fontSize: number;
-  fontWeight: '400' | '500' | '600';
-};
-
-export const typography: Record<TypographyRole, TypographyStyle> = {
-  title: { fontSize: 34, fontWeight: '600' },
-  heading: { fontSize: 22, fontWeight: '600' },
-  headline: { fontSize: 17, fontWeight: '600' },
-  body: { fontSize: 17, fontWeight: '400' },
-  subhead: { fontSize: 15, fontWeight: '400' },
-  footnote: { fontSize: 13, fontWeight: '400' },
-  caption: { fontSize: 12, fontWeight: '500' },
-  tabLabel: { fontSize: 11, fontWeight: '500' },
-};
-
-/** CCScaledNumber roles: hero (700/56) and plan (700/64) numerals. */
-export type ScaledNumberRole = 'hero' | 'planNumber';
-
-export const scaledNumberSize: Record<ScaledNumberRole, number> = {
-  hero: 56,
-  planNumber: 64,
-};
-
-/** Every `--cc-*` color of tokens.css, camelCase. */
-export type EmberColors = {
-  accent: string;
-  accentPressed: string;
-  onAccent: string;
-  accentStrong: string;
-  accentInk: string;
-  accentTint: string;
-  ember: string;
-  emberTrack: string;
-  emberText: string;
-  emberText2: string;
-  emberAccent: string;
-  bg: string;
-  grouped: string;
-  card: string;
-  elevated: string;
-  fill: string;
-  border: string;
-  separator: string;
-  text: string;
-  text2: string;
-  text3: string;
-  grabber: string;
-  success: string;
-  successInk: string;
-  successTint: string;
-  caution: string;
-  cautionInk: string;
-  cautionTint: string;
-  error: string;
-  errorInk: string;
-  errorTint: string;
-  info: string;
-  infoInk: string;
-  infoTint: string;
-  protein: string;
-  carbs: string;
-  fat: string;
-  fiber: string;
-};
+/** Every `--cc-*` color of tokens.css, camelCase. The key set follows the generated module. */
+export type EmberColors = { -readonly [K in keyof typeof color.light]: string };
 
 /** Earlier key -> the Ember key whose value it now holds. */
 export const legacyColorAliases = {
@@ -178,108 +167,89 @@ export const legacyColorAliases = {
 
 export type LegacyColorKey = keyof typeof legacyColorAliases;
 
-/** Earlier keys with no Ember counterpart: they keep their value (listed in the findings). */
-export const colorsWithoutEmberCounterpart = ['appleHealth'] as const;
-
 export type Colors = EmberColors &
   Record<LegacyColorKey, string> &
   Record<(typeof colorsWithoutEmberCounterpart)[number], string>;
-
-// prettier-ignore
-const emberLight: EmberColors = {
-  accent: '#FF6A00', accentPressed: '#E35A00', onAccent: '#0B0A09', accentStrong: '#E35A00',
-  accentInk: '#B84300', accentTint: '#FFEBDC', ember: '#141210', emberTrack: '#3A342F',
-  emberText: '#F7F5F2', emberText2: '#ABA6A0', emberAccent: '#FF7A1F',
-  bg: '#FFFFFF', grouped: '#F6F5F3', card: '#FFFFFF', elevated: '#FFFFFF', fill: '#EFEDEA',
-  border: 'rgba(20,18,16,0.08)', separator: 'rgba(20,18,16,0.12)',
-  text: '#141210', text2: '#5F5B57', text3: '#6F6A65', grabber: 'rgba(20,18,16,0.22)',
-  success: '#22A653', successInk: '#146C34', successTint: '#E6F6EB',
-  caution: '#E0A800', cautionInk: '#6E5300', cautionTint: '#FFF6D6',
-  error: '#E5243B', errorInk: '#B3122E', errorTint: '#FDE8EC',
-  info: '#2563EB', infoInk: '#1D4ED8', infoTint: '#E8EFFE',
-  protein: '#2563EB', carbs: '#0E8A7E', fat: '#7C4DDB', fiber: '#2E8B47',
-};
-
-// prettier-ignore
-const emberDark: EmberColors = {
-  accent: '#FF6A00', accentPressed: '#E35A00', onAccent: '#0B0A09', accentStrong: '#FF6A00',
-  accentInk: '#FF7A1F', accentTint: '#3A2312', ember: '#1C1A18', emberTrack: '#3A342F',
-  emberText: '#F7F5F2', emberText2: '#ABA6A0', emberAccent: '#FF7A1F',
-  bg: '#000000', grouped: '#000000', card: '#1C1A18', elevated: '#2A2724', fill: '#2A2724',
-  border: 'rgba(255,255,255,0.08)', separator: 'rgba(255,255,255,0.12)',
-  text: '#F7F5F2', text2: '#ABA6A0', text3: '#9A958F', grabber: 'rgba(255,255,255,0.3)',
-  success: '#4ADE80', successInk: '#4ADE80', successTint: '#12301E',
-  caution: '#FFD43B', cautionInk: '#FFD43B', cautionTint: '#3A3214',
-  error: '#FF7088', errorInk: '#FF7088', errorTint: '#3A1219',
-  info: '#6EA8FF', infoInk: '#6EA8FF', infoTint: '#14223D',
-  protein: '#6EA8FF', carbs: '#3CCFBE', fat: '#B794FF', fiber: '#5AD27A',
-};
 
 function withLegacyKeys(ember: EmberColors): Colors {
   const legacy = {} as Record<LegacyColorKey, string>;
   for (const key of Object.keys(legacyColorAliases) as LegacyColorKey[]) {
     legacy[key] = ember[legacyColorAliases[key]];
   }
-  return { ...ember, ...legacy, appleHealth: '#FF2D55' };
+  return { ...ember, ...legacy, ...colorValuesWithoutSource };
 }
 
-export const lightColors: Colors = withLegacyKeys(emberLight);
+export const lightColors: Colors = withLegacyKeys(color.light);
+export const darkColors: Colors = withLegacyKeys(color.dark);
+export const highContrastLightColors: Colors = withLegacyKeys(color.highContrastLight);
+export const highContrastDarkColors: Colors = withLegacyKeys(color.highContrastDark);
 
-export const darkColors: Colors = withLegacyKeys(emberDark);
+/** The four color modes of the chain, by name. */
+export type ColorMode = keyof typeof emberTokens.color;
 
-const colorsByScheme: Record<Scheme, Colors> = { light: lightColors, dark: darkColors };
+export const colorsByMode: Record<ColorMode, Colors> = {
+  light: lightColors,
+  dark: darkColors,
+  highContrastLight: highContrastLightColors,
+  highContrastDark: highContrastDarkColors,
+};
 
-/** The full token set for one scheme. */
+/** The full token set for one scheme and one contrast setting. */
 export type Tokens = {
   scheme: Scheme;
   /** True in the dark scheme: components branch on this, never on a color literal. */
   isDark: boolean;
+  /** True while iOS Increase Contrast is on: `colors` then holds the High Contrast values. */
+  highContrast: boolean;
   colors: Colors;
   space: typeof space;
   radius: typeof radius;
   size: typeof size;
   typography: typeof typography;
+  /** The sixteen text styles of the design, under the names of tokens.json. */
+  type: typeof textStyles;
   fontFamily: typeof fontFamily;
 };
 
-export function getTokens(scheme: Scheme): Tokens {
+export type TokenOptions = {
+  /** The system color scheme; `null`, `undefined` or anything but `dark` is light. */
+  colorScheme?: string | null;
+  highContrast?: boolean;
+};
+
+/**
+ * Pure: the token set for a color scheme and a contrast setting. A bare scheme string is accepted for
+ * the callers that predate the contrast setting; it means normal contrast.
+ */
+export function getTokens(options: Scheme | TokenOptions): Tokens {
+  const { colorScheme, highContrast = false } =
+    typeof options === 'string' ? { colorScheme: options, highContrast: false } : options;
+  const scheme: Scheme = colorScheme === 'dark' ? 'dark' : 'light';
+  const mode: ColorMode =
+    scheme === 'dark'
+      ? highContrast
+        ? 'highContrastDark'
+        : 'dark'
+      : highContrast
+        ? 'highContrastLight'
+        : 'light';
   return {
     scheme,
     isDark: scheme === 'dark',
-    colors: colorsByScheme[scheme],
+    highContrast,
+    colors: colorsByMode[mode],
     space,
     radius,
     size,
     typography,
+    type: textStyles,
     fontFamily,
   };
 }
 
-/** The token set for the current color scheme. */
+/** The token set for the current color scheme and the iOS Increase Contrast setting. */
 export function useTokens(): Tokens {
-  return getTokens(useScheme());
-}
-
-function useScheme(): Scheme {
-  const system = useColorScheme();
-  return system === 'dark' ? 'dark' : 'light';
-}
-
-/**
- * `Color.opacity(_)` for a `#RRGGBB` token or an `rgba(r,g,b,a)` token (the new alpha replaces
- * the old one).
- */
-export function withAlpha(color: string, alpha: number): string {
-  if (color.startsWith('rgb')) {
-    const [r, g, b] = color
-      .slice(color.indexOf('(') + 1, color.indexOf(')'))
-      .split(',')
-      .map((part) => Number.parseFloat(part));
-    return `rgba(${r},${g},${b},${alpha})`;
-  }
-  const value = Number.parseInt(color.slice(1), 16);
-  const r = (value >> 16) & 0xff;
-  const g = (value >> 8) & 0xff;
-  const b = value & 0xff;
-  return `rgba(${r},${g},${b},${alpha})`;
+  const colorScheme = useColorScheme();
+  const highContrast = useHighContrast();
+  return getTokens({ colorScheme, highContrast });
 }

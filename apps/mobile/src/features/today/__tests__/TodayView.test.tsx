@@ -178,8 +178,9 @@ describe('TodayView', () => {
     expect(flat.paddingBottom).toBe(todayBottomPadding(34)); // the jest safe-area mock has a 34pt bottom inset
     expect(TODAY_BOTTOM_INSET).toBe(48);
     // the list clears the whole Scan button (offset + height) plus the xl5 gap, and grows with the safe area
-    expect(todayBottomPadding(0)).toBe(FAB_BOTTOM_PADDING + 56 + 48);
-    expect(todayBottomPadding(34)).toBe(34 + FAB_BOTTOM_PADDING + 56 + 48);
+    // 62 is `--fab` of tokens.css (it was the hand-written 56 before U-71d)
+    expect(todayBottomPadding(0)).toBe(FAB_BOTTOM_PADDING + 62 + 48);
+    expect(todayBottomPadding(34)).toBe(34 + FAB_BOTTOM_PADDING + 62 + 48);
   });
 });
 

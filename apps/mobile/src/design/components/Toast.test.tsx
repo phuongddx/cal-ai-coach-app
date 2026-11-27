@@ -13,7 +13,7 @@ jest.mock('react/jsx-runtime', () => {
 import { act, render, screen, userEvent } from '@testing-library/react-native';
 import { useEffect } from 'react';
 
-import { toastVisibleKcalText, Toast } from './Toast';
+import { carriesCalorieFigure, toastVisibleKcalText, toastVisibleMessage, Toast } from './Toast';
 import { setEdSafeMode } from '../edSafe';
 
 beforeEach(() => setEdSafeMode(false));
@@ -66,6 +66,61 @@ describe('Toast rendering', () => {
     await render(<Toast title="Saved" />);
     expect(onDismissSpy).not.toHaveBeenCalled();
     onDismissSpy.mockRestore();
+  });
+});
+
+describe('Toast message line', () => {
+  it('spots a calorie figure', () => {
+    expect(carriesCalorieFigure('640 kcal')).toBe(true);
+    expect(carriesCalorieFigure('640kcal added')).toBe(true);
+    expect(carriesCalorieFigure('Chicken salad · 1,200 Cal')).toBe(true);
+    expect(carriesCalorieFigure('Total kcal today')).toBe(true);
+    expect(carriesCalorieFigure('Chicken salad · 180 g')).toBe(false);
+    expect(carriesCalorieFigure('Calm bowl · 250 g')).toBe(false);
+  });
+
+  it('keeps a plain message in every mode and hides a kcal message only under ED-safe', () => {
+    expect(toastVisibleMessage('Chicken salad · 180 g', true)).toBe('Chicken salad · 180 g');
+    expect(toastVisibleMessage('Chicken salad · 180 g', false)).toBe('Chicken salad · 180 g');
+    expect(toastVisibleMessage('Chicken salad · 640 kcal', false)).toBe('Chicken salad · 640 kcal');
+    expect(toastVisibleMessage('Chicken salad · 640 kcal', true)).toBeUndefined();
+    expect(toastVisibleMessage(undefined, false)).toBeUndefined();
+    expect(toastVisibleMessage('', false)).toBeUndefined();
+  });
+
+  it('renders the message as the second line and in the spoken label', async () => {
+    await render(<Toast title="Entry updated" message="Chicken salad · 180 g" />);
+    expect(screen.getByTestId('toast:message', { includeHiddenElements: true })).toHaveTextContent('Chicken salad · 180 g');
+    expect(screen.getByTestId('toast')).toHaveProp('accessibilityLabel', 'Entry updated. Chicken salad · 180 g');
+  });
+
+  it('shows a plain message under ED-safe', async () => {
+    await render(<Toast title="Entry updated" message="Chicken salad · 180 g" />);
+    await act(async () => {
+      setEdSafeMode(true);
+    });
+    expect(screen.getByText('Chicken salad · 180 g', { includeHiddenElements: true })).toBeOnTheScreen();
+  });
+
+  it('hides a kcal message under ED-safe from the line and the spoken label, and shows it otherwise', async () => {
+    await render(<Toast title="Saved" message="Chicken salad · 640 kcal" />);
+    expect(screen.getByText('Chicken salad · 640 kcal', { includeHiddenElements: true })).toBeOnTheScreen();
+    await act(async () => {
+      setEdSafeMode(true);
+    });
+    expect(screen.queryByText('Chicken salad · 640 kcal', { includeHiddenElements: true })).toBeNull();
+    expect(screen.getByTestId('toast')).toHaveProp('accessibilityLabel', 'Saved');
+  });
+
+  it('leaves the kcal line behavior alone when both are given', async () => {
+    await render(<Toast title="Saved" message="Rice · 150 g" kcalText="200 kcal added" />);
+    expect(screen.getByText('Rice · 150 g', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByText('200 kcal added', { includeHiddenElements: true })).toBeOnTheScreen();
+    await act(async () => {
+      setEdSafeMode(true);
+    });
+    expect(screen.getByText('Rice · 150 g', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.queryByText('200 kcal added', { includeHiddenElements: true })).toBeNull();
   });
 });
 

@@ -1,6 +1,7 @@
 /**
- * CCQuickActionTile (Components/Controls.swift). Icon-over-label tile, lime
- * tinted when highlighted.
+ * CCQuickActionTile (Components/Controls.swift). Icon-over-label tile, accent
+ * tinted when highlighted. The glyph is an Ember icon (`iconName`, the canvas `#i-*` set) or, for the
+ * earlier callers, an SF Symbol (`icon`); `iconName` wins when both are given, as in `OptionCard`.
  */
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -8,9 +9,15 @@ import { SymbolView, type SFSymbol } from 'expo-symbols';
 
 import { radius, space, typography, useTokens } from '../tokens';
 
+import { Icon } from './Icon';
+import type { IconName } from './iconShapes';
+
 export type QuickActionTileProps = {
   title: string;
-  icon: string;
+  /** SF Symbol name of the earlier callers. Ignored when `iconName` is given. */
+  icon?: string;
+  /** Ember canvas glyph (`#i-*`), drawn at 28 pt. */
+  iconName?: IconName;
   isHighlighted?: boolean;
   action?: () => void;
 };
@@ -18,6 +25,7 @@ export type QuickActionTileProps = {
 export function QuickActionTile({
   title,
   icon,
+  iconName,
   isHighlighted = false,
   action,
 }: QuickActionTileProps) {
@@ -40,11 +48,17 @@ export function QuickActionTile({
         },
       ]}
     >
-      <SymbolView
-        name={icon as SFSymbol}
-        size={28}
-        tintColor={isHighlighted ? colors.accentInk : colors.text}
-      />
+      {iconName != null ? (
+        <Icon name={iconName} size={28} color={isHighlighted ? colors.accentInk : colors.text} />
+      ) : (
+        icon != null && (
+          <SymbolView
+            name={icon as SFSymbol}
+            size={28}
+            tintColor={isHighlighted ? colors.accentInk : colors.text}
+          />
+        )
+      )}
       <Text
         style={[
           styles.title,

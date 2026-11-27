@@ -30,4 +30,14 @@ describe('QuickActionTile', () => {
       'Log weight',
     );
   });
+
+  it('draws an Ember glyph from iconName without an SF Symbol, and iconName wins over icon', async () => {
+    await render(<QuickActionTile title="Scan" iconName="camera" />);
+    expect(screen.getByTestId('quick-action:Scan')).toBeOnTheScreen();
+    expect(screen.getByTestId('icon:camera')).toBeOnTheScreen();
+    await render(<QuickActionTile title="Both" iconName="camera" icon="scalemass" />);
+    expect(screen.getByTestId('quick-action:Both')).toBeOnTheScreen();
+    await render(<QuickActionTile title="None" />);
+    expect(screen.getByTestId('quick-action:None')).toBeOnTheScreen();
+  });
 });
