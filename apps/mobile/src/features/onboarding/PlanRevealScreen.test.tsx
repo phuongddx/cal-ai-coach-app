@@ -19,6 +19,8 @@ jest.mock('react/jsx-runtime', () => {
 
 import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
 
+import { setEdSafeMode } from '../../design';
+
 import { PlanRevealScreen } from './PlanRevealScreen';
 import { onboardingCopy } from './onboardingCopy';
 import { createOnboardingModel } from './onboardingModel';
@@ -39,6 +41,9 @@ function makeModel(saveTarget: (target: unknown) => Promise<void> = async () => 
 }
 
 describe('plan reveal screen', () => {
+  beforeEach(() => setEdSafeMode(false));
+  afterEach(() => setEdSafeMode(false));
+
   it('shows the locked copy, the kcal hero, the macro rings and the weekly range', async () => {
     await render(<PlanRevealScreen model={makeModel()} onFinished={jest.fn()} />);
 
@@ -126,5 +131,24 @@ describe('plan reveal screen', () => {
     await waitFor(() => expect(onFinished).toHaveBeenCalledTimes(1));
     expect(model.finished).toBe(true);
     expect(saveTarget).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders neither the kcal hero nor the weekly range in ED-safe mode', async () => {
+    setEdSafeMode(true);
+    await render(<PlanRevealScreen model={makeModel()} onFinished={jest.fn()} />);
+
+    // The kcal hero collapses entirely: number, subtitle and the announced range.
+    expect(screen.queryByTestId('plan.kcalHero')).toBeNull();
+    expect(screen.queryByText('calories per day')).toBeNull();
+    expect(screen.queryByLabelText('1693 calories per day')).toBeNull();
+    // The weekly range line collapses; the card, headline and caption stay.
+    expect(screen.queryByTestId('plan.weeklyRange')).toBeNull();
+    expect(screen.queryByText('11,601 – 12,101 calories')).toBeNull();
+    expect(screen.getByText('Weekly range')).toBeOnTheScreen();
+    expect(screen.getByText(onboardingCopy.weeklyRangeCaption)).toBeOnTheScreen();
+    // The non-calorie surfaces stay: rings, adjust panel, disclaimer, continue.
+    expect(screen.getByTestId('plan.macro.protein')).toBeOnTheScreen();
+    expect(screen.getByTestId('plan.adjust')).toBeOnTheScreen();
+    expect(screen.getByTestId('plan.medicalDisclaimer')).toBeOnTheScreen();
   });
 });

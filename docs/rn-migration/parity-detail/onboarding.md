@@ -38,7 +38,7 @@ in `apps/mobile`.
 | OB-06 | Body metrics: sex chips, three wheels, under-18 gate | BodyMetricsView.swift | BodyMetricsScreen.tsx | `BodyMetricsScreen.test.tsx` (+ twin cases 3–4) |
 | OB-07 | Goal weight hero + wheel; pace slider clamped by the engine; safety-floor banner | GoalWeightPaceView.swift | GoalWeightPaceScreen.tsx, PaceSlider.tsx | `GoalWeightPaceScreen.test.tsx` (+ twin cases 5–7) |
 | OB-08 | Ring + 4-step checklist; 2 s window; instant flip with the flag | GeneratingPlanView.swift | GeneratingPlanScreen.tsx | `GeneratingPlanScreen.test.tsx` |
-| OB-09 | Plan reveal: kcal hero, macro rings, weekly range, edit panel, persist | PlanRevealView.swift | PlanRevealScreen.tsx, MacroRing.tsx | `PlanRevealScreen.test.tsx` (+ twin case 8, finish cases) |
+| OB-09 | Plan reveal: kcal hero, macro rings, weekly range, edit panel, persist; ED-safe collapse of the hero and the range | PlanRevealView.swift | PlanRevealScreen.tsx, MacroRing.tsx | `PlanRevealScreen.test.tsx` (+ twin case 8, finish cases, ED-safe case) |
 | OB-10 | Projection: kg + weeks only, no calorie strings | ProjectionView.swift | ProjectionScreen.tsx | `ProjectionScreen.test.tsx` (renders every string and keeps the unit out) |
 
 ## Model contract (the 8 Swift twins, same behavior sentences)
@@ -114,10 +114,13 @@ DS-owned identifiers riding along (not onboarding's, but on these screens):
 
 ## Gaps (recorded, none silently dropped)
 
-1. **Plan reveal ED-safe hide** (OB-09): the Swift `.edSafeHidden()` collapse
-   of the kcal hero and weekly range is not ported — no DS component owns the
-   branch and I7 forbids the call in feature code. Both surfaces render
-   unconditionally. See findings/U-31.md §5.
+1. **Plan reveal ED-safe hide** (OB-09): CLOSED in U-41 — the kcal hero and
+   the weekly-range Text are wrapped in the design system's `EdSafeCollapse`
+   (PR 21's component), matching the Swift `.edSafeHidden()` placement: the
+   hero collapses whole, the range line collapses inside its card (headline and
+   caption stay). Test: `PlanRevealScreen.test.tsx` "renders neither the kcal
+   hero nor the weekly range in ED-safe mode". See
+   findings/U-41.md §OB-09.
 2. **A11y-hidden caption rows** (pace axis captions, "Today / 12 weeks"):
    RNTL v14 queries mirror the accessibility tree, so the hiding flag makes
    the locked copy unassertable; both rows render without it. VoiceOver reads
