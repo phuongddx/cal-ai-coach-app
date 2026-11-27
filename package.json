@@ -1,20 +1,22 @@
 {
-  "name": "coachcal-rn-spike",
+  "name": "coachcal",
   "private": true,
-  "version": "0.0.0",
-  "description": "Throwaway React Native + Expo spike for CoachCal (branch spike/rn-expo). Not production code.",
+  "version": "1.0.0",
+  "description": "CoachCal monorepo: React Native + Expo app (apps/mobile), Hono API (apps/api), shared packages (packages/core, packages/api-contract).",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "engines": {
-    "node": ">=22.13"
+    "node": ">=24"
   },
   "scripts": {
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "api": "npm run dev --workspace @coachcal/api",
-    "mobile": "npm run start --workspace @coachcal/mobile"
+    "mobile": "npm run start --workspace @coachcal/mobile",
+    "test:api": "npm run test --workspace @coachcal/api",
+    "test:mobile": "npm run test --workspace @coachcal/mobile"
   },
   "devDependencies": {
     "@testing-library/react-native": "^14.1.0",

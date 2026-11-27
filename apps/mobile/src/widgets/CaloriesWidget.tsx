@@ -80,7 +80,7 @@ const CaloriesWidget = (props: CaloriesWidgetProps, environment: WidgetEnvironme
             font({ size: 15, weight: 'semibold', design: 'rounded' }),
             foregroundStyle(textPrimary),
           ]}>
-          Open CoachCal Spike
+          Open CoachCal
         </Text>
       </VStack>
     );

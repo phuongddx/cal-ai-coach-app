@@ -3,11 +3,11 @@
 # Measurements for the CoachCal RN spike (spec D6): app size, idle memory, cold start.
 #
 # Usage:
-#   scripts/measure.sh debug|release          # everything, writes evidence/measurements/<mode>.txt
-#   MEASURE_RUNTIME=0 scripts/measure.sh debug # dry run: only the size branch (no simulator)
+#   scripts/rn/measure.sh debug|release          # everything, writes evidence/measurements/<mode>.txt
+#   MEASURE_RUNTIME=0 scripts/rn/measure.sh debug # dry run: only the size branch (no simulator)
 #
-# The built app is the newest CoachCalSpike.app under
-# ~/Library/Developer/Xcode/DerivedData/CoachCalSpike-*/Build/Products/<Debug|Release>-iphonesimulator/.
+# The built app is the newest CoachCal.app under
+# ~/Library/Developer/Xcode/DerivedData/CoachCal-*/Build/Products/<Debug|Release>-iphonesimulator/.
 # Cold start needs the T1 marker file (first-render.txt, written on the Ember screen's first
 # React commit), so a full run only makes sense after the integration task (plan T6/T7).
 #
@@ -18,7 +18,7 @@ set -euo pipefail
 
 MODE="${1:-}"
 UDID="85024D2F-71DE-43C0-8E11-CE58F4578FC3"
-BUNDLE_ID="com.nextlabs.coachcal.rnspike"
+BUNDLE_ID="com.nextlabs.coachcal"
 IDLE_WAIT_SEC=15
 COLD_STARTS=5
 COLD_START_TIMEOUT_SEC=120
@@ -27,30 +27,30 @@ case "$MODE" in
   debug) PRODUCTS_DIR="Debug-iphonesimulator" ;;
   release) PRODUCTS_DIR="Release-iphonesimulator" ;;
   *)
-    echo "usage: scripts/measure.sh <debug|release>  (MEASURE_RUNTIME=0 for size-only dry run)" >&2
+    echo "usage: scripts/rn/measure.sh <debug|release>  (MEASURE_RUNTIME=0 for size-only dry run)" >&2
     exit 2
     ;;
 esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(dirname "$SCRIPT_DIR")"
-OUT_FILE="$ROOT_DIR/evidence/measurements/$MODE.txt"
+ROOT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
+OUT_FILE="$ROOT_DIR/docs/rn-migration/evidence/measurements/$MODE.txt"
 RUNTIME="${MEASURE_RUNTIME:-1}"
 
 # host time in ms; macOS date has no %N, perl's Time::HiRes ships with the system.
 now_ms() { perl -MTime::HiRes=time -e 'printf "%.0f\n", time() * 1000'; }
 
-APP_PATH="$(ls -td ~/Library/Developer/Xcode/DerivedData/CoachCalSpike-*/Build/Products/$PRODUCTS_DIR/CoachCalSpike.app 2>/dev/null | head -1 || true)"
+APP_PATH="$(ls -td ~/Library/Developer/Xcode/DerivedData/CoachCal-*/Build/Products/$PRODUCTS_DIR/CoachCal.app 2>/dev/null | head -1 || true)"
 if [ -z "$APP_PATH" ]; then
-  echo "error: no CoachCalSpike.app under DerivedData for $PRODUCTS_DIR — build it first:" >&2
+  echo "error: no CoachCal.app under DerivedData for $PRODUCTS_DIR — build it first:" >&2
   echo "  cd apps/mobile && CI=1 npx expo run:ios${MODE:+ --configuration Release} --no-bundler --device $UDID" >&2
   exit 1
 fi
 
-mkdir -p "$ROOT_DIR/evidence/measurements"
+mkdir -p "$ROOT_DIR/docs/rn-migration/evidence/measurements"
 
 {
-  echo "# CoachCalSpike measurements — $MODE build ($(date '+%Y-%m-%d %H:%M:%S %Z'))"
+  echo "# CoachCal measurements — $MODE build ($(date '+%Y-%m-%d %H:%M:%S %Z'))"
   echo "# Simulator iPhone 17 Pro, iOS 26.4, UDID $UDID. All numbers are Simulator numbers."
   echo "# app: $APP_PATH"
   echo ""

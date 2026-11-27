@@ -23,7 +23,7 @@ export type AppDeps = {
 export function createApp(deps: AppDeps) {
   const app = new Hono<AppEnv>();
 
-  app.get('/health', (c) => c.json({ ok: true, service: 'coachcal-rn-spike-api' }));
+  app.get('/health', (c) => c.json({ ok: true, service: 'coachcal-api' }));
 
   app.use('/v1/sync/*', bearerAuth(deps.tokens ?? loadDevTokens()));
   registerSyncRoutes(app, deps.store);

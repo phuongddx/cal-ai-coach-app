@@ -8,13 +8,13 @@
 #
 #   bash scripts/e2e-sync-app.sh 2>&1 | tee evidence/item4/e2e-app-transcript.txt
 #
-# Deep links: `xcrun simctl openurl` opens ccspike://spike?action=<name>. When iOS asks
-# "Open in CoachCal Spike?" the script presses Open with `axe tap --label Open`.
+# Deep links: `xcrun simctl openurl` opens coachcal://spike?action=<name>. When iOS asks
+# "Open in CoachCal?" the script presses Open with `axe tap --label Open`.
 set -uo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 UDID="${SIM_UDID:-85024D2F-71DE-43C0-8E11-CE58F4578FC3}"
-BUNDLE=com.nextlabs.coachcal.rnspike
+BUNDLE=com.nextlabs.coachcal
 LOG_DIR="${RN_SPIKE_LOG_DIR:-/private/var/folders/nn/n6wtxkdd3n10d78wf4xmygrm0000gp/T/opencode/rn-logs}"
 METRO_LOG="${METRO_LOG:-$LOG_DIR/t6-metro.log}"
 EVID="${EVID:-$ROOT/evidence/item4}"
@@ -31,10 +31,10 @@ step() { echo; echo "=== $1 ==="; }
 ok() { echo "  ok: $1"; }
 bad() { echo "  FAIL: $1"; FAILS=$((FAILS + 1)); }
 expect() { if [ "$2" = "$3" ]; then ok "$1 ($3)"; else bad "$1 — expected [$2], got [$3]"; fi; }
-# Every spike deep link lands on the Spike tab; ccspike:/// is the route of the Ember tab
+# Every spike deep link lands on the Spike tab; coachcal:/// is the route of the Ember tab
 # (axe taps on the glass tab bar do not register).
 show_ember() {
-  xcrun simctl openurl "$UDID" "ccspike:///"
+  xcrun simctl openurl "$UDID" "coachcal:///"
   sleep 1.5
   axe tap --label Open --udid "$UDID" >/dev/null 2>&1 || true
   sleep 1.5
@@ -48,7 +48,7 @@ spike_lines_since() { tail -n +"$(($1 + 1))" "$METRO_LOG" | grep -a '\[spike\]' 
 link() { # action [extra query]
   local action="$1" extra="${2:-}" before i
   before="$(log_lines)"
-  xcrun simctl openurl "$UDID" "ccspike://spike?action=$action${extra:+&$extra}"
+  xcrun simctl openurl "$UDID" "coachcal://spike?action=$action${extra:+&$extra}"
   for i in $(seq 1 25); do
     sleep 1
     if tail -n +"$((before + 1))" "$METRO_LOG" | grep -aq "\"event\":\"action-done\",\"data\":{\"name\":\"$action\""; then

@@ -2,7 +2,7 @@
 # End-to-end sync scenario, curl-only steps (spec Testing "End-to-end").
 # Prerequisite: scripts/start-api.sh is running (PostgreSQL 17 on 5433, API on 8787).
 #
-#   bash scripts/e2e-sync.sh 2>&1 | tee evidence/item4/e2e-transcript.txt
+#   bash scripts/rn/e2e-sync.sh 2>&1 | tee docs/rn-migration/evidence/spike/item4/e2e-transcript.txt
 #
 # The app-driven steps (deep links into the simulator) live at the bottom as
 # comments; the integration task (T6) runs them.
@@ -123,7 +123,7 @@ step "Done — all curl steps green"
 cat <<'APP_STEPS'
 
 App-driven steps (integration task T6, via deep links and the [spike] log):
-  1. Online:      ccspike://spike?action=seed ; action=sync   → server has A and C (already true above)
+  1. Online:      coachcal://spike?action=seed ; action=sync   → server has A and C (already true above)
   2. Offline:     scripts/start-api.sh stop (server stopped); on the device
                   action=force-offline, action=add-meal (B), action=edit-meal (A 450),
                   action=delete-meal (C); force-stop and relaunch the app; B present,

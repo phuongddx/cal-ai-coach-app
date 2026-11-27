@@ -116,7 +116,7 @@ describe('GET /health', () => {
     const { app } = await makeApp();
     const res = await app.request('/health');
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, service: 'coachcal-rn-spike-api' });
+    expect(await res.json()).toEqual({ ok: true, service: 'coachcal-api' });
   });
 });
 

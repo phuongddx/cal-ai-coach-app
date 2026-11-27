@@ -29,3 +29,20 @@
 
 # Local git worktrees (superpowers:using-git-worktrees)
 .worktrees/
+
+# Node / Expo monorepo (apps/, packages/)
+node_modules/
+.expo/
+dist/
+expo-env.d.ts
+*.tsbuildinfo
+# generated native folders (Continuous Native Generation)
+apps/*/ios/
+apps/*/android/
+apps/*/.kotlin/
+coverage/
+# machine-generated evidence that is large; curated screenshots under docs/ are committed
+docs/rn-migration/evidence/tmp/
+*.log
+# locally built app bundles kept for `xcrun simctl install`; never committed
+apps/mobile/build-output/

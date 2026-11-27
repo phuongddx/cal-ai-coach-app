@@ -1,24 +1,28 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 /**
- * Native config for all four spike items lives here and only here (single writer: the spike owner).
- * Bundle id is deliberately NOT the production one (com.nextlabs.coachcal): a spike build must never
- * collide with the App Store app, its App Group or its HealthKit source.
+ * Native config for the RN app lives here and only here (single writer: the unit that holds the
+ * native build slot). The identity is the production one: this app replaces the SwiftUI app, so the
+ * bundle id, URL scheme and App Group must not change.
  */
-const BUNDLE_ID = 'com.nextlabs.coachcal.rnspike';
+const BUNDLE_ID = 'com.nextlabs.coachcal';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'CoachCal Spike',
-  slug: 'coachcal-rn-spike',
-  version: '0.0.1',
+  name: 'CoachCal',
+  slug: 'coachcal',
+  version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
-  scheme: 'ccspike',
+  scheme: 'coachcal',
   userInterfaceStyle: 'automatic',
   ios: {
     bundleIdentifier: BUNDLE_ID,
     icon: './assets/expo.icon',
+    deploymentTarget: '18.0',
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
+    },
   },
   android: {
     package: `${BUNDLE_ID}`,
@@ -47,14 +51,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         showMenuAtLaunch: false,
       },
     ],
-    // Adds the HealthKit entitlement and the two usage strings (spike item 3).
+    // Adds the HealthKit entitlement and the two usage strings (same strings as the SwiftUI app's Info.plist).
     [
       '@kingstinct/react-native-healthkit',
       {
         NSHealthShareUsageDescription:
-          'CoachCal Spike reads back the meals it wrote to Health so the round trip can be verified.',
+          'CoachCal reads your step count from Apple Health to show it on the Today screen and keep calorie estimates accurate.',
         NSHealthUpdateUsageDescription:
-          'CoachCal Spike writes the meal you log so the round trip can be verified.',
+          'CoachCal saves burned-energy summaries to Apple Health only when you explicitly confirm them — never automatically from a scan.',
       },
     ],
     [
@@ -66,7 +70,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
             displayName: 'CoachCal Calories',
             description: "Today's remaining kcal at a glance.",
             ios: {
-              supportedFamilies: ['systemSmall', 'systemMedium'],
+              supportedFamilies: ['systemSmall'],
               initialLayout: 'src/widgets/CaloriesWidget.tsx',
             },
           },

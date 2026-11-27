@@ -84,7 +84,7 @@ type MockCorrelation = {
 };
 
 const revision: MockRevision = {
-  source: { name: 'CoachCalSpike', bundleIdentifier: 'com.nextlabs.coachcal.rnspike' },
+  source: { name: 'CoachCal', bundleIdentifier: 'com.nextlabs.coachcal' },
   operatingSystemVersion: '26.4',
 };
 

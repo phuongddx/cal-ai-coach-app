@@ -14,7 +14,7 @@ export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 PG_BIN="${PG_BIN:-/opt/homebrew/opt/postgresql@17/bin}"
 PG_PORT=5433
 API_PORT="${API_PORT:-8787}"
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LOG_DIR="${RN_SPIKE_LOG_DIR:-/private/var/folders/nn/n6wtxkdd3n10d78wf4xmygrm0000gp/T/opencode/rn-logs}"
 STATE_FILE="$LOG_DIR/t3-dev-api.state"
 DB_USER="$(id -un)"
@@ -76,7 +76,7 @@ STATE
   echo "  API:          http://127.0.0.1:$API_PORT  (GET /health answers {ok:true})"
   echo "  PostgreSQL:   $DB_URL"
   echo "  Tokens:       apps/api/dev-tokens.json (spike-dev-token, spike-dev-token-2)"
-  echo "  Stop both:    $ROOT/scripts/start-api.sh stop"
+  echo "  Stop both:    $ROOT/scripts/rn/start-api.sh stop"
   echo "  Logs:         $LOG_DIR/t3-postgres.log, $LOG_DIR/t3-api.log"
   echo "  Cluster dir:  $cluster (deleted on stop)"
 }

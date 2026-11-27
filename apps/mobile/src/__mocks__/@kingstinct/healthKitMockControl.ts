@@ -144,6 +144,6 @@ export const healthKitMockControl = {
 };
 
 export const MOCK_SOURCE_REVISION = {
-  source: { name: 'CoachCalSpike', bundleIdentifier: 'com.nextlabs.coachcal.rnspike' },
+  source: { name: 'CoachCal', bundleIdentifier: 'com.nextlabs.coachcal' },
   operatingSystemVersion: '26.4',
 } as const;

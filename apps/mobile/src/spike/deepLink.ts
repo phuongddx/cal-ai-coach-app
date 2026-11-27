@@ -2,10 +2,10 @@ import * as Linking from 'expo-linking';
 
 import { runSpikeAction } from './registry';
 
-export const SPIKE_SCHEME = 'ccspike';
+export const SPIKE_SCHEME = 'coachcal';
 
 /**
- * `ccspike://spike?action=seed` → `seed`. Anything else (other scheme, other host, no action)
+ * `coachcal://spike?action=seed` → `seed`. Anything else (other scheme, other host, no action)
  * returns null so the URL stays a plain navigation.
  */
 export function parseSpikeUrl(url: string): string | null {
@@ -14,7 +14,7 @@ export function parseSpikeUrl(url: string): string | null {
 
 /** Like `parseSpikeUrl`, plus the other query parameters (`&rolloverInSeconds=90`). */
 export function parseSpikeLink(url: string): { name: string; params: Record<string, string> } | null {
-  const m = /^ccspike:\/\/([^/?#]*)\/?(?:\?([^#]*))?/i.exec(url.trim());
+  const m = /^coachcal:\/\/([^/?#]*)\/?(?:\?([^#]*))?/i.exec(url.trim());
   if (!m || m[1].toLowerCase() !== 'spike') return null;
   const query = m[2] ?? '';
   let name = '';
