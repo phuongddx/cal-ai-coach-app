@@ -11,6 +11,8 @@ export type SecondaryButtonProps = {
   title: string;
   bordered?: boolean;
   action?: () => void;
+  /** Reaches the Pressable so tests and feature code can address the button. */
+  testID?: string;
 };
 
 /** The CCSecondaryButtonStyle visual mapping, exposed for contract tests. */
@@ -27,11 +29,12 @@ export function secondaryButtonStyle(
   };
 }
 
-export function SecondaryButton({ title, bordered = false, action }: SecondaryButtonProps) {
+export function SecondaryButton({ title, bordered = false, action, testID }: SecondaryButtonProps) {
   const { colors } = useTokens();
   return (
     <Pressable
       accessibilityRole="button"
+      testID={testID}
       onPress={action}
       style={({ pressed }) =>
         secondaryButtonStyle(bordered, colors.border, pressed)

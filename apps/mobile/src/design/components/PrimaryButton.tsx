@@ -13,6 +13,8 @@ export type PrimaryButtonProps = {
   title: string;
   action?: () => void;
   disabled?: boolean;
+  /** Reaches the Pressable so tests and feature code can address the button. */
+  testID?: string;
 };
 
 /** The CCPrimaryButtonStyle visual mapping, exposed for contract tests. */
@@ -34,11 +36,12 @@ const labelTypography: TextStyle = {
   color: '#000000',
 };
 
-export function PrimaryButton({ title, action, disabled = false }: PrimaryButtonProps) {
+export function PrimaryButton({ title, action, disabled = false, testID }: PrimaryButtonProps) {
   const { colors } = useTokens();
   return (
     <Pressable
       accessibilityRole="button"
+      testID={testID}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={action}
