@@ -10,7 +10,11 @@ import { SymbolView } from 'expo-symbols';
 
 import { radius, space, typography, useTokens } from '../tokens';
 
+import { carriesCalorieFigure } from '../calorieFigure';
 import { useEdSafeMode } from '../edSafe';
+
+// The rule lives in ../calorieFigure (U-71f); re-exported so the barrel and every caller keep the same name.
+export { carriesCalorieFigure };
 
 export type ToastProps = {
   title: string;
@@ -25,14 +29,6 @@ export type ToastProps = {
 /** The pure ED-safe rule for the kcal line, assertable without rendering. */
 export function toastVisibleKcalText(kcalText: string | undefined, edSafeMode: boolean): string | undefined {
   return edSafeMode ? undefined : kcalText;
-}
-
-/**
- * The conservative ED-safe screen for free text: true when the text holds the word kcal, cal, calorie(s) or
- * kJ (whatever comes before it: "Calories today: 1,850"), or a number followed by one of them ("640kcal").
- */
-export function carriesCalorieFigure(text: string): boolean {
-  return /\b(?:kcal|cal|calories?|kj)\b/i.test(text) || /\d\s*(?:k?cal(?:ories?)?|kj)\b/i.test(text);
 }
 
 /** The pure ED-safe rule for the message line: kept in every mode, hidden under ED-safe only if it holds a calorie word or figure. */
