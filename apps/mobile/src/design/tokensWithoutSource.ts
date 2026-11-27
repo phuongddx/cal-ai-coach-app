@@ -2,63 +2,36 @@
  * The register of every value the app reads that `docs/design/ember/tokens.css` does not hold.
  * `tokens.ts` builds all it can from `emberTokens` (the generated module); what is left has no
  * source in the chain and is written here, in one place, so it is visible and cannot grow silently:
- * the token test pins the exact key lists (`tokensWithoutSource.test`), and the findings of U-71c
- * ask the owner and Designer to either add each one to `tokens.css` or retire it.
+ * the token test pins the exact key lists (`tokensWithoutSource.test`), and the findings of U-71d
+ * list each one for the owner and Designer to either add to `tokens.css` or retire it.
  *
- * Nothing here is an Ember color except `appleHealth`, which is Apple's own Health brand color.
+ * U-71d moved out of this file, into the chain: the Apple Health color (`appleHealth`), the button
+ * radius (`radius.btn`), the floating button (`size.fab`), the compact ring (`size.ringSm`,
+ * `size.ringSmStroke`) and the macro bar (`size.macroBar`). Nothing here is a color any more.
  */
 
-/** Earlier color keys with no Ember counterpart. They keep their value. */
-export const colorsWithoutEmberCounterpart = ['appleHealth'] as const;
+/** Earlier color keys with no Ember counterpart. None is left: `appleHealth` is `--cc-apple-health`. */
+export const colorsWithoutEmberCounterpart = [] as const;
 
-export const colorValuesWithoutSource: Record<(typeof colorsWithoutEmberCounterpart)[number], string> = {
-  appleHealth: '#FF2D55',
-};
+export const colorValuesWithoutSource: Record<(typeof colorsWithoutEmberCounterpart)[number], string> = {};
 
-/** Radius: the canvas `.btn` and `.chip` use 18 with no CSS variable. */
-export const radiusWithoutSource = { button: 18 } as const;
+/** Radius: nothing. `radius.button` is `radius.btn` (`--r-btn`). */
+export const radiusWithoutSource = {} as const;
 
 /**
- * Sizes with no `--tap/--btn/--shutter/--ring/--ring-stroke` counterpart. `fab` is 56 like `--btn`
- * but is the app shell's own control, so it does not follow `--btn`.
+ * Sizes the design has no variable for: the 56 pt goal ring of the diary water card and the
+ * onboarding macro ring, with its 6 pt stroke. `--ring-sm` is 120 pt and `--ring` 184 pt; no
+ * variable describes a ring this small, so it stays here until the design adds one.
  */
 export const sizeWithoutSource = {
-  fab: 56,
-  ringCompact: 120,
   ringGoal: 56,
-  ringCompactStroke: 8,
   ringGoalStroke: 6,
-  macroBarHeight: 8,
 } as const;
 
-/** Typography roles (CCTypography.Role) with the iOS system text style each maps to. */
-export type TypographyRole =
-  | 'title' // .largeTitle.weight(.semibold)
-  | 'heading' // .title2.weight(.semibold)
-  | 'headline' // .headline
-  | 'body' // .body
-  | 'subhead' // .subheadline
-  | 'footnote' // .footnote
-  | 'caption' // .caption.weight(.medium)
-  | 'tabLabel'; // .caption2.weight(.medium)
-
-export type TypographyStyle = {
-  fontSize: number;
-  fontWeight: '400' | '500' | '600';
-};
-
-export const typography: Record<TypographyRole, TypographyStyle> = {
-  title: { fontSize: 34, fontWeight: '600' },
-  heading: { fontSize: 22, fontWeight: '600' },
-  headline: { fontSize: 17, fontWeight: '600' },
-  body: { fontSize: 17, fontWeight: '400' },
-  subhead: { fontSize: 15, fontWeight: '400' },
-  footnote: { fontSize: 13, fontWeight: '400' },
-  caption: { fontSize: 12, fontWeight: '500' },
-  tabLabel: { fontSize: 11, fontWeight: '500' },
-};
-
-/** CCScaledNumber roles: hero (700/56) and plan (700/64) numerals. */
+/**
+ * CCScaledNumber roles: hero (700/56) and plan (700/64) numerals. `--t-num-xl` is 44 and no text
+ * style of the design is 56 or 64, so these two sizes have no source in the chain.
+ */
 export type ScaledNumberRole = 'hero' | 'planNumber';
 
 export const scaledNumberSize: Record<ScaledNumberRole, number> = {
