@@ -292,6 +292,23 @@ VERIFY      npm test --workspace @coachcal/mobile; npm run typecheck; npm run pa
 TIMEBOX     6 hours
 ```
 
+## State after wave 1 (2026-11-27)
+
+Landed on `main`: PR 4 (U-10, merge `fcaee1b`), PR 5 (U-11, `a2ec624`), PR 6 (U-13, `b10ed1a`),
+PR 7 (U-22, `404aa1a`). The owner re-ran the four merged together on one branch: 470 tests with
+PostgreSQL 17 up, typecheck clean, parity gate 0 problems, smoke 4 of 4; each PR was synced with
+`main` and merged only when its tree equaled the tested one.
+
+Follow-ups the drain found, each with its owner:
+
+| Finding | Owner |
+|---|---|
+| The ported SQL keeps the legacy column `supabase_user_id`; one test harness builds the name in pieces so the parity gate does not see it. Rename to `user_id`, use it plainly | U-21, first commit |
+| The generated Info.plist has the generic `expo-image-picker` photo-library string; the old app had none (the picker needs no permission). Set `photoPermissionPermission: false` | the next unit that holds the native slot |
+| The icon is RGBA; the App Store icon must have no alpha | U-61 |
+| Component tests carry a preamble that maps `react` onto one copy; the nested copy is gone since U-13, so the preamble is dead | U-61 |
+| `npm run typecheck` regenerates the Expo Router typed routes first (`scripts/rn/gen-typed-routes.mjs`): without it a worktree that never ran Metro type-checks against stale routes and CI checked none | done in the drain PR |
+
 ## Units of wave 2
 
 Scoped here; each gets a `briefs/U-*.md` with the full CONTEXT at dispatch.
