@@ -72,6 +72,21 @@ function makeHarness(init: { flags?: Partial<DebugFlags>; session?: Session | nu
 }
 
 describe('root controller (PL-01)', () => {
+  it('opens the gate even when the --ccFreshStart wipe fails', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const h = makeHarness({ flags: { freshStart: true }, target: true });
+    h.deps.wipeLocalData = async () => {
+      throw new Error('disk');
+    };
+    const controller = createRootController(h.deps);
+    await controller.start();
+    expect(controller.getState().ready).toBe(true);
+    expect(controller.getRoute()).toBe('shell');
+    expect(h.startDataBinding).toHaveBeenCalledTimes(1);
+    controller.dispose();
+    warn.mockRestore();
+  });
+
   it('waits for the session and the target before it decides', async () => {
     const session = deferred<Session | null>();
     const target = deferred<boolean>();

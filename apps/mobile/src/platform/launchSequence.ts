@@ -4,7 +4,8 @@
  * order. The real steps are wired in `rootRuntime.ts`; nothing here touches a native module.
  *
  * Order, which the root gate depends on:
- *  1. (`--ccFreshStart` only) wipe the local data, as Swift removes the database files.
+ *  1. (`--ccFreshStart` only) wipe the local data, as Swift removes the database files. A failed wipe is
+ *     logged and the launch continues.
  *  2. load the session (the keychain);
  *  3. read the stored ED-safe mode and apply `flags.edSafe || stored`;
  *  4. read whether a target exists;
@@ -52,7 +53,13 @@ export function targetOwners(session: Session | null): string[] {
 
 export async function runLaunchSequence(deps: LaunchDeps): Promise<LaunchResult> {
   const flags = deps.flags();
-  if (flags.freshStart) await deps.wipeLocalData();
+  if (flags.freshStart) {
+    // Swift never hangs here: a failed removal is ignored and the launch goes on. A rejected wipe must
+    // not keep `ready` false for ever (the user would look at the wait spinner), so log it and go on.
+    await deps.wipeLocalData().catch((error: unknown) => {
+      console.warn('[launch] --ccFreshStart wipe failed; continuing the launch', error);
+    });
+  }
 
   const session = await deps.loadSession().catch(() => null);
 

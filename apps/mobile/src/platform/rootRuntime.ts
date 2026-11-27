@@ -58,9 +58,15 @@ export function createRealRootDeps(): RootControllerDeps {
     subscribeLocalMutation: (listener) => {
       let unsubscribe: (() => void) | null = null;
       let cancelled = false;
-      void getSyncRuntime().then((runtime) => {
-        if (!cancelled) unsubscribe = runtime.subscribe(listener);
-      });
+      // A runtime that fails to open leaves the gate without the live target re-read; the launch read
+      // and the explicit `completeOnboarding()` still decide, so the failure is not fatal.
+      void getSyncRuntime()
+        .then((runtime) => {
+          if (!cancelled) unsubscribe = runtime.subscribe(listener);
+        })
+        .catch((error: unknown) => {
+          console.warn('[root] local-mutation subscription failed', error);
+        });
       return () => {
         cancelled = true;
         unsubscribe?.();

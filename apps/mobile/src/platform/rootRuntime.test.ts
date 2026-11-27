@@ -63,7 +63,6 @@ async function makeFake(): Promise<Fake & { fixture: Awaited<ReturnType<typeof c
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 
 beforeEach(async () => {
-  await SecureStore.deleteItemAsync(SESSION_STORAGE_KEY);
   resetAuthForTests();
   resetDataEnvironmentForTests();
   resetDebugFlagsForTests();
@@ -128,6 +127,22 @@ describe('the root gate over the app modules', () => {
     await flush();
     expect(fake.runtime.engine.setForcedOffline).toHaveBeenLastCalledWith(false);
     controller.dispose();
+  });
+
+  it('keeps the gate open when the sync runtime fails to open for the local-mutation subscription', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const unhandled = jest.fn();
+    process.on('unhandledRejection', unhandled);
+    const original = holder.current;
+    holder.current = null; // getSyncRuntime() now rejects (it reads holder.current!.runtime)
+    const unsubscribe = createRealRootDeps().subscribeLocalMutation(() => undefined);
+    await flush();
+    expect(warn).toHaveBeenCalledWith('[root] local-mutation subscription failed', expect.anything());
+    expect(unhandled).not.toHaveBeenCalled();
+    expect(() => unsubscribe()).not.toThrow();
+    process.off('unhandledRejection', unhandled);
+    holder.current = original;
+    warn.mockRestore();
   });
 
   it('feeds the data environment clock from --ccFixedClock', async () => {

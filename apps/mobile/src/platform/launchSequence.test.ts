@@ -103,6 +103,21 @@ describe('launch sequence (PL-01)', () => {
     expect(calls).toEqual(['wipe', 'session', 'flag', 'edSafe:false', 'target', 'binding']);
   });
 
+  it('still opens the gate when the --ccFreshStart wipe fails (Swift never hangs on this path)', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { deps, calls } = makeDeps({
+      flags: { freshStart: true },
+      wipeLocalData: async () => {
+        throw new Error('disk');
+      },
+    });
+    const result = await runLaunchSequence(deps);
+    expect(calls).toEqual(['session', 'flag', 'edSafe:false', 'target', 'binding']);
+    expect(result).toMatchObject({ session: null, hasTargets: false });
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
   it('returns the data binding stop function', async () => {
     const { deps, calls } = makeDeps();
     (await runLaunchSequence(deps)).stop();
