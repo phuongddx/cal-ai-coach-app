@@ -35,9 +35,11 @@ LOG_DIR="${RN_SPIKE_LOG_DIR:-/private/var/folders/nn/n6wtxkdd3n10d78wf4xmygrm000
 STATE_FILE="$LOG_DIR/api-dev.state"
 # Keyed by checkout: only the tree that started this cluster reads its variables back, so a
 # `npm test` in another worktree skips the SQL suites instead of running against a schema it
-# does not have. The Jest harness derives the same name (apps/api/src/testing/sqlHarness.ts).
-WORKTREE_KEY="$(printf '%s' "$ROOT" | shasum -a 256 | cut -c1-12)"
-ENV_FILE="${RN_API_ENV_FILE:-${TMPDIR:-/tmp}/coachcal-rn-api-$WORKTREE_KEY.env}"
+# does not have. The smoke scripts and the Jest harness (apps/api/src/testing/sqlHarness.ts)
+# derive the same name.
+# shellcheck source=api-env-file.sh
+source "$(dirname "${BASH_SOURCE[0]}")/api-env-file.sh"
+ENV_FILE="$(api_env_file)"
 SUPERUSER="$(id -un)"
 DB_NAME=coachcal
 OWNER_URL="postgres://coachcal_owner@127.0.0.1:$PG_PORT/$DB_NAME"

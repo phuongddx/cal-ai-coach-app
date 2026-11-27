@@ -11,7 +11,7 @@ is frozen in `spike/build-recipe.md`; everything there still applies except the 
 | Chip / RAM | Apple M3 Pro, 18 GB, 11 cores |
 | Xcode | 27.1 (27A9275) |
 | Simulator runtimes | iOS 18.4, 26.4, 27.0, 27.1 |
-| Simulator for this program | `iPhone 17 Pro`, iOS 26.4, UDID `85024D2F-71DE-43C0-8E11-CE58F4578FC3` |
+| Simulator for this program | `iPhone 17 Pro`, iOS 26.4, UDID `A902237E-29DE-4A6F-9E93-23199FC2107F` (recreated 2026-11-27; scripts find it by name through `scripts/rn/sim-udid.sh`) |
 | Node / npm | 26.8.1 / 11.19.0 (CI uses Node 24) |
 | CocoaPods | 1.17.0 at `/opt/homebrew/bin/pod` |
 | PostgreSQL | 17 binaries under `/opt/homebrew/opt/postgresql@17/bin`; no server running until `scripts/rn/start-api.sh` |
@@ -42,9 +42,9 @@ Run from the repo root unless stated.
 | Parity gate | `npm run parity:check` (`npm run parity:write` regenerates the table) | under 1 s |
 | Local API with PostgreSQL 17 | `bash scripts/rn/start-api.sh`, stop with `bash scripts/rn/start-api.sh stop` | ports 5433 and 8787 |
 | Native project | `bash scripts/rn/native-slot.sh prepare` (clean-tree and 6 GB disk check, then `expo prebuild`) | 138 s with `pod install`; in the native worktree only |
-| Build, install, launch | `cd apps/mobile && CI=1 npx expo run:ios --no-bundler --device 85024D2F-71DE-43C0-8E11-CE58F4578FC3` | measured 1002 s (16.7 min) from a cold DerivedData, including install and launch, on 2026-11-27 (U-13); `export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8` first |
+| Build, install, launch | `cd apps/mobile && CI=1 npx expo run:ios --no-bundler --device A902237E-29DE-4A6F-9E93-23199FC2107F` | measured 1002 s (16.7 min) from a cold DerivedData, including install and launch, on 2026-11-27 (U-13); `export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8` first |
 | Metro | `cd apps/mobile && npx expo start --dev-client --port 8081` | not with `CI=1` |
-| Point the dev client at Metro | `xcrun simctl openurl 85024D2F-71DE-43C0-8E11-CE58F4578FC3 "exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"` | the slug is `coachcal` since the promotion commit |
+| Point the dev client at Metro | `xcrun simctl openurl A902237E-29DE-4A6F-9E93-23199FC2107F "exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"` | the slug is `coachcal` since the promotion commit |
 | Screenshot | `xcrun simctl io <udid> screenshot <file.png>` | |
 
 ## Pitfalls met in this program

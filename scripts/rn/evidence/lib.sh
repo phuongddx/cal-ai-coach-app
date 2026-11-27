@@ -20,7 +20,11 @@ export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
 # Repo root (scripts/rn/evidence/lib.sh -> three levels up). Independent of the caller's cwd.
 EVID_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-UDID="${SIM_UDID:-85024D2F-71DE-43C0-8E11-CE58F4578FC3}"
+# The evidence Simulator is found by name (scripts/rn/sim-udid.sh); SIM_UDID overrides the lookup.
+# shellcheck source=../sim-udid.sh
+source "$(dirname "${BASH_SOURCE[0]}")/../sim-udid.sh"
+UDID="${SIM_UDID:-$(sim_udid)}"
+[ -n "$UDID" ] || { echo "FAIL fatal: no available 'iPhone 17 Pro' on iOS 26.4 (see scripts/rn/sim-udid.sh)"; exit 90; }
 BUNDLE_ID="${APP_BUNDLE_ID:-com.nextlabs.coachcal}"
 # The built Debug dev client (read only, built by the native unit; never rebuilt here).
 APP_PATH="${COACHCAL_APP_PATH:-/Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-native/apps/mobile/build-output/CoachCal-dev.app}"

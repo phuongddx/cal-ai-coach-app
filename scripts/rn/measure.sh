@@ -11,13 +11,16 @@
 # Cold start needs the T1 marker file (first-render.txt, written on the Ember screen's first
 # React commit), so a full run only makes sense after the integration task (plan T6/T7).
 #
-# Simulator: iPhone 17 Pro, iOS 26.4 (UDID 85024D2F-71DE-43C0-8E11-CE58F4578FC3).
+# Simulator: the available iPhone 17 Pro on iOS 26.4, found by name (scripts/rn/sim-udid.sh).
 # All numbers are Simulator numbers (spec D6 says so, never an App Store thinned size).
 
 set -euo pipefail
 
 MODE="${1:-}"
-UDID="85024D2F-71DE-43C0-8E11-CE58F4578FC3"
+# shellcheck source=sim-udid.sh
+source "$(dirname "${BASH_SOURCE[0]}")/sim-udid.sh"
+UDID="${SIM_UDID:-$(sim_udid)}"
+[ -n "$UDID" ] || { echo "no available 'iPhone 17 Pro' on iOS 26.4 (see scripts/rn/sim-udid.sh)"; exit 2; }
 BUNDLE_ID="com.nextlabs.coachcal"
 IDLE_WAIT_SEC=15
 COLD_STARTS=5

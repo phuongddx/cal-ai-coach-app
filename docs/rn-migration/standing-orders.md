@@ -11,7 +11,7 @@ that has to be repeated in briefs belongs here.
 | Coordinator worktree, read only | `/Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-expo` |
 | Native worktree, only for the unit that holds the native slot | `/Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-native` |
 | Your worktree and branch | named in your brief; already created, `node_modules` already present |
-| Simulator, only for the unit that holds the simulator slot | `iPhone 17 Pro`, iOS 26.4, UDID `85024D2F-71DE-43C0-8E11-CE58F4578FC3` |
+| Simulator, only for the unit that holds the simulator slot | the available `iPhone 17 Pro` on iOS 26.4; scripts find it by name through `scripts/rn/sim-udid.sh`. Never write a UDID into a script: the machine lost every Simulator on 2026-11-27 and the device came back with a new id |
 | Metro, only for the simulator slot holder | port 8081 |
 | API and PostgreSQL 17, only when your brief gives you the API slot | `http://127.0.0.1:8787`, port 5433, through `scripts/rn/start-api.sh`; the env file it writes is named after your checkout |
 | The database handle and the repositories | `apps/mobile/src/data/environment.ts` (`getDataEnvironment()`); after a write through a repository call `notifyLocalMutation()` from `apps/mobile/src/data/sync/runtime.ts` |

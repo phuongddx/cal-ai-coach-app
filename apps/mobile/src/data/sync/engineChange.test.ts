@@ -14,6 +14,7 @@ describe('engine change notifications', () => {
       onChange,
     });
 
+    await engine.bind('de000000-0000-4000-8000-000000000001');
     await engine.sync();
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(engine.lastResult().status).toBe('synced');

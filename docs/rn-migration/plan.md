@@ -371,7 +371,64 @@ has about 1 GB free and a build needs 5 GB.
 | U-31 onboarding | G1 | OB-01 to OB-10 | Nine steps with the locked copy, the plan through `TargetsEngine`, the just-in-time HealthKit request behind an injected function | nothing |
 | U-32 diary | G2 | DY-01 to DY-07 | Day sheet, add food, local food search, custom food, manual log, exercise log, water card | nothing |
 
-## Waves 4 to 7 (outline; scoped at the drain before each)
+## State after wave 3 (2026-11-27)
+
+Landed on `main`: PR 17 (U-23, `380d833`), PR 18 (U-32, `fdfde23`), PR 19 (U-31, `c57db8b`).
+PR 16 (U-30, scan flow) stays open until two review fixes are in (a Flip camera button without an
+action, and a hint that promised OCR). The owner merged the four on one integration branch and ran
+everything on that tree: 1,015 tests with PostgreSQL 17 up (api 252, mobile 629, contract 47, core
+87), typecheck clean, parity gate 0 problems, the curl sync script 15 of 15 steps, both smokes 5 of 5.
+Three independent reviews read the diffs before the merge.
+
+**The machine lost every Simulator.** Between 13:19 and 13:32 a cleanup outside this program (it
+needed administrator rights) removed all Simulator runtimes and devices, while the disk was full.
+U-30 could not take its screenshots. The owner reinstalled the iOS 26.4 runtime (8.46 GB) and
+recreated `iPhone 17 Pro`; the built development app launches on it. No script pins a device id any
+more: `scripts/rn/sim-udid.sh` finds the device by name.
+
+Follow-ups the drain and the reviews found, each with its owner:
+
+| Finding | Owner |
+|---|---|
+| Scan flow: the Flip camera button has no action; the label-mode hint says text is read automatically while the app uploads the photo; quota routing is looser than Swift | Worker-S2, rework on PR 16 |
+| Onboarding (OB-09): in ED-safe mode the kcal hero and the weekly range of the plan reveal still show; no design component owns that branch. `EdSafeCollapse` exists in `features/scan` and belongs in `src/design` | U-41 |
+| Onboarding asks HealthKit for write and read on five types; Swift asks to read steps only, and only when not decided | U-42 |
+| Two caption rows of onboarding that Swift hides from VoiceOver are readable here | the accessibility pass of U-52 |
+| `features/diary/writeQueue.ts` repeats what the serialized transaction helper does since U-23 | the next unit that touches the diary |
+| A due operation whose mirror row is missing is sent as an empty upsert instead of being reported undecodable; an applied tombstone leaves the detail row behind | the next sync unit |
+| `features/ember/**` and `src/spike/**` are still imported by placeholder routes and the debug console | the cleanup unit after wave 4 |
+| The findings of U-32 state that a Swift assertion contradicts its own seed; the Swift test simply has no seed | U-60 (wording) |
+| The two smoke scripts read the old env file name after PR 15, and PR 15 was verified without them | done in this drain PR |
+
+## Units of wave 4
+
+JS only for three units; one unit holds the Simulator slot. Briefs: `briefs/U-33.md`, `U-40.md`,
+`U-41.md`, `U-51.md`.
+
+| Unit | Worker | Parity rows | Goal | Holds |
+|---|---|---|---|---|
+| U-33 Today and the Simulator evidence | S2 | TD-01; evidence of SC-02 to SC-07 and DB-01 | The Today screen on the design tokens in `features/today`; the Scan button never covers a meal's kcal; the week strip contrast; then on the recreated Simulator: the screenshots U-30 could not take and a re-run of the five flows of U-14 | Simulator slot |
+| U-40 Progress and Coach | G2 | PG-01 to PG-04, CH-01 | Charts with react-native-svg and an accessibility description, the weight log, weekly energy hidden in ED-safe mode, achievements, the weekly review | nothing |
+| U-41 Profile and Settings | G1 | PR-01 to PR-03, OB-09 | Settings copy, the inert subscription card, the ED-safe toggle and its persistence, the account deletion entry, the target edit sheet; closes OB-09 with an `EdSafeCollapse` component in `src/design` | nothing |
+| U-51 Composition root, root gate, debug console | S1 | PL-01, PL-02, PL-05 | The React environment over `getDataEnvironment()`; the root gate (sign-in, onboarding, shell); session load at launch; the local reset on sign-out and account deletion; flags settable from the debug console | nothing |
+
+Topology of wave 4 (one writer per file):
+
+| File or tree | Writer |
+|---|---|
+| `apps/mobile/src/app/_layout.tsx`, `debug.tsx` | U-51 |
+| `apps/mobile/src/app/(tabs)/index.tsx`, `(tabs)/_layout.tsx` | U-33 |
+| `apps/mobile/src/app/(tabs)/progress.tsx`, `coach.tsx` | U-40 |
+| `apps/mobile/src/app/(tabs)/profile.tsx`, `settings.tsx`, `settings/**` | U-41 |
+| `apps/mobile/src/features/today/**`, `src/data/binding.ts` (exports unchanged) | U-33 |
+| `apps/mobile/src/features/progress/**`, `coach/**` | U-40 |
+| `apps/mobile/src/features/profile/**`, `features/onboarding/PlanRevealScreen.tsx` and its test | U-41 |
+| `apps/mobile/src/design/components/EdSafeCollapse.tsx` (moved from `features/scan`) and the import lines in `features/scan` | U-41 |
+| `apps/mobile/src/app/environment.tsx`, `src/data/environment.ts`, `src/data/sync/runtime.ts`, `src/debug/launchArgs.ts` | U-51 |
+| `apps/mobile/src/features/ember/**`, `src/spike/**` | nobody: they are deleted after wave 4 |
+| `scripts/rn/evidence/**` | U-33 |
+
+## Waves 5 to 7 (outline; scoped at the drain before each)
 
 | Unit | Rows | Notes |
 |---|---|---|
@@ -379,13 +436,13 @@ has about 1 GB free and a build needs 5 GB.
 | U-30 scan flow | SC-01 to SC-07, PL-12 (start, update, end) | see "Units of wave 3" above |
 | U-31 onboarding | OB-01 to OB-10 | see "Units of wave 3" above |
 | U-32 diary | DY-01 to DY-07 | see "Units of wave 3" above |
-| U-33 today | TD-01 | Ember screen completed; the Scan button moves so no meal's kcal is covered; week strip contrast |
-| U-40 progress and coach | PG-01 to PG-04, CH-01 | charts with react-native-svg and an accessibility description; weekly review |
-| U-41 profile and settings | PR-01 to PR-03 | settings copy, inert subscription card, account deletion entry, target edit |
+| U-33 Today and the Simulator evidence | TD-01 | see "Units of wave 4" above |
+| U-40 progress and coach | PG-01 to PG-04, CH-01 | see "Units of wave 4" above |
+| U-41 profile and settings | PR-01 to PR-03 | see "Units of wave 4" above |
 | U-42 HealthKit, notifications, CSV | PL-10, PL-13, PL-14 | steps read, confirmed burned-energy write, background delivery, three local notifications, CSV share |
 | U-43 widget and Live Activity | PL-11, PL-12 | native slot; small widget with midnight rollover and ED-safe variant; Live Activity UI |
 | U-50 telemetry | PL-09 | native slot; allow-list seam first, Sentry and PostHog adapters after |
-| U-51 composition root, shell, debug seams | PL-01, PL-02, PL-05 | environment context, root gate (sign-in, onboarding, shell), launch arguments, debug console |
+| U-51 composition root, shell, debug console | PL-01, PL-02, PL-05 | see "Units of wave 4" above; the native reader of the launch arguments waits for the native slot |
 | U-52, U-53 evidence sweeps | every screen row | simulator slot, one at a time; light, dark and ED-safe screenshots per screen next to the SwiftUI snapshots; fix units for what they find |
 | U-60 parity audit | QA-01, QA-04 | a worker that built none of the feature reads every Swift source against the detail files and lists what is missing |
 | U-61 CI completion | QA-02, QA-03 | API integration tests on a PostgreSQL 17 service in RN CI; evidence flows runnable from CI artifacts |
