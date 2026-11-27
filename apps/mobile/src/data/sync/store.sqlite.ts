@@ -1,231 +1,405 @@
 /**
- * The real SQLite `SyncStore` (spec D4), on Drizzle over expo-sqlite.
+ * The real SQLite `SyncStore` (spec D4), on Drizzle over expo-sqlite — now on
+ * the Swift tables: `diary_entries` (+ `diary_entry_details`) mirrors, the
+ * `pending_ops` outbox and the single-row `sync_state` cursor.
  *
- * Every port method that the spec calls a transaction is one
- * `db.transaction(...)` — the local write (meal row + outbox operation), each
- * push-batch merge and each pull page (rows + cursor) is all-or-nothing.
+ * - A local write is one transaction: the mirror row (+ its detail row), the
+ *   pending op. A delete writes the tombstoned mirror row and queues the
+ *   tombstone op.
+ * - Push acks run through the sync merge repository's acknowledgement rules
+ *   (canonical version bump + op delete) in one transaction.
+ * - A pull page runs through the sync merge repository (LWW via
+ *   `compareCanonicalVersions`, skips records with pending local intent) and
+ *   writes the pulled details rows in the same transaction, then advances the
+ *   cursor.
+ *
+ * The wire shapes stay the contract's meal records (`@coachcal/api-contract`);
+ * this file maps between the meal wire shape and the Swift tables. The
+ * `SyncStore` interface itself is unchanged, so the engine keeps working.
  */
-import { asc, eq, inArray, max, sql } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 
 import type { Meal, MealRecord, PullResponse, SyncOperation } from '@coachcal/api-contract';
+import type { DiaryEntry, DiaryEntryDetail } from '../repos/diaryEntryRepository';
 
-import { meals, outbox, syncState } from '../db/schema';
-import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite';
-
-import * as schema from '../db/schema';
+import { diaryEntryDetails, diaryEntries, pendingOps, syncState } from '../db/schema';
+import { entryToRow, rowToEntry, rowToDetail } from '../repos/diaryEntryRepository';
+import { applyAcknowledgement, applyPulledRow, enqueueDiaryOp } from '../repos/syncMergeRepository';
+import { fromIso, inTransaction, toIso, type SqlDb } from '../repos/sqlDb';
 import type { LocalMeal, OutboxEntry, SyncStore } from './types';
 
-type Db = ExpoSQLiteDatabase<typeof schema>;
+type Db = SqlDb;
 
-const CURSOR_KEY = 'cursor';
+/**
+ * Single-account device: mirror rows carry this owner until the auth unit
+ * lands (Swift gets it from the session). The demo user id from
+ * SeedDataManager keeps the seed and the sync writes consistent.
+ */
+const LOCAL_OWNER_ID = 'de000000-0000-4000-8000-000000000001';
 
-function toRow(meal: Meal, extras: { deleted: boolean; serverVersion: number; acceptedOpId: string | null }) {
+/** Wire meals carry no slot; derive the details row's slot from eatenAt. */
+function mealSlotFor(eatenAtIso: string): string {
+  const hour = new Date(eatenAtIso).getHours();
+  if (hour < 11) return 'breakfast';
+  if (hour < 15) return 'lunch';
+  if (hour < 21) return 'dinner';
+  return 'snacks';
+}
+
+function mealToEntry(meal: Meal, extras: { deletedAt: Date | null; serverVersion: number; acceptedOpId: string | null; now: Date }): DiaryEntry {
   return {
     id: meal.id,
-    eatenAt: meal.eatenAt,
-    name: meal.name,
+    userId: LOCAL_OWNER_ID,
+    displayText: meal.name,
+    createdAt: new Date(meal.eatenAt),
+    updatedAt: new Date(meal.updatedAt),
+    deletedAt: extras.deletedAt,
+    serverVersion: extras.serverVersion,
+    acceptedOpId: extras.acceptedOpId,
+    serverUpdatedAt: extras.now,
+  };
+}
+
+function entryToLocalMeal(entry: DiaryEntry, detail: DiaryEntryDetail | null): LocalMeal {
+  return {
+    id: entry.id,
+    eatenAt: entry.createdAt.toISOString(),
+    name: entry.displayText,
+    kcal: detail?.kcal ?? 0,
+    proteinG: detail?.proteinG ?? 0,
+    carbsG: detail?.carbsG ?? 0,
+    fatG: detail?.fatG ?? 0,
+    fiberG: detail?.fiberG ?? 0,
+    updatedAt: entry.updatedAt.getTime(),
+    deleted: entry.deletedAt !== null,
+    serverVersion: entry.serverVersion,
+    acceptedOpId: entry.acceptedOpId,
+  };
+}
+
+function detailForMeal(meal: Meal, source: string): DiaryEntryDetail {
+  return {
+    entryId: meal.id,
+    mealSlot: mealSlotFor(meal.eatenAt),
+    title: meal.name,
+    grams: null,
     kcal: meal.kcal,
     proteinG: meal.proteinG,
     carbsG: meal.carbsG,
     fatG: meal.fatG,
     fiberG: meal.fiberG,
-    updatedAt: meal.updatedAt,
-    deleted: extras.deleted,
-    serverVersion: extras.serverVersion,
-    acceptedOpId: extras.acceptedOpId,
+    confidence: null,
+    hiddenFatLikely: false,
+    source,
+    unresolved: false,
+    scanId: null,
   };
 }
 
-function fromRow(row: typeof meals.$inferSelect): LocalMeal {
-  return {
-    id: row.id,
-    eatenAt: row.eatenAt,
-    name: row.name,
-    kcal: row.kcal,
-    proteinG: row.proteinG,
-    carbsG: row.carbsG,
-    fatG: row.fatG,
-    fiberG: row.fiberG,
-    updatedAt: row.updatedAt,
-    deleted: row.deleted,
-    serverVersion: row.serverVersion,
-    acceptedOpId: row.acceptedOpId,
-  };
-}
-
-function entryFromRow(row: typeof outbox.$inferSelect): OutboxEntry {
-  return {
-    op: JSON.parse(row.payload) as SyncOperation,
-    attempts: row.attempts,
-    state: row.state === 'quarantined' ? 'quarantined' : 'pending',
-    lastError: row.lastError,
-    createdAt: row.createdAt,
-  };
+async function readDetail(tx: Db, entryId: string): Promise<DiaryEntryDetail | null> {
+  const rows = await tx.select().from(diaryEntryDetails).where(eq(diaryEntryDetails.entryId, entryId)).limit(1);
+  return rows[0] === undefined ? null : rowToDetail(rows[0]);
 }
 
 export function createSqliteSyncStore(db: Db): SyncStore {
-  /** MAX(queue_seq)+1 inside the write transaction keeps FIFO across same-ms writes. */
-  async function nextQueueSeq(tx: Db): Promise<number> {
-    const rows = await tx.select({ highest: max(outbox.queueSeq) }).from(outbox);
-    const highest = rows[0]?.highest ?? 0;
-    return highest + 1;
-  }
-
-  async function enqueue(tx: Db, op: SyncOperation, nowMs: number): Promise<void> {
-    await tx.insert(outbox).values({
-      opId: op.opId,
-      recordId: op.recordId,
-      kind: op.kind,
-      payload: JSON.stringify(op),
-      createdAt: nowMs,
-      queueSeq: await nextQueueSeq(tx),
-      attempts: 0,
-      state: 'pending',
-      lastError: null,
-    });
-  }
-
   return {
+    /** Local write = one transaction: mirror row + detail row + pending op. */
     async recordUpsert(meal, op) {
-      const nowMs = op.clientTimestamp;
-      await db.transaction(async (tx) => {
-        const row = toRow(meal, { deleted: false, serverVersion: 0, acceptedOpId: null });
-        await tx.insert(meals).values(row).onConflictDoUpdate({ target: meals.id, set: row });
-        await enqueue(tx, op, nowMs);
+      await inTransaction(db, async (tx) => {
+        const at = new Date(op.clientTimestamp);
+        const entry = mealToEntry(meal, { deletedAt: null, serverVersion: 0, acceptedOpId: null, now: at });
+        await tx.insert(diaryEntries).values(entryToRow(entry)).onConflictDoUpdate({ target: diaryEntries.id, set: entryToRow(entry) });
+        await tx
+          .insert(diaryEntryDetails)
+          .values(detailForMeal(meal, 'local'))
+          .onConflictDoUpdate({ target: diaryEntryDetails.entryId, set: detailForMeal(meal, 'local') });
+        await enqueueDiaryOp(tx, {
+          opId: op.opId,
+          recordId: op.recordId,
+          kind: op.kind,
+          clientTimestamp: at,
+          createdAt: at,
+          entry,
+        });
       });
     },
 
+    /** Local delete = one transaction: tombstone the mirror row, queue the op. */
     async recordDelete(recordId, op) {
-      const nowMs = op.clientTimestamp;
-      await db.transaction(async (tx) => {
-        await tx.delete(meals).where(eq(meals.id, recordId));
-        await enqueue(tx, op, nowMs);
+      await inTransaction(db, async (tx) => {
+        const at = new Date(op.clientTimestamp);
+        const rows = await tx.select().from(diaryEntries).where(eq(diaryEntries.id, recordId)).limit(1);
+        const existing = rows[0] === undefined ? null : rowToEntry(rows[0]);
+        const entry = existing === null
+          ? {
+              id: recordId,
+              userId: LOCAL_OWNER_ID,
+              displayText: '',
+              createdAt: at,
+              updatedAt: at,
+              deletedAt: at,
+              serverVersion: 0,
+              acceptedOpId: null,
+              serverUpdatedAt: at,
+            }
+          : {
+              ...existing,
+              updatedAt: at,
+              deletedAt: existing.deletedAt ?? at,
+            };
+        await tx.insert(diaryEntries).values(entryToRow(entry)).onConflictDoUpdate({ target: diaryEntries.id, set: entryToRow(entry) });
+        await enqueueDiaryOp(tx, {
+          opId: op.opId,
+          recordId: op.recordId,
+          kind: op.kind,
+          clientTimestamp: at,
+          createdAt: at,
+          entry,
+        });
       });
     },
 
+    /** "Has pending local intent": a pending_ops row exists for the record id. */
     async hasPendingIntent(recordId) {
-      const rows = await db.select({ opId: outbox.opId }).from(outbox).where(eq(outbox.recordId, recordId)).limit(1);
+      const rows = await db
+        .select({ opId: pendingOps.opId })
+        .from(pendingOps)
+        .where(eq(pendingOps.recordId, recordId))
+        .limit(1);
       return rows.length > 0;
     },
 
+    /** The single-row pull cursor. */
     async cursor() {
-      const rows = await db.select().from(syncState).where(eq(syncState.key, CURSOR_KEY)).limit(1);
-      const value = rows[0]?.value;
-      return value === undefined ? 0 : Number(value);
+      const rows = await db.select().from(syncState).where(eq(syncState.id, 1)).limit(1);
+      return rows[0]?.pullCursor ?? 0;
     },
 
+    /**
+     * FIFO by created_at then op_id, not quarantined — the outbox's due batch
+     * (engine batches are already ≤ 50, the Swift cap).
+     */
     async pendingOperations(limit) {
       const rows = await db
         .select()
-        .from(outbox)
-        .where(eq(outbox.state, 'pending'))
-        .orderBy(asc(outbox.queueSeq))
+        .from(pendingOps)
+        .where(eq(pendingOps.quarantined, false))
+        .orderBy(asc(pendingOps.createdAt), asc(pendingOps.opId))
         .limit(limit);
-      return rows.map(entryFromRow);
+      const entries: OutboxEntry[] = [];
+      for (const row of rows) {
+        entries.push(await outboxEntryForRow(db, row));
+      }
+      return entries;
     },
 
     async quarantinedOperations() {
-      const rows = await db.select().from(outbox).where(eq(outbox.state, 'quarantined')).orderBy(asc(outbox.queueSeq));
-      return rows.map(entryFromRow);
+      const rows = await db
+        .select()
+        .from(pendingOps)
+        .where(eq(pendingOps.quarantined, true))
+        .orderBy(asc(pendingOps.createdAt), asc(pendingOps.opId));
+      const entries: OutboxEntry[] = [];
+      for (const row of rows) {
+        entries.push(await outboxEntryForRow(db, row));
+      }
+      return entries;
     },
 
+    /** The mirror row + its detail row, as the wire LocalMeal. */
     async getMeal(recordId) {
-      const rows = await db.select().from(meals).where(eq(meals.id, recordId)).limit(1);
+      const rows = await db.select().from(diaryEntries).where(eq(diaryEntries.id, recordId)).limit(1);
       const row = rows[0];
-      return row === undefined ? null : fromRow(row);
+      if (row === undefined) return null;
+      return entryToLocalMeal(rowToEntry(row), await readDetail(db, recordId));
     },
 
+    /** All mirror rows, oldest edit first. */
     async listMeals() {
-      const rows = await db.select().from(meals).orderBy(asc(meals.updatedAt));
-      return rows.map(fromRow);
+      const rows = await db.select().from(diaryEntries).orderBy(asc(diaryEntries.updatedAt));
+      const meals: LocalMeal[] = [];
+      for (const row of rows) {
+        meals.push(entryToLocalMeal(rowToEntry(row), await readDetail(db, row.id)));
+      }
+      return meals;
     },
 
     async outboxCount() {
-      const rows = await db.select({ count: sql<number>`count(*)` }).from(outbox);
+      const rows = await db.select({ count: sql<number>`count(*)` }).from(pendingOps);
       return Number(rows[0]?.count ?? 0);
     },
 
+    /**
+     * Push acks, one transaction, the Swift acknowledgement rules: stamp the
+     * acked canonical version onto the mirror row (only when newer) and
+     * delete the op; the content itself arrives with the next pull.
+     */
     async applyPushAcks(entries) {
-      await db.transaction(async (tx) => {
+      await inTransaction(db, async (tx) => {
         for (const { op, record } of entries) {
-          await tx.delete(outbox).where(eq(outbox.opId, op.opId));
-
-          const stillPending = await tx
-            .select({ opId: outbox.opId })
-            .from(outbox)
-            .where(eq(outbox.recordId, record.id))
-            .limit(1);
-
-          if (stillPending.length > 0) {
-            // A newer local edit waits in the outbox: keep its content, only
-            // stamp the server's versioning onto the row.
-            await tx
-              .update(meals)
-              .set({ serverVersion: record.serverVersion, acceptedOpId: record.acceptedOpId })
-              .where(eq(meals.id, record.id));
-            continue;
-          }
-
-          if (record.deleted) {
-            // A deleted record with no pending operation is removed locally.
-            await tx.delete(meals).where(eq(meals.id, record.id));
-            continue;
-          }
-
-          const row = toRow(record, { deleted: false, serverVersion: record.serverVersion, acceptedOpId: record.acceptedOpId });
-          await tx.insert(meals).values(row).onConflictDoUpdate({ target: meals.id, set: row });
+          await applyAcknowledgement(tx, {
+            opId: op.opId,
+            serverVersion: record.serverVersion,
+            acceptedOpId: record.acceptedOpId ?? '',
+            duplicate: false,
+          }, new Date(record.updatedAt));
         }
       });
     },
 
+    /**
+     * One pull page, one transaction: the merge repository applies the rows
+     * (LWW, pending-intent skip), the pulled detail rows are written in the
+     * same transaction, the cursor advances last.
+     */
     async applyPullPage(rows: PullResponse['rows'], newCursor: number) {
-      await db.transaction(async (tx) => {
+      await inTransaction(db, async (tx) => {
         for (const { record } of rows) {
-          const pending = await tx
-            .select({ opId: outbox.opId })
-            .from(outbox)
-            .where(eq(outbox.recordId, record.id))
-            .limit(1);
-          if (pending.length > 0) continue; // pending local intent: skip
-
-          if (record.deleted) {
-            await tx.delete(meals).where(eq(meals.id, record.id));
-            continue;
+          const applied = await applyPulledRow(
+            tx,
+            {
+              table: 'diary_entries',
+              recordId: record.id,
+              snapshot: {
+                id: record.id,
+                displayText: record.name,
+                deletedAt: record.deleted ? toIso(new Date(record.updatedAt)) : null,
+                serverVersion: record.serverVersion,
+                acceptedOpId: record.acceptedOpId,
+              },
+            },
+            LOCAL_OWNER_ID,
+            new Date(),
+          );
+          // Details are local-only (I4): write them only for rows the merge
+          // actually applied, and only for live content — a tombstone never
+          // carries nutrition.
+          if (applied && !record.deleted) {
+            const detail = detailForMeal(mealFromRecord(record), 'sync');
+            await tx
+              .insert(diaryEntryDetails)
+              .values({ ...detail })
+              .onConflictDoUpdate({ target: diaryEntryDetails.entryId, set: { ...detail } });
           }
-
-          const row = toRow(record, { deleted: false, serverVersion: record.serverVersion, acceptedOpId: record.acceptedOpId });
-          await tx.insert(meals).values(row).onConflictDoUpdate({ target: meals.id, set: row });
         }
-        await tx
-          .insert(syncState)
-          .values({ key: CURSOR_KEY, value: String(newCursor) })
-          .onConflictDoUpdate({ target: syncState.key, set: { value: String(newCursor) } });
+        const states = await tx.select().from(syncState).where(eq(syncState.id, 1)).limit(1);
+        if (states[0] !== undefined) {
+          await tx.update(syncState).set({ pullCursor: newCursor }).where(eq(syncState.id, 1));
+        }
       });
     },
 
+    /** Failed attempt: bump the attempt counter, retry time stays open. */
     async markAttempts(opIds, lastError) {
       if (opIds.length === 0) return;
-      await db
-        .update(outbox)
-        .set({ attempts: sql`${outbox.attempts} + 1`, lastError })
-        .where(inArray(outbox.opId, opIds));
+      for (const opId of opIds) {
+        await db
+          .update(pendingOps)
+          .set({ dispatchAttempts: sql`${pendingOps.dispatchAttempts} + 1` })
+          .where(eq(pendingOps.opId, opId));
+      }
+      void lastError; // pending_ops has no error column (Swift parity)
     },
 
+    /** Dead letter per op: stays in the table, leaves the due batch. */
     async quarantine(opIds, lastError) {
       if (opIds.length === 0) return;
-      await db.update(outbox).set({ state: 'quarantined', lastError }).where(inArray(outbox.opId, opIds));
+      for (const opId of opIds) {
+        await db
+          .update(pendingOps)
+          .set({ quarantined: true, dispatchAttempts: sql`${pendingOps.dispatchAttempts} + 1`, nextRetryAt: null })
+          .where(eq(pendingOps.opId, opId));
+      }
+      void lastError;
     },
 
+    /** Empties mirrors, details, pending ops; resets the cursor row. */
     async reset() {
-      await db.transaction(async (tx) => {
-        await tx.delete(meals);
-        await tx.delete(outbox);
+      await inTransaction(db, async (tx) => {
+        await tx.delete(diaryEntries);
+        await tx.delete(diaryEntryDetails);
+        await tx.delete(pendingOps);
         await tx.delete(syncState);
+        await tx.insert(syncState).values({ id: 1, pullCursor: 0 });
       });
     },
   };
 }
 
-/** Shape of a `meals` table row (exported for tests and the console). */
-export type MealRow = typeof meals.$inferSelect;
-export type MealRecordRow = MealRecord;
+function mealFromRecord(record: MealRecord): Meal {
+  return {
+    id: record.id,
+    eatenAt: record.eatenAt,
+    name: record.name,
+    kcal: record.kcal,
+    proteinG: record.proteinG,
+    carbsG: record.carbsG,
+    fatG: record.fatG,
+    fiberG: record.fiberG,
+    updatedAt: record.updatedAt,
+  };
+}
+
+/**
+ * Rebuilds the wire operation from the Swift tables: the op's meal fields
+ * come from the mirror row + its detail row (the snapshot column carries the
+ * diary snapshot only).
+ */
+async function outboxEntryForRow(db: Db, row: typeof pendingOps.$inferSelect): Promise<OutboxEntry> {
+  const clientTimestamp = fromIso(row.clientTimestamp).getTime();
+  const op: SyncOperation =
+    row.kind === 'tombstone'
+      ? { opId: row.opId, recordId: row.recordId, kind: 'tombstone', clientTimestamp }
+      : {
+          opId: row.opId,
+          recordId: row.recordId,
+          kind: 'upsert',
+          clientTimestamp,
+          meal: await mealForOp(db, row.recordId),
+        };
+  return {
+    op,
+    attempts: row.dispatchAttempts,
+    state: row.quarantined ? 'quarantined' : 'pending',
+    lastError: null,
+    createdAt: fromIso(row.createdAt).getTime(),
+  };
+}
+
+/** The op's meal fields come from the mirror row + its detail row. */
+async function mealForOp(db: Db, recordId: string): Promise<Meal> {
+  const entries = await db.select().from(diaryEntries).where(eq(diaryEntries.id, recordId)).limit(1);
+  const entryRow = entries[0];
+  if (entryRow === undefined) {
+    // The mirror row is gone (an ack removed it mid-retry): an empty meal
+    // keeps the batch shape valid; the server answers duplicate and the op
+    // drains on the next ack pass.
+    return {
+      id: recordId,
+      eatenAt: '1970-01-01T00:00:00.000Z',
+      name: '',
+      kcal: 0,
+      proteinG: 0,
+      carbsG: 0,
+      fatG: 0,
+      fiberG: 0,
+      updatedAt: 0,
+    };
+  }
+  const detail = await readDetail(db, recordId);
+  const local = entryToLocalMeal(rowToEntry(entryRow), detail);
+  return {
+    id: local.id,
+    eatenAt: local.eatenAt,
+    name: local.name,
+    kcal: local.kcal,
+    proteinG: local.proteinG,
+    carbsG: local.carbsG,
+    fatG: local.fatG,
+    fiberG: local.fiberG,
+    updatedAt: local.updatedAt,
+  };
+}
+
+/** Shape of a `diary_entries` row (exported for tests and the console). */
+export type DiaryEntryRow = typeof diaryEntries.$inferSelect;
