@@ -85,7 +85,6 @@ describe('TodayDiarySnapshotTests twins', () => {
       setEdSafeMode(state.safeMode);
       Appearance.setColorScheme(state.scheme);
       const view = await render(inProvider(<TodayView model={model} />));
-      const label = state.name;
 
       // The seeded day: today carries Spaghetti Bolognese (350 g × 155 kcal/100 g = 543).
       expect(screen.getByText('Spaghetti Bolognese')).toBeOnTheScreen();
@@ -105,7 +104,6 @@ describe('TodayDiarySnapshotTests twins', () => {
         expect(screen.getByText('of 2,150 kcal goal')).toBeOnTheScreen();
         expect(screen.getByTestId('food-row-kcal:Spaghetti Bolognese')).toHaveTextContent('543 kcal');
       }
-      expect(label).toMatch(/^today-/);
       await view.unmount();
     }
   });
