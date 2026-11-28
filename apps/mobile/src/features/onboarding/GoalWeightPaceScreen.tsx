@@ -95,7 +95,9 @@ export function GoalWeightPaceScreen({ model }: { model: OnboardingModel }) {
         {showsPace && (
           <View style={styles.paceSection}>
             <View style={styles.paceHeader}>
-              <Text style={[styles.headline, { color: colors.text }]}>Pace</Text>
+              {/* OB-01 locks the step-4 header: "Weekly pace" (the review's
+                  should-fix A put the owner's copy back). */}
+              <Text style={[styles.headline, { color: colors.text }]}>Weekly pace</Text>
               <Text
                 testID="onboarding.paceValue"
                 style={[styles.paceValue, { color: colors.accentInk }]}

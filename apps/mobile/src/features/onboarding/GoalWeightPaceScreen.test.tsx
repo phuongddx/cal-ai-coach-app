@@ -54,7 +54,7 @@ describe('goal weight and pace screen', () => {
   it('shows the pace segment with the engine pace and the plain-words card', async () => {
     await render(<GoalWeightPaceScreen model={makeModel()} />);
 
-    expect(screen.getByText('Pace')).toBeOnTheScreen();
+    expect(screen.getByText('Weekly pace')).toBeOnTheScreen();
     // The readout prints the pace the engine returns for the draft (0.45 —
     // the default 0.5 request clamps for this draft).
     expect(screen.getByTestId('onboarding.paceValue')).toBeOnTheScreen();
@@ -126,7 +126,7 @@ describe('goal weight and pace screen', () => {
     habitModel.selectGoal('habit');
     await render(<GoalWeightPaceScreen model={habitModel} />);
     expect(screen.queryByTestId('onboarding.paceSegment')).toBeNull();
-    expect(screen.queryByText('Pace')).toBeNull();
+    expect(screen.queryByText('Weekly pace')).toBeNull();
   });
 
   it('the typed goal weight writes through the model and the hero follows', async () => {
