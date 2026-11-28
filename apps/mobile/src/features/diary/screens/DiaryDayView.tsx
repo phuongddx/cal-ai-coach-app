@@ -100,9 +100,7 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
     if (currentUndo === null) {
       return undefined;
     }
-    console.log('PROBE arm timer, front:', currentUndo?.kind === 'delete' ? currentUndo.item.title : currentUndo?.kind);
     const timer = setTimeout(() => {
-      console.log('PROBE timer fired');
       setUndoQueue((queue) => queue.slice(1));
     }, UNDO_WINDOW_MS);
     return () => clearTimeout(timer);

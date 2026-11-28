@@ -245,7 +245,7 @@ describe('DiaryDayView screen', () => {
     const model = makeModel(makeSnapshot(), { delete: jest.fn(async () => undefined) });
     await renderDay(model);
 
-    fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
+    await fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
     expect(showActionSheet).toHaveBeenCalledTimes(1);
     const [options, callback] = showActionSheet.mock.calls[0] as unknown as [
       { title: string; message: string; options: string[]; destructiveButtonIndex: number; cancelButtonIndex: number },
@@ -272,7 +272,7 @@ describe('DiaryDayView screen', () => {
     const model = makeModel(makeSnapshot(), { delete: jest.fn(async () => undefined) });
     await renderDay(model);
 
-    fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
+    await fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
     const [, callback] = showActionSheet.mock.calls[0] as unknown as [(index: number) => void, (index: number) => void];
     callback(1);
     expect(model.delete).not.toHaveBeenCalled();
@@ -284,7 +284,7 @@ describe('DiaryDayView screen', () => {
     const model = makeModel(makeSnapshot(), { delete: jest.fn(async () => undefined), undoDelete });
     await renderDay(model);
 
-    fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
+    await fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
     const [, callback] = showActionSheet.mock.calls[0] as unknown as [(index: number) => void, (index: number) => void];
     callback(0);
     const toast = await screen.findByTestId('diary.toast.undo');
@@ -301,22 +301,21 @@ describe('DiaryDayView screen', () => {
       const model = makeModel(makeSnapshot(), { delete: jest.fn(async () => undefined), undoDelete });
       await renderDay(model);
 
-      fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
+      await fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
       const [, callback] = showActionSheet.mock.calls[0] as unknown as [(index: number) => void, (index: number) => void];
-      // Hold act open across the delete's promise so the enqueue commits in scope.
+      // One act per step, never nested: the delete's promise settles inside the
+      // first, the five-second timer fires inside the second, and each commits
+      // when its own scope exits (a waitFor inside an act cannot see the commit).
       await act(async () => {
         callback(0);
-        await waitFor(() => expect(screen.getByTestId('diary.toast.undo')).toBeOnTheScreen());
       });
+      expect(screen.getByTestId('diary.toast.undo')).toBeOnTheScreen();
       expect(screen.getByText('Overnight Oats deleted')).toBeOnTheScreen();
 
       await act(async () => {
         jest.advanceTimersByTime(5000);
       });
-      // The dismissal's render flushes on a real macrotask (React's scheduler
-      // is not faked): hand the loop back first, then poll under real timers.
-      jest.useRealTimers();
-      await waitFor(() => expect(screen.queryByTestId('diary.toast.undo')).toBeNull());
+      expect(screen.queryByTestId('diary.toast.undo')).toBeNull();
       expect(undoDelete).not.toHaveBeenCalled();
     } finally {
       jest.useRealTimers();
@@ -327,7 +326,7 @@ describe('DiaryDayView screen', () => {
     const showActionSheet = jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions').mockImplementation(() => {});
     // The sheet's item carries a kcal figure; the message must not repeat it.
     await renderDay(makeModel(makeSnapshot(), { delete: jest.fn(async () => undefined) }));
-    fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
+    await fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
     const [options] = showActionSheet.mock.calls[0] as unknown as [
       { title: string; message: string },
       (index: number) => void,
@@ -340,7 +339,7 @@ describe('DiaryDayView screen', () => {
     setEdSafeMode(true);
     const showActionSheet = jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions').mockImplementation(() => {});
     await renderDay(makeModel(makeSnapshot(), { delete: jest.fn(async () => undefined) }));
-    fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
+    await fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
     const [options] = showActionSheet.mock.calls[0] as unknown as [
       { title: string; message: string },
       (index: number) => void,
