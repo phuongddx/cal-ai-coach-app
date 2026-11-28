@@ -13,11 +13,17 @@ appId: com.nextlabs.coachcal
 name: 03 the scan fixture recomputes kcal from the grams
 ---
 - openLink: exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+- tapOn:
+    text: "^Open$"
+    optional: true
 - extendedWaitUntil:
     visible: "Today"
     timeout: 180000
 
 - openLink: coachcal://scan
+- tapOn:
+    text: "^Open$"
+    optional: true
 - extendedWaitUntil:
     visible: "Scan Food"
     timeout: 30000

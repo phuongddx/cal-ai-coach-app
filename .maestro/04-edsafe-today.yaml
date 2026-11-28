@@ -7,6 +7,9 @@ appId: com.nextlabs.coachcal
 name: 04 a launch with --ccEDSafe shows no calorie number on Today
 ---
 - openLink: exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+- tapOn:
+    text: "^Open$"
+    optional: true
 - extendedWaitUntil:
     visible: "Chicken rice bowl"
     timeout: 180000

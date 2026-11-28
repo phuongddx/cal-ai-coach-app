@@ -9,6 +9,11 @@ name: 01 fresh install shows onboarding, then the seeded Today
     appId: com.nextlabs.coachcal
     clearState: true
 - openLink: exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+# The system asks "Open in CoachCal?" for every simctl openurl of a custom scheme; the evidence
+# harness taps it away the same way (lib.sh dismiss_open_dialog).
+- tapOn:
+    text: "^Open$"
+    optional: true
 # The first load compiles the whole Metro bundle on a cold runner; five minutes is the ceiling.
 - extendedWaitUntil:
     visible: "Track calories with a photo"
@@ -17,10 +22,16 @@ name: 01 fresh install shows onboarding, then the seeded Today
 - takeScreenshot: 01-onboarding-fresh-install
 
 - openLink: coachcal://debug?action=seed
+- tapOn:
+    text: "^Open$"
+    optional: true
 - extendedWaitUntil:
     visible: "Debug console"
     timeout: 30000
 - openLink: coachcal:///
+- tapOn:
+    text: "^Open$"
+    optional: true
 - extendedWaitUntil:
     visible: "Chicken rice bowl"
     timeout: 60000

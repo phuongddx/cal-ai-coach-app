@@ -10,14 +10,23 @@ name: 02 the four tabs and the diary day sheet
 - launchApp:
     appId: com.nextlabs.coachcal
 - openLink: exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+- tapOn:
+    text: "^Open$"
+    optional: true
 - extendedWaitUntil:
     visible: "Today"
     timeout: 180000
 - openLink: coachcal://debug?action=seed
+- tapOn:
+    text: "^Open$"
+    optional: true
 - extendedWaitUntil:
     visible: "Debug console"
     timeout: 30000
 - openLink: coachcal:///
+- tapOn:
+    text: "^Open$"
+    optional: true
 - extendedWaitUntil:
     visible: "Chicken rice bowl"
     timeout: 60000
@@ -49,8 +58,14 @@ name: 02 the four tabs and the diary day sheet
     timeout: 20000
 
 - openLink: coachcal://diary
+- tapOn:
+    text: "^Open$"
+    optional: true
 - extendedWaitUntil:
     visible: "Breakfast"
     timeout: 30000
 - takeScreenshot: 02-diary-sheet
 - openLink: coachcal:///
+- tapOn:
+    text: "^Open$"
+    optional: true
