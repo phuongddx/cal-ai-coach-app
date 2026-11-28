@@ -92,29 +92,32 @@ jobs:
           export PATH="$HOME/.maestro/bin:$PATH"
           maestro --version
 
-      - name: Run the Maestro flows
+      - name: Flow 01 — a fresh install shows onboarding
         run: |
           touch "$RUNNER_TEMP/maestro-start-marker"
           sleep 1
-          # 01: a fresh install shows onboarding.
           maestro test .maestro/01-fresh-install-onboarding.yaml
-          # 02: the seed launch (--ccSeedNoTargets lets the shell mount, where the Today route
-          # takes coachcal:///?seed=1 and seeds the full demo persona, one target included).
+
+      - name: Flow 02 — seed the demo persona (launched with --ccSeedNoTargets)
+        run: |
           xcrun simctl terminate "$SIM_UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
           sleep 1
+          # --ccSeedNoTargets lets the shell mount, where the Today route takes
+          # coachcal:///?seed=1 and seeds the full demo persona (one target included).
           xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID" --ccSeedNoTargets
           maestro test .maestro/02-seed-persona.yaml
-          # 03: the seeded Today, the four tabs and the diary sheet (plain relaunch).
-          maestro test .maestro/03-today-tabs-diary-sheet.yaml
 
-      - name: Scan flow (launched with --ccScanScenario 200, the way the evidence harness launches)
+      - name: Flow 03 — the seeded Today, the four tabs and the diary sheet
+        run: maestro test .maestro/03-today-tabs-diary-sheet.yaml
+
+      - name: Flow 04 — the scan fixture recomputes kcal (launched with --ccScanScenario 200)
         run: |
           xcrun simctl terminate "$SIM_UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
           sleep 1
           xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID" --ccScanScenario 200
           maestro test .maestro/04-scan-fixture-recompute.yaml
 
-      - name: ED-safe flow (launched with --ccEDSafe)
+      - name: Flow 05 — ED-safe Today (launched with --ccEDSafe)
         run: |
           xcrun simctl terminate "$SIM_UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
           sleep 1

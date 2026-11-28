@@ -4,11 +4,11 @@
 # launch-arguments module), so this flow only opens the dev client URL.
 #
 # The scenario is the golden response: one item at 320 g and 145 kcal per 100 g, so the review
-# reads 464. Three taps on the stepper's plus button add 30 g; the row then reads
-# 350 x 145 / 100 = 507.5, rounded half-up to 508 — the recomputed figure, never 464 again
-# (the rule scanKcalParity.test.ts proves). Every step addresses an identifier or a text, never
-# a pixel: scan.shutter, ccstepper.increment (the design Stepper's plus button inside the
-# scan.grams wrapper), asserted through the review's kcal texts.
+# reads 464. Three taps on the GramsField plus button (scan.grams.0.increment) add 30 g; the
+# row then reads 350 x 145 / 100 = 507.5, rounded half-up to 508 — the recomputed figure, never
+# 464 again (the rule scanKcalParity.test.ts proves). Every step addresses an identifier or a
+# text, never a pixel: scan.shutter, scan.grams.0.increment, asserted through the review's
+# kcal texts (scan.itemKcal.<id>).
 appId: com.nextlabs.coachcal
 name: 04 the scan fixture recomputes kcal from the grams
 ---
@@ -25,7 +25,8 @@ name: 04 the scan fixture recomputes kcal from the grams
     text: "^Open$"
     optional: true
 - extendedWaitUntil:
-    visible: "Scan Food"
+    visible:
+      id: "scan.shutter"
     timeout: 30000
 - takeScreenshot: 04-scan-capture
 - tapOn:
@@ -37,11 +38,11 @@ name: 04 the scan fixture recomputes kcal from the grams
 - takeScreenshot: 04-scan-review-464
 
 - tapOn:
-    id: "ccstepper.increment"
+    id: "scan.grams.0.increment"
 - tapOn:
-    id: "ccstepper.increment"
+    id: "scan.grams.0.increment"
 - tapOn:
-    id: "ccstepper.increment"
+    id: "scan.grams.0.increment"
 - assertVisible: "508 kcal"
 - assertNotVisible: "464 kcal"
 - takeScreenshot: 04-scan-review-508

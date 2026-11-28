@@ -15,7 +15,8 @@
 #      (their routes answer 503), AUTH_DEV_TOKENS=1, VLM_PROVIDER=fixture.
 #   4. Write TEST_OWNER_URL, TEST_API_URL, API_BASE_URL and API_LOG into the env file the smoke
 #      scripts and the Jest SQL harness read. RN_API_ENV_FILE names the file; the workflow sets
-#      it at job level so every step shares it.
+#      it in the env of each step that needs it (step-level env, because the runner context is
+#      not available at job level).
 #
 # No cluster state file: `scripts/rn/ci/stop-api.sh` kills the API by its pid and its port.
 set -euo pipefail

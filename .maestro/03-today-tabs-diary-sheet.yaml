@@ -1,9 +1,8 @@
-# U-82 flow 03 — the four tabs of the shell and the diary day sheet.
-# Mirrors scripts/rn/evidence/flows/02-tabs.sh and 04-diary-sheet.sh, on the seeded persona.
-# Each tab is recognised by what its own screen shows (the raw text the accessibility tree
-# carries, even where the design uppercases it visually): Progress has the title "Progress";
-# Coach shows "Today's insights"; Profile shows "Goals & targets". coachcal://diary opens the
-# formSheet, recognised by its "Breakfast" section.
+# Launched by the workflow after the seed flow: `--ccSeedNoTargets` was only the seeding launch;
+# this flow's plain launchApp relaunch opens the shell on the seeded target. Each tab is
+# recognised by what its own screen renders: Progress has the title "Progress", Coach the header
+# "Insights", Profile the header "Plan". coachcal://diary opens the formSheet, recognised by its
+# meal sections ("Breakfast" — the section headers carry a slot emoji, so the wait is a regex).
 appId: com.nextlabs.coachcal
 name: 03 the four tabs and the diary day sheet
 ---
@@ -17,11 +16,11 @@ name: 03 the four tabs and the diary day sheet
     visible: "Today"
     timeout: 180000
 - scrollUntilVisible:
-    element: "Chicken rice bowl"
+    element: "Spaghetti Bolognese"
     direction: DOWN
     timeout: 60000
 - assertVisible:
-    id: "food-row-kcal:Chicken rice bowl"
+    id: "food-row-kcal:Spaghetti Bolognese"
 - takeScreenshot: 03-today-seeded
 
 - tapOn: "Progress"
@@ -32,19 +31,19 @@ name: 03 the four tabs and the diary day sheet
 
 - tapOn: "Coach"
 - extendedWaitUntil:
-    visible: "Today's insights"
+    visible: "Insights"
     timeout: 20000
 - takeScreenshot: 03-tab-coach
 
 - tapOn: "Profile"
 - extendedWaitUntil:
-    visible: "Goals & targets"
+    visible: "Plan"
     timeout: 20000
 - takeScreenshot: 03-tab-profile
 
 - tapOn: "Today"
 - extendedWaitUntil:
-    visible: "Chicken rice bowl"
+    visible: "Spaghetti Bolognese"
     timeout: 20000
 
 - openLink: coachcal://diary
@@ -52,7 +51,8 @@ name: 03 the four tabs and the diary day sheet
     text: "^Open$"
     optional: true
 - extendedWaitUntil:
-    visible: "Breakfast"
+    visible:
+      text: ".*Breakfast"
     timeout: 30000
 - takeScreenshot: 03-diary-sheet
 - openLink: coachcal:///
