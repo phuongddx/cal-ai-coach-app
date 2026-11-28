@@ -399,6 +399,8 @@ function Meals({ snapshot, onOpenDiary }: { snapshot: TodaySnapshot; onOpenDiary
               title={meal.title}
               meta={pendingMealMeta(mealMeta(meal.mealSlot, meal.loggedAt), !meal.isSynced)}
               kcal={meal.kcal ?? undefined}
+              chevron={false}
+              unitHidden
               compactBadge={
                 meal.confidence === null ? undefined : <ConfidenceBadge confidence={meal.confidence} compact />
               }
