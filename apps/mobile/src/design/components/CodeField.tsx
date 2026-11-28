@@ -36,6 +36,8 @@ export type CodeFieldProps = {
   accessibilityLabel?: string;
   /** Turns the six borders to the `error` color. */
   error?: boolean;
+  /** Asks the input for the focus when it mounts (the code step of sign-in). Default false. */
+  autoFocus?: boolean;
 };
 
 const groups = [[0, 1, 2], [3, 4, 5]] as const;
@@ -46,6 +48,7 @@ export function CodeField({
   testID,
   accessibilityLabel = '6-digit code',
   error = false,
+  autoFocus = false,
 }: CodeFieldProps) {
   const { colors } = useTokens();
   const [focused, setFocused] = useState(false);
@@ -96,6 +99,7 @@ export function CodeField({
         textContentType="oneTimeCode"
         autoComplete="one-time-code"
         autoCorrect={false}
+        autoFocus={autoFocus}
         caretHidden
         style={styles.hiddenInput}
       />

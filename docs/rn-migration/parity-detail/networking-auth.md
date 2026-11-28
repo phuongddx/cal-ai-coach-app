@@ -105,6 +105,30 @@ email", labeled fields, one sentence after the code is sent (`auth.codeSent`), d
 | `auth.emailField.label`, `auth.otpField.label` | added: the labels above the two fields (plain `Text` in `EmailStep.tsx`; `FillField` is not used, it has no keyboard props) |
 | `auth.form`, `auth.signInApple`, `auth.signInGoogle`, `auth.emailField`, `auth.sendCode`, `auth.otpField`, `auth.verifyCode` | kept |
 
+Ember look, round 4 (U-77c, frames 108 to 115): three steps of one route. The e-mail step is now "Continue with email"
+(Back, title, subtitle, `FillField` text variant, docked Send code). Sending the code opens the code step: "Enter the code",
+"We sent a 6-digit code to <e-mail>." (`auth.codeSent`), the six cells of `CodeField` over the hidden `auth.otpField`, docked
+Verify, "Resend code in m:ss" (60 s cooldown of the client, injected clock) and "Use a different email". Two error lines: the
+code could not be sent (field border in error) and the code is wrong or has expired (six cells in error, digits kept).
+
+| Behaviour | Swift source | Proving Jest case |
+|---|---|---|
+| Send code runs `requestCode` once per tap and opens the code step | `SignInView.swift` | `sign in screen, the e-mail step (frames 108 to 111) > Send code is enabled once the address is typed and runs requestCode once per tap` |
+| The sentence carries the address; the cells are the code field | (new) | `sign in screen, the code step (frames 112 to 115) > draws the title, the sentence with the address in bold, the six cells and the note of the frame` |
+| Verify is disabled at five digits, enabled at six; more than six is cut; nothing submits at the sixth digit | `SignInView.swift` | `... > Verify is disabled at five digits and enabled at six`; `> a code of more than six digits is cut to six`; `> nothing submits when the sixth digit lands, and Verify runs verifyCode once with the address and the code` |
+| Resend counts down from 60 s with an injected clock; at zero it calls `requestCode` once with the same address | (new) | `... > Resend code counts down from 60 seconds and is disabled until it reaches zero`; `> a tap on Resend code at zero calls requestCode once more with the same address and starts the 60 seconds again` |
+| Back and "Use a different email" keep the address | (new) | `... > Back on the code step returns to the e-mail step and keeps the address, Back again to the entry step`; `> Use a different email returns to the e-mail step and keeps the typed address` |
+| Code not sent: field border in error and the send line; wrong code: cells in error, digits kept; any other error keeps the service message | (new) | `sign in screen, the e-mail step (frames 108 to 111) > the code could not be sent (%s): the field border in error and the line of frame 110` (the `it.each`, four errors); `... > a code that is wrong or expired: the six cells in error, the digits kept, the line of frame 114, Verify still enabled`; `> an error that maps to neither line keeps the message of the service and the cells stay quiet`; `> a resend the server refuses says so on the code step and keeps the cooldown at zero` |
+| `CodeField` takes `autoFocus` (default false) | (new) | `design/components/CodeField.test.tsx > CodeField autoFocus` |
+
+| Identifier | Status (U-77c) |
+|---|---|
+| `auth.codeCells`, `auth.resendCode`, `auth.useDifferentEmail`, `auth.emailField.ring` | added |
+| `auth.otpField.label` | removed: the cells have no label above them; the input keeps the accessibility label "6-digit code" |
+| `auth.sendCode`, `auth.verifyCode` | kept, now on the buttons themselves |
+
+Details and deviations: `findings/U-77c.md`.
+
 Differences from the SwiftUI screen: the `auth.*` identifiers sit on wrapper views for the design buttons
 (`PrimaryButton` and `SecondaryButton` take no `testID`), so the tests press the button by its label; the
 native Apple button carries `auth.signInApple` itself. The Apple cancel gives the line "Sign-in was cancelled."

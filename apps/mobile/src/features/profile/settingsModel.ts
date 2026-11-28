@@ -41,6 +41,35 @@ export interface SettingsModelDeps {
   signOut: () => Promise<void>;
   /** The route binds the CSV export service; the model shares exactly what it produces. */
   csvExportAction: () => Promise<string>;
+  /**
+   * The route binds `exportCsvAndShare` (U-77): the tap on the export row writes
+   * the cache file and hands its URL to the share sheet. The route maps the
+   * share sheet's answer to `'shared' | 'cancelled'` (RN `Share.share` resolves
+   * with `action: 'dismissedAction'` when the sheet is closed without sharing —
+   * node_modules/react-native/Libraries/Share/Share.js). A failed write or
+   * build rejects.
+   */
+  shareExport: () => Promise<'shared' | 'cancelled'>;
+}
+
+/** The last share attempt's outcome; the three export rows of the frames read it. */
+export type ExportShareState =
+  | { kind: 'idle' }
+  | { kind: 'cancelled' }
+  | { kind: 'failed'; reason: string };
+
+/**
+ * True when the prepared export carries at least one data row. The generator
+ * writes a `# <table>` section per table and only emits the header and rows
+ * when a row exists, so an empty diary is a comment-and-blank-line file.
+ */
+export function hasExportRows(csv: string): boolean {
+  return csv
+    .split('\n')
+    .some((line) => {
+      const trimmed = line.trim();
+      return trimmed !== '' && !trimmed.startsWith('#');
+    });
 }
 
 export class SettingsModel {
@@ -53,6 +82,10 @@ export class SettingsModel {
   wellnessWriteError: string | null = null;
   /** The loaded export; null until the injected action resolves (the row stays disabled). */
   exportedCsv: string | null = null;
+  /** True when the prepared export has no data rows (the frame's no-data state). */
+  exportEmpty = false;
+  /** The last share attempt's outcome; 'idle' after a completed share. */
+  exportShare: ExportShareState = { kind: 'idle' };
 
   private readonly deps: SettingsModelDeps;
 
@@ -142,6 +175,8 @@ export class SettingsModel {
     this.burnAddBackOn = false;
     this.wellnessWriteError = null;
     this.exportedCsv = null;
+    this.exportEmpty = false;
+    this.exportShare = { kind: 'idle' };
     this.touch();
   }
 
@@ -153,11 +188,13 @@ export class SettingsModel {
     }
   }
 
-  // -- CSV export (TRU-03) ----------------------------------------------------
+  // -- CSV export (TRU-03, U-77's three states) --------------------------------
 
   /**
    * Loads in the background as soon as Settings appears (Swift `.task`), once.
-   * On failure the export stays null and the row stays disabled.
+   * On failure the export stays null and the row stays disabled. A prepared
+   * export without data rows marks the no-data state: the row stays disabled
+   * and the information row says so (frame x-nodata).
    */
   async loadExport(): Promise<void> {
     if (this.exportedCsv !== null) return;
@@ -166,6 +203,33 @@ export class SettingsModel {
     } catch {
       return;
     }
+    this.exportEmpty = !hasExportRows(this.exportedCsv);
+    this.touch();
+  }
+
+  /**
+   * The tap on the export row (frame x-cancel): the injected `exportCsvAndShare`
+   * binding writes the file and opens the share sheet with it — never on open.
+   * A cancelled sheet is not an error: the state records it, the file stays and
+   * the row offers "Share again" and "Done". A failed write records the reason
+   * with a retry. A completed share resets to idle.
+   */
+  async shareExport(): Promise<void> {
+    try {
+      const result = await this.deps.shareExport();
+      this.exportShare = result === 'cancelled' ? { kind: 'cancelled' } : { kind: 'idle' };
+    } catch (error) {
+      this.exportShare = {
+        kind: 'failed',
+        reason: error instanceof Error ? error.message : 'The export could not be created.',
+      };
+    }
+    this.touch();
+  }
+
+  /** "Done" on the cancelled row: dismisses the row without touching the file. */
+  dismissExportShare(): void {
+    this.exportShare = { kind: 'idle' };
     this.touch();
   }
 }

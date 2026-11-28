@@ -13,6 +13,8 @@ import { sql } from 'drizzle-orm';
 import { dayKey } from '@coachcal/core';
 
 import { getSessionStore } from '../../data/auth';
+import { createNativeHealthKitPort } from '../../data/health/healthKitNative';
+import { HealthAuthorizationStatus } from '../../data/health/healthKitService';
 import { getDataEnvironment } from '../../data/environment';
 import { DEMO_USER_ID } from '../../data/repos/seedDataManager';
 import { notifyLocalMutation } from '../../data/sync/runtime';
@@ -49,9 +51,31 @@ async function loadStats(ownerId: string, monthStart: string): Promise<ProfileSt
   };
 }
 
+/**
+ * The real Apple Health connection status: the step type's authorization. A
+ * device without the native module reads as not connected (the honest value —
+ * never a permission prompt).
+ */
+function readHealthConnected(): boolean {
+  try {
+    return (
+      createNativeHealthKitPort().authorizationStatusFor('HKQuantityTypeIdentifierStepCount') ===
+      HealthAuthorizationStatus.sharingAuthorized
+    );
+  } catch {
+    return false;
+  }
+}
+
 export default function ProfileRoute() {
   const router = useRouter();
-  const ownerId = getSessionStore().getSession()?.user.id ?? DEMO_USER_ID;
+  const session = getSessionStore().getSession();
+  const ownerId = session?.user.id ?? DEMO_USER_ID;
+  // The account's name: the session carries no display name field (the
+  // contract holds id, e-mail, providers), so the e-mail address is the name;
+  // signed-out (demo) it stays empty and the card shows an em dash.
+  const accountName = session?.user.email ?? '';
+  const healthConnected = useMemo(() => readHealthConnected(), []);
   const model = useMemo(() => {
     const now = () => new Date();
     const monthStart = dayKey(new Date(now().getTime() - 29 * 24 * 60 * 60 * 1000));
@@ -89,6 +113,8 @@ export default function ProfileRoute() {
         // Display-only entitlement state: Phase 3 is Free-only and no RN module
         // keeps a stored entitlement yet (see findings/U-41.md).
         planName="Free"
+        accountName={accountName}
+        healthConnected={healthConnected}
         onEditTargets={target === null ? null : () => setEditingTargets(true)}
         onOpenSettings={() => router.push('/settings')}
       />

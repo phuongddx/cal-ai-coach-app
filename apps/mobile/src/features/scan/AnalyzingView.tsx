@@ -1,95 +1,73 @@
 /**
- * AnalyzingView.swift — 160pt thumb (radius-lg) with a 1.5s shimmer, headings, a 3-step checklist
- * (completed check / spinner / idle circle) plus a 4th escalation-only row, and Cancel back to capture.
+ * Analyzing (Ember frame 02): a 200 pt thumb with a 3 pt accent ring and a soft glow, "Reading your plate",
+ * "Usually under 5 seconds" and a pinned Cancel. The model reports no stages (the scan API answers in one
+ * request), so there is no checklist and no timer: only observed facts are shown.
  */
 import { useEffect, useRef } from 'react';
-import { ActivityIndicator, Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { radius, space, typography, useTokens } from '../../design';
+import { darkColors, radius, size, space, useTokens, withAlpha } from '../../design';
 import { ScanThumb } from './ScanThumb';
 import type { ScanModel } from './scanModel';
-import { ANALYZING_STEPS, ANALYZING_STEP_TITLE, type AnalyzingStep } from './scanTypes';
 import { useScanState } from './useScanModel';
 
-const THUMB = 160;
+const THUMB = 200;
+const RING = 3;
+const THUMB_RADIUS = 32;
 
 export type AnalyzingViewProps = {
   model: ScanModel;
-  /** `--ccDisableAnimations` of the Swift view: pins a static "in progress" glyph and no shimmer. */
+  /** `--ccDisableAnimations`: pins the glow and stops the pulse. */
   animationsDisabled?: boolean;
 };
-
-/** The rows shown: three, plus the escalation row only once the call outlasts the budget. */
-export function visibleSteps(active: AnalyzingStep | null): readonly AnalyzingStep[] {
-  return active === 'confirming' ? ANALYZING_STEPS : ANALYZING_STEPS.slice(0, 3);
-}
 
 export function AnalyzingView({ model, animationsDisabled = false }: AnalyzingViewProps) {
   const { colors } = useTokens();
   const state = useScanState(model);
-  const active = state.phase.kind === 'analyzing' ? state.phase.step : null;
-  const steps = visibleSteps(active);
-  const activeIndex = active === null ? -1 : steps.indexOf(active);
+  const pulse = useRef(new Animated.Value(0.6)).current;
 
-  const shimmer = useRef(new Animated.Value(-1)).current;
   useEffect(() => {
     if (animationsDisabled) return;
-    const loop = Animated.loop(Animated.timing(shimmer, { toValue: 2, duration: 1500, easing: Easing.linear, useNativeDriver: true }));
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.6, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ]),
+    );
     loop.start();
     return () => loop.stop();
-  }, [animationsDisabled, shimmer]);
+  }, [animationsDisabled, pulse]);
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: darkColors.bg }]}>
       <View style={styles.column}>
         <View style={styles.spacer} />
-        <View testID="scan.analyzing.thumb" style={styles.thumb}>
-          <ScanThumb thumb={state.captureThumb} size={THUMB} cornerRadius={radius.lg} tone="analyzing" />
-          {!animationsDisabled && (
-            <Animated.View
-              pointerEvents="none"
-              style={[styles.shimmer, { transform: [{ translateX: Animated.multiply(shimmer, THUMB) }] }]}
-            />
-          )}
+        <View testID="scan.analyzing.thumb" style={styles.thumbWrap}>
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.glow,
+              { backgroundColor: withAlpha(colors.accent, 0.25), shadowColor: colors.accent, opacity: animationsDisabled ? 0.8 : pulse },
+            ]}
+          />
+          <View style={[styles.ring, { borderColor: colors.accent }]}>
+            <ScanThumb thumb={state.captureThumb} size={THUMB} cornerRadius={THUMB_RADIUS} tone="analyzing" />
+          </View>
         </View>
         <View style={styles.headings}>
-          <Text testID="scan.analyzing" accessibilityRole="header" style={styles.heading}>
-            Analyzing your meal
+          <Text testID="scan.analyzing" accessibilityRole="header" style={[styles.heading, { color: colors.emberText }]}>
+            Reading your plate
           </Text>
-          <Text style={styles.subhead}>AI estimate in progress</Text>
-        </View>
-        <View testID="scan.checklist" style={styles.checklist}>
-          {steps.map((step, index) => {
-            const reached = index <= activeIndex;
-            return (
-              <View
-                key={step}
-                testID={`scan.step.${step}`}
-                accessible
-                accessibilityLabel={ANALYZING_STEP_TITLE[step]}
-                accessibilityState={{ busy: index === activeIndex, checked: index < activeIndex }}
-                style={styles.stepRow}
-              >
-                {index < activeIndex ? (
-                  <SymbolView name="checkmark.circle.fill" size={20} tintColor={colors.accentLime} />
-                ) : index === activeIndex ? (
-                  animationsDisabled ? (
-                    <SymbolView name="circle.dotted" size={20} tintColor={colors.accentLime} />
-                  ) : (
-                    <ActivityIndicator color={colors.accentLime} style={styles.spinner} />
-                  )
-                ) : (
-                  <View style={styles.idleCircle} />
-                )}
-                <Text style={[styles.stepTitle, { color: reached ? '#FFFFFF' : 'rgba(255,255,255,0.4)' }]}>{ANALYZING_STEP_TITLE[step]}</Text>
-              </View>
-            );
-          })}
+          <Text style={[styles.subhead, { color: colors.emberText2 }]}>Usually under 5 seconds</Text>
         </View>
         <View style={styles.spacer} />
-        <Pressable accessibilityRole="button" testID="scan.cancel" onPress={() => model.cancelAnalyzing()} style={styles.cancel}>
-          <Text style={styles.cancelText}>Cancel</Text>
+        <Pressable
+          accessibilityRole="button"
+          testID="scan.cancel"
+          onPress={() => model.cancelAnalyzing()}
+          style={[styles.cancel, { backgroundColor: withAlpha(darkColors.elevated, 0.9) }]}
+        >
+          <Text style={[styles.cancelText, { color: colors.emberText }]}>Cancel</Text>
         </Pressable>
       </View>
     </View>
@@ -97,19 +75,23 @@ export function AnalyzingView({ model, animationsDisabled = false }: AnalyzingVi
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#000000' },
-  column: { flex: 1, alignItems: 'center', gap: space.xl, paddingHorizontal: space.xl2, paddingBottom: space.xl },
+  root: { flex: 1 },
+  column: { flex: 1, alignItems: 'center', gap: space.xl2, paddingHorizontal: space.xl2, paddingBottom: space.xl3 },
   spacer: { flex: 1 },
-  thumb: { width: THUMB, height: THUMB, borderRadius: radius.lg, overflow: 'hidden' },
-  shimmer: { position: 'absolute', top: 0, bottom: 0, width: THUMB * 0.6, backgroundColor: 'rgba(255,255,255,0.18)' },
-  headings: { alignItems: 'center', gap: space.xs },
-  heading: { ...typography.heading, color: '#FFFFFF' },
-  subhead: { ...typography.subhead, color: 'rgba(255,255,255,0.7)' },
-  checklist: { alignSelf: 'flex-start', gap: space.md, paddingVertical: space.lg },
-  stepRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  stepTitle: { ...typography.subhead },
-  spinner: { width: 20, height: 20 },
-  idleCircle: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)' },
-  cancel: { padding: space.md, minHeight: 44, justifyContent: 'center' },
-  cancelText: { fontSize: 15, fontWeight: '500', color: 'rgba(255,255,255,0.8)' },
+  thumbWrap: { width: THUMB + RING * 2, height: THUMB + RING * 2, alignItems: 'center', justifyContent: 'center' },
+  glow: {
+    position: 'absolute',
+    width: THUMB + RING * 2,
+    height: THUMB + RING * 2,
+    borderRadius: THUMB_RADIUS + RING,
+    shadowOpacity: 0.6,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  ring: { borderWidth: RING, borderRadius: THUMB_RADIUS + RING, overflow: 'hidden' },
+  headings: { alignItems: 'center', gap: space.sm },
+  heading: { fontSize: 28, fontWeight: '700' },
+  subhead: { fontSize: 15, fontWeight: '400' },
+  cancel: { minHeight: size.btn, alignSelf: 'stretch', borderRadius: radius.button, alignItems: 'center', justifyContent: 'center' },
+  cancelText: { fontSize: 17, fontWeight: '600' },
 });

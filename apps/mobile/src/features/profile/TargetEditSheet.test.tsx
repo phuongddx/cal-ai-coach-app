@@ -68,7 +68,8 @@ describe('target edit sheet', () => {
     const { model } = makeModel();
     await render(<TargetEditSheet model={model} onDismiss={() => undefined} />);
 
-    expect(screen.getByText('Edit targets')).toBeOnTheScreen();
+    expect(screen.getByText('Edit goal')).toBeOnTheScreen();
+    expect(screen.getByTestId('settings.targetEdit.close')).toBeOnTheScreen();
     expect(screen.getByText('Daily target')).toBeOnTheScreen();
     expect(screen.getByText('2,150 kcal')).toBeOnTheScreen();
     expect(screen.getByText('Protein 161 g · Carbs 215 g · Fat 72 g')).toBeOnTheScreen();
@@ -80,8 +81,20 @@ describe('target edit sheet', () => {
     expect(screen.getByTestId('wheel-field:Goal weight')).toBeOnTheScreen();
     expect(screen.getByTestId('wheel-value:Goal weight')).toHaveTextContent('65 kg');
     expect(screen.getByTestId('settings.targetEdit.save')).toBeOnTheScreen();
-    // The default plan is unfloored: no safety-floor banner yet.
+    expect(screen.getByText('Save goal')).toBeOnTheScreen();
+    expect(screen.getByText("Past days in your diary don't change.")).toBeOnTheScreen();
+    // The default plan is unfloored on both axes: no banner yet.
     expect(screen.queryByTestId('settings.targetEdit.safetyFloor')).toBeNull();
+    expect(screen.queryByTestId('settings.targetEdit.goalFloor')).toBeNull();
+  });
+
+  it('closes from the close glass button', async () => {
+    const { model } = makeModel();
+    const onDismiss = jest.fn();
+    await render(<TargetEditSheet model={model} onDismiss={onDismiss} />);
+
+    await userEvent.press(screen.getByTestId('settings.targetEdit.close'));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
   it('steps the kcal by 50 and shows the engine floor banner below the floor', async () => {
@@ -150,6 +163,48 @@ describe('target edit sheet', () => {
     expect(saved.goalWeightKg).toBe(65);
   });
 
+  it('shows the caution card and names the clamped value when a stored goal sits under the engine minimum', async () => {
+    // The wheel's own range starts at the engine minimum, so a sub-floor goal
+    // only arrives from stored data — the sheet surfaces it honestly.
+    const stored = { ...makeTarget(), goalWeightKg: 35 };
+    const { model, saveTarget } = makeModel(stored);
+    await render(<TargetEditSheet model={model} onDismiss={() => undefined} />);
+
+    expect(screen.getByTestId('settings.targetEdit.goalFloor')).toBeOnTheScreen();
+    // The copy names the clamped value, never claims a height-based range and
+    // never says BMI.
+    expect(screen.getByText('35 kg is under the lowest goal CoachCal supports.')).toBeOnTheScreen();
+    expect(screen.getByText("We'll plan for 40 kg. A doctor or dietitian can help with a different goal.")).toBeOnTheScreen();
+    expect(screen.queryByText(/BMI/)).toBeNull();
+    expect(screen.getByText('Save 40 kg goal')).toBeOnTheScreen();
+
+    // The save still reclamps through the engine.
+    await userEvent.press(screen.getByTestId('settings.targetEdit.save'));
+    await waitFor(() => expect(saveTarget).toHaveBeenCalledTimes(1));
+    const saved = saveTarget.mock.calls[0]?.[0] as UserTarget;
+    expect(saved.goalWeightKg).toBe(40);
+  });
+
+  it('clears the caution card when the wheel moves the goal back in range', async () => {
+    const stored = { ...makeTarget(), goalWeightKg: 35 };
+    const { model } = makeModel(stored);
+    await render(<TargetEditSheet model={model} onDismiss={() => undefined} />);
+    expect(screen.getByTestId('settings.targetEdit.goalFloor')).toBeOnTheScreen();
+
+    // One wheel row up from the bottom lands on 40 kg: the card disappears.
+    await act(async () => {
+      fireEvent(screen.getByTestId('wheel-scroll:Goal weight'), 'momentumScrollEnd', {
+        nativeEvent: {
+          contentOffset: { y: 0 },
+          layoutMeasurement: { height: 108 },
+          contentSize: { height: 36 * 111 },
+        },
+      });
+    });
+    expect(screen.queryByTestId('settings.targetEdit.goalFloor')).toBeNull();
+    expect(screen.getByText('Save goal')).toBeOnTheScreen();
+  });
+
   it('collapses the daily-target section under ED-safe mode and keeps the save path', async () => {
     setEdSafeMode(true);
     const { model, saveTarget } = makeModel();
@@ -159,7 +214,7 @@ describe('target edit sheet', () => {
     expect(screen.queryByText('Daily target')).toBeNull();
     expect(screen.queryByTestId('settings.targetEdit.kcal')).toBeNull();
     expect(screen.queryByTestId('settings.targetEdit.safetyFloor')).toBeNull();
-    // The wheel and the save stay reachable.
+    // The weight and the save stay reachable.
     expect(screen.getByTestId('settings.targetEdit.goalWeight')).toBeOnTheScreen();
     expect(screen.getByTestId('settings.targetEdit.save')).toBeOnTheScreen();
 
