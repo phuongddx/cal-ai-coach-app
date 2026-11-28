@@ -1,20 +1,17 @@
 name: RN CI
 
 # TypeScript, Jest and the parity gate for the React Native app (apps/mobile), the Hono API
-# (apps/api) and the shared packages. Runs on Ubuntu: nothing here needs Xcode. The Swift app in
-# native/ is covered by ci.yml until it is removed; pull requests that only touch native/, supabase/
-# or the Deno lockfile skip this workflow.
+# (apps/api) and the shared packages. Runs on Ubuntu: nothing here needs Xcode. This is the only
+# workflow; pull requests that only touch supabase/ or the Deno lockfile skip it.
 
 on:
   push:
     branches: [main]
     paths-ignore:
-      - 'native/**'
       - 'supabase/**'
       - 'deno.lock'
   pull_request:
     paths-ignore:
-      - 'native/**'
       - 'supabase/**'
       - 'deno.lock'
   workflow_dispatch:
