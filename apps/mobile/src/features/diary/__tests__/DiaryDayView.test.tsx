@@ -10,7 +10,7 @@ import { setEdSafeMode } from '../../../design';
 
 import type { DiaryDeps } from '../deps';
 import type { DiaryDayItem, DiaryDaySnapshotData as DiaryDaySnapshot } from '../diarySnapshot';
-import type { DiaryDayModel } from '../diaryDayModel';
+import { publishDiaryDay, type DiaryDayModel } from '../diaryDayModel';
 import { DiaryDayView } from '../screens/DiaryDayView';
 
 const NOON = new Date(2026, 8, 12, 9, 0, 0, 0);
@@ -92,8 +92,13 @@ function makeModel(
   snapshot: DiaryDaySnapshot = makeSnapshot(),
   overrides: Partial<DiaryDayModel> = {},
 ): DiaryDayModel {
+  // The snapshot the real model publishes for this data (the view reads it and nothing else).
+  const published = publishDiaryDay(snapshot, {
+    heading: overrides.dayHeading?.() ?? 'Saturday, Sep 12',
+    isToday: overrides.isToday?.() ?? false,
+  });
   return {
-    getSnapshot: () => snapshot,
+    getSnapshot: () => published,
     subscribe: () => () => undefined,
     refresh: async () => undefined,
     getDay: () => NOON,

@@ -66,7 +66,8 @@ type UndoToast =
 
 export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
   const { colors, radius, space, typography } = useTokens();
-  useSyncExternalStore(model.subscribe, model.getSnapshot, model.getSnapshot);
+  // The view draws the snapshot and nothing else: the model replaces it on every change (U-84).
+  const snapshot = useSyncExternalStore(model.subscribe, model.getSnapshot, model.getSnapshot);
 
   const [editItem, setEditItem] = useState<DiaryDayItem | null>(null);
   const [isExerciseSheetPresented, setIsExerciseSheetPresented] = useState(false);
@@ -87,8 +88,6 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
     }, UNDO_WINDOW_MS);
     return () => clearTimeout(timer);
   }, [currentUndo]);
-
-  const snapshot = model.getSnapshot();
 
   const undo = (receipt: SavedReceipt) => {
     setSavedToast(null);
@@ -162,27 +161,27 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
             testID="diary.previousDay"
             onPress={() => shiftDay(model, -1)}
           />
-          <Text style={[typography.heading, { color: colors.textPrimary }]}>{model.dayHeading()}</Text>
+          <Text style={[typography.heading, { color: colors.textPrimary }]}>{snapshot.heading}</Text>
           {/* GlassIconButton cannot express `disabled`, which the next-day
               pager needs on today: the same DS glass tokens style a feature
               Pressable that carries the state (findings, U-74 §3). */}
-          <NextDayGlassButton isToday={model.isToday()} onPress={() => shiftDay(model, 1)} />
+          <NextDayGlassButton isToday={snapshot.isToday} onPress={() => shiftDay(model, 1)} />
         </View>
 
         <EdSafeCollapse>
           <View
             accessible
-            accessibilityLabel={`Eaten ${model.eatenKcal()} of ${model.goalKcal() ?? 0}, ${model.leftKcal() ?? 0} remaining`}
+            accessibilityLabel={`Eaten ${snapshot.eatenKcal} of ${snapshot.goalKcal ?? 0}, ${snapshot.leftKcal ?? 0} remaining`}
             style={[
               styles.summaryCard,
               { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.lg },
             ]}
           >
-            <SummaryColumn title="Eaten" kcal={model.eatenKcal()} color={colors.textPrimary} />
+            <SummaryColumn title="Eaten" kcal={snapshot.eatenKcal} color={colors.textPrimary} />
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <SummaryColumn title="Goal" kcal={model.goalKcal() ?? 0} color={colors.textPrimary} />
+            <SummaryColumn title="Goal" kcal={snapshot.goalKcal ?? 0} color={colors.textPrimary} />
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <SummaryColumn title="Left" kcal={model.leftKcal() ?? 0} color={colors.accentInk} />
+            <SummaryColumn title="Left" kcal={snapshot.leftKcal ?? 0} color={colors.accentInk} />
           </View>
         </EdSafeCollapse>
 
@@ -197,7 +196,7 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
               </View>
               <EdSafeCollapse>
                 <Text style={[typography.subhead, { color: colors.textSecondary }]}>
-                  {`${model.sectionKcal(section)} kcal`}
+                  {`${section.kcal} kcal`}
                 </Text>
               </EdSafeCollapse>
             </View>
@@ -224,9 +223,9 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
             Exercise
           </Text>
           <EdSafeCollapse>
-            {model.burnedKcal() !== null && (
+            {snapshot.burnedKcal !== null && (
               <Text style={[typography.subhead, { color: colors.textSecondary }]}>
-                {`\u2212${model.burnedKcal()} kcal`}
+                {`\u2212${snapshot.burnedKcal} kcal`}
               </Text>
             )}
           </EdSafeCollapse>

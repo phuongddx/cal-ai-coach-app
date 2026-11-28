@@ -13,8 +13,55 @@ import type { DiaryDeps } from './deps';
 import { dayString, manualKcal } from './diaryMath';
 import { cancelTombstoneAndRestore, createDiaryDayLoader, type DiaryDayExercise, type DiaryDaySection, type DiaryDaySnapshotData } from './diarySnapshot';
 
-export type DiaryDaySnapshot = DiaryDaySnapshotData;
+/**
+ * What the day sheet draws, published whole and replaced on every change (never mutated): the
+ * loaded rows plus the values derived from them. The view reads this and nothing else — a value
+ * the view asks the model for in render keeps its identity under the React Compiler and freezes
+ * (U-84); a snapshot that is replaced does not.
+ */
+export type DiaryDaySnapshot = Omit<DiaryDaySnapshotData, 'sections'> & {
+  heading: string;
+  isToday: boolean;
+  eatenKcal: number;
+  goalKcal: number | null;
+  leftKcal: number | null;
+  /** The day's burned-kcal sum (the exercise header figure); null without exercise rows. */
+  burnedKcal: number | null;
+  sections: (DiaryDaySection & { kcal: number })[];
+};
 export type { DiaryDayExercise, DiaryDaySection };
+
+/** The day sheet's heading: the weekday, month and day of the local calendar day. */
+function headingOf(day: Date): string {
+  return day.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+const kcalOfSection = (section: DiaryDaySection): number =>
+  section.items.reduce((total, item) => total + (item.kcal ?? 0), 0);
+
+/** The loaded rows of one day and the day's two facts, as the snapshot the day sheet reads. */
+export function publishDiaryDay(
+  data: DiaryDaySnapshotData,
+  day: { heading: string; isToday: boolean },
+): DiaryDaySnapshot {
+  const sections = data.sections.map((section) => ({ ...section, kcal: kcalOfSection(section) }));
+  const eatenKcal = sections.reduce((total, section) => total + section.kcal, 0);
+  const goalKcal = data.target?.dailyKcal ?? null;
+  return {
+    target: data.target,
+    exercises: data.exercises,
+    heading: day.heading,
+    isToday: day.isToday,
+    eatenKcal,
+    goalKcal,
+    leftKcal: goalKcal === null ? null : Math.max(goalKcal - eatenKcal, 0),
+    burnedKcal:
+      data.exercises.length === 0
+        ? null
+        : data.exercises.reduce((total, exercise) => total + (exercise.kcalBurned ?? 0), 0),
+    sections,
+  };
+}
 
 export type DiaryDayModel = {
   /** The observed snapshot — `useSyncExternalStore(model.subscribe, model.getSnapshot)`. */
@@ -69,11 +116,18 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
   });
 
   let day = initialDay;
-  let snapshot: DiaryDaySnapshot = {
-    target: null,
-    sections: ['breakfast', 'lunch', 'dinner', 'snacks'].map((slot) => ({ slot, items: [] })),
-    exercises: [],
-  };
+  const dayFacts = (forDay: Date) => ({
+    heading: headingOf(forDay),
+    isToday: dayString(forDay) === dayString(deps.now()),
+  });
+  let snapshot: DiaryDaySnapshot = publishDiaryDay(
+    {
+      target: null,
+      sections: ['breakfast', 'lunch', 'dinner', 'snacks'].map((slot) => ({ slot, items: [] })),
+      exercises: [],
+    },
+    dayFacts(initialDay),
+  );
 
   const listeners = new Set<() => void>();
   const emit = () => {
@@ -86,7 +140,9 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
   });
 
   async function refresh(): Promise<void> {
-    snapshot = await loadDay(dayString(day));
+    // The heading and the today flag belong to the day the rows were read for.
+    const forDay = day;
+    snapshot = publishDiaryDay(await loadDay(dayString(forDay)), dayFacts(forDay));
     emit();
   }
 
@@ -107,23 +163,13 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
       day = date;
       void refresh();
     },
-    dayHeading: () =>
-      day.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }),
-    isToday: () => dayString(day) === dayString(deps.now()),
-    eatenKcal: () =>
-      snapshot.sections.reduce((total, section) => total + sectionKcalOf(section), 0),
-    goalKcal: () => snapshot.target?.dailyKcal ?? null,
-    leftKcal: () => {
-      const goal = snapshot.target?.dailyKcal;
-      return goal === undefined ? null : Math.max(goal - eatenKcalOf(), 0);
-    },
-    sectionKcal: sectionKcalOf,
-    burnedKcal: () => {
-      if (snapshot.exercises.length === 0) {
-        return null;
-      }
-      return snapshot.exercises.reduce((total, exercise) => total + (exercise.kcalBurned ?? 0), 0);
-    },
+    dayHeading: () => headingOf(day),
+    isToday: () => dayFacts(day).isToday,
+    eatenKcal: () => snapshot.eatenKcal,
+    goalKcal: () => snapshot.goalKcal,
+    leftKcal: () => snapshot.leftKcal,
+    sectionKcal: kcalOfSection,
+    burnedKcal: () => snapshot.burnedKcal,
     items: (slot: string) => snapshot.sections.find((section) => section.slot === slot)?.items ?? [],
     async delete(item) {
       // Tombstone (not hard delete) keeps the sync history; the detail row
@@ -204,12 +250,4 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
       await refresh();
     },
   };
-
-  function sectionKcalOf(section: DiaryDaySection): number {
-    return section.items.reduce((total, item) => total + (item.kcal ?? 0), 0);
-  }
-
-  function eatenKcalOf(): number {
-    return snapshot.sections.reduce((total, section) => total + sectionKcalOf(section), 0);
-  }
 }
