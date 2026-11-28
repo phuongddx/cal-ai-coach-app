@@ -105,3 +105,58 @@ describe('body metrics screen', () => {
     expect(model.path[model.path.length - 1]).toBe('goal');
   });
 });
+
+describe('the typed fields clamp on blur (the wheels\' ranges)', () => {
+  it('nothing clamps while typing and a blur clamps 250 to 220', async () => {
+    const model = makeModel();
+    await render(<BodyMetricsScreen model={model} />);
+
+    await fireEvent.changeText(screen.getByTestId('onboarding.heightField'), '250');
+    expect(model.draft.heightCm).toBe(250);
+    expect(screen.getByTestId('onboarding.heightField')).toHaveDisplayValue('250');
+
+    await fireEvent(screen.getByTestId('onboarding.heightField'), 'blur');
+    expect(model.draft.heightCm).toBe(220);
+    expect(screen.getByTestId('onboarding.heightField')).toHaveDisplayValue('220');
+  });
+
+  it('a blur clamps 9 to 120 for height', async () => {
+    const model = makeModel();
+    await render(<BodyMetricsScreen model={model} />);
+
+    await fireEvent.changeText(screen.getByTestId('onboarding.heightField'), '9');
+    await fireEvent(screen.getByTestId('onboarding.heightField'), 'blur');
+    expect(model.draft.heightCm).toBe(120);
+    expect(screen.getByTestId('onboarding.heightField')).toHaveDisplayValue('120');
+  });
+
+  it('weight 35 and 200 stay on the blur and 172 inside the range is untouched', async () => {
+    const model = makeModel();
+    await render(<BodyMetricsScreen model={model} />);
+
+    await fireEvent.changeText(screen.getByTestId('onboarding.weightField'), '35');
+    await fireEvent(screen.getByTestId('onboarding.weightField'), 'blur');
+    expect(model.draft.weightKg).toBe(35);
+    expect(screen.getByTestId('onboarding.weightField')).toHaveDisplayValue('35');
+
+    await fireEvent.changeText(screen.getByTestId('onboarding.weightField'), '200');
+    await fireEvent(screen.getByTestId('onboarding.weightField'), 'blur');
+    expect(model.draft.weightKg).toBe(200);
+    expect(screen.getByTestId('onboarding.weightField')).toHaveDisplayValue('200');
+
+    await fireEvent.changeText(screen.getByTestId('onboarding.heightField'), '172');
+    await fireEvent(screen.getByTestId('onboarding.heightField'), 'blur');
+    expect(model.draft.heightCm).toBe(172);
+    expect(screen.getByTestId('onboarding.heightField')).toHaveDisplayValue('172');
+  });
+
+  it('an empty field writes nothing on blur', async () => {
+    const model = makeModel();
+    await render(<BodyMetricsScreen model={model} />);
+
+    await fireEvent.changeText(screen.getByTestId('onboarding.heightField'), '');
+    await fireEvent(screen.getByTestId('onboarding.heightField'), 'blur');
+    expect(model.draft.heightCm).toBe(165);
+    expect(screen.getByTestId('onboarding.heightField')).toHaveDisplayValue('');
+  });
+});

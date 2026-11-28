@@ -343,3 +343,35 @@ describe('the step-7 ED-safe policy switch', () => {
   });
 });
 
+describe('the typed fields clamp on blur (the wheels\' ranges)', () => {
+  it('height 250 clamps to 220 and 9 clamps to 120 through the model', () => {
+    const model = makeModel();
+    expect(model.clampHeightCm(250)).toBe(220);
+    expect(model.draft.heightCm).toBe(220);
+    expect(model.clampHeightCm(9)).toBe(120);
+    expect(model.draft.heightCm).toBe(120);
+  });
+
+  it('weight 35 and 200 stay and goal weight 40 and 150 stay on their bounds', () => {
+    const model = makeModel();
+    expect(model.clampWeightKg(35)).toBe(35);
+    expect(model.clampWeightKg(200)).toBe(200);
+    expect(model.clampGoalWeightKg(40)).toBe(40);
+    expect(model.clampGoalWeightKg(150)).toBe(150);
+    expect(model.draft.weightKg).toBe(200);
+    expect(model.draft.goalWeightKg).toBe(150);
+  });
+
+  it('a value inside a range is untouched and typing never clamps', () => {
+    const model = makeModel();
+    expect(model.clampHeightCm(172)).toBe(172);
+    expect(model.clampWeightKg(80.6)).toBe(80.6);
+    expect(model.clampGoalWeightKg(72)).toBe(72);
+    // The typing writes stay raw: only the blur clamp bounds a value.
+    model.setHeightCm(250);
+    expect(model.draft.heightCm).toBe(250);
+    model.setGoalWeightKg(250);
+    expect(model.draft.goalWeightKg).toBe(250);
+  });
+});
+

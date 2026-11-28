@@ -8,6 +8,9 @@
  * engine returns, and a clamp shows the verbatim safety-floor banner on the
  * caution tokens, as today. The segment's selection follows the raw request
  * (`model.requestedPaceRaw`), which can differ from the clamped stored value.
+ * The typed goal weight clamps on blur through the model to the old wheel's
+ * range (the owner decision): typing never clamps and an empty field writes
+ * nothing.
  */
 
 import { useState } from 'react';
@@ -63,6 +66,15 @@ export function GoalWeightPaceScreen({ model }: { model: OnboardingModel }) {
     const parsed = Number.parseFloat(text);
     if (Number.isFinite(parsed) && parsed > 0) model.setGoalWeightKg(parsed);
   };
+  // The blur clamp (the owner decision): the parsed text clamps through the
+  // model to the old wheel's range; typing never clamps and an empty or
+  // unusable field writes nothing. The field then shows the clamped value.
+  const goalWeightBlur = (): void => {
+    const parsed = Number.parseFloat(goalWeightText);
+    if (!Number.isFinite(parsed) || parsed <= 0) return;
+    const clamped = model.clampGoalWeightKg(parsed);
+    if (clamped !== parsed) setGoalWeightText(String(clamped));
+  };
 
   return (
     <StepScaffold
@@ -88,6 +100,7 @@ export function GoalWeightPaceScreen({ model }: { model: OnboardingModel }) {
           label="Goal weight"
           value={goalWeightText}
           onChangeText={goalWeightChange}
+          onBlur={goalWeightBlur}
           unit="kg"
           keyboardType="decimal-pad"
           testID="onboarding.goalWeightField"

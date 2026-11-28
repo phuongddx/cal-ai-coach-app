@@ -6,7 +6,9 @@
  * The gate footnote is locked copy (onboardingCopy) and the Continue CTA
  * disables while it blocks. A field writes through the model as soon as its
  * text parses to a positive number, so the draft always holds the last typed
- * value; the text stays exactly what the user typed.
+ * value; the text stays exactly what the user typed. On blur the parsed text
+ * clamps through the model to the old wheel's range (the owner decision) and
+ * the field then shows the clamped value; typing never clamps.
  */
 
 import { useState } from 'react';
@@ -36,6 +38,21 @@ export function BodyMetricsScreen({ model }: { model: OnboardingModel }) {
     setWeightText(text);
     const parsed = Number.parseFloat(text);
     if (Number.isFinite(parsed) && parsed > 0) model.setWeightKg(parsed);
+  };
+  // The blur clamp (the owner decision): the parsed text clamps through the
+  // model to the old wheel's range; typing never clamps and an empty or
+  // unusable field writes nothing. The field then shows the clamped value.
+  const heightBlur = (): void => {
+    const parsed = Number.parseFloat(heightText);
+    if (!Number.isFinite(parsed) || parsed <= 0) return;
+    const clamped = model.clampHeightCm(parsed);
+    if (clamped !== parsed) setHeightText(String(clamped));
+  };
+  const weightBlur = (): void => {
+    const parsed = Number.parseFloat(weightText);
+    if (!Number.isFinite(parsed) || parsed <= 0) return;
+    const clamped = model.clampWeightKg(parsed);
+    if (clamped !== parsed) setWeightText(String(clamped));
   };
 
   return (
@@ -67,6 +84,7 @@ export function BodyMetricsScreen({ model }: { model: OnboardingModel }) {
           label="Height"
           value={heightText}
           onChangeText={heightChange}
+          onBlur={heightBlur}
           unit="cm"
           keyboardType="decimal-pad"
           testID="onboarding.heightField"
@@ -75,6 +93,7 @@ export function BodyMetricsScreen({ model }: { model: OnboardingModel }) {
           label="Current weight"
           value={weightText}
           onChangeText={weightChange}
+          onBlur={weightBlur}
           unit="kg"
           keyboardType="decimal-pad"
           testID="onboarding.weightField"

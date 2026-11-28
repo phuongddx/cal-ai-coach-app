@@ -138,3 +138,38 @@ describe('goal weight and pace screen', () => {
     expect(screen.getByLabelText('Goal weight 72 kilograms')).toBeOnTheScreen();
   });
 });
+
+describe('the typed goal weight clamps on blur (the wheel\'s range)', () => {
+  it('nothing clamps while typing and a blur clamps 250 to 150', async () => {
+    const model = makeModel();
+    await render(<GoalWeightPaceScreen model={model} />);
+
+    await fireEvent.changeText(screen.getByTestId('onboarding.goalWeightField'), '250');
+    expect(model.draft.goalWeightKg).toBe(250);
+    expect(screen.getByTestId('onboarding.goalWeightField')).toHaveDisplayValue('250');
+
+    await fireEvent(screen.getByTestId('onboarding.goalWeightField'), 'blur');
+    expect(model.draft.goalWeightKg).toBe(150);
+    expect(screen.getByTestId('onboarding.goalWeightField')).toHaveDisplayValue('150');
+  });
+
+  it('goal weight 40 and 150 stay on the blur and 72 inside the range is untouched', async () => {
+    const model = makeModel();
+    await render(<GoalWeightPaceScreen model={model} />);
+
+    await fireEvent.changeText(screen.getByTestId('onboarding.goalWeightField'), '40');
+    await fireEvent(screen.getByTestId('onboarding.goalWeightField'), 'blur');
+    expect(model.draft.goalWeightKg).toBe(40);
+    expect(screen.getByTestId('onboarding.goalWeightField')).toHaveDisplayValue('40');
+
+    await fireEvent.changeText(screen.getByTestId('onboarding.goalWeightField'), '150');
+    await fireEvent(screen.getByTestId('onboarding.goalWeightField'), 'blur');
+    expect(model.draft.goalWeightKg).toBe(150);
+    expect(screen.getByTestId('onboarding.goalWeightField')).toHaveDisplayValue('150');
+
+    await fireEvent.changeText(screen.getByTestId('onboarding.goalWeightField'), '72');
+    await fireEvent(screen.getByTestId('onboarding.goalWeightField'), 'blur');
+    expect(model.draft.goalWeightKg).toBe(72);
+    expect(screen.getByTestId('onboarding.goalWeightField')).toHaveDisplayValue('72');
+  });
+});

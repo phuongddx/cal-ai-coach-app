@@ -67,6 +67,15 @@ const QUIZ_INDEX: Record<OnboardingStep, number | null> = {
 export const QUIZ_STEP_COUNT = 8;
 export const DEFAULT_BIRTH_YEAR = 1995;
 
+/** The old wheels' ranges (OB-06, OB-07) the typed fields clamp to on blur. */
+export const HEIGHT_CM_LIMITS = { min: 120, max: 220 } as const;
+export const WEIGHT_KG_LIMITS = { min: 35, max: 200 } as const;
+export const GOAL_WEIGHT_KG_LIMITS = { min: 40, max: 150 } as const;
+
+function clampBetween(value: number, limits: { min: number; max: number }): number {
+  return Math.min(Math.max(value, limits.min), limits.max);
+}
+
 export type MacroAxis = 'protein' | 'carbs' | 'fat';
 
 export interface RevealPlan {
@@ -306,6 +315,31 @@ export class OnboardingModel {
   setGoalWeightKg(kg: number): void {
     this.draft.goalWeightKg = kg;
     this.touch();
+  }
+
+  /**
+   * The typed fields clamp on blur (the owner decision replacing the wheels,
+   * OB-06/OB-07): the parsed text clamps to the old wheel's range — 250 cm
+   * lands 220, 9 cm lands 120 — and typing never clamps (the set* writes stay
+   * raw). The screens call these from FillField's onBlur and show the returned
+   * value, so the field never keeps a number the wheel could not hold.
+   */
+  clampHeightCm(requested: number): number {
+    this.draft.heightCm = clampBetween(requested, HEIGHT_CM_LIMITS);
+    this.touch();
+    return this.draft.heightCm;
+  }
+
+  clampWeightKg(requested: number): number {
+    this.draft.weightKg = clampBetween(requested, WEIGHT_KG_LIMITS);
+    this.touch();
+    return this.draft.weightKg;
+  }
+
+  clampGoalWeightKg(requested: number): number {
+    this.draft.goalWeightKg = clampBetween(requested, GOAL_WEIGHT_KG_LIMITS);
+    this.touch();
+    return this.draft.goalWeightKg;
   }
 
   // The stored value always lands on the engine's clamped result; the raw
