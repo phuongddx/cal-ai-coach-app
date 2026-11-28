@@ -24,6 +24,10 @@ export type WeekStats = {
 export type CoachSnapshotData = {
   stats: WeekStats;
   targetKcal: number | null;
+  /** Logged local days of the trailing 28, ascending (the insight day lists). */
+  loggedDays: string[];
+  /** Local days of the trailing week with a kcal sum, ascending. */
+  weekDays: string[];
 };
 
 export type CoachSnapshotDeps = {
@@ -95,7 +99,7 @@ export function createCoachSnapshotLoader(
           : 0,
     };
 
-    return { stats, targetKcal: target?.dailyKcal ?? null };
+    return { stats, targetKcal: target?.dailyKcal ?? null, loggedDays: loggedDayRows.map((row) => row.day).sort(), weekDays: kcalRows.map((row) => row.day).sort() };
   };
 }
 
