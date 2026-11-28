@@ -38,13 +38,11 @@ export type PaywallViewProps = {
 };
 
 export function PaywallView({ model, onClose }: PaywallViewProps) {
-  useSyncExternalStore(model.subscribe, model.getRevision);
+  const { state } = useSyncExternalStore(model.subscribe, model.getSnapshot);
   const { colors } = useTokens();
   useEffect(() => {
     void model.load();
   }, [model]);
-
-  const state = model.state;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]} testID="plans.sheet">
