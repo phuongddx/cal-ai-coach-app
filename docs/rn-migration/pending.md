@@ -1,52 +1,36 @@
 # Messages the owner could not send
 
 A turn that a worker result started cannot address that worker without the rework flag and a new
-thread. The messages below wait here and go out in the next turn another worker starts. A turn
-also opens at most five new threads: the sixth call of a turn is refused.
+thread. A turn opens at most five new threads: a further unit of the same worker goes into a
+thread that is already open, with its thread id, or waits for the next turn.
 
-## When U-71g is merged (Worker-S1, thread 31cd8275 is the unit's own thread)
+## State on 2026-11-28 at 12:55
 
-The go for the code step of U-77b, on a new thread with the rework flag. Content: merge `main`;
-swap the two fields onto the text variant of `FillField` with their keyboard props; build the code
-step on frames `112-auth-code-entry-light.png` and `113-auth-code-entry-dark.png` with `CodeField`
-("Enter the code", "We sent a 6-digit code to **address**.", "Can't find it? Look in Junk or
-Promotions.", Verify enabled at six digits, "Resend code in" after 60 seconds, "Use a different
-email"); the e-mail step on `108-auth-email-step-light.png` and `109-auth-email-step-dark.png`
-("Continue with email", "We'll email you a 6-digit code. If you're new, the same code creates your
-account."); the errors on 110, 111, 114 and 115; `SheetHeader` for the header (`auth.emailBack`);
-`SecondaryButton leading` for the three buttons of the entry step. Replace the three literal sizes and
-weights of the correction by the text styles of `useTokens().type` (`EmailStep.tsx` lines 126 and
-180, `EntryStep.tsx` line 127 at 659d4e6). Stage B then waits for the Simulator slot.
+`main` is `8c954de`: merged today PR 53, 55, 54, 50, 42, 47.
 
-## When the slot reaches U-76 (after U-72): the go for its stage B
+| Unit | Worker | State | Next |
+|---|---|---|---|
+| U-74e diary evidence | Worker-S2 (thread 44b9402a) | running, holds the Simulator | drain when its pull request opens; evidence only |
+| U-82 gates on GitHub Actions | Worker-G1 (thread 73e61e95) | running | gate, review, merge; then merges take their verdict from GitHub |
+| U-73 correction (PR 36) | Worker-G1 (thread 0e8d9059) | running | gate, re-read the three points, merge |
+| U-77 correction (PR 43) | Worker-G2 (thread 8f3ad0f1) | running | gate, re-read the points, merge |
+| U-74 correction (PR 37) | Worker-G2 (thread 8f3ad0f1, after PR 43) | queued | gate, re-read the four points, merge |
+| U-77c sign-in code step | Worker-S1 (thread 994c6d28) | running | gate, review, merge |
+| U-72b scan, merge and stage A2 | Worker-S1 | not sent | after PR 37 and PR 43 are on `main`: send briefs/U-72b.md into the thread 994c6d28 |
+| U-70 Swift cleanup | nobody | not sent | after U-82 is on `main` (the rewritten AGENTS.md must name the workflows); the worker reads the tree at dispatch; merge LAST, after the tag |
 
-- The decisions on the three questions of Worker-S2: the sentence "N of M meals" stays out (no
-  source); the offline chip sits beside the diary button (a recorded deviation from frame 08 that
-  Phương may overrule); the meal rows take `chevron={false}` and `unitHidden` of `FoodRow` once
-  U-71g is on `main`; the photo tile of the frames is not built (a diary entry holds no photo).
-- For the worker: prove the new `TodayView` tests can fail (one run with the view mutated under
-  test, quoted in the findings).
-- For the reviewer: `CalorieRing` gained the variant `md` and its render was restructured; the
-  variants `hero`, `compact` and `goal` must draw as before.
+## After each merge
 
-## When a report arrives
-
-- PR 50 (U-76 stage A, Worker-S2): drain, then stage B waits for the slot after U-72.
-- PR 37 (U-74 stage B, Worker-G2): read every screenshot, an independent review of the whole pull
-  request, the gates on an integration tree, merge; then the slot to Worker-G1 for the stage B of
-  U-73 (new thread, rework flag).
-- PR 47 (U-77b correction, Worker-S1): read; no merge before the code step.
-- PR of U-71g (Worker-S1): gate, independent review, merge; then the go above.
-- PR of U-61d (Worker-G1): run `node scripts/rn/check-frames-doc.mjs` on the pushed head, read a
-  sample, merge with the tree recipe.
-
-## Still open from before
-
-- The owner docs pull request is done (PR 52).
-- The U-72 stage A2 (the picker of U-74 on `main`) waits for the merge of PR 37.
+- U-73 (PR 36): its evidence unit (onboarding, nine steps, dark twins 47 to 55, ED-Safe rows of
+  steps 8 and 9) waits for the Simulator.
+- U-75 (PR 42): its evidence unit (Progress 11 and 12, Coach) waits for the Simulator.
+- U-77b (PR 47) and U-77c: one evidence unit for sign-in (61, 62, 108 to 115).
+- U-76 (PR 50): its evidence unit must prove the four-digit number on one line and the Fat card
+  not cut at the edge (asked by Zed), the header offline on a narrow screen (note 5 of the review).
+- High Contrast: `xcrun simctl ui <udid> increase_contrast enabled` switches the real setting.
 
 ## For the next owner pull request
 
 - A gate lock: `scripts/rn/gate.sh` runs the three gates under a lock (one gate on the machine at
-  a time), and rule 10 names it. At 23:30 the load was 43 to 62 on 11 cores while the stage B of
-  U-74 captured evidence.
+  a time), and rule 10 names it (the load was 62 on 11 cores on 2026-11-27 at 23:30).
+- The parity rows of the units merged today (the owner sets status and evidence).
