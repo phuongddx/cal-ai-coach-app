@@ -582,6 +582,28 @@ entitlement read, servings in the scan contract, a report endpoint with storage,
 with a purchase SDK, the height-based goal floor (an engine change), unit conversion, "Prefer not to
 say", the Food / Exercise / Custom food segment, haptics.
 
+## Decisions taken after the closing plan (2026-11-27, at night)
+
+State at 23:20: steps 1 (PR 38), 2 (PR 46), 3 (PRs 41, 44, 45, 49) and 9 (PR 48) landed; step 4
+is reported on every branch; step 5 runs (the stage B of U-74 holds the Simulator); step 8 runs
+(PR 47). The Ember design on `main` holds 115 frames after PR 51.
+
+| The question | Decision | Where |
+|---|---|---|
+| Sign-in by password, as the frames of round 3 draw it | not built: the app signs in with the code; the API has no account creation by password and no reset route; frames 63 to 67 are reference only | U-77b, PR 51 |
+| The privacy line about training models and the footnote about Terms | not drawn until Phương supplies the promise and the pages | U-77b |
+| The e-mail field one tap deeper | the one exception to standing order 22: the tests of the e-mail flow open that step first; sentences and identifiers stay | U-77b |
+| The code step of sign-in | on frames 108 to 115: six cells over one hidden field, "Resend code in" after 60 s, "Use a different email" | U-77b, after the components of U-71g |
+| The ED-safe screen of free text | every form of the calorie words; `kilocalorie` joins the vocabulary in U-71g | PR 49 |
+| A unit is drained from its artifact | a pushed branch and an open pull request are read before the worker's message arrives | U-81, PR 46 |
+| The method of standing order 21 | it was wrong for statically linked pods; the order now names `scripts/rn/check-native-modules.sh` | PR 46 and the owner pull request that follows PR 51 |
+| The number of a frame | keyed on the id of its figure, so a reworded caption or a frame added in the middle of the canvas shifts nothing | PR 51 |
+| The screenshots `run-all.sh` rewrites | a unit restores every screenshot outside its own rows before it commits | standing order 23 |
+
+Follow-ups added tonight: a password sign-in (a product decision for Phương), the Terms and the
+Privacy Policy pages, the promise about training models, a direct test of a signed-out deep link to
+a guarded route, High Contrast on a device, the resend limit of the server read by the client.
+
 ## Waves 5 to 7 (outline; scoped at the drain before each)
 
 | Unit | Rows | Notes |

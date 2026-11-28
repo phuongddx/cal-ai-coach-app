@@ -1,13 +1,12 @@
 /**
- * ScanFAB (Components/Shell.swift) placed as MainShell.swift places it: a lime circle with a black
- * plus, centered at the bottom of the shell, 28pt above the bottom safe area. The view's list keeps
+ * ScanFAB (Components/Shell.swift) placed as MainShell.swift places it: on the Ember frames an accent circle
+ * with a camera glyph (U-76), centered at the bottom of the shell, 28pt above the bottom safe area. The view's list keeps
  * the Swift bottom inset (CCSpace.xl5) so the button never covers a meal's kcal.
  */
 import { Pressable, StyleSheet, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { size, useTokens } from '../../design';
+import { Icon, size, useTokens } from '../../design';
 
 /** MainShell: `.padding(.bottom, 28)` on the overlay. */
 export const FAB_BOTTOM_PADDING = 28;
@@ -25,12 +24,12 @@ export function ScanFab({ onPress }: { onPress: () => void }) {
         style={[
           styles.fab,
           {
-            backgroundColor: colors.accentLime,
-            shadowColor: colors.accentLime,
+            backgroundColor: colors.accent,
+            shadowColor: colors.accent,
           },
         ]}
       >
-        <SymbolView name="plus" size={28} weight="medium" tintColor="#000000" />
+        <Icon name="camera" size={28} color={colors.onAccent} />
       </Pressable>
     </View>
   );

@@ -209,6 +209,7 @@ export {
   type ScaledNumberProps,
 } from './components/ScaledNumber';
 export { EdSafeCollapse } from './components/EdSafeCollapse';
+export { EdSafeAlternate, type EdSafeAlternateProps } from './components/EdSafeAlternate';
 export {
   Icon,
   iconStrokeWidth,
@@ -230,7 +231,13 @@ export {
   type SegmentProps,
 } from './components/Segment';
 export { EdSafeNote, type EdSafeNoteProps } from './components/EdSafeNote';
-export { FillField, fieldDigitWidth, type FillFieldProps } from './components/FillField';
+export {
+  FillField,
+  fieldDigitWidth,
+  fieldRingWidth,
+  type FillFieldProps,
+} from './components/FillField';
+export { CodeField, codeFieldDigits, codeLength, type CodeFieldProps } from './components/CodeField';
 export {
   GramsRuler,
   rulerHeight,

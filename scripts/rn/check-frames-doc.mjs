@@ -40,7 +40,7 @@ for (const entry of manifest) {
   }
 }
 
-const cited = doc.match(/\b\d{2}-[a-z0-9][a-z0-9-]*\.png\b/g) || [];
+const cited = doc.match(/\b\d{2,3}-[a-z0-9][a-z0-9-]*\.png\b/g) || [];
 const known = new Set(manifest.map((entry) => entry.file));
 const seen = new Set();
 for (const name of cited) {

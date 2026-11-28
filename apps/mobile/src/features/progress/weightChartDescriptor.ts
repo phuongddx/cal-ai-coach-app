@@ -37,6 +37,20 @@ export function weightYRange(points: ChartPoint[]): { minimum: number; maximum: 
   return { minimum, maximum };
 }
 
+/**
+ * The frame's one-sentence chart summary (frame 11): the numbers are the real
+ * first and latest values of the windowed series, the days the window's
+ * length — "Weight trend from 82.4 to 80.6 kilograms over 30 days".
+ */
+export function weightTrendA11yLabel(points: ChartPoint[], windowDays: number): string {
+  const first = points[0];
+  const last = points.at(-1);
+  if (first === undefined || last === undefined || points.length < 2) {
+    return 'Weight trend';
+  }
+  return `Weight trend from ${first.value.toFixed(1)} to ${last.value.toFixed(1)} kilograms over ${windowDays} days`;
+}
+
 export function makeWeightChartDescriptor(points: ChartPoint[]): WeightChartDescriptorData {
   return {
     title: 'Weight trend',

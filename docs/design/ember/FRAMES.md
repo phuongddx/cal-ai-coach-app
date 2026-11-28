@@ -18,9 +18,9 @@ browser:
 node -e "const m=require('./docs/design/ember/frames/manifest.json'); const k={},s={};
 for (const f of m) { k[f.kind]=(k[f.kind]||0)+1; s[f.section]=(s[f.section]||0)+1; }
 console.log(m.length, JSON.stringify(k)); console.log(JSON.stringify(s))"
-# → 107 {"screen":84,"glanceable":7,"panel":16}
+# → 115 {"screen":92,"glanceable":7,"panel":16}
 #   {"scan":6,"core":6,"profile":4,"billing":3,"onboarding":9,"diaryedit":12,"export":6,
-#    "darkmode":12,"hc":3,"auth":7,"target":4,"scansheets":6,"paywallstates":3,"darkmore":4,
+#    "darkmode":12,"hc":3,"auth":15,"target":4,"scansheets":6,"paywallstates":3,"darkmore":4,
 #    "glance":7,"icon":11,"glance2":4}
 ```
 
@@ -33,16 +33,20 @@ elements — the 19 phones of `#scan`, `#core`, `#profile` and `#billing`
   icon variants = 30 runtime frames.
 - `screens-additions.js`: 12 diary-edit + 6 export + 3 dark billing + 3 high contrast = 24 runtime
   frames.
-- `screens-more.js`: 7 sign-in + 4 edit-goal + 6 scan sheets + 3 paywall states + 4 glance2 + 4
-  dark profile band = 28 runtime frames.
+- `screens-more.js`: 15 sign-in (7 entry and password, 8 e-mail code path) + 4 edit-goal + 6 scan
+  sheets + 3 paywall states + 4 glance2 + 4 dark profile band = 36 runtime frames.
 
-25 static + 82 runtime = 107. Of the 107, **84 are phone screens, 7 glanceables and 16 panels**
+25 static + 90 runtime = 115. Of the 115, **92 are phone screens, 7 glanceables and 16 panels**
 (the panels: 11 icon frames, the High Contrast token table, and the 4 second-glance-band frames).
 
 Every frame of the manifest is a PNG under `frames/` at 2x (a phone screen is 780×1690) named
 `NN-<section>-<caption>.png`, in canvas order; this document cites each block's exact file name.
 Frames 01 to 28 kept their first-round file names; from 29 on the frames are new or renumbered (the
-glance band moved from 29–35 to 85–91, the icon band from 36–40 to 92–96).
+glance band moved from 29–35 to 85–91, the icon band from 36–40 to 92–96). Round 4 added frames
+108 to 115 (the e-mail code path of Sign in) and renamed 63 to 67 to the `auth-reference-only-*`
+names — the numbers stayed. The manifest is sorted by number and each entry carries the id of its
+canvas figure (40 entries have none); the capture tool keys a frame's number on that id, so a
+caption can be reworded without moving a number.
 
 Each section has the seven parts the unit brief names. Token names (`--cc-accent`, `--cc-text-2`,
 …) are from `tokens.css`; hex values quoted in a frame are the canvas' inline values, which the
@@ -1259,19 +1263,23 @@ as frame 29.
 `60-hc-edit-item-high-contrast-dark.png` — frame 30 with the HC dark tokens: accent text brightens
 to #FF9A52, text to pure white, secondary text to #C8C3BD. The rest as frame 30.
 
-## 10 · Sign in (`#auth`, 7 frames)
+## 10 · Sign in (`#auth`, 15 frames)
 
-The sign-in flow: the entry step with the three providers, the e-mail step, its error state and the
-reset-link screen. Built by U-77b (row AU-01).
+The sign-in flow: the entry step with the three providers, the e-mail step of the code flow with
+its send-failure state, the code entry with its wrong-or-expired state — each light and dark —
+and the five reference-only frames of the password flow. The code cells are built in U-71g, the
+screen in U-77b (row AU-01).
 
-**The owner's decision for this band (taken after plan.md):** the frames draw a password; the app
-signs in with a code sent to the e-mail and keeps that (parity AU-01). The entry step takes frames
-61 and 62 as they are. The e-mail step takes the look of frames 63 to 67 with **the code where the
-frame has a password**. The segment "Sign in | Create account", **"Forgot password?"**, the
-reset-link screen and the two notes under the dock are not drawn. The back button of the entry step
-is not drawn (the root gate puts nothing behind it). The privacy line "Meal photos are only used
-for your estimate, never to train models." and the footnote about Terms and Privacy Policy are not
-drawn until Phương supplies the promise and the pages.
+**The owner's decision for this band (updated after round 4):** the app signs in with a code sent
+to the e-mail and keeps that (parity AU-01). The entry step takes frames 61 and 62 as they are.
+The e-mail step is frames 108 and 109. The code step is frames 112 and 113: six cells drawn over
+one hidden field, "Resend code in" counting down from 60 s, "Use a different email" back to the
+e-mail step. The errors are frames 110 and 111 (the code could not be sent) and 114 and 115 (a
+wrong or expired code). Frames 63 to 67 draw a password flow and are **reference only**: Designer
+kept them for the look, the app does not build them. The back button of the entry step is not
+drawn (the root gate puts nothing behind it). The privacy line "Meal photos are only used for your
+estimate, never to train models." and the footnote about Terms and Privacy Policy are not drawn
+until Phương supplies the promise and the pages.
 
 ### Sign in (light)
 
@@ -1305,9 +1313,12 @@ drawn until Phương supplies the promise and the pages.
 theme (#131314 fill, #8E918F border, #E3E3E3 text), as both guidelines require. The rest as
 frame 61.
 
-### Email + password (light)
+### Reference only · Email + password (light)
 
-1. **Frame:** "Email + password (light)" — `63-auth-email-password-light.png`, anchor `#auth`,
+**Reference only** — Designer's password flow; the app builds the code path of frames 108 to 115
+instead (decision above).
+
+1. **Frame:** "Reference only · Email + password (light)" — `63-auth-reference-only-email-password-light.png`, anchor `#auth`,
    light, pushed from the entry step.
 2. **Shows:** nav bar: back glass button, title **"Email"**; **"Sign in with email"** (700 28 px);
    segment **"Sign in (selected) / Create account"** (`role=radiogroup`); field **"Email"** with
@@ -1315,48 +1326,53 @@ frame 61.
    border, dot mask, caret, eye glass button (`aria-label "Show password"`, 44 pt); ghost row
    **"Forgot password?"**; dock: primary **"Sign in"**, note **"Create account asks for at least 8
    characters and shows the rule before you type."**
-3. **Implemented today by:** `SignInScreen.tsx` (the e-mail step of the code flow).
-4. **Identifiers that must survive:** RN `auth.emailField`, `auth.sendCode`, `auth.otpField`,
-   `auth.verifyCode`, `auth.form`; Swift the same.
-5. **Differences from today's screen:** the frame's password field becomes the code field
-   (`auth.otpField`, the "6-digit code" field) — the owner's decision; the segment, the
-   "Forgot password?" row and the dock note are not drawn. `textContentType` /
-   `autoComplete` (email, one-time-code) stay so Keychain can fill.
-6. **Behavior the frame needs:** the code flow exists (U-20/U-21; the OTP throttle answers 429 —
-   the contract follow-up in plan.md). The show-password eye has no counterpart for a code field
-   and is not built. **Client** (U-77b).
-7. **Parity rows:** AU-01.
+3. **Implemented today by:** nothing — reference only; the built e-mail step is frame 108 (the
+   code flow of `SignInScreen.tsx`).
+4. **Identifiers that must survive:** none — not built. The built step carries the code flow's ids
+   (`auth.emailField`, `auth.sendCode`; the code step `auth.otpField`, `auth.verifyCode`).
+5. **Differences from today's screen:** none to build. The block stays as the reference for the
+   password look (the segment, the show-password eye, the forgot-password row) if the owner ever
+   adopts one; in the app the segment, the "Forgot password?" row and the dock note are not drawn.
+6. **Behavior the frame needs:** none — **not built** per the owner's decision.
+7. **Parity rows:** AU-01 (derived; the row's screen keeps the code flow).
 
-### Email + password (dark)
+### Reference only · Email + password (dark)
 
-`64-auth-email-password-dark.png` — fields on `--cc-fill`; the focus ring is accent (a graphic),
-the caret too. The rest as frame 63.
+`64-auth-reference-only-email-password-dark.png` — **Reference only**, as frame 63: fields on
+`--cc-fill`; the focus ring is accent (a graphic), the caret too.
 
-### Wrong password (light)
+### Reference only · Wrong password (light)
 
-1. **Frame:** "Wrong password (light)" — `65-auth-wrong-password-light.png`, anchor `#auth`, the
+**Reference only** — the password flow's error state; the app's errors are the code flow's frames
+110 and 114.
+
+1. **Frame:** "Reference only · Wrong password (light)" — `65-auth-reference-only-wrong-password-light.png`, anchor `#auth`, the
    e-mail step after a failed sign-in.
 2. **Shows:** as frame 63, with the field border in `--cc-error` and an inline alert under it
    (`role=alert`, `#i-alert`, `--cc-error-ink`): **"That email and password don't match. Check
    them, or reset your password."**; dock note **"After 5 wrong tries we pause sign-in for 1
    minute."**; the primary stays enabled and labelled **"Sign in"**.
-3. **Implemented today by:** `SignInScreen.tsx` (the error path of the code flow).
-4. **Identifiers that must survive:** `auth.emailField`, `auth.otpField`, `auth.verifyCode`,
-   `auth.form`.
-5. **Differences from today's screen:** the error is inline under the field, announced, and never
-   says which of the two was wrong — today's screen surfaces the envelope error; the frame fixes
-   the copy pattern. The rate-limit note after 5 tries comes from the server.
-6. **Behavior the frame needs:** the wording maps to the code flow ("That code doesn't match…");
-   the server rate limit exists (BE-06). **Client** (U-77b).
-7. **Parity rows:** AU-01.
+3. **Implemented today by:** nothing — reference only; the app's inline errors are the code flow's
+   (frames 110 and 114).
+4. **Identifiers that must survive:** none — not built.
+5. **Differences from today's screen:** none to build. The pattern the frame holds — one inline
+   line, announced, that never says which of the two was wrong, with the primary left enabled — is
+   the pattern the code-path errors (110, 114) already follow.
+6. **Behavior the frame needs:** none — **not built** per the owner's decision (the server rate
+   limit exists, BE-06).
+7. **Parity rows:** AU-01 (derived; the row's screen keeps the code flow).
 
-### Wrong password (dark)
+### Reference only · Wrong password (dark)
 
-`66-auth-wrong-password-dark.png` — error ink #FF7088 on black is 7.3:1. The rest as frame 65.
+`66-auth-reference-only-wrong-password-dark.png` — **Reference only**, as frame 65: error ink
+#FF7088 on black is 7.3:1.
 
-### Reset link sent (light)
+### Reference only · Reset link sent (light)
 
-1. **Frame:** "Reset link sent (light)" — `67-auth-reset-link-sent-light.png`, anchor `#auth`,
+**Reference only** — the password flow's reset screen; the app signs in with the code and builds
+no reset flow.
+
+1. **Frame:** "Reference only · Reset link sent (light)" — `67-auth-reference-only-reset-link-sent-light.png`, anchor `#auth`,
    light, after "Forgot password?".
 2. **Shows:** 64 pt `--cc-accent-tint` tile with `#i-mail` in `--cc-accent-ink`; **"Check your
    email"** (700 28 px); **"We sent a link to minh@example.com. Open it on this iPhone to set a new
@@ -1371,6 +1387,117 @@ the caret too. The rest as frame 63.
    catalog as the reference if a reset flow returns.
 6. **Behavior the frame needs:** none — **not built** per the owner's decision.
 7. **Parity rows:** AU-01 (derived; the row's screen keeps the code flow).
+
+### Email step (light)
+
+1. **Frame:** "Email step (light)" — `108-auth-email-step-light.png`, anchor `#auth`, light,
+   pushed from the entry step ("Continue with email").
+2. **Shows**, top to bottom:
+   - Back glass button (back to the entry step).
+   - **"Continue with email"** (700 28 px) and **"We'll email you a 6-digit code. If you're new,
+     the same code creates your account."** (400 17 px `--cc-text-2`) — one path, no Sign in /
+     Create account segment.
+   - Label **"Email"**; field **"minh@example.com"** (52 pt, `--cc-fill`) focused: 2 px
+     `--cc-accent` border, caret, e-mail keyboard, `textContentType` emailAddress /
+     `autoComplete` email so Keychain can fill.
+   - Dock: primary **"Send code"**, docked and enabled — an empty or malformed address gets the
+     same inline line as a failed send (the canvas caption).
+3. **Implemented today by:** `SignInScreen.tsx` — the e-mail step of the code flow
+   (`auth.emailField`, `auth.sendCode`; the flow is U-20/U-21).
+4. **Identifiers that must survive:** RN `auth.emailField`, `auth.sendCode`, `auth.form`; Swift the
+   same.
+5. **Differences from today's screen:** the headline and the one-path subhead are new — today the
+   step is a bare field. No password field, no segment, no forgot-password row: the owner's
+   decision, the password look stays in frames 63–67 (reference only). `textContentType` /
+   `autoComplete` stay so Keychain can fill.
+6. **Behavior the frame needs:** sending the code exists (U-20/U-21; the OTP throttle answers 429 —
+   the contract follow-up in plan.md). The subhead states the rule the app already implements: the
+   same code signs in or creates the account. **Client** (U-77b).
+7. **Parity rows:** AU-01.
+
+### Email step (dark)
+
+`109-auth-email-step-dark.png` — the field sits on `--cc-fill`; the focus ring is accent (a
+graphic), the caret too. The rest as frame 108.
+
+### Code could not be sent (light)
+
+1. **Frame:** "Code could not be sent (light)" — `110-auth-code-could-not-be-sent-light.png`,
+   anchor `#auth`, the e-mail step after a failed send (network error, rate limit or a rejected
+   address).
+2. **Shows:** as frame 108, with the field border in `--cc-error` and an inline alert under it
+   (`role=alert`, `#i-alert`, `--cc-error-ink`): **"We couldn't send the code. Check the address
+   and try again."**; the dock keeps **"Send code"** enabled.
+3. **Implemented today by:** `SignInScreen.tsx` (the error path of the send).
+4. **Identifiers that must survive:** `auth.emailField`, `auth.sendCode`, `auth.form`.
+5. **Differences from today's screen:** today's failure surfaces the envelope error; the frame
+   fixes one inline line that never says whether the address has an account (no account leak).
+6. **Behavior the frame needs:** the wording is **client** (U-77b); the server rate limit exists
+   (BE-06).
+7. **Parity rows:** AU-01.
+
+### Code could not be sent (dark)
+
+`111-auth-code-could-not-be-sent-dark.png` — error ink #FF7088 on black; the field on `--cc-fill`.
+The rest as frame 110.
+
+### Code entry (light)
+
+1. **Frame:** "Code entry (light)" — `112-auth-code-entry-light.png`, anchor `#auth`, light, the
+   code step after a successful send.
+2. **Shows**, top to bottom:
+   - Back glass button (back to the e-mail step).
+   - **"Enter the code"** (700 28 px); **"We sent a 6-digit code to minh@example.com."** (400 17
+     px, the address 700 in `--cc-text`) — the address sits in the sentence instead of a field.
+   - Six cells, split 3 + 3 for reading (44 pt+ fill cells): five filled ("4 8 2 9 1") and the
+     sixth focused — 2 px `--cc-accent` ring and caret. The cells are drawn over ONE hidden text
+     field (`keyboardType` number-pad, `textContentType` oneTimeCode, `autoComplete`
+     one-time-code, maxLength 6), so paste and the keyboard's code suggestion fill all six at once
+     and VoiceOver reads one field, "6-digit code".
+   - Note **"Can't find it? Look in Junk or Promotions."** (15 px `--cc-text-2`).
+   - Dock: primary **"Verify"** disabled until six digits (grey fill and label; no auto-submit,
+     parity with today); **"Resend code in 0:42"** (600, `--cc-text-2`) counting down from 60 s;
+     accent row **"Use a different email"** back to the e-mail step.
+3. **Implemented today by:** `SignInScreen.tsx` (`auth.otpField`, `auth.verifyCode`); the six-cell
+   control is the component built in U-71g.
+4. **Identifiers that must survive:** RN `auth.otpField`, `auth.verifyCode`, `auth.form`; Swift the
+   same.
+5. **Differences from today's screen:** the cells-over-one-field presentation, the address in the
+   sentence, the resend countdown, the junk note and "Use a different email" are the frame's
+   additions; verify at six digits with no auto-submit stays.
+6. **Behavior the frame needs:** the countdown is the client's own 60 s timer (the server's own
+   sending limit is a follow-up — the behaviors table). Paste and autofill ride the one hidden
+   field. **Client** (U-77b; the cells from U-71g).
+7. **Parity rows:** AU-01.
+
+### Code entry (dark)
+
+`113-auth-code-entry-dark.png` — the cells on `--cc-fill`; the focused cell keeps the accent ring
+and caret. The rest as frame 112.
+
+### Wrong or expired code (light)
+
+1. **Frame:** "Wrong or expired code (light)" —
+   `114-auth-wrong-or-expired-code-light.png`, anchor `#auth`, the code step after a failed verify.
+2. **Shows:** as frame 112, with all six cells filled ("4 8 2 9 1 7") and every cell border in
+   `--cc-error`; inline alert under the cells (`role=alert`, `#i-alert`, `--cc-error-ink`):
+   **"That code is wrong or has expired. Check the latest email, or send a new code."**; the junk
+   note stays; dock: **"Verify"** stays enabled (six digits present — the digits stay so the
+   person can fix a typo, and typing again clears the error), then accent rows **"Send a new
+   code"** (drawn after the 60 s timer has run out; while it runs the countdown of frame 112 shows
+   instead) and **"Use a different email"**.
+3. **Implemented today by:** `SignInScreen.tsx` (the verify error path).
+4. **Identifiers that must survive:** `auth.otpField`, `auth.verifyCode`, `auth.form`.
+5. **Differences from today's screen:** today the error surfaces the envelope; the frame states
+   wrong-or-expired in one announced line and keeps the digits so the person can fix a typo.
+6. **Behavior the frame needs:** the wording maps the envelope's wrong and expired outcomes to one
+   line; the server rate limit exists (BE-06). **Client** (U-77b).
+7. **Parity rows:** AU-01.
+
+### Wrong or expired code (dark)
+
+`115-auth-wrong-or-expired-code-dark.png` — the error borders and ink #FF7088 on black. The rest
+as frame 114.
 
 ---
 
@@ -1654,7 +1781,9 @@ under ED-Safe; the note card uses accent-tint. The rest as frame 16.
 
 The widget surface is ember (`#141210`) with the brand ring for the first time; the Live Activity
 covers the scan-in-progress and ready-to-review states and their ED-Safe variants. The ED-Safe
-flag travels through the shared app group and the activity's ContentState.
+flag travels through the shared app group and the activity's ContentState. Round 4 recaptured the
+band: a PNG now holds the whole canvas figure — every card of a multi-card figure and the caption
+under it — where the first-round capture kept only its first child.
 
 ### Small widget
 
@@ -1729,9 +1858,9 @@ flag travels through the shared app group and the activity's ContentState.
    bar on `#3A342F`. Ready card — 56 pt thumb + **"Ready to review"** (600 17 px) + mini **"High"**
    badge + **"624 kcal"** (600 15 px Rounded) + orange **"Review"** button (44 pt, black label).
    Active while a scan processes (steps come from the server) and when it is ready; ends when saved
-   or after 8 h; height 84–160 pt. The PNG under `frames/` holds only the processing card — the
-   capture tool photographs the first child of the canvas figure, and the ready card is the second;
-   the canvas figure stacks both, so a restyle unit compares against both cards.
+   or after 8 h; height 84–160 pt. Round 4 recaptured the PNG: it now holds both cards (the
+   capture tool photographs the whole canvas figure, not its first child), so a restyle unit
+   compares against the picture directly.
 3. **Implemented today by:** the port seam only — `apps/mobile/src/features/scan/scanActivity.ts`
    is a no-op implementation behind `ScanActivityPort`; the model starts/ends the activity
    (`scanModel.ts`). The native activity is U-43's open scope (PL-12 partial).
@@ -2000,7 +2129,7 @@ frames for the first time (DY-08, AU-01, PR-03, the QA-04 check), and the frames
 
 | Parity row | `ember` cell | Frames |
 |---|---|---|
-| PL-01 | Shell (tab bar and Scan button in every frame) | The shell itself has no frame: it is the tab bar + Scan FAB repeated in every phone-screen frame (screens.js `data-tab` chrome). Touches all 84 screen sections. |
+| PL-01 | Shell (tab bar and Scan button in every frame) | The shell itself has no frame: it is the tab bar + Scan FAB repeated in the phone-screen frames (screens.js `data-tab` chrome). Touches all 77 signed-in phone screens — the 92 screens minus the 15 of the sign-in band, whose frames sit at or before sign-in and carry no tab bar. |
 | PL-06 | Design system (#system) | No frame — the `#system` band is the token board behind every section. The HC token panel 103 is its high-contrast slice. |
 | PL-07 | Design system (#system) | No frame — the component mapping in `design-system.md`. |
 | PL-08 | Today (ED-Safe); Review (ED-Safe); Food search (ED-Safe); Manual log (ED-Safe); widgets and Live Activity in ED-Safe | Today (ED-Safe) 09; Review (ED-Safe) 05; Food search (ED-Safe) 15; Manual log (ED-Safe) 16; Edit item (ED-Safe) 31; Delete confirm (ED-Safe) 34; Saved (ED-Safe) 37; Deleted + Undo (ED-Safe) 40; Edit goal sheet (ED-Safe) 70; Food search (dark, ED-Safe) 83; Manual log (dark, ED-Safe) 84; Small widget · ED-Safe 86; Live Activity · ED-Safe 91; Medium widget · ED-Safe 104 |
@@ -2042,14 +2171,14 @@ frames for the first time (DY-08, AU-01, PR-03, the QA-04 check), and the frames
 | PR-01 | Profile | Profile 13; dark 81 |
 | PR-02 | Settings; Quota reached (sheet); Plans / paywall; Cancel flow | Settings 14; dark 82; Quota reached (sheet) 17; dark sheet 56; Plans / paywall 18; dark 57; Cancel flow 19; dark 58; Paywall: loading prices 78; prices failed 79/80; Export states 41–46 |
 | PR-03 | Edit goal sheet (was derived; Designer drew the frames) | Edit goal sheet 68/69/70; Goal below healthy range 71 (not built: engine follow-up) |
-| AU-01 | Sign in (was derived; Designer drew the frames) | Sign in 61/62; Email + code 63/64; Wrong code 65/66; Reset link sent 67 (not built: owner decision) |
+| AU-01 | Sign in (was derived; Designer drew the frames) | Sign in 61/62; Email step 108/109; Code could not be sent 110/111; Code entry 112/113; Wrong or expired code 114/115; Reference only, the password flow (not built: owner decision) 63–67 |
 | QA-04 | Parity check | No frame — this catalog is its frames-side evidence: `scripts/rn/check-frames-doc.mjs` fails the build when a manifest frame is missing here or a cited name has gone stale |
 
 ---
 
 ## Table B — screens the design does not show, and the nearest frame to derive from
 
-After three rounds some screens still have no frame. Derived from `parity.tsv` (the `derived`
+After four rounds some screens still have no frame. Derived from `parity.tsv` (the `derived`
 cells) and the routes and sheets under `apps/mobile/src/app/` and `apps/mobile/src/features/`.
 Each derivation keeps the behavior, the test sentences and the identifiers of today's screen and
 takes only tokens and patterns from the named frame.
@@ -2068,12 +2197,12 @@ takes only tokens and patterns from the named frame.
 
 Rows that used to be here and have frames now: editing a food in the diary (29–40), the export
 error states (41–46), the dark variants of onboarding (47–55) and billing (56–58), the
-high-contrast tokens (103), the target edit sheet (68–71), sign-in (61–67), and the medium widget
-under ED-Safe (104).
+high-contrast tokens (103), the target edit sheet (68–71), sign-in with its e-mail code step
+(61–67, 108–115), and the medium widget under ED-Safe (104).
 
 ---
 
-## The behaviors the 107 frames need that the app does not have
+## The behaviors the 115 frames need that the app does not have
 
 One table, the plan's decision for each. "Built in unit X" means client work inside the named
 restyle unit; anything else is a follow-up with its owner.
@@ -2088,7 +2217,8 @@ restyle unit; anything else is a follow-up with its owner.
 | ED-Safe in the glanceables (flag through App Group and ContentState) | 86, 91, 104 | native follow-up (U-78, native slot; expo-widgets coverage on SDK 58 unverified, D14) |
 | Accessory families, Dynamic Island presentations, the widget scan button, the Live Activity failure card | 88, 90, 105, 106, 107 | native follow-up (U-78); the processing steps are the backend stages follow-up; the couldn't-read reason maps from the typed 422 error code (client, U-72) |
 | The app icon "Ember ring" | 92–102 | adopted when Designer's complete set is in (U-80, native slot); a step that needs Icon Composer by hand is written down for Phương; until then the current icon stays (PL-17) |
-| Sign-in keeps the e-mail code where the frames draw a password | 61–67 | the entry step takes 61/62 as they are; the e-mail step takes the look of 63–67 with the code in place of the password; the Sign in / Create account segment, Forgot password?, the reset-link screen (67) and the two notes under the dock are not drawn; the entry back button is not drawn (the root gate puts nothing behind it); the photo-privacy line and the Terms/Privacy footnote wait for Phương's promise and pages (owner decision) |
+| Sign-in keeps the e-mail code; the password frames are reference only | 61, 62 and 108–115 | the entry step takes 61/62 as they are; the e-mail step is 108/109; the code step is 112/113 — six cells over one hidden field, verify at six digits with no auto-submit, "Use a different email" back to the e-mail step; the errors are 110/111 (the code could not be sent) and 114/115 (wrong or expired); 63–67 are reference only, not built; the code cells are built in U-71g, the screen in U-77b; the entry back button is not drawn (the root gate puts nothing behind it); the photo-privacy line and the Terms/Privacy footnote wait for Phương's promise and pages (owner decision) |
+| The resend countdown on the code step | 112–115 | the client counts its own 60 seconds and swaps the countdown for "Send a new code" when it ends; the server's own sending limit is a backend follow-up (owner decision) |
 | The goal floor of the target sheet | 71 | the floor the engine returns, one flat minimum; the height-based minimum of the frame is an engine follow-up; the copy never says "BMI" (owner decision) |
 | Report a problem | 75, 76, 77 | a report unlocks Save and stays on this device; the sent state says so; the photo toggle is not drawn until an endpoint with storage exists (backend follow-up) (owner decision) |
 | Diary edit, delete and undo | 29–40 | built in stage A2 of U-74 (row DY-08): the system action sheet, an undo toast for five seconds (`diary.toast.undo`), the "Edited" label that persists, and a saved toast with its undo (owner decision) |

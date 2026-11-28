@@ -87,6 +87,17 @@ describe('GlassIconButton', () => {
     });
   });
 
+  describe('spoken value', () => {
+    it('carries an optional accessibility value and none by default', async () => {
+      await render(
+        <GlassIconButton icon="flip" accessibilityLabel="Switch camera" accessibilityValueText="Back camera" testID="flip" />,
+      );
+      expect(screen.getByTestId('flip')).toHaveAccessibilityValue({ text: 'Back camera' });
+      await render(<GlassIconButton icon="flip" accessibilityLabel="Switch camera" testID="plain" />);
+      expect(screen.getByTestId('plain').props.accessibilityValue?.text).toBeUndefined();
+    });
+  });
+
   it('draws the surface glass of the canvas on a surface: card at 78% light, text at 10% dark', async () => {
     expect(glassIconButtonColors(lightColors, false, 'onSurface')).toEqual({
       background: withAlpha(lightColors.card, 0.78),
