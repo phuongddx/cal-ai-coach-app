@@ -1,15 +1,19 @@
 /**
  * The paywall screen (U-77, frame "Plans / paywall" + round-3 loading/failed
- * states): the ember hero, the feature rows, the option cards, Restore and
- * Close always visible, the terms note under the button. The three states —
- * loading (skeleton price slots, disabled CTA), failed (caution card, "Price
- * unavailable" options, disabled CTA; this build always ends here) and ready
- * (the store's options, the plan choice selected) — render through the model.
- * No string on this screen is a price: every price line is the store's own
- * (`option.price`), and this build's route injects a loader that always fails.
+ * states): the ember hero, the feature rows, the option cards, Close always
+ * visible, the note under the button. The three states — loading (skeleton
+ * price slots, disabled CTA), failed (the caution card with the frame's
+ * "Try again" inside it, "Price unavailable" options, disabled CTA; this
+ * build always ends here) and ready (the store's options, the plan choice
+ * selected) — render through the model. Restore is recorded, not rendered:
+ * no store is connected, so nothing about Restore is drawn anywhere (owner
+ * correction — the model still binds the port and catches a rejection into
+ * `restoreError` for the day a real port exists). No string on this screen
+ * is a price: every price line is the store's own (`option.price`), and this
+ * build's route injects a loader that always fails.
  */
 import { useEffect, useSyncExternalStore } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
   EmberCard,
@@ -45,15 +49,9 @@ export function PaywallView({ model, onClose }: PaywallViewProps) {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]} testID="plans.sheet">
       <View style={styles.navRow}>
-        {/* Restore stays available in every state (round-3 handoff). */}
-        <Pressable
-          accessibilityRole="button"
-          testID="plans.restore"
-          onPress={() => void model.restore()}
-          style={styles.restore}
-        >
-          <Text style={[typography.subhead, { color: colors.accentInk }]}>{billingCopy.restoreLabel}</Text>
-        </Pressable>
+        {/* Restore is recorded, not rendered: a control that cannot act is not
+            drawn (owner correction) — shown when a store exists (findings §5).
+            The model still binds the port and reports a rejection for that day. */}
         <GlassIconButton icon="x" onPress={onClose} accessibilityLabel="Close" testID="plans.close" />
       </View>
 
@@ -88,19 +86,20 @@ export function PaywallView({ model, onClose }: PaywallViewProps) {
 
         {state.kind === 'failed' && (
           <View testID="plans.state.failed" style={styles.stack}>
-            <View style={[styles.failedCard, { backgroundColor: colors.cautionTint }]}>
-              <Icon name="info" size={20} color={colors.cautionInk} />
-              <Text style={[typography.footnote, styles.failedText, { color: colors.cautionInk }]}>
-                {billingCopy.failedCardText}
-              </Text>
+            <View testID="plans.caution" style={[styles.failedCard, { backgroundColor: colors.cautionTint }]}>
+              <View style={styles.failedRow}>
+                <Icon name="info" size={20} color={colors.cautionInk} />
+                <Text style={[typography.footnote, styles.failedText, { color: colors.cautionInk }]}>
+                  {billingCopy.failedCardText}
+                </Text>
+              </View>
+              {/* The frame's Try again sits inside the caution card (79). */}
+              <SecondaryButton
+                title={billingCopy.tryAgain}
+                testID="plans.retry"
+                action={() => model.retry()}
+              />
             </View>
-            {/* The frame's Try again sits inside the caution card (79); here it
-                renders directly under it — recorded in findings §7. */}
-            <SecondaryButton
-              title={billingCopy.tryAgain}
-              testID="plans.retry"
-              action={() => model.retry()}
-            />
             {/* The plans render unselectable with "Price unavailable". */}
             <View testID="plans.option.yearly">
               <OptionCard title="Yearly" subtitle={billingCopy.priceUnavailable} isSelected={false} />
@@ -150,13 +149,13 @@ export function PaywallView({ model, onClose }: PaywallViewProps) {
           testID="plans.primary"
           action={() => void model.purchaseSelected()}
         />
-        <Text style={[typography.footnote, styles.dockNote, { color: colors.textSecondary }]}>
-          {state.kind === 'loading'
-            ? billingCopy.loadingNote
-            : state.kind === 'failed'
-              ? billingCopy.failedNote
-              : 'Terms · Privacy'}
-        </Text>
+        {/* The failed state draws no note: the slot held only the Restore
+            sentence, which waits for a store like the button. */}
+        {state.kind !== 'failed' && (
+          <Text style={[typography.footnote, styles.dockNote, { color: colors.textSecondary }]}>
+            {state.kind === 'loading' ? billingCopy.loadingNote : 'Terms · Privacy'}
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -177,14 +176,9 @@ const styles = StyleSheet.create({
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     paddingHorizontal: space.lg,
     paddingTop: space.md,
-  },
-  restore: {
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingRight: space.lg,
   },
   content: {
     gap: space.lg,
@@ -214,11 +208,14 @@ const styles = StyleSheet.create({
   },
   skeletonBar: { height: 16, borderRadius: radius.sm },
   failedCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     gap: space.md,
     padding: space.lg,
     borderRadius: radius.lg,
+  },
+  failedRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: space.md,
   },
   failedText: { flex: 1 },
   price: { marginTop: space.xs },

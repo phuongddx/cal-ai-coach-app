@@ -12,7 +12,9 @@ export const billingCopy = {
   featureCoachReview: 'Weekly coach review and insights',
   featureExportHealth: 'CSV export and Apple Health sync',
   featureFreeLogging: 'Manual logging is free on every plan',
-  /** Paywall states (frames b-paywall-loading / b-paywall-failed). */
+  /** Paywall states (frames b-paywall-loading / b-paywall-failed). The two
+      Restore strings are recorded, not rendered: shown when a store exists
+      (owner correction — a control that cannot act is not drawn, findings §5). */
   restoreLabel: 'Restore',
   loadingCta: 'Loading prices…',
   loadingNote: 'Prices come from the App Store in your currency.',

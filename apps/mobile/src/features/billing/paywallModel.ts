@@ -45,6 +45,9 @@ export interface PaywallModelDeps {
 export class PaywallModel {
   state: PaywallState = { kind: 'loading' };
 
+  /** The rejected restore's line, or null — drawn when a store exists. */
+  restoreError: string | null = null;
+
   private readonly deps: PaywallModelDeps;
 
   private revision = 0;
@@ -76,8 +79,8 @@ export class PaywallModel {
   /**
    * The load the screen runs on appear and on "Try again": loading → ready
    * (the store's options, the first plan preselected — nothing is selected
-   * apart from the plan choice) or failed. Restore and close stay available in
-   * every state.
+   * apart from the plan choice) or failed. Close stays available in every
+   * state.
    */
   async load(): Promise<void> {
     this.state = { kind: 'loading' };
@@ -103,9 +106,19 @@ export class PaywallModel {
     this.touch();
   }
 
-  /** The nav bar's Restore — available in every state. */
+  /**
+   * The store's restore. The view draws no Restore while no store is
+   * connected (owner correction), but the port stays bound for the day a
+   * real one lands: a rejected restore lands in `restoreError` (the error
+   * line) — never an unhandled rejection.
+   */
   async restore(): Promise<void> {
-    await this.deps.restore();
+    try {
+      await this.deps.restore();
+      this.restoreError = null;
+    } catch (error) {
+      this.restoreError = error instanceof Error ? error.message : String(error);
+    }
     this.touch();
   }
 

@@ -1,7 +1,8 @@
 /**
  * RNTL tests of the paywall (U-77, frame 18 + round-3 loading/failed states):
- * the three states with no price in any of them, the always-visible Restore
- * and Close, the plan-choice selection, and the shell identifiers.
+ * the three states with no price in any of them, the always-visible Close,
+ * no Restore anywhere while no store exists (owner correction), the
+ * plan-choice selection, and the shell identifiers.
  *
  * Dual-react preamble: jest-expo pins `react-native` but not `react`; app-side
  * requests are re-pointed onto the renderer's copy. See findings/U-22.md.
@@ -17,7 +18,7 @@ jest.mock('react/jsx-runtime', () => {
   return jest.requireActual(`${root}/react/jsx-runtime`);
 });
 
-import { fireEvent, render, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, userEvent, waitFor, within } from '@testing-library/react-native';
 
 import { PaywallView } from './PaywallView';
 import { createPaywallModel, type PaywallModelDeps, type PlanOption } from './paywallModel';
@@ -66,11 +67,12 @@ describe('paywall', () => {
     expect(screen.getByTestId('option-card:Monthly').props.accessibilityState?.selected).toBe(false);
     expect(deps.loadOptions).toHaveBeenCalledTimes(1);
 
-    // Shell identifiers: Restore and Close always visible, sheet + primary.
+    // Shell identifiers: Close always visible, sheet + primary. Restore is
+    // recorded, not rendered — no store exists (owner correction, findings §5).
     expect(screen.getByTestId('plans.sheet')).toBeOnTheScreen();
-    expect(screen.getByTestId('plans.restore')).toBeOnTheScreen();
     expect(screen.getByTestId('plans.close')).toBeOnTheScreen();
     expect(screen.getByTestId('plans.primary')).toBeOnTheScreen();
+    expect(screen.queryByTestId('plans.restore')).toBeNull();
   });
 
   it('ends in the failed state when no store answers and shows no price anywhere', async () => {
@@ -87,10 +89,11 @@ describe('paywall', () => {
     expect(screen.getAllByText('Price unavailable')).toHaveLength(2);
     expect(screen.getByTestId('plans.option.yearly')).toBeOnTheScreen();
     expect(screen.getByTestId('plans.option.monthly')).toBeOnTheScreen();
-    // The primary is disabled and names the blocker; the note offers restore.
+    // The primary is disabled and names the blocker; nothing about Restore is
+    // drawn while no store exists — the frame's dock note line waits for one.
     expect(screen.getByTestId('plans.primary').props.accessibilityState?.disabled).toBe(true);
     expect(screen.getByText('Prices unavailable')).toBeOnTheScreen();
-    expect(screen.getByText('Already subscribed? Restore works without prices.')).toBeOnTheScreen();
+    expect(screen.queryByText(/restore/i)).toBeNull();
     // No price text anywhere on the screen.
     expect(screen.queryByText(/US?\$\s*\d/)).toBeNull();
   });
@@ -125,13 +128,13 @@ describe('paywall', () => {
     await waitFor(() => expect(deps.purchase).toHaveBeenCalledWith('monthly'));
   });
 
-  it('retries from the failed card and keeps Restore and Close working in every state', async () => {
+  it('retries from the failed card and keeps Close working in every state', async () => {
     const loadOptions = jest
       .fn<Promise<readonly PlanOption[]>, []>()
       .mockRejectedValueOnce(new Error('no store'))
       .mockResolvedValueOnce(makeOptions());
     const onClose = jest.fn();
-    const { model, deps } = makeModel({ loadOptions });
+    const { model } = makeModel({ loadOptions });
     await render(<PaywallView model={model} onClose={onClose} />);
     await waitFor(() => expect(screen.getByTestId('plans.state.failed')).toBeOnTheScreen());
 
@@ -139,10 +142,47 @@ describe('paywall', () => {
     await waitFor(() => expect(screen.getByTestId('plans.state.ready')).toBeOnTheScreen());
     expect(loadOptions).toHaveBeenCalledTimes(2);
 
-    await userEvent.press(screen.getByTestId('plans.restore'));
-    await waitFor(() => expect(deps.restore).toHaveBeenCalledTimes(1));
     await userEvent.press(screen.getByTestId('plans.close'));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('draws no Restore button and no sentence about Restore in any state reachable today', async () => {
+    // Loading: a load that never answers.
+    const loading = makeModel({ loadOptions: () => new Promise<readonly PlanOption[]>(() => undefined) });
+    await render(<PaywallView model={loading.model} onClose={() => undefined} />);
+    expect(screen.getByTestId('plans.state.loading')).toBeOnTheScreen();
+    expect(screen.queryByTestId('plans.restore')).toBeNull();
+    expect(screen.queryByText(/restore/i)).toBeNull();
+
+    // Failed: this build's loader always rejects.
+    const failed = makeModel({
+      loadOptions: jest.fn(async () => {
+        throw new Error('no store');
+      }),
+    });
+    await render(<PaywallView model={failed.model} onClose={() => undefined} />);
+    await waitFor(() => expect(screen.getByTestId('plans.state.failed')).toBeOnTheScreen());
+    expect(screen.queryByTestId('plans.restore')).toBeNull();
+    expect(screen.queryByText(/restore/i)).toBeNull();
+
+    // Ready: a store that answers.
+    const ready = makeModel();
+    await render(<PaywallView model={ready.model} onClose={() => undefined} />);
+    await waitFor(() => expect(screen.getByTestId('plans.state.ready')).toBeOnTheScreen());
+    expect(screen.queryByTestId('plans.restore')).toBeNull();
+    expect(screen.queryByText(/restore/i)).toBeNull();
+  });
+
+  it('draws Try again inside the caution card as frame 79 does', async () => {
+    const { model } = makeModel({
+      loadOptions: jest.fn(async () => {
+        throw new Error('no store');
+      }),
+    });
+    await render(<PaywallView model={model} onClose={() => undefined} />);
+
+    await waitFor(() => expect(screen.getByTestId('plans.caution')).toBeOnTheScreen());
+    expect(within(screen.getByTestId('plans.caution')).getByTestId('plans.retry')).toBeOnTheScreen();
   });
 
   it('shows "Price unavailable" in the ready state when the store exposes no price', async () => {
@@ -176,5 +216,22 @@ describe('paywall model', () => {
     expect(model.state).toEqual({ kind: 'failed' });
     model.retry();
     expect(model.state).toEqual({ kind: 'loading' });
+  });
+
+  it('catches a rejected restore into the error line instead of an unhandled rejection', async () => {
+    const { model, deps } = makeModel({
+      restore: jest.fn(async () => {
+        throw new Error('store unavailable');
+      }),
+    });
+    // The model resolves even when its port rejects: no rejection escapes it.
+    await expect(model.restore()).resolves.toBeUndefined();
+    expect(deps.restore).toHaveBeenCalledTimes(1);
+    expect(model.restoreError).toBe('store unavailable');
+
+    // A later restore that resolves clears the line.
+    (deps.restore as jest.Mock).mockResolvedValueOnce(undefined);
+    await expect(model.restore()).resolves.toBeUndefined();
+    expect(model.restoreError).toBeNull();
   });
 });

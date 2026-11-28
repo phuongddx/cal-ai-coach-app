@@ -24,7 +24,8 @@ export default function PlansRoute() {
       createPaywallModel({
         loadOptions: loadStoreOptions,
         // `AppStore.sync()`'s equivalent needs the store's native module (D14
-        // follow-up); the button works and resolves honestly for now.
+        // follow-up); the model binds this stub and a rejection would land in
+        // its error line. No Restore is drawn while only this stub exists.
         restore: async () => undefined,
         purchase: async () => {
           throw new Error('No store is connected in this build.');
