@@ -4,45 +4,61 @@ A turn that a worker result started cannot address that worker without the rewor
 thread. A turn opens at most five new threads: a further unit of the same worker goes into a
 thread that is already open, with its thread id, or waits for the next turn.
 
-## State on 2026-11-28 at 13:55
+## State on 2026-11-28 at 18:30
 
-`main` is `7f10adf`. Landed today: PR 53, 55, 54, 50, 42, 47, 56, 43, 36, 57, 59, 39.
+`main` is `5bf273d`. Open: PR 37 (diary, gated), PR 58 (gates on GitHub Actions, gated), PR 62
+(diary evidence, waits for the re-capture), PR 61 (Swift cleanup, reviewed, merges LAST).
 
 | Unit | Worker (thread) | State | Next |
 |---|---|---|---|
-| U-74e diary evidence | Worker-S2 (44b9402a) | running on the Simulator | when its pull request opens: open every screenshot, read every row, check rule 23; after PR 37 merges it captures again the rows the four fixes change |
-| U-82 gates on GitHub Actions | Worker-G1 (73e61e95) | fixing three should-fixes; the iOS job queued on GitHub | when its run is green with artifacts: review done (PASS+NOTES), merge; from then a merge takes its verdict from GitHub Actions |
-| U-74 correction (PR 37) | Worker-G2 (8f3ad0f1) | running: the evidence leaves the branch, the four fixes, the three fixes found on the device stay | the full gate on a tree with it and a re-read; merge; then the lines below |
-| U-70 Swift cleanup | Worker-S1 (10185721) | starting from main 7f10adf | review, gate, merge LAST after the tag |
-| U-83 two evidence sessions | nobody | brief ready | after U-74e reports: the Simulator between two units (Worker-G2 after PR 37, or another) |
-| U-76e, U-73e, U-75e, U-77e, U-72e, U-77ce | nobody | rows written (briefs/evidence-rows.md) | one at a time on the Simulator, two at a time after U-83 |
+| PR 37 (U-74) | Worker-G2 (8f3ad0f1, closed) | gate `w6a` green on tree `82ca97c49a98`; the re-read of the correction delta runs | merge with the tree check; then the two lines below |
+| PR 58 (U-82) | Worker-G1 (2f0bc688) | gate `w6b` green on the tree with PR 37 (`64ee5cc8d5fd`); GitHub integration job green; iOS run 46136718293 in flight; the re-read of the delta runs | when the iOS run is green with artifacts and the re-read is in: merge after PR 37 with the tree check |
+| U-84 views under the React Compiler | Worker-S2 (71e63cba) | running: PR A (the day sheet reads its snapshot) then PR B (the other views, a guard) | gate + review + merge of A; then S2 gets the diary re-capture with the Simulator |
+| U-82b evidence harness on a GitHub runner | Worker-G1 (2f0bc688) | queued behind the end of the iOS run of PR 58 | when its three runs are green: gate + review + merge |
+| U-76e Today evidence | Worker-G2 | assigned (brief changed: worker and timebox of 3 hours) | dispatch with the Simulator and port 8081 once PR 37 is on main |
+| item 4 of U-72b (the picker) | Worker-S1 (994c6d28, closed) | waits for the line "PR 37 is on main" | new worktree `rn-u-72c` from the new main; a new branch |
+| PR 61 (U-70) | Worker-S1 (10185721, closed) | reviewed on `5e60510`: PASS+NOTES, seven should-fixes (reviews/U-70-PR-61.md) | the correction goes to S1 after item 4 was sent; the last merge of main and the tag right before the merge |
+| U-83 | nobody | dropped (replaced by U-82b) | - |
+| U-73e, U-75e, U-77e, U-72e, U-77ce | nobody | rows written (briefs/evidence-rows.md) | after U-82b is merged: on GitHub runners, in parallel; otherwise on the Simulator, one at a time |
+| U-78 widgets and Live Activity, U-80 the icon, U-50 telemetry, U-24 the spike files | nobody | not briefed yet (closing plan steps 10 and 11) | S1 after item 4; the native verification goes through the iOS workflow of PR 58 on GitHub |
 
 ## The lines the owner writes into threads
 
-- To Worker-S1 (10185721 or its scan thread) when PR 37 is merged: "PR 37 is on main: do item 4
-  of U-72b (the picker)" — a new branch from main, since PR 39 is merged.
-- To Worker-S2 (44b9402a) when PR 37 is merged: "PR 37 is on main with the four fixes: merge
-  origin/main in rn-u-74e and capture again the delete confirm (three rows and High Contrast),
-  the two undo toasts, and the Delete of the edit sheet; then push and open the pull request."
-- To Worker-G1 (73e61e95) when the pull request of U-82 is merged: its next unit (an evidence
-  unit, once the Simulator is free).
+- To Worker-S1 (994c6d28) once PR 37 is merged: "PR 37 is on main: do item 4 of U-72b (the
+  picker)" with the worktree `rn-u-72c` and a branch from the new main.
+- To Worker-S1 (10185721) after that line was sent: the correction of PR 61 (the seven
+  should-fixes and the notes of reviews/U-70-PR-61.md), a first pass now, the last merge of main
+  and the lines for `rn-ios.yml` right before the tag.
+- To Worker-G2 once PR 37 is merged: U-76e, with the Simulator and port 8081, three hours.
+- To Worker-S2 once PR A of U-84 is merged: the re-capture of the diary rows (the delete confirm
+  ×3 and High Contrast, the two undo toasts, the Delete of the edit sheet), `run-all.sh` at
+  `0 failed`, when the Simulator is free.
 
 ## The order to the end
 
-1. PR 37 merged (diary code) → U-74e evidence merged.
+1. PR 37 merged (diary code) → U-84 A merged → the diary evidence (PR 62) re-captured and merged.
 2. PR 58 merged (gates on GitHub Actions) → merges take their verdict from GitHub.
-3. U-83 (two Simulators) → the six evidence units, two at a time.
+3. U-82b merged (evidence on GitHub runners) → the six evidence units, in parallel on GitHub.
 4. Every parity row with its evidence → `done`.
-5. The tag `archive/swiftui-final` on main, then the pull request of U-70 merged last.
-6. `docs/rn-migration/report.md` in Vietnamese: the six sections, the list of design deviations,
+5. The native units of the closing plan (U-78, U-80, U-50) and U-24, or named in the report as
+   what remains.
+6. The tag `archive/swiftui-final` on main, then the pull request of U-70 merged last.
+7. `docs/rn-migration/report.md` in Vietnamese: the six sections, the list of design deviations,
    what Phương does himself (Icon Composer, the support address, the products of the App Store,
    the promise about training models, the pages of Terms and Privacy).
 
 ## For the next owner pull request
 
-- The parity rows of PR 39 (SC-01 to SC-07: partial with the evidence of the merge) and of PR 57.
-- An owner pull request that adds a script runs the full gate on its tree before the merge.
+- `plan.md`: U-84, U-82b, U-83 dropped, the evidence on GitHub runners, the state of the evening.
+- The parity rows PL-02 and QA-01 are still `todo` although U-51 and U-60 landed: read their
+  evidence and set them.
+- Before the merge of PR 61: the GitHub branch protection (a required check named after the deleted
+  Swift workflow) and the Xcode Cloud workflow that ran `ci_post_clone.sh` (review of PR 61, "Not
+  checked"); `scripts/proof-capture/capture-golden-fixtures.mjs` recreates `native/` through its
+  default output directory (note 18); the stale ignore lines of `.gitignore` and `.dockerignore`
+  (note 17); the sentence "This is the only workflow" in `rn-ci.yml` (note 22).
 - The follow-ups for the final report: the undo of a save that fails in the scan (nothing shown);
   whole centimetres for a decimal height; `purchaseSelected` without a catch in the paywall shell;
   the paragraph on testIDs in the parity detail of sign-in; the label "Report sent" in the parity
-  detail of the scan.
+  detail of the scan; the background-task seam of the sync engine is unused; no release pipeline
+  for the React Native app (findings U-70).
