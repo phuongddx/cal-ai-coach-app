@@ -153,3 +153,15 @@ describe('CodeField error (frames 114 and 115)', () => {
     }
   });
 });
+
+describe('CodeField autoFocus', () => {
+  it('does not take the focus by default', async () => {
+    await render(<CodeField value="" onChangeText={() => {}} testID="code" />);
+    expect(screen.getByTestId('code')).toHaveProp('autoFocus', false);
+  });
+
+  it('asks the input for the focus when autoFocus is set', async () => {
+    await render(<CodeField value="" onChangeText={() => {}} testID="code" autoFocus />);
+    expect(screen.getByTestId('code')).toHaveProp('autoFocus', true);
+  });
+});
