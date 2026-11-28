@@ -22,6 +22,20 @@ thread that is already open, with its thread id, or waits for the next turn.
 | U-73e, U-75e, U-77e, U-72e, U-77ce | nobody | rows written (briefs/evidence-rows.md) | after U-82b is merged: on GitHub runners, in parallel; otherwise on the Simulator, one at a time |
 | U-78 widgets and Live Activity, U-80 the icon, U-50 telemetry, U-24 the spike files | nobody | not briefed yet (closing plan steps 10 and 11) | S1 after item 4; the native verification goes through the iOS workflow of PR 58 on GitHub |
 
+## Could not be sent at 18:40: the agents server answered "unauthorized" to every call
+
+- **To Worker-G1 (thread 73e61e95, rework)**: the correction of the iOS half of PR 58 (the five
+  must-fixes and should-fix 6 of `reviews/U-82-PR-58-reread.md`: the strings "Today's insights" and
+  "Goals & targets", the name of the seeded meal "Spaghetti Bolognese", "Scan Food" replaced by
+  `scan.shutter`, `ccstepper.increment` replaced by `scan.grams.0.increment`, the ED-Safe assertion
+  on the row that exists; one flow per step in `rn-ios.yml` (note 8); the findings rewritten
+  (must-fix 7); the table of every string of the five flows with the file and line that renders it;
+  a merge of `origin/main` once PR 65 is merged). Verdict from the checks of GitHub. Timebox 90
+  minutes, before the rest of U-82b.
+- The PR 61 correction (thread 10185721, receipt bc57cd08) and U-76e (thread 1c13f27f, receipt
+  6b3186c4) were accepted by the server before it failed; the rework of PR 37 (receipt ab096fef)
+  too.
+
 ## The lines the owner writes into threads
 
 - To Worker-S1 (994c6d28) once PR 37 is merged: "PR 37 is on main: do item 4 of U-72b (the
