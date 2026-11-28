@@ -44,7 +44,7 @@ jobs:
 
       - name: Expo prebuild for iOS (generates ios/ and runs pod install)
         working-directory: apps/mobile
-        run: npx expo prebuild --platform ios --no-open
+        run: npx expo prebuild --platform ios
 
       - name: Build the app for the Simulator
         working-directory: apps/mobile
