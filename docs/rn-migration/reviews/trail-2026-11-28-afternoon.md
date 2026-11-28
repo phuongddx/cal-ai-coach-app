@@ -27,3 +27,18 @@ Checked and found true by that reviewer: the commit ab293e2 holds exactly four c
 
 - First review: a row supersedes the count (three fixes in four files; the flow file is evidence); the brief section has its row; the head of U-82 has a row with 518c3dd.
 - Second review: a row supersedes the count of flows (one flow, two waits); this file makes the text of both reviews durable.
+
+## Third and fourth reviews (the rows of the drains w5h to w5k)
+
+Flags of the third review (the rows of w5h)
+
+1. `ROW ledger U-82 | "two flows wait for strings the app never renders on main" | both waits sit in one flow (.maestro/02-tabs-diary-sheet.yaml, lines 29 and 35)`
+2. `ROW trail-review-1310 | the evidence is "its text is in the transcript of the owner" | a pointer that cannot be opened`
+
+Flags of the fourth review (the rows of w5i to w5k)
+
+1. `ROW U-82 | the head of PR 58 moved from 518c3dd to 48dcf84 since the ledger row; at the new head the third should-fix is still unfixed (the step "Install Maestro" appends to GITHUB_PATH and runs maestro --version in the same step) | the row says the three should-fixes are being corrected | gh pr view 58; the workflow and the flow at 48dcf84`
+
+What the owner found on reading the head 48dcf84 herself: none of the three should-fixes is fixed at that head (the flow still waits for the two strings; the step is unchanged; nothing under apps/ changed). The head was pushed at 13:42, before the message of the owner reached the worker at 13:45; the message waits in the thread of the worker. The iOS job is queued on GitHub and will fail at that step when it runs; the worker iterates.
+
+Both reviews checked and found true: the merge of PR 39 and its tree against its gate (1,648 tests); the toggle gone on main with the dock "Save report" and the state on this device; PR 60 changed one file and its counts are right; the three rows of PR 60 end in a true and clear record; the briefs of the evidence units exist with a table each; the worktree of U-70 descends from main; PR 37 has not moved; no attribution in the commits or the body of PR 60.
