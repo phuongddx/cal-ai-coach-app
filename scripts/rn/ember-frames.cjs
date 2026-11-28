@@ -103,10 +103,13 @@ const slug = (text) =>
     await element.screenshot({ path: path.join(out, name) });
     manifest.push({ file: name, kind: frame.kind, section: frame.section, id: frame.id, caption: frame.caption });
   }
-  // A frame that left the canvas takes its picture with it.
+  // A frame that left the canvas takes its picture with it. Only a picture the previous manifest
+  // of this tool listed goes: never any file that happens to carry such a name, so a wrong output
+  // directory costs nothing.
   const kept = new Set(manifest.map((entry) => entry.file));
-  for (const file of fs.readdirSync(out)) {
-    if (/^\d{2,3}-.*\.png$/.test(file) && !kept.has(file)) fs.rmSync(path.join(out, file));
+  for (const entry of previous) {
+    const picture = path.join(out, entry.file);
+    if (!kept.has(entry.file) && fs.existsSync(picture)) fs.rmSync(picture);
   }
   manifest.sort((a, b) => Number.parseInt(a.file, 10) - Number.parseInt(b.file, 10));
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
