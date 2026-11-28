@@ -24,6 +24,7 @@ import {
 import { createDiaryDetailRepository } from '../../../data/repos/diaryDetailRepository';
 import { createCatalogRepository } from '../../../data/repos/catalogRepository';
 import { pendingOps } from '../../../data/db/schema';
+import { inTransaction } from '../../../data/repos/sqlDb';
 import { createTargetRepository } from '../../../data/repos/targetRepository';
 import { createTrackingRepository } from '../../../data/repos/trackingRepository';
 import { createSeedDataManager, DEMO_USER_ID } from '../../../data/repos/seedDataManager';
@@ -252,6 +253,36 @@ describe('DiaryWaterExerciseTests twins', () => {
     const entry = await fetchDiaryEntry(harness.deps.db, dinner.id);
     expect(entry?.deletedAt).toBeNull();
     expect(await countRows(harness.deps.db, 'pending_ops')).toBe(1);
+  });
+
+  // The review correction's race: the sync takes the op in the gap between
+  // the tap and the undo's write. The undo's one transaction re-checks the op
+  // inside itself and falls back to the re-record — the restored row never
+  // sits with no op while the server holds the tombstone.
+  it('an undo whose op the sync takes between the tap and the write re-records the entry', async () => {
+    const harness = await makeHarness();
+    const model = await makeDiaryModel(harness);
+    const dinner = model.items('dinner')[0];
+
+    await model.delete(dinner);
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(1);
+
+    // The take lands in the gap: queued on the same handle ahead of the
+    // undo's write, it deletes the op before the undo's transaction begins.
+    const take = inTransaction(harness.deps.db, (tx) => tx.delete(pendingOps));
+    const undoing = model.undoDelete(dinner);
+    await take;
+    await undoing;
+
+    const entry = await fetchDiaryEntry(harness.deps.db, dinner.id);
+    expect(entry?.deletedAt).toBeNull();
+    const stored = await fetchDiaryEntryDetail(harness.deps.db, dinner.id);
+    expect(stored?.kcal).toBe(roundKcal(155, 350));
+    // The re-record, not a silent restore: exactly one new op waits, and it
+    // is an upsert.
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(1);
+    const ops = await harness.deps.db.select({ kind: pendingOps.kind }).from(pendingOps);
+    expect(ops.map((op) => op.kind)).toEqual(['upsert']);
   });
 
   // testManualLogKcalMatchesKcalArithmeticAtEveryStepperValue — manual-log

@@ -128,36 +128,40 @@ function rowToExerciseRows(rows: ExerciseRow[]): DiaryDayExercise[] {
 }
 
 /**
- * The delete-undo seam (DY-08, the d-deleted frames). While the tombstone's
- * pending op is still in the outbox, the undo cancels the op and restores the
- * rows silently (the device keeps no trace of the delete); once the sync has
- * taken the op, the undo re-records the entry the way a save does. All three
- * helpers run over the injected handle — the same seam the snapshot loader
- * uses.
+ * The delete-undo seam (DY-08, the d-deleted frames; the review correction's
+ * one-transaction rule). The undo's decision reads the outbox INSIDE the same
+ * transaction that cancels: while the tombstone's pending op is still there,
+ * it is cancelled and the rows are restored silently (the device keeps no
+ * trace of the delete); once the sync has taken the op, the seam reports it
+ * and the model re-records the entry the way a save does. Runs over the
+ * injected handle — the same seam the snapshot loader uses.
  */
 
-/** The still-pending tombstone op of an entry, or null when none waits. */
-export async function findPendingTombstoneOp(db: SqlDb, entryId: string): Promise<string | null> {
-  const rows = await db
-    .select({ opId: pendingOps.opId })
-    .from(pendingOps)
-    .where(and(eq(pendingOps.recordId, entryId), eq(pendingOps.kind, 'tombstone')))
-    .limit(1);
-  return rows[0]?.opId ?? null;
-}
-
-/** Cancels one pending op (the sync will never take it). */
-export async function cancelPendingOp(db: SqlDb, opId: string): Promise<void> {
-  await db.delete(pendingOps).where(eq(pendingOps.opId, opId));
-}
-
-/** Restores the mirror and detail rows exactly as given, with no new op. */
-export async function restoreRowsWithoutOp(
+/**
+ * The undo's one transaction: look whether the tombstone's op still waits,
+ * and only then cancel it and restore the mirror + detail rows exactly as
+ * given, with no new op. Returns false when the op is already gone — the
+ * sync took it in the gap between the tap and this write — and nothing is
+ * restored; the caller re-records the entry with its one new op instead, so
+ * a server tombstone can never out-argue a restored row that carries no op.
+ */
+export async function cancelTombstoneAndRestore(
   db: SqlDb,
+  entryId: string,
   entry: DiaryEntry,
   detail: DiaryEntryDetail,
-): Promise<void> {
-  await inTransaction(db, async (tx) => {
+): Promise<boolean> {
+  return inTransaction(db, async (tx) => {
+    const rows = await tx
+      .select({ opId: pendingOps.opId })
+      .from(pendingOps)
+      .where(and(eq(pendingOps.recordId, entryId), eq(pendingOps.kind, 'tombstone')))
+      .limit(1);
+    const opId = rows[0]?.opId;
+    if (opId === undefined) {
+      return false;
+    }
+    await tx.delete(pendingOps).where(eq(pendingOps.opId, opId));
     await tx
       .insert(diaryEntries)
       .values({
@@ -189,6 +193,7 @@ export async function restoreRowsWithoutOp(
         target: diaryEntryDetails.entryId,
         set: { ...detailToDetailRow(detail) },
       });
+    return true;
   });
 }
 

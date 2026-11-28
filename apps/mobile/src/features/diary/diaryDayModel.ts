@@ -11,7 +11,7 @@ import type { DiaryEntry, DiaryEntryDetail } from '../../data/repos/diaryEntryRe
 
 import type { DiaryDeps } from './deps';
 import { dayString, manualKcal } from './diaryMath';
-import { cancelPendingOp, createDiaryDayLoader, findPendingTombstoneOp, restoreRowsWithoutOp, type DiaryDayExercise, type DiaryDaySection, type DiaryDaySnapshotData } from './diarySnapshot';
+import { cancelTombstoneAndRestore, createDiaryDayLoader, type DiaryDayExercise, type DiaryDaySection, type DiaryDaySnapshotData } from './diarySnapshot';
 
 export type DiaryDaySnapshot = DiaryDaySnapshotData;
 export type { DiaryDayExercise, DiaryDaySection };
@@ -170,13 +170,13 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
       await refresh();
     },
     async undoDelete(item) {
-      const opId = await findPendingTombstoneOp(deps.db, item.id);
-      if (opId !== null) {
-        // The delete has not left the device: cancel the op, restore the rows
-        // silently — the device keeps no trace of the delete.
-        await cancelPendingOp(deps.db, opId);
-        await restoreRowsWithoutOp(deps.db, item.entry, item.detail);
-      } else {
+      // One transaction re-checks the op inside itself (the review
+      // correction): only a still-pending tombstone cancels and restores
+      // silently; an op the sync already took falls back to the re-record —
+      // the restored row never sits with no op while the server holds the
+      // tombstone.
+      const cancelled = await cancelTombstoneAndRestore(deps.db, item.id, item.entry, item.detail);
+      if (!cancelled) {
         // The sync has taken the tombstone: the entry comes back the way a
         // save records it — one batch, one new op.
         await deps.diaryEntries.recordUpserts([{ entry: item.entry, detail: item.detail }], deps.now());
