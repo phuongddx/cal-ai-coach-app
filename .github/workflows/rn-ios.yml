@@ -26,6 +26,9 @@ jobs:
       METRO_PORT: '8081'
       BUNDLE_ID: com.nextlabs.coachcal
       MAESTRO_CLI_NO_ANALYTICS: '1'
+      # The XCTest driver compiles and launches on the cold CI simulator; the default startup
+      # timeout ("iOS driver not ready in time") is too short for the first flow.
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
