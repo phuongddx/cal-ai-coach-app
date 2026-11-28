@@ -4,33 +4,40 @@ A turn that a worker result started cannot address that worker without the rewor
 thread. A turn opens at most five new threads: a further unit of the same worker goes into a
 thread that is already open, with its thread id, or waits for the next turn.
 
-## State on 2026-11-28 at 12:55
+## State on 2026-11-28 at 13:15
 
-`main` is `8c954de`: merged today PR 53, 55, 54, 50, 42, 47.
+`main` is `769c0a0`. Landed today: PR 53, 55, 54, 50, 42, 47, 56, 43, 36.
 
-| Unit | Worker | State | Next |
+| Unit | Worker (thread) | State | Next |
 |---|---|---|---|
-| U-74e diary evidence | Worker-S2 (thread 44b9402a) | running, holds the Simulator | drain when its pull request opens; evidence only |
-| U-82 gates on GitHub Actions | Worker-G1 (thread 73e61e95) | running | gate, review, merge; then merges take their verdict from GitHub |
-| U-73 correction (PR 36) | Worker-G1 (thread 0e8d9059) | running | gate, re-read the three points, merge |
-| U-77 correction (PR 43) | Worker-G2 (thread 8f3ad0f1) | running | gate, re-read the points, merge |
-| U-74 correction (PR 37) | Worker-G2 (thread 8f3ad0f1, after PR 43) | queued | gate, re-read the four points, merge |
-| U-77c sign-in code step | Worker-S1 (thread 994c6d28) | running | gate, review, merge |
-| U-72b scan, merge and stage A2 | Worker-S1 | not sent | after PR 37 and PR 43 are on `main`: send briefs/U-72b.md into the thread 994c6d28 |
-| U-70 Swift cleanup | nobody | not sent | after U-82 is on `main` (the rewritten AGENTS.md must name the workflows); the worker reads the tree at dispatch; merge LAST, after the tag |
+| U-74e diary evidence | Worker-S2 (44b9402a) | running, holds the Simulator | when its pull request opens: read every screenshot, check rule 23, merge |
+| U-82 gates on GitHub Actions | Worker-G1 (73e61e95) | running | gate on the full gate, review, merge; then write the line that starts U-70 and create the worktree rn-u-70 |
+| U-74 correction (PR 37) | Worker-G2 (8f3ad0f1) | running | the evidence leaves the branch; the four fixes; then the full gate on a tree with it and a re-read |
+| U-77c sign-in code step | Worker-S1 (994c6d28) | running | full gate, review, merge |
+| U-72b scan, part one | Worker-S1 (994c6d28, after U-77c) | queued | when PR 37 is on `main`, write the line that releases item 4 |
+| U-70 Swift cleanup | Worker-G1 (73e61e95, after U-82) | queued | create the worktree rn-u-70 from `main` after U-82; merge LAST after the tag |
+| U-76e Today evidence | Worker-S2 | not sent | send briefs/U-76e.md when U-74e reports (new thread, or its thread) |
+
+## The lines the owner writes into threads
+
+- To Worker-S1 (994c6d28) when PR 37 is merged: "PR 37 is on main: do item 4 of U-72b".
+- To Worker-G1 (73e61e95) when PR of U-82 is merged: "U-82 is merged: start U-70 in
+  .worktrees/rn-u-70 on rn/u-70-swift-cleanup" (create the worktree and the node_modules first).
 
 ## After each merge
 
-- U-73 (PR 36): its evidence unit (onboarding, nine steps, dark twins 47 to 55, ED-Safe rows of
-  steps 8 and 9) waits for the Simulator.
-- U-75 (PR 42): its evidence unit (Progress 11 and 12, Coach) waits for the Simulator.
-- U-77b (PR 47) and U-77c: one evidence unit for sign-in (61, 62, 108 to 115).
-- U-76 (PR 50): its evidence unit must prove the four-digit number on one line and the Fat card
-  not cut at the edge (asked by Zed), the header offline on a narrow screen (note 5 of the review).
-- High Contrast: `xcrun simctl ui <udid> increase_contrast enabled` switches the real setting.
+- The evidence units that remain: onboarding (U-73e), progress and coach (U-75e), profile,
+  settings and billing (U-77e), Today (U-76e, brief written), scan (after PR 39), sign-in (after
+  U-77c). Once the iOS workflow with Maestro is on `main`, prefer artifacts from GitHub Actions
+  for these, and keep the machine of Phương for what only the Simulator can show (High Contrast
+  through the real setting).
+- High Contrast: `xcrun simctl ui <udid> increase_contrast enabled`.
 
 ## For the next owner pull request
 
-- A gate lock: `scripts/rn/gate.sh` runs the three gates under a lock (one gate on the machine at
-  a time), and rule 10 names it (the load was 62 on 11 cores on 2026-11-27 at 23:30).
-- The parity rows of the units merged today (the owner sets status and evidence).
+- `docs/rn-migration/plan.md`: the rule "do the work, then report" (a turn never ends with a
+  status message while something is left that does not depend on another bot) and the rule that an
+  owner pull request with a script or a workflow runs the full gate before its merge.
+- The parity rows of PR 43 and PR 36 (OB-01 to OB-10, PR-01 to PR-03: partial with the evidence of
+  the merge; the Simulator evidence pending).
+- An owner pull request that adds a script runs the full gate on its tree before the merge.
