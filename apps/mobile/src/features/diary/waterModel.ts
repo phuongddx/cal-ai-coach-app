@@ -81,3 +81,14 @@ export function createWaterModel(deps: WaterModelDeps): WaterModel {
 export function glassesLogged(totalMl: number): number {
   return Math.floor(totalMl / GLASS_ML);
 }
+
+/**
+ * The litres figure of the Today frame's water card ("1.25 of 2 L"): two
+ * decimals, trailing zeros trimmed, no unit — the caller composes the copy.
+ */
+export function litresText(ml: number): string {
+  const litres = ml / 1000;
+  const fixed = litres.toFixed(2);
+  const trimmed = fixed.replace(/\.?0+$/, '');
+  return trimmed === '' ? '0' : trimmed;
+}

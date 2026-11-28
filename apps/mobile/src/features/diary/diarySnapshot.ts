@@ -6,9 +6,14 @@
  */
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 
-import { diaryEntries, diaryEntryDetails } from '../../data/db/schema';
-import { rowToEntry, type DiaryEntry } from '../../data/repos/diaryEntryRepository';
-import type { SqlDb } from '../../data/repos/sqlDb';
+import { diaryEntries, diaryEntryDetails, pendingOps } from '../../data/db/schema';
+import {
+  rowToDetail,
+  rowToEntry,
+  type DiaryEntry,
+  type DiaryEntryDetail,
+} from '../../data/repos/diaryEntryRepository';
+import { inTransaction, type SqlDb } from '../../data/repos/sqlDb';
 import type { TargetRepository, UserTarget } from '../../data/repos/targetRepository';
 import { rowToExerciseLog, type TrackingRepository } from '../../data/repos/trackingRepository';
 
@@ -22,10 +27,14 @@ export type DiaryDayItem = {
   kcal: number | null;
   grams: number | null;
   confidence: number | null;
+  /** The detail payload's source ('scan' | 'manual' | 'relog' | 'cache'), for the row caption. */
+  source: string | null;
   isSynced: boolean;
   loggedAt: Date;
   /** The full mirror row, so the delete path can tombstone without a re-read. */
   entry: DiaryEntry;
+  /** The full detail row, so the edit sheet can rewrite grams and kcal in one batch. */
+  detail: DiaryEntryDetail;
 };
 
 export type DiaryDaySection = { slot: string; items: DiaryDayItem[] };
@@ -82,9 +91,11 @@ export function createDiaryDayLoader(
         kcal: row.detail.kcal,
         grams: row.detail.grams,
         confidence: row.detail.confidence,
+        source: row.detail.source,
         isSynced: entry.acceptedOpId !== null,
         loggedAt: entry.createdAt,
         entry,
+        detail: rowToDetail(row.detail),
       };
       const slotItems = bySlot.get(item.mealSlot) ?? [];
       slotItems.push(item);
@@ -114,4 +125,92 @@ function rowToExerciseRows(rows: ExerciseRow[]): DiaryDayExercise[] {
     durationMin: row.durationMin,
     kcalBurned: row.kcalBurned,
   }));
+}
+
+/**
+ * The delete-undo seam (DY-08, the d-deleted frames; the review correction's
+ * one-transaction rule). The undo's decision reads the outbox INSIDE the same
+ * transaction that cancels: while the tombstone's pending op is still there,
+ * it is cancelled and the rows are restored silently (the device keeps no
+ * trace of the delete); once the sync has taken the op, the seam reports it
+ * and the model re-records the entry the way a save does. Runs over the
+ * injected handle — the same seam the snapshot loader uses.
+ */
+
+/**
+ * The undo's one transaction: look whether the tombstone's op still waits,
+ * and only then cancel it and restore the mirror + detail rows exactly as
+ * given, with no new op. Returns false when the op is already gone — the
+ * sync took it in the gap between the tap and this write — and nothing is
+ * restored; the caller re-records the entry with its one new op instead, so
+ * a server tombstone can never out-argue a restored row that carries no op.
+ */
+export async function cancelTombstoneAndRestore(
+  db: SqlDb,
+  entryId: string,
+  entry: DiaryEntry,
+  detail: DiaryEntryDetail,
+): Promise<boolean> {
+  return inTransaction(db, async (tx) => {
+    const rows = await tx
+      .select({ opId: pendingOps.opId })
+      .from(pendingOps)
+      .where(and(eq(pendingOps.recordId, entryId), eq(pendingOps.kind, 'tombstone')))
+      .limit(1);
+    const opId = rows[0]?.opId;
+    if (opId === undefined) {
+      return false;
+    }
+    await tx.delete(pendingOps).where(eq(pendingOps.opId, opId));
+    await tx
+      .insert(diaryEntries)
+      .values({
+        id: entry.id,
+        userId: entry.userId,
+        displayText: entry.displayText,
+        createdAt: entry.createdAt.toISOString(),
+        updatedAt: entry.updatedAt.toISOString(),
+        deletedAt: entry.deletedAt === null ? null : entry.deletedAt.toISOString(),
+        serverVersion: entry.serverVersion,
+        acceptedOpId: entry.acceptedOpId,
+        serverUpdatedAt: entry.serverUpdatedAt.toISOString(),
+      })
+      .onConflictDoUpdate({
+        target: diaryEntries.id,
+        set: {
+          displayText: entry.displayText,
+          updatedAt: entry.updatedAt.toISOString(),
+          deletedAt: entry.deletedAt === null ? null : entry.deletedAt.toISOString(),
+          serverVersion: entry.serverVersion,
+          acceptedOpId: entry.acceptedOpId,
+          serverUpdatedAt: entry.serverUpdatedAt.toISOString(),
+        },
+      });
+    await tx
+      .insert(diaryEntryDetails)
+      .values({ ...detail, ...detailToDetailRow(detail) })
+      .onConflictDoUpdate({
+        target: diaryEntryDetails.entryId,
+        set: { ...detailToDetailRow(detail) },
+      });
+    return true;
+  });
+}
+
+function detailToDetailRow(detail: DiaryEntryDetail) {
+  return {
+    mealSlot: detail.mealSlot,
+    title: detail.title,
+    grams: detail.grams,
+    kcal: detail.kcal,
+    proteinG: detail.proteinG,
+    carbsG: detail.carbsG,
+    fatG: detail.fatG,
+    fiberG: detail.fiberG,
+    confidence: detail.confidence,
+    hiddenFatLikely: detail.hiddenFatLikely,
+    source: detail.source,
+    unresolved: detail.unresolved,
+    scanId: detail.scanId,
+  };
 }
