@@ -4,6 +4,16 @@
 # Jest runs with a 120 s test timeout: a native build on the same machine makes the 15 s limit
 # of apps/mobile fire on suites that pass in CI. The count of suites over 15 s is printed.
 set -u
+# One gate on the machine at a time: the same lock the workers take through scripts/rn/gate.sh.
+# A lock left by a dead process is removed.
+GATELOCK="${COACHCAL_GATE_LOCK:-/tmp/coachcal-rn-gate.lock}"
+while ! mkdir "$GATELOCK" 2>/dev/null; do
+  pid=$(cat "$GATELOCK/pid" 2>/dev/null || true)
+  if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then rm -rf "$GATELOCK"; continue; fi
+  sleep 5
+done
+echo $$ > "$GATELOCK/pid"
+trap 'rm -rf "$GATELOCK"' EXIT
 export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 W="$1"
 P="${2:-gate}"
