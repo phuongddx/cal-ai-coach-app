@@ -22,6 +22,7 @@ import {
   type IconName,
 } from '../../design';
 import { ErrorLine } from './ErrorLine';
+import { textStyle } from './textStyle';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- a bundler asset, the same form as scanCapture.ts
 const EMBER_RING: number = require('../../../assets/brand/ember-ring.png');
@@ -44,7 +45,7 @@ export type EntryStepProps = {
 };
 
 export function EntryStep({ appleAvailable, isBusy, errorMessage, onApple, onGoogle, onEmail }: EntryStepProps) {
-  const { colors, isDark } = useTokens();
+  const { colors, isDark, type } = useTokens();
   return (
     <>
       <ScrollView
@@ -121,19 +122,17 @@ export function EntryStep({ appleAvailable, isBusy, errorMessage, onApple, onGoo
 
         <View accessible={false} importantForAccessibility="no-hide-descendants" style={styles.divider}>
           <View style={[styles.rule, { backgroundColor: colors.separator }]} />
-          <Text
-            style={{
-              fontSize: textStyles.footnote.fontSize,
-              fontWeight: '500',
-              color: colors.text2,
-            }}
-          >
-            or
-          </Text>
+          <Text style={{ ...textStyle(type.footnote), color: colors.text2 }}>or</Text>
           <View style={[styles.rule, { backgroundColor: colors.separator }]} />
         </View>
 
-        <SecondaryButton testID="auth.signInEmail" title="Continue with email" action={onEmail} disabled={isBusy} />
+        <SecondaryButton
+          testID="auth.signInEmail"
+          title="Continue with email"
+          leading="mail"
+          action={onEmail}
+          disabled={isBusy}
+        />
       </View>
     </>
   );
