@@ -73,6 +73,11 @@ export class GateApi implements CoachCalApi {
     });
   }
 
+  /** Resolves only the oldest parked call (the stale one after a cancel), leaving the newer ones parked. */
+  resumeFirst(response: ScanResponse): void {
+    this.resolvers.shift()?.(response);
+  }
+
   resumeAll(response: ScanResponse): void {
     for (const resolve of this.resolvers) resolve(response);
     this.resolvers = [];

@@ -24,8 +24,10 @@ export type ScanFlowViewProps = {
   onClose: () => void;
   /** Food search escape (the route owns FoodSearchRoute); a meal logged there closes the flow. */
   onSearchManually?: () => void;
-  /** Manual log escape of the quota card. */
+  /** Manual log escape of the quota sheet. */
   onLogManually: () => void;
+  /** "See plans" of the quota sheet: the route opens the plans screen. */
+  onSeePlans: () => void;
   isCameraAccessDenied?: boolean;
   onOpenSettings?: () => void;
   animationsDisabled?: boolean;
@@ -38,6 +40,7 @@ export function ScanFlowView({
   onClose,
   onSearchManually,
   onLogManually,
+  onSeePlans,
   isCameraAccessDenied,
   onOpenSettings,
   animationsDisabled,
@@ -50,7 +53,7 @@ export function ScanFlowView({
     case 'capture':
     case 'failed':
       return mode === 'text' ? (
-        <DescribeMealSheet model={model} onSearchManually={onSearchManually} />
+        <DescribeMealSheet model={model} onSearchManually={onSearchManually} onBackToCamera={() => setMode('photo')} />
       ) : (
         <CaptureViewfinderView
           key={mode}
@@ -59,18 +62,21 @@ export function ScanFlowView({
           onModeChange={setMode}
           onSearchManually={onSearchManually}
           onLoggedElsewhere={onClose}
+          onClose={onClose}
           capture={capture}
           isCameraAccessDenied={isCameraAccessDenied}
           onOpenSettings={onOpenSettings}
         />
       );
     case 'analyzing':
+      // The text scan keeps the describe sheet on screen (frame s-describe-estimating); the others take the full screen.
+      if (mode === 'text') return <DescribeMealSheet model={model} onSearchManually={onSearchManually} onBackToCamera={() => setMode('photo')} />;
       return <AnalyzingView model={model} animationsDisabled={animationsDisabled} />;
     case 'review':
       return <ReviewSheetView model={model} onClose={onClose} />;
     case 'saved':
       return <ScanSavedView model={model} onViewDiary={onClose} onAddMore={() => model.startNewScan()} />;
     case 'quotaReached':
-      return <QuotaReachedView model={model} onLogManually={onLogManually} />;
+      return <QuotaReachedView model={model} onLogManually={onLogManually} onSeePlans={onSeePlans} onClose={onClose} />;
   }
 }
