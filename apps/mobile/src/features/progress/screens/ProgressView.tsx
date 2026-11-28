@@ -5,7 +5,7 @@
  * (which collapse entirely while the mode is on — the component owns that
  * policy, I7) and the badges.
  */
-import { useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Segment, useTokens } from '../../../design';
@@ -29,7 +29,6 @@ const RANGE_OPTIONS: ReadonlyArray<{ value: ProgressRange; label: string }> = [
 
 export function ProgressView({ model }: ProgressViewProps) {
   const { colors, typography, space } = useTokens();
-  useSyncExternalStore(model.subscribe, model.getSnapshot, model.getSnapshot);
   const [range, setRange] = useState<ProgressRange>('month');
 
   return (

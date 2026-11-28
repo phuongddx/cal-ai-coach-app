@@ -6,7 +6,7 @@
  * calorie (energy) framing, so the collapse component owns hiding it entirely
  * while the mode is on (invariant I7): this file holds no policy branch.
  */
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Line } from 'react-native-svg';
 
@@ -42,8 +42,9 @@ export function averageKcalText(weekKcals: DayKcal[]): string {
 export function WeeklyEnergyView({ model }: WeeklyEnergyViewProps) {
   const { colors, space } = useTokens();
   const [width, setWidth] = useState(0);
-  const weekKcals = model.weekKcals();
-  const targetKcal = model.targetKcal();
+  const snapshot = useSyncExternalStore(model.subscribe, model.getSnapshot, model.getSnapshot);
+  const weekKcals = snapshot.weekKcals;
+  const targetKcal = snapshot.target?.dailyKcal ?? null;
   const scale = scaleKcal(weekKcals, targetKcal);
   const loggedValues = weekKcals.flatMap((entry) => (entry.kcal === null ? [] : [entry.kcal]));
   const average =

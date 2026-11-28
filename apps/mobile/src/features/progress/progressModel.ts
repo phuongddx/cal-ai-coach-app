@@ -37,6 +37,31 @@ export type ProgressDeps = {
 
 export type ProgressSnapshot = ProgressSnapshotData;
 
+/**
+ * The logged weight series of a snapshot, oldest first. Without a range the full observed series;
+ * with one, the trailing window ending on `today` (a day key compares lexicographically). Pure:
+ * the views call it on the snapshot they read, so the figures follow every replaced snapshot.
+ */
+export function weightPointsOf(
+  weights: ProgressSnapshot['weights'],
+  today: string,
+  range?: ProgressRange,
+): ChartPoint[] {
+  const all = weights.flatMap((log) => {
+    const date = dateFromDay(log.day);
+    return date === null ? [] : [{ date, value: log.kg, label: log.day }];
+  });
+  if (range === undefined) {
+    return all;
+  }
+  const todayDate = dateFromDay(today);
+  if (todayDate === null) {
+    return all;
+  }
+  const windowStart = dayString(addDays(todayDate, -(RANGE_WINDOW_DAYS[range] - 1)));
+  return all.filter((point) => point.label >= windowStart);
+}
+
 export type ProgressModel = {
   /** The observed snapshot — `useSyncExternalStore(model.subscribe, model.getSnapshot)`. */
   getSnapshot(): ProgressSnapshot;
@@ -67,6 +92,7 @@ export function createProgressModel(deps: ProgressDeps): ProgressModel {
   });
 
   let snapshot: ProgressSnapshot = {
+    today: dayString(deps.now()),
     target: null,
     weights: [],
     weekKcals: [],
@@ -143,18 +169,7 @@ export function createProgressModel(deps: ProgressDeps): ProgressModel {
       };
     },
     refresh,
-    weightPoints: (range?: ProgressRange) => {
-      const all = snapshot.weights.flatMap((log) => {
-        const date = dateFromDay(log.day);
-        return date === null ? [] : [{ date, value: log.kg, label: log.day }];
-      });
-      if (range === undefined) {
-        return all;
-      }
-      // The trailing window in local days (a day key compares lexicographically).
-      const windowStart = dayString(addDays(deps.now(), -(RANGE_WINDOW_DAYS[range] - 1)));
-      return all.filter((point) => point.label >= windowStart);
-    },
+    weightPoints: (range?: ProgressRange) => weightPointsOf(snapshot.weights, dayString(deps.now()), range),
     latestKg: () => snapshot.weights.at(-1)?.kg ?? null,
     goalKg: () => snapshot.target?.goalWeightKg ?? null,
     startKg: () => snapshot.weights[0]?.kg ?? null,
