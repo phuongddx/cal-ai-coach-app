@@ -26,9 +26,9 @@ export type OnboardingFlowViewProps = {
 };
 
 export function OnboardingFlowView({ model, onFinished }: OnboardingFlowViewProps) {
-  useOnboardingModel(model);
+  const snapshot = useOnboardingModel(model);
 
-  const step = model.currentStep;
+  const step = snapshot.currentStep;
 
   useEffect(() => {
     if (step === 'generating') model.beginGeneration();

@@ -26,13 +26,13 @@ export { LEVELS };
 const DIET_STYLES = ['Standard', 'High protein', 'Vegetarian', 'Vegan', 'Keto'] as const;
 
 export function ActivityDietScreen({ model }: { model: OnboardingModel }) {
-  useOnboardingModel(model);
+  const snapshot = useOnboardingModel(model);
   const { colors } = useTokens();
   return (
     <StepScaffold
       title="Lifestyle"
       subtitle="Fine-tune your calorie target"
-      progress={model.progress}
+      progress={snapshot.progress}
       action={() => model.advance()}
     >
       <View style={styles.rows}>
@@ -46,7 +46,7 @@ export function ActivityDietScreen({ model }: { model: OnboardingModel }) {
                 title={entry.title}
                 subtitle={entry.subtitle}
                 icon={entry.icon}
-                isSelected={model.draft.activityLevel === entry.level}
+                isSelected={snapshot.draft.activityLevel === entry.level}
                 onSelect={() => model.selectActivityLevel(entry.level)}
               />
             </View>
@@ -58,12 +58,12 @@ export function ActivityDietScreen({ model }: { model: OnboardingModel }) {
         <View style={styles.chips}>
           <View style={styles.chipRow}>
             {DIET_STYLES.slice(0, 3).map((style) => (
-              <DietChip key={style} model={model} style={style} />
+              <DietChip key={style} model={model} style={style} selected={snapshot.dietStyle === style} />
             ))}
           </View>
           <View style={styles.chipRow}>
             {DIET_STYLES.slice(3).map((style) => (
-              <DietChip key={style} model={model} style={style} />
+              <DietChip key={style} model={model} style={style} selected={snapshot.dietStyle === style} />
             ))}
           </View>
         </View>
@@ -72,12 +72,12 @@ export function ActivityDietScreen({ model }: { model: OnboardingModel }) {
   );
 }
 
-function DietChip({ model, style }: { model: OnboardingModel; style: string }) {
+function DietChip({ model, style, selected }: { model: OnboardingModel; style: string; selected: boolean }) {
   return (
     <View testID={`onboarding.dietChip.${style.toLowerCase().replaceAll(' ', '')}`}>
       <ChipOption
         title={style}
-        isSelected={model.dietStyle === style}
+        isSelected={selected}
         onSelect={() => model.selectDietStyle(style)}
       />
     </View>

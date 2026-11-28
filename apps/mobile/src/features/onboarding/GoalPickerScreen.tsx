@@ -19,12 +19,12 @@ const OPTIONS: ReadonlyArray<{ goal: Goal; title: string; subtitle: string; icon
 ];
 
 export function GoalPickerScreen({ model }: { model: OnboardingModel }) {
-  useOnboardingModel(model);
+  const snapshot = useOnboardingModel(model);
   return (
     <StepScaffold
       title="What's your goal?"
       subtitle="We'll personalize your plan"
-      progress={model.progress}
+      progress={snapshot.progress}
       action={() => model.advance()}
     >
       <View style={styles.cards}>
@@ -35,7 +35,7 @@ export function GoalPickerScreen({ model }: { model: OnboardingModel }) {
               title={option.title}
               subtitle={option.subtitle}
               iconName={option.icon}
-              isSelected={model.draft.goal === option.goal}
+              isSelected={snapshot.draft.goal === option.goal}
               onSelect={() => model.selectGoal(option.goal)}
             />
           </View>

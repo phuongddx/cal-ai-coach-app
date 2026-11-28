@@ -37,7 +37,7 @@ import { useOnboardingModel } from './useOnboardingModel';
 import type { OnboardingModel } from './onboardingModel';
 
 export function PrivacyHealthScreen({ model }: { model: OnboardingModel }) {
-  useOnboardingModel(model);
+  const snapshot = useOnboardingModel(model);
   const { colors } = useTokens();
   const [showConnectNote, setShowConnectNote] = useState(false);
   // The design flag is the single source of the switch value (the Settings
@@ -48,7 +48,7 @@ export function PrivacyHealthScreen({ model }: { model: OnboardingModel }) {
     <StepScaffold
       title="Privacy & Health"
       subtitle="Your data, your choice"
-      progress={model.progress}
+      progress={snapshot.progress}
       ctaTitle="Skip for now"
       action={() => model.advance()}
     >
@@ -92,12 +92,12 @@ export function PrivacyHealthScreen({ model }: { model: OnboardingModel }) {
             />
           </View>
         </SettingsGroup>
-        {model.safePolicyWriteError !== null && (
+        {snapshot.safePolicyWriteError !== null && (
           <View testID="onboarding.edSafeError">
             {/* RN-only, as in Settings: the stored write is an async database
                 write that can fail, and the screen says so instead of silently
                 keeping a dead switch. */}
-            <BannerNote text={model.safePolicyWriteError} />
+            <BannerNote text={snapshot.safePolicyWriteError} />
           </View>
         )}
         <View style={styles.promise}>

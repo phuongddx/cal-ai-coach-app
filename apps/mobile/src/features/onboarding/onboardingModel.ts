@@ -6,9 +6,10 @@
  * route file builds them from the data environment, the session store and
  * the design system's policy flag; Jest builds them with test doubles.
  *
- * React surface: the model bumps a `revision` on every mutation, so screens
- * subscribe with `useSyncExternalStore(model.subscribe, model.getRevision)`
- * and read the fields directly — the RN counterpart of Swift's `@Observable`.
+ * React surface: the model publishes a replaced `OnboardingSnapshot` on every
+ * mutation, so screens subscribe with `useOnboardingModel(model)` and draw from
+ * the snapshot it returns — the RN counterpart of Swift's `@Observable`. The
+ * React Compiler memoizes reads of a mutable model, so no screen draws from it.
  *
  * U-73: the generating step shows the real formula lines — no fake progress —
  * and, since stage A2, it HOLDS until the user taps its primary button
@@ -86,6 +87,30 @@ export interface RevealPlan {
   floored: boolean;
 }
 
+/**
+ * What the screens draw, replaced on every mutation (never mutated): the React Compiler treats a value
+ * that keeps its identity as unchanged, so a screen reads this object (`useOnboardingModel` returns it)
+ * and not the model's mutable fields and getters. `draft` and `reveal` are copies for the same reason.
+ */
+export interface OnboardingSnapshot {
+  readonly draft: Readonly<QuizProfile>;
+  readonly birthYear: number;
+  readonly dietStyle: string;
+  readonly requestedPaceRaw: number | null;
+  readonly currentStep: OnboardingStep | null;
+  readonly progress: number;
+  readonly computedAge: number;
+  readonly isDobGateBlocked: boolean;
+  readonly dobYears: readonly number[];
+  readonly paceClamped: boolean;
+  readonly targets: Targets | null;
+  readonly reveal: Readonly<RevealPlan> | null;
+  readonly safePolicyWriteError: string | null;
+  readonly persistError: string | null;
+  readonly finished: boolean;
+  readonly currentDate: Date;
+}
+
 /** Constructor-injected dependencies (`OnboardingModel.init`). */
 export interface OnboardingModelDeps {
   /** The user of the session when one exists, else the demo user; the route passes it. */
@@ -149,6 +174,7 @@ export class OnboardingModel {
   private generationStarted = false;
 
   private revision = 0;
+  private snapshot: OnboardingSnapshot;
   private readonly subscribers = new Set<() => void>();
 
   constructor(deps: OnboardingModelDeps) {
@@ -160,6 +186,7 @@ export class OnboardingModel {
     this.policyStorageKey = deps.policyStorageKey;
     this.applyPolicyFlag = deps.applyPolicyFlag;
     this.writeSetting = deps.writeSetting;
+    this.snapshot = this.publish();
   }
 
   // -- React seam ------------------------------------------------------------
@@ -174,8 +201,33 @@ export class OnboardingModel {
 
   readonly getRevision = (): number => this.revision;
 
+  /** The published snapshot — `useSyncExternalStore(model.subscribe, model.getSnapshot)`. */
+  readonly getSnapshot = (): OnboardingSnapshot => this.snapshot;
+
+  private publish(): OnboardingSnapshot {
+    return {
+      draft: { ...this.draft },
+      birthYear: this.birthYear,
+      dietStyle: this.dietStyle,
+      requestedPaceRaw: this.requestedPaceRaw,
+      currentStep: this.currentStep,
+      progress: this.progress,
+      computedAge: this.computedAge,
+      isDobGateBlocked: this.isDobGateBlocked,
+      dobYears: this.dobYears,
+      paceClamped: this.paceClampedState,
+      targets: this.targetsState,
+      reveal: this.revealState === null ? null : { ...this.revealState },
+      safePolicyWriteError: this.safePolicyWriteErrorState,
+      persistError: this.persistErrorState,
+      finished: this.finishedState,
+      currentDate: this.now(),
+    };
+  }
+
   private touch(): void {
     this.revision += 1;
+    this.snapshot = this.publish();
     for (const listener of [...this.subscribers]) listener();
   }
 
