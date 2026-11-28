@@ -85,6 +85,8 @@ jobs:
           fi
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+          # GITHUB_PATH applies to later steps only; export it for this step's version check.
+          export PATH="$HOME/.maestro/bin:$PATH"
           maestro --version
 
       - name: Run the Maestro flows
