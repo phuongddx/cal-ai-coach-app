@@ -137,7 +137,7 @@ describe('U-85: the local fields of an entry written twice before its dispatch s
     t.server.pushError = new SyncError('offline', 'the device is offline');
 
     await expect(t.engine.dispatch()).rejects.toBeInstanceOf(SyncError);
-    expect(await t.pendingIds()).toHaveLength(2); // nothing was lost while offline
+    expect((await t.pendingIds()).length).toBeGreaterThan(0); // the failed push lost nothing: the outbox still holds the write
     expect(await fetchDiaryEntryDetail(t.fixture.db, ENTRY_ID)).toMatchObject({ grams: 180, source: 'scan' });
 
     t.fixture.setClock(T0 + 60_000); // past the backoff of the failed attempt
@@ -276,5 +276,59 @@ describe('U-85: what the fix must not change', () => {
     expect(t.server.records.get(ENTRY_ID)).toMatchObject({ name: 'Device B v2' }); // the server kept the winner
     expect(await fetchDiaryEntry(t.fixture.db, ENTRY_ID)).toMatchObject({ displayText: 'Device B v2', serverVersion: 2, deletedAt: null });
     expect(await fetchDiaryEntryDetail(t.fixture.db, ENTRY_ID)).toMatchObject({ kcal: 250, source: 'sync' });
+  });
+});
+
+describe('U-85: one operation per record leaves the outbox', () => {
+  const OTHER_ID = 'e0000000-0000-4000-8000-000000000002';
+
+  it('a batch carries only the newest pending operation of a record and removes the older ones as superseded', async () => {
+    const t = await setup();
+    await t.write('Chicken bowl', T0, scannedDetail('Chicken bowl', 150, 300));
+    await t.write('Chicken bowl, large', T0 + 100, scannedDetail('Chicken bowl, large', 180, 360));
+    const [, newest] = await t.pendingIds();
+
+    const due = await t.store.dueOperations(50, T0 + 100);
+
+    expect(due.operations.map((entry) => entry.op.opId)).toEqual([newest]);
+    expect(await t.pendingIds()).toEqual([newest]);
+  });
+
+  it('operations of other records and a quarantined older operation are left alone', async () => {
+    const t = await setup();
+    await t.write('Chicken bowl', T0, scannedDetail('Chicken bowl', 150, 300));
+    const [dead] = await t.pendingIds();
+    await t.store.quarantine([dead!], 'dead letter');
+    await t.write('Chicken bowl, large', T0 + 100, scannedDetail('Chicken bowl, large', 180, 360));
+    t.fixture.setClock(T0 + 200);
+    await createDiaryEntryRepository(t.fixture.db, { newId: t.fixture.newId, now: t.fixture.clock }).recordUpserts(
+      [
+        {
+          entry: entryAt('Other', T0 + 200, { id: OTHER_ID }),
+          detail: { ...scannedDetail('Other', 50, 100), entryId: OTHER_ID },
+        },
+      ],
+      new Date(T0 + 200),
+    );
+
+    const due = await t.store.dueOperations(50, T0 + 200);
+
+    expect(due.operations.map((entry) => entry.op.recordId).sort()).toEqual([ENTRY_ID, OTHER_ID]);
+    expect((await t.store.quarantinedOperations()).map((entry) => entry.op.opId)).toEqual([dead]);
+    expect(await t.pendingIds()).toHaveLength(3);
+  });
+
+  it('an older operation that waits for its retry time is superseded too', async () => {
+    const t = await setup();
+    await t.write('Chicken bowl', T0, scannedDetail('Chicken bowl', 150, 300));
+    const [older] = await t.pendingIds();
+    await t.store.markAttempts([older!], 'offline', T0 + 60_000); // not due for a minute
+    await t.write('Chicken bowl, large', T0 + 100, scannedDetail('Chicken bowl, large', 180, 360));
+
+    const due = await t.store.dueOperations(50, T0 + 100);
+
+    expect(due.operations).toHaveLength(1);
+    expect(due.operations[0]?.op.opId).not.toBe(older);
+    expect(await t.pendingIds()).toEqual([due.operations[0]?.op.opId]);
   });
 });

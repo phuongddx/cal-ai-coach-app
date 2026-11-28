@@ -17,7 +17,7 @@
  * this file maps between the meal wire shape and the Swift tables. The
  * `SyncStore` interface itself is unchanged, so the engine keeps working.
  */
-import { and, asc, eq, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 
 import type { Meal, MealRecord, PullResponse, SyncOperation } from '@coachcal/api-contract';
 import { decodeDiaryEntrySnapshot, type PullResponse as MergePullResponse } from '@coachcal/core';
@@ -203,8 +203,13 @@ export function createSqliteSyncStore(db: Db, options: SqliteSyncStoreOptions = 
      * Swift `dueOps`: FIFO, not quarantined, retry time passed or never set, at most `limit` rows. A row
      * whose snapshot does not decode (or whose table or kind is unsupported) is reported as
      * undecodable instead of being turned into a wire operation.
+     *
+     * One operation per record: before the batch is read, every older pending operation of a record
+     * that has a newer one is removed as superseded (`dropSupersededOperations`), whatever its retry
+     * time and wherever it would fall in the batches.
      */
     async dueOperations(limit, dueAt): Promise<DueBatch> {
+      await dropSupersededOperations(db);
       const rows = await db
         .select()
         .from(pendingOps)
@@ -395,6 +400,58 @@ function undecodableReason(row: typeof pendingOps.$inferSelect): string | null {
     return error instanceof Error ? error.message : 'the snapshot does not decode';
   }
   return null;
+}
+
+/** Ids per `IN (...)` list: far below SQLite's bound-variable limit. */
+const ID_CHUNK = 400;
+
+/**
+ * Removes the pending operations that a newer pending operation of the same record supersedes.
+ *
+ * An operation carries no payload of its own: `outboxEntryForRow` builds the wire meal of EVERY upsert from
+ * the current mirror row, so two pending upserts of one record travel as the same meal with the same
+ * `updatedAt`. The server applies the first and answers the second as a loser (its `updatedAt` is not
+ * greater than the one it just stored), and the acknowledgement of a loser rebuilds the mirror and the
+ * detail row from the wire (grams, confidence, scan id and source are lost). A tombstone behind an upsert,
+ * or an upsert behind a tombstone, has the same shape. The newest operation (the highest rowid: insertion
+ * order, whatever the clock said) already says everything the older ones say, so only it may travel.
+ *
+ * Only operations that are not quarantined and that decode take part: a dead letter stays for the person
+ * to see, an undecodable newer row keeps counting its attempts and never costs a valid older operation
+ * its place. Nothing happens, and no transaction is taken, when no record has two operations.
+ */
+async function dropSupersededOperations(db: Db): Promise<void> {
+  const crowded = db
+    .select({ recordId: pendingOps.recordId })
+    .from(pendingOps)
+    .where(eq(pendingOps.quarantined, false))
+    .groupBy(pendingOps.recordId)
+    .having(sql`count(*) > 1`);
+  const rows = await db
+    .select()
+    .from(pendingOps)
+    .where(and(eq(pendingOps.quarantined, false), inArray(pendingOps.recordId, crowded)))
+    .orderBy(asc(sql`rowid`));
+  if (rows.length === 0) return;
+
+  const byRecord = new Map<string, Array<typeof pendingOps.$inferSelect>>();
+  for (const row of rows) byRecord.set(row.recordId, [...(byRecord.get(row.recordId) ?? []), row]);
+
+  const superseded: string[] = [];
+  for (const group of byRecord.values()) {
+    let newest = -1;
+    group.forEach((row, index) => {
+      if (undecodableReason(row) === null) newest = index;
+    });
+    for (const row of group.slice(0, Math.max(newest, 0))) superseded.push(row.opId);
+  }
+  if (superseded.length === 0) return;
+
+  await inTransaction(db, async (tx) => {
+    for (let start = 0; start < superseded.length; start += ID_CHUNK) {
+      await tx.delete(pendingOps).where(inArray(pendingOps.opId, superseded.slice(start, start + ID_CHUNK)));
+    }
+  });
 }
 
 async function decodableEntries(db: Db, rows: Array<typeof pendingOps.$inferSelect>): Promise<OutboxEntry[]> {
