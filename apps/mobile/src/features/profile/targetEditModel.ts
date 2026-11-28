@@ -60,6 +60,19 @@ export function reclamped(
   };
 }
 
+/**
+ * What the sheet draws, replaced on every edit (never mutated): the React Compiler treats a value
+ * that keeps its identity as unchanged, so the view reads this object, not the model's getters.
+ */
+export interface TargetEditSnapshot {
+  readonly dailyKcal: number;
+  readonly goalWeightKg: number;
+  readonly clampedGoalWeightKg: number;
+  readonly goalClamped: boolean;
+  readonly isFloored: boolean;
+  readonly macros: MacroSplit;
+}
+
 export class TargetEditModel {
   dailyKcal: number;
   goalWeightKg: number;
@@ -67,12 +80,14 @@ export class TargetEditModel {
   private readonly deps: TargetEditModelDeps;
 
   private revision = 0;
+  private snapshot: TargetEditSnapshot;
   private readonly subscribers = new Set<() => void>();
 
   constructor(deps: TargetEditModelDeps) {
     this.deps = deps;
     this.dailyKcal = deps.initial.dailyKcal;
     this.goalWeightKg = deps.initial.goalWeightKg ?? deps.initial.weightKg ?? 70;
+    this.snapshot = this.publish();
   }
   // -- React seam ------------------------------------------------------------
 
@@ -86,8 +101,23 @@ export class TargetEditModel {
 
   readonly getRevision = (): number => this.revision;
 
+  /** The published snapshot — `useSyncExternalStore(model.subscribe, model.getSnapshot)`. */
+  readonly getSnapshot = (): TargetEditSnapshot => this.snapshot;
+
+  private publish(): TargetEditSnapshot {
+    return {
+      dailyKcal: this.dailyKcal,
+      goalWeightKg: this.goalWeightKg,
+      clampedGoalWeightKg: this.clampedGoalWeightKg,
+      goalClamped: this.goalClamped,
+      isFloored: this.isFloored,
+      macros: this.macros(),
+    };
+  }
+
   private touch(): void {
     this.revision += 1;
+    this.snapshot = this.publish();
     for (const listener of [...this.subscribers]) listener();
   }
 

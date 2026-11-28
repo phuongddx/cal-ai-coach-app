@@ -72,6 +72,21 @@ export function hasExportRows(csv: string): boolean {
     });
 }
 
+/**
+ * What the settings screen draws, replaced on every mutation (never mutated): the React Compiler
+ * treats a value that keeps its identity as unchanged, so the view reads this object, not the
+ * model's fields.
+ */
+export interface SettingsSnapshot {
+  readonly wellnessPolicyOn: boolean;
+  readonly burnAddBackOn: boolean;
+  readonly wellnessWriteError: string | null;
+  /** True when the export is prepared and has data rows (the export row is enabled). */
+  readonly exportLoaded: boolean;
+  readonly exportEmpty: boolean;
+  readonly exportShare: ExportShareState;
+}
+
 export class SettingsModel {
   readonly ownerId: string;
   readonly policyStorageKey: string;
@@ -90,6 +105,7 @@ export class SettingsModel {
   private readonly deps: SettingsModelDeps;
 
   private revision = 0;
+  private snapshot: SettingsSnapshot;
   private readonly subscribers = new Set<() => void>();
 
   constructor(deps: SettingsModelDeps) {
@@ -98,6 +114,7 @@ export class SettingsModel {
     this.policyStorageKey = deps.policyStorageKey;
     this.burnAddBackStorageKey = deps.burnAddBackStorageKey;
     this.wellnessPolicyOn = deps.initialPolicyOn;
+    this.snapshot = this.publish();
   }
 
   // -- React seam ------------------------------------------------------------
@@ -112,8 +129,23 @@ export class SettingsModel {
 
   readonly getRevision = (): number => this.revision;
 
+  /** The published snapshot — `useSyncExternalStore(model.subscribe, model.getSnapshot)`. */
+  readonly getSnapshot = (): SettingsSnapshot => this.snapshot;
+
+  private publish(): SettingsSnapshot {
+    return {
+      wellnessPolicyOn: this.wellnessPolicyOn,
+      burnAddBackOn: this.burnAddBackOn,
+      wellnessWriteError: this.wellnessWriteError,
+      exportLoaded: this.exportedCsv !== null && !this.exportEmpty,
+      exportEmpty: this.exportEmpty,
+      exportShare: this.exportShare,
+    };
+  }
+
   private touch(): void {
     this.revision += 1;
+    this.snapshot = this.publish();
     for (const listener of [...this.subscribers]) listener();
   }
 
