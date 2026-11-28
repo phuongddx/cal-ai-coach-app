@@ -45,7 +45,9 @@ function makeModel(overrides: Partial<OnboardingModelDeps> = {}): OnboardingMode
   return createOnboardingModel({
     ownerId: '11111111-2222-4333-8444-555555555555',
     now: () => FIXED_NOW,
-    disableAnimations: true,
+    policyStorageKey: 'onboarding.policy.key',
+    applyPolicyFlag: jest.fn(),
+    writeSetting: jest.fn(async () => undefined),
     saveTarget: jest.fn(async () => undefined),
     notify: jest.fn(),
     requestHealthAccess: jest.fn(async () => 'denied'),
@@ -174,8 +176,8 @@ describe('OnboardingContractTests (twin)', () => {
   });
 });
 
-// Brief additions beyond the 8 Swift twins: the step order over the typed list,
-// and the granted / denied HealthKit paths of the privacy screen.
+  // Brief additions beyond the 8 Swift twins: the step order over the typed list,
+  // and the granted / denied HealthKit paths of the privacy screen.
 describe('onboarding model (brief additions)', () => {
   it('advances through the nine steps in the locked order and lands on plan reveal', () => {
     const model = makeModel();
@@ -202,10 +204,38 @@ describe('onboarding model (brief additions)', () => {
       'generating',
     ]);
     model.finishGenerationForTesting();
+    // Stage A2 (decision 2): the generating step holds — the computed reveal
+    // does not advance the path by itself.
+    expect(model.path[model.path.length - 1]).toBe('generating');
+    expect(model.reveal).not.toBeNull();
+    // seePlan is the only way past: it lands the reveal and is a no-op after.
+    model.seePlan();
     expect(model.path[model.path.length - 1]).toBe('planReveal');
+    model.seePlan();
+    expect(model.path).toHaveLength(9);
     // advance() past the reveal is a no-op: the flow ends there.
     model.advance();
     expect(model.path).toHaveLength(9);
+  });
+
+  it('the pace segment keeps the picked option and stores the engine value', () => {
+    const model = makeModel();
+    // The default request is Steady (0.5), today's default.
+    expect(model.requestedPaceRaw).toBe(0.5);
+    // The engine clamps 0.5 to 0.45 for the default draft, and the stored
+    // value is the engine's — one of today's values.
+    model.setPace(0.5);
+    expect(model.requestedPaceRaw).toBe(0.5);
+    expect(model.draft.requestedPaceKgPerWeek).toBe(0.45);
+    expect(model.paceClamped).toBe(true);
+    // The other two options store their engine values too.
+    model.setPace(0.25);
+    expect(model.requestedPaceRaw).toBe(0.25);
+    expect(model.draft.requestedPaceKgPerWeek).toBe(0.25);
+    model.setPace(1.0);
+    expect(model.requestedPaceRaw).toBe(1.0);
+    // 1.0 clamps to the safe supported pace for the default draft.
+    expect(model.draft.requestedPaceKgPerWeek).toBe(0.45);
   });
 
   it('the granted HealthKit path shows no footnote and lets the user continue', async () => {
@@ -274,6 +304,74 @@ describe('onboarding model (brief additions)', () => {
     expect(model.finished).toBe(false);
     expect(model.persistError).toBe(onboardingCopy.persistError);
     expect(notify).not.toHaveBeenCalled();
+  });
+});
+
+// U-73: the step-7 ED-Safe switch. The stored key and the design flag setter
+// are injected; the toggle's contract is the Settings wellness toggle's order —
+// persist '1'/'0' first, then apply the mode, and a failed write never applies.
+describe('the step-7 ED-safe policy switch', () => {
+  it('persists the stored value first and then applies the mode', async () => {
+    const writeSetting = jest.fn(async () => undefined);
+    const applyPolicyFlag = jest.fn();
+    const model = makeModel({ policyStorageKey: 'onboarding.policy.key', writeSetting, applyPolicyFlag });
+
+    await model.setSafeModePolicy(true);
+    expect(writeSetting).toHaveBeenCalledWith('onboarding.policy.key', '1');
+    // The design flag applies only after the stored write resolves.
+    expect(applyPolicyFlag.mock.invocationCallOrder[0] ?? 0).toBeGreaterThan(
+      writeSetting.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(applyPolicyFlag).toHaveBeenCalledWith(true);
+    expect(model.safePolicyWriteError).toBeNull();
+
+    await model.setSafeModePolicy(false);
+    expect(writeSetting).toHaveBeenLastCalledWith('onboarding.policy.key', '0');
+    expect(applyPolicyFlag).toHaveBeenLastCalledWith(false);
+  });
+
+  it('a failed stored write never applies the mode', async () => {
+    const writeSetting = jest.fn(async () => {
+      throw new Error('disk full');
+    });
+    const applyPolicyFlag = jest.fn();
+    const model = makeModel({ policyStorageKey: 'onboarding.policy.key', writeSetting, applyPolicyFlag });
+
+    await expect(model.setSafeModePolicy(true)).rejects.toThrow('disk full');
+    expect(applyPolicyFlag).not.toHaveBeenCalled();
+    expect(model.safePolicyWriteError).toBe('disk full');
+  });
+});
+
+describe('the typed fields clamp on blur (the wheels\' ranges)', () => {
+  it('height 250 clamps to 220 and 9 clamps to 120 through the model', () => {
+    const model = makeModel();
+    expect(model.clampHeightCm(250)).toBe(220);
+    expect(model.draft.heightCm).toBe(220);
+    expect(model.clampHeightCm(9)).toBe(120);
+    expect(model.draft.heightCm).toBe(120);
+  });
+
+  it('weight 35 and 200 stay and goal weight 40 and 150 stay on their bounds', () => {
+    const model = makeModel();
+    expect(model.clampWeightKg(35)).toBe(35);
+    expect(model.clampWeightKg(200)).toBe(200);
+    expect(model.clampGoalWeightKg(40)).toBe(40);
+    expect(model.clampGoalWeightKg(150)).toBe(150);
+    expect(model.draft.weightKg).toBe(200);
+    expect(model.draft.goalWeightKg).toBe(150);
+  });
+
+  it('a value inside a range is untouched and typing never clamps', () => {
+    const model = makeModel();
+    expect(model.clampHeightCm(172)).toBe(172);
+    expect(model.clampWeightKg(80.6)).toBe(80.6);
+    expect(model.clampGoalWeightKg(72)).toBe(72);
+    // The typing writes stay raw: only the blur clamp bounds a value.
+    model.setHeightCm(250);
+    expect(model.draft.heightCm).toBe(250);
+    model.setGoalWeightKg(250);
+    expect(model.draft.goalWeightKg).toBe(250);
   });
 });
 

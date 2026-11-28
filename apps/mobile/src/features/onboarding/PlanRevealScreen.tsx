@@ -2,9 +2,13 @@
  * PlanRevealView.swift — the daily target, macro rings, weekly range and the
  * edit panel. Every reveal edit funnels back through the engine (floors
  * re-clamp, macros re-derive); Continue persists and hands off to the Today
- * tab. The kcal hero and the weekly range hide in ED-safe mode through the
- * design system's EdSafeCollapse (invariant I7: the policy branch lives in the
- * design component, never in the feature).
+ * tab. U-73 moves the reveal onto the design system's EmberCard (the frame's
+ * dark-in-both-schemes hero card, emberText tokens for the number). The kcal
+ * hero — now the whole ember card — and the weekly range hide in ED-safe mode
+ * through EdSafeCollapse (invariant I7: the policy branch lives in the design
+ * component, never in the feature). The frame's ring-on-card, the macro rows
+ * on the card, the "Goal" row, the "Free scans" row and the paywall hand-off
+ * are decisions/follow-ups recorded in findings U-73.
  */
 
 import { useState } from 'react';
@@ -14,6 +18,7 @@ import {
   BannerNote,
   Card,
   EdSafeCollapse,
+  EmberCard,
   PrimaryButton,
   ScaledNumber,
   SecondaryButton,
@@ -24,6 +29,7 @@ import {
 } from '../../design';
 
 import { onboardingCopy } from './onboardingCopy';
+import { grouped } from './format';
 import { MacroRing } from './MacroRing';
 import { useOnboardingModel } from './useOnboardingModel';
 import type { MacroAxis, OnboardingModel } from './onboardingModel';
@@ -57,14 +63,18 @@ export function PlanRevealScreen({ model, onFinished }: PlanRevealScreenProps) {
           </Text>
           {reveal !== null && (
             <>
-              {/* The hero collapses under ED-safe mode (the Swift hero is .edSafeHidden()). */}
+              {/* The hero collapses under ED-safe mode together with its ember card
+                  (the Swift hero carries the design system's hide modifier); the design
+                  component owns the branch. */}
               <EdSafeCollapse>
-                <View accessible accessibilityLabel={`${reveal.dailyKcal} calories per day`} style={styles.hero}>
-                  <View testID="plan.kcalHero">
-                    <ScaledNumber text={`${reveal.dailyKcal}`} role="planNumber" style={{ color: colors.textPrimary }} />
+                <EmberCard>
+                  <View accessible accessibilityLabel={`${reveal.dailyKcal} calories per day`} style={styles.hero}>
+                    <View testID="plan.kcalHero">
+                      <ScaledNumber text={`${reveal.dailyKcal}`} role="planNumber" style={{ color: colors.emberText }} />
+                    </View>
+                    <Text style={[styles.subtitle, { color: colors.emberText2 }]}>calories per day</Text>
                   </View>
-                  <Text style={[styles.subtitle, { color: colors.textSecondary }]}>calories per day</Text>
-                </View>
+                </EmberCard>
               </EdSafeCollapse>
               <View style={styles.rings}>
                 <MacroRing
@@ -95,7 +105,7 @@ export function PlanRevealScreen({ model, onFinished }: PlanRevealScreenProps) {
               <Card>
                 <View style={styles.weeklyBlock}>
                   <Text style={[styles.headline, { color: colors.textPrimary }]}>Weekly range</Text>
-                  {/* The range line collapses under ED-safe mode; the card, headline and caption stay (the Swift .edSafeHidden() sits on the range Text). */}
+                  {/* The range line collapses under ED-safe mode; the card, headline and caption stay (the Swift hide modifier sits on the range Text). */}
                   <EdSafeCollapse>
                     <Text
                       testID="plan.weeklyRange"
@@ -123,13 +133,18 @@ export function PlanRevealScreen({ model, onFinished }: PlanRevealScreenProps) {
                     { backgroundColor: colors.card, borderColor: colors.border },
                   ]}
                 >
-                  <EditRow
-                    label="Daily calories"
-                    value={`${reveal.dailyKcal}`}
-                    identifier="plan.editKcal"
-                    decrement={() => model.adjustRevealKcal(-50)}
-                    increment={() => model.adjustRevealKcal(50)}
-                  />
+                  {/* ED-safe hides kcal only (the decision): the kcal edit row
+                      collapses through the design component (invariant I7);
+                      the macro grams stay editable and visible. */}
+                  <EdSafeCollapse>
+                    <EditRow
+                      label="Daily calories"
+                      value={`${reveal.dailyKcal}`}
+                      identifier="plan.editKcal"
+                      decrement={() => model.adjustRevealKcal(-50)}
+                      increment={() => model.adjustRevealKcal(50)}
+                    />
+                  </EdSafeCollapse>
                   <EditRow
                     label="Protein"
                     value={`${reveal.proteinG} g`}
@@ -233,17 +248,6 @@ function StepButton({
       <Text style={[styles.stepSymbol, { color: colors.textPrimary }]}>{symbol}</Text>
     </Pressable>
   );
-}
-
-/** en-US comma grouping without Intl (Hermes-safe): 11900 → "11,900". */
-function grouped(value: number): string {
-  const digits = Math.round(Math.max(value, 0)).toString();
-  let groupedText = '';
-  for (let index = 0; index < digits.length; index += 1) {
-    if (index > 0 && (digits.length - index) % 3 === 0) groupedText += ',';
-    groupedText += digits[index];
-  }
-  return groupedText;
 }
 
 const styles = StyleSheet.create({

@@ -20,6 +20,9 @@ const LEVELS: ReadonlyArray<{ level: ActivityLevel; title: string; subtitle: str
   { level: 'athlete', title: 'Athlete', subtitle: 'Training most days, high intensity', icon: 'trophy.fill' },
 ];
 
+/** Shared with the generating step's formula line (the level's display title). */
+export { LEVELS };
+
 const DIET_STYLES = ['Standard', 'High protein', 'Vegetarian', 'Vegan', 'Keto'] as const;
 
 export function ActivityDietScreen({ model }: { model: OnboardingModel }) {

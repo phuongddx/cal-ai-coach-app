@@ -9,6 +9,8 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton, ProgressRail, space, typography, useTokens } from '../../design';
 
+import { QUIZ_STEP_COUNT } from './onboardingModel';
+
 export type StepScaffoldProps = {
   title: string;
   subtitle?: string;
@@ -31,9 +33,13 @@ export function StepScaffold({
   children,
 }: StepScaffoldProps) {
   const { colors } = useTokens();
+  // The frame's caption over the rail: "Step N of 9" (the rail fills up to the
+  // current quiz position, so the same number names the step).
+  const stepNumber = Math.round(progress * QUIZ_STEP_COUNT);
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <View style={styles.rail}>
+        <Text style={[styles.stepCaption, { color: colors.text2 }]}>Step {stepNumber} of 9</Text>
         <ProgressRail progress={progress} />
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
@@ -61,7 +67,15 @@ export function StepScaffold({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  rail: { paddingHorizontal: space.lg, paddingTop: space.xs },
+  rail: {
+    gap: space.sm,
+    paddingHorizontal: space.lg,
+    paddingTop: space.xs,
+  },
+  stepCaption: {
+    ...typography.footnote,
+    fontWeight: '600',
+  },
   scrollContent: { flexGrow: 1 },
   inner: {
     gap: space.xl2,
