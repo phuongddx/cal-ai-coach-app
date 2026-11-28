@@ -93,11 +93,11 @@ Added, with the reason:
 | `coach.seeDays.<kind>` | the "See the days" action row of an insight card | U-75 new behavior (frame 12); `<kind>` is the seeded insight kind (streak, protein render with the seed; hydration holds no days and shows no row) |
 | `coach.dayList` | the expanded local day list under the card | U-75 new behavior (frame 12) |
 
-Removed: none. Every identifier of U-40 survives with the same string. Placement moves, same
-string: `chart-card` now rides on the feature chart root (`screens/WeightChart.tsx`) and
-`badge-tile:<name>` on the feature badge tiles (`screens/AchievementsView.tsx`) — both because the
-design-system components (`ChartCard`, `BadgeTile`) lack the Ember shape and `src/design` is
-read-only for this unit (findings U-75, "Needs a design component"). `progress.logWeight`,
-`progress.saveWeight`, `progress.closeWeightSheet`, `streak-card`, `weekly-review-stats`,
-`weekly-stat:<id>` and `insight-card:<variant>` are unchanged on their DS components or wrapper
+Removed: none. Every identifier of U-40 survives with the same string. Placement after stage A2
+(findings U-75, section 8): `chart-card` rides on the root of the design `TrendChart` through its
+`testID` prop (`screens/WeightTrendView.tsx`; the private `WeightChart.tsx` is gone),
+`badge-tile:<name>` on the design `BadgeTile` (`screens/AchievementsView.tsx`) and
+`insight-card:<variant>` on the design `InsightCard` (`features/coach/screens/CoachView.tsx`).
+`progress.logWeight`, `progress.saveWeight`, `progress.closeWeightSheet`, `streak-card`,
+`weekly-review-stats` and `weekly-stat:<id>` are unchanged on their DS components or wrapper
 Views.
