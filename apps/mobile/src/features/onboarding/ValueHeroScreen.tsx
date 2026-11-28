@@ -16,11 +16,9 @@ import { SymbolView } from 'expo-symbols';
 import { EdSafeCollapse, PrimaryButton, radius, space, typography, useTokens, withAlpha } from '../../design';
 
 import { onboardingCopy } from './onboardingCopy';
-import { useOnboardingModel } from './useOnboardingModel';
 import type { OnboardingModel } from './onboardingModel';
 
 export function ValueHeroScreen({ model }: { model: OnboardingModel }) {
-  useOnboardingModel(model);
   const { colors } = useTokens();
   return (
     <View style={[styles.root, { backgroundColor: colors.ember }]}>

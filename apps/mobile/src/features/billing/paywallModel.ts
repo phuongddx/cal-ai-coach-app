@@ -42,6 +42,15 @@ export interface PaywallModelDeps {
   purchase: (optionId: string) => Promise<void>;
 }
 
+/**
+ * What the paywall draws, replaced on every mutation (never mutated): the React Compiler treats a
+ * value that keeps its identity as unchanged, so the view reads this object, not the model's fields.
+ */
+export interface PaywallSnapshot {
+  readonly state: PaywallState;
+  readonly restoreError: string | null;
+}
+
 export class PaywallModel {
   state: PaywallState = { kind: 'loading' };
 
@@ -51,10 +60,12 @@ export class PaywallModel {
   private readonly deps: PaywallModelDeps;
 
   private revision = 0;
+  private snapshot: PaywallSnapshot;
   private readonly subscribers = new Set<() => void>();
 
   constructor(deps: PaywallModelDeps) {
     this.deps = deps;
+    this.snapshot = this.publish();
   }
 
   // -- React seam ------------------------------------------------------------
@@ -69,8 +80,16 @@ export class PaywallModel {
 
   readonly getRevision = (): number => this.revision;
 
+  /** The published snapshot — `useSyncExternalStore(model.subscribe, model.getSnapshot)`. */
+  readonly getSnapshot = (): PaywallSnapshot => this.snapshot;
+
+  private publish(): PaywallSnapshot {
+    return { state: this.state, restoreError: this.restoreError };
+  }
+
   private touch(): void {
     this.revision += 1;
+    this.snapshot = this.publish();
     for (const listener of [...this.subscribers]) listener();
   }
 

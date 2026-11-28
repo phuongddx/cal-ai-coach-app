@@ -6,6 +6,7 @@
  * progress-photos row (ENG2-01 is v2 — the planner choice renders the row
  * disabled). The tile keeps BadgeTile's testID and accessibility label.
  */
+import { useSyncExternalStore } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
@@ -58,7 +59,7 @@ export function badgeIcon(code: string, isLocked: boolean): IconName {
 
 export function AchievementsView({ model }: AchievementsViewProps) {
   const { space } = useTokens();
-  const { streak, badges } = model.getSnapshot();
+  const { streak, badges } = useSyncExternalStore(model.subscribe, model.getSnapshot, model.getSnapshot);
 
   const earned = badges.filter((badge) => badge.earnedAt !== null);
   const locked = badges.filter((badge) => badge.earnedAt === null);

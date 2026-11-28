@@ -4,6 +4,7 @@
  * UI flow (Mila Punch, 120 kcal).
  */
 import { fireEvent, render, screen, userEvent, waitFor, within } from '@testing-library/react-native';
+import { setEdSafeMode } from '../../../design';
 
 import type { CatalogRepository, CustomFood } from '../../../data/repos/catalogRepository';
 import { CustomFoodSheet } from '../screens/CustomFoodSheet';
@@ -30,6 +31,10 @@ async function renderSheet(catalog = makeCatalog(), onCreated = jest.fn(), onDis
   return { catalog, onCreated, onDismiss };
 }
 
+afterEach(() => {
+  setEdSafeMode(false);
+});
+
 describe('CustomFoodSheet screen', () => {
   it('the sheet shows the fields and the basis chips, per-100g selected first', async () => {
     await renderSheet();
@@ -42,12 +47,40 @@ describe('CustomFoodSheet screen', () => {
     expect(screen.getByTestId('custom.carbsField')).toBeOnTheScreen();
     expect(screen.getByTestId('custom.fatField')).toBeOnTheScreen();
     expect(screen.getByTestId('custom.fiberField')).toBeOnTheScreen();
+    expect(screen.queryByText('Advanced')).toBeNull();
     expect(
       within(screen.getByTestId('custom.basis.per100g')).getByRole('button').props.accessibilityState.selected,
     ).toBe(true);
     expect(screen.getByTestId('custom.basis.per_serving')).toBeOnTheScreen();
     // The serving grams field belongs to the per-serving basis only.
     expect(screen.queryByTestId('custom.servingGramsField')).toBeNull();
+  });
+
+  it('the nutrition fields fold into the Advanced group in the ED-safe mode and unfold with it', async () => {
+    setEdSafeMode(true);
+    await renderSheet();
+
+    // Collapsed by default: the nutrition fields are folded away, name and serving stay.
+    expect(screen.queryByTestId('custom.kcalField')).toBeNull();
+    expect(screen.queryByTestId('custom.proteinField')).toBeNull();
+    expect(screen.getByTestId('custom.nameField')).toBeOnTheScreen();
+    expect(screen.getByText('Advanced')).toBeOnTheScreen();
+    expect(screen.getByText('Name and serving only.')).toBeOnTheScreen();
+    expect(screen.getByText('Nutrition fields fold into \u201CAdvanced\u201D, collapsed.')).toBeOnTheScreen();
+
+    // Unfolding reveals the fields; the identifiers stay on them.
+    await userEvent.press(screen.getByText('Advanced'));
+    expect(await screen.findByTestId('custom.kcalField')).toBeOnTheScreen();
+    expect(screen.getByTestId('custom.proteinField')).toBeOnTheScreen();
+    expect(screen.getByTestId('custom.fiberField')).toBeOnTheScreen();
+    expect(
+      screen.getByText('Advanced').parent?.props.accessibilityState?.expanded,
+    ).toBe(true);
+
+    // The mode off returns the flat fields and removes the group.
+    setEdSafeMode(false);
+    await waitFor(() => expect(screen.queryByText('Advanced')).toBeNull());
+    expect(screen.getByTestId('custom.kcalField')).toBeOnTheScreen();
   });
 
   it('the per-serving basis reveals the serving grams field', async () => {

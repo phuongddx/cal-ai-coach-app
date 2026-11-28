@@ -41,7 +41,7 @@ export type TargetEditSheetProps = {
 const GOAL_WEIGHT_ITEMS = Array.from({ length: 111 }, (_, index) => index + 40);
 
 export function TargetEditSheet({ model, onDismiss }: TargetEditSheetProps) {
-  useSyncExternalStore(model.subscribe, model.getRevision);
+  const snapshot = useSyncExternalStore(model.subscribe, model.getSnapshot);
   const { colors } = useTokens();
   const [saving, setSaving] = useState(false);
 
@@ -55,9 +55,9 @@ export function TargetEditSheet({ model, onDismiss }: TargetEditSheetProps) {
     }
   }
 
-  const macros = model.macros();
-  const saveTitle = model.goalClamped
-    ? `Save ${model.clampedGoalWeightKg} kg goal`
+  const { macros } = snapshot;
+  const saveTitle = snapshot.goalClamped
+    ? `Save ${snapshot.clampedGoalWeightKg} kg goal`
     : 'Save goal';
 
   return (
@@ -93,7 +93,7 @@ export function TargetEditSheet({ model, onDismiss }: TargetEditSheetProps) {
                   testID="settings.targetEdit.kcal"
                   style={[styles.kcalValue, { color: colors.accentInk }]}
                 >
-                  {`${grouped(model.dailyKcal)} kcal`}
+                  {`${grouped(snapshot.dailyKcal)} kcal`}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
@@ -109,7 +109,7 @@ export function TargetEditSheet({ model, onDismiss }: TargetEditSheetProps) {
             <Text style={[typography.footnote, { color: colors.textSecondary }]}>
               {`Protein ${macros.proteinG} g · Carbs ${macros.carbsG} g · Fat ${macros.fatG} g`}
             </Text>
-            {model.isFloored && (
+            {snapshot.isFloored && (
               <View testID="settings.targetEdit.safetyFloor">
                 <BannerNote text={onboardingCopy.safetyFloorBanner} variant="success" markdown />
               </View>
@@ -117,7 +117,7 @@ export function TargetEditSheet({ model, onDismiss }: TargetEditSheetProps) {
           </View>
         </EdSafeCollapse>
 
-        {model.goalClamped && (
+        {snapshot.goalClamped && (
           <View testID="settings.targetEdit.goalFloor" style={styles.goalFloor}>
             {/* The engine's flat clamp, shown with the design system's caution
                 banner — the height-based floor of the frame is an engine change
@@ -125,7 +125,7 @@ export function TargetEditSheet({ model, onDismiss }: TargetEditSheetProps) {
             <BannerNote
               variant="caution"
               markdown
-              text={goalFloorCopy(model.goalWeightKg, model.clampedGoalWeightKg)}
+              text={goalFloorCopy(snapshot.goalWeightKg, snapshot.clampedGoalWeightKg)}
             />
           </View>
         )}
@@ -134,7 +134,7 @@ export function TargetEditSheet({ model, onDismiss }: TargetEditSheetProps) {
           <WheelField<number>
             label="Goal weight"
             items={GOAL_WEIGHT_ITEMS}
-            selection={Math.round(model.goalWeightKg)}
+            selection={Math.round(snapshot.goalWeightKg)}
             onSelectionChange={(kg) => model.setGoalWeight(kg)}
             displayText={(kg) => `${kg} kg`}
           />

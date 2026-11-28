@@ -5,9 +5,16 @@
  */
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
 
-import { PrimaryButton, Sheet, useTokens } from '../../../design';
+import {
+  EdSafeCollapse,
+  EdSafeNote,
+  Icon,
+  PrimaryButton,
+  Sheet,
+  SheetHeader,
+  useTokens,
+} from '../../../design';
 
 import type { DiaryDayModel } from '../diaryDayModel';
 
@@ -42,18 +49,7 @@ export function ExerciseLogSheet({ model, onDismiss }: ExerciseLogSheetProps) {
 
   return (
     <Sheet>
-      <View style={styles.header}>
-        <Text style={[typography.heading, { color: colors.textPrimary }]}>Add exercise</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          testID="exercise.close"
-          onPress={onDismiss}
-          style={styles.closeButton}
-        >
-          <SymbolView name="xmark" size={14} weight="semibold" tintColor={colors.textSecondary} />
-        </Pressable>
-      </View>
+      <SheetHeader title="Add exercise" onClose={onDismiss} testID="exercise" />
 
       <TextInput
         value={type}
@@ -66,7 +62,7 @@ export function ExerciseLogSheet({ model, onDismiss }: ExerciseLogSheetProps) {
           typography.body,
           {
             color: colors.textPrimary,
-            backgroundColor: colors.surface,
+            backgroundColor: colors.fill,
             borderColor: colors.border,
             borderRadius: radius.md,
             paddingVertical: space.md,
@@ -77,26 +73,30 @@ export function ExerciseLogSheet({ model, onDismiss }: ExerciseLogSheetProps) {
 
       <DurationStepper value={durationMin} onValueChange={setDurationMin} />
 
-      <TextInput
-        value={kcalText}
-        onChangeText={setKcalText}
-        placeholder="Calories burned (optional)"
-        placeholderTextColor={colors.textTertiary}
-        keyboardType="number-pad"
-        testID="exercise.kcalField"
-        style={[
-          styles.field,
-          typography.body,
-          {
-            color: colors.textPrimary,
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-            borderRadius: radius.md,
-            paddingVertical: space.md,
-            paddingHorizontal: space.lg,
-          },
-        ]}
-      />
+      <EdSafeCollapse>
+        <TextInput
+          value={kcalText}
+          onChangeText={setKcalText}
+          placeholder="Calories burned (optional)"
+          placeholderTextColor={colors.textTertiary}
+          keyboardType="number-pad"
+          testID="exercise.kcalField"
+          style={[
+            styles.field,
+            typography.body,
+            {
+              color: colors.textPrimary,
+              backgroundColor: colors.fill,
+              borderColor: colors.border,
+              borderRadius: radius.md,
+              paddingVertical: space.md,
+              paddingHorizontal: space.lg,
+            },
+          ]}
+        />
+      </EdSafeCollapse>
+
+      <EdSafeNote title="Activity and minutes only." body="Burned kcal is hidden." />
 
       <View testID="exercise.save">
         <PrimaryButton title="Save" action={save} disabled={!canSave} />
@@ -130,26 +130,24 @@ function DurationStepper({
         accessibilityRole="button"
         testID="ccstepper.decrement"
         onPress={() => onValueChange(clamp(value - DURATION_STEP))}
-        style={[styles.stepButton, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.sm }]}
+        style={[styles.stepButton, { backgroundColor: colors.fill, borderColor: colors.border, borderRadius: radius.sm }]}
       >
-        <SymbolView name="minus" size={16} weight="semibold" tintColor={colors.textPrimary} />
+        <Icon name="minus" size={16} color={colors.textPrimary} />
       </Pressable>
       <Text style={[styles.durationValue, { color: colors.textPrimary }]}>{`${value} min`}</Text>
       <Pressable
         accessibilityRole="button"
         testID="ccstepper.increment"
         onPress={() => onValueChange(clamp(value + DURATION_STEP))}
-        style={[styles.stepButton, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.sm }]}
+        style={[styles.stepButton, { backgroundColor: colors.fill, borderColor: colors.border, borderRadius: radius.sm }]}
       >
-        <SymbolView name="plus" size={16} weight="semibold" tintColor={colors.textPrimary} />
+        <Icon name="plus" size={16} color={colors.textPrimary} />
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center' },
-  closeButton: { marginLeft: 'auto', width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   field: { borderWidth: 1 },
   durationRow: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 8 },
   stepButton: { width: 32, height: 32, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },

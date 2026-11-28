@@ -85,7 +85,7 @@ describe('OnboardingContractTests (twin)', () => {
   // OnboardingContractTests.testUnder18DobGateBlocksContinueAndShowsVerbatimFootnote
   it('under-18 DOB gate blocks continue and shows verbatim footnote', async () => {
     const model = makeModel();
-    model.birthYear = 2014;
+    model.setBirthYear(2014);
     // A 12-year-old must trip the DOB gate.
     expect(model.isDobGateBlocked).toBe(true);
 
@@ -102,7 +102,7 @@ describe('OnboardingContractTests (twin)', () => {
   // OnboardingContractTests.testAdultDobAllowsContinue
   it('adult DOB allows continue', () => {
     const model = makeModel();
-    model.birthYear = 1995;
+    model.setBirthYear(1995);
     expect(model.isDobGateBlocked).toBe(false);
     model.advance(); // value hero → goal
     model.advance(); // goal → body metrics

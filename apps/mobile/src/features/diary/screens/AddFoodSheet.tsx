@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
-import { QuickActionTile, SectionHeader, Sheet, useTokens, useEdSafeHidden } from '../../../design';
+import { EdSafeCollapse, QuickActionTile, SectionHeader, Sheet, SheetHeader, useTokens } from '../../../design';
 
 import { mealName } from '../diaryMath';
 import type { ScanMode } from '../addFoodModel';
@@ -45,27 +45,13 @@ export function AddFoodSheet({
   onDismiss,
 }: AddFoodSheetProps) {
   const { colors, space, radius, typography } = useTokens();
-  const kcalHidden = useEdSafeHidden();
 
   return (
     <Sheet>
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={[typography.heading, { color: colors.textPrimary }]}>Add food</Text>
-          <Text style={[typography.footnote, { color: colors.textSecondary }]}>
-            {`to ${mealName(mealSlot)}`}
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          testID="addfood.close"
-          onPress={onDismiss}
-          style={styles.closeButton}
-        >
-          <SymbolView name="xmark" size={14} weight="semibold" tintColor={colors.textSecondary} />
-        </Pressable>
-      </View>
+      <SheetHeader title="Add food" onClose={onDismiss} testID="addfood" />
+      <Text style={[typography.footnote, { color: colors.textSecondary }]}>
+        {`to ${mealName(mealSlot)}`}
+      </Text>
 
       <View style={styles.tileGrid}>
         {TILES.map((tile) => (
@@ -132,11 +118,11 @@ export function AddFoodSheet({
               >
                 {meal.name}
               </Text>
-              {!kcalHidden && (
+              <EdSafeCollapse>
                 <Text style={[typography.caption, { color: colors.textSecondary }]}>
                   {`${meal.kcal} kcal`}
                 </Text>
-              )}
+              </EdSafeCollapse>
             </Pressable>
           ))}
         </ScrollView>
@@ -224,6 +210,12 @@ export function AddFoodSheetRoute({
           now={deps.now}
           newId={deps.newId}
           catalog={deps.catalog}
+          onDescribe={() => {
+            // The describe escape: close the sheets, then the scan hand-over in text mode.
+            setIsSearchPresented(false);
+            onDismiss();
+            onCapture('text');
+          }}
           onSaved={onSaved}
           onDismiss={() => setIsSearchPresented(false)}
         />
@@ -233,9 +225,6 @@ export function AddFoodSheetRoute({
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'flex-start' },
-  headerText: { flex: 1, gap: 2 },
-  closeButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tileCell: { width: '31%', flexGrow: 1 },
   emptyCard: {

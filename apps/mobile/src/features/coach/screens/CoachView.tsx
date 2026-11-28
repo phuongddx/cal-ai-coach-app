@@ -61,8 +61,11 @@ export function insightDayLabel(day: string): string {
 
 export function CoachView({ model, greeting: greetingText }: CoachViewProps) {
   const { colors, space, typography: type } = useTokens();
-  useSyncExternalStore(model.subscribe, model.getSnapshot, model.getSnapshot);
-  const { insights, insightDays } = model.getSnapshot();
+  const { insights, insightDays, weekStats, targetKcal } = useSyncExternalStore(
+    model.subscribe,
+    model.getSnapshot,
+    model.getSnapshot,
+  );
 
   return (
     <ScrollView style={[styles.root, { backgroundColor: colors.background }]} contentContainerStyle={[styles.content, { gap: space.md }]}>
@@ -71,7 +74,7 @@ export function CoachView({ model, greeting: greetingText }: CoachViewProps) {
         <Text style={[type.title, { color: colors.text }]}>Coach</Text>
       </View>
 
-      <WeeklyReviewCard stats={model.getSnapshot().weekStats} targetKcal={model.getSnapshot().targetKcal} />
+      <WeeklyReviewCard stats={weekStats} targetKcal={targetKcal} />
 
       {insights.length > 0 && (
         <>

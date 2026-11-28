@@ -7,7 +7,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 
 import { getSessionStore } from '../data/auth';
 import { createDiaryDetailRepository } from '../data/repos/diaryDetailRepository';
@@ -59,7 +59,16 @@ function makeRuntimeSubscribe(): DiaryDeps['subscribe'] {
 
 export default function DiaryScreen() {
   const params = useLocalSearchParams<{ date?: string }>();
+  const navigation = useNavigation();
   const [session, setSession] = useState<DiarySession | null>(null);
+
+  // The frame's detents (medium + large) are a native sheet option, so they
+  // belong here in the route file, not in the view (U-71 findings). The sheet
+  // expands to the large detent after opening — the frame (10) draws it large;
+  // the medium detent stays draggable.
+  useEffect(() => {
+    navigation.setOptions({ sheetAllowedDetents: [0.5, 1], sheetInitialDetentIndex: 1 });
+  }, [navigation]);
 
   useEffect(() => {
     let mounted = true;

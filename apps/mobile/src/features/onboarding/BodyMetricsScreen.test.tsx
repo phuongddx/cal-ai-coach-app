@@ -32,7 +32,7 @@ function makeModel(birthYear = 1995) {
     notify: jest.fn(),
     requestHealthAccess: jest.fn(async () => 'denied'),
   });
-  model.birthYear = birthYear;
+  model.setBirthYear(birthYear);
   return model;
 }
 

@@ -7,13 +7,61 @@
  * write the injected `notify` fans out before the model re-reads itself.
  */
 import { fetchDiaryEntry } from '../../data/repos/diaryEntryRepository';
+import type { DiaryEntry, DiaryEntryDetail } from '../../data/repos/diaryEntryRepository';
 
 import type { DiaryDeps } from './deps';
-import { dayString } from './diaryMath';
-import { createDiaryDayLoader, type DiaryDayExercise, type DiaryDaySection, type DiaryDaySnapshotData } from './diarySnapshot';
+import { dayString, manualKcal } from './diaryMath';
+import { cancelTombstoneAndRestore, createDiaryDayLoader, type DiaryDayExercise, type DiaryDaySection, type DiaryDaySnapshotData } from './diarySnapshot';
 
-export type DiaryDaySnapshot = DiaryDaySnapshotData;
+/**
+ * What the day sheet draws, published whole and replaced on every change (never mutated): the
+ * loaded rows plus the values derived from them. The view reads this and nothing else — a value
+ * the view asks the model for in render keeps its identity under the React Compiler and freezes
+ * (U-84); a snapshot that is replaced does not.
+ */
+export type DiaryDaySnapshot = Omit<DiaryDaySnapshotData, 'sections'> & {
+  heading: string;
+  isToday: boolean;
+  eatenKcal: number;
+  goalKcal: number | null;
+  leftKcal: number | null;
+  /** The day's burned-kcal sum (the exercise header figure); null without exercise rows. */
+  burnedKcal: number | null;
+  sections: (DiaryDaySection & { kcal: number })[];
+};
 export type { DiaryDayExercise, DiaryDaySection };
+
+/** The day sheet's heading: the weekday, month and day of the local calendar day. */
+function headingOf(day: Date): string {
+  return day.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+const kcalOfSection = (section: DiaryDaySection): number =>
+  section.items.reduce((total, item) => total + (item.kcal ?? 0), 0);
+
+/** The loaded rows of one day and the day's two facts, as the snapshot the day sheet reads. */
+export function publishDiaryDay(
+  data: DiaryDaySnapshotData,
+  day: { heading: string; isToday: boolean },
+): DiaryDaySnapshot {
+  const sections = data.sections.map((section) => ({ ...section, kcal: kcalOfSection(section) }));
+  const eatenKcal = sections.reduce((total, section) => total + section.kcal, 0);
+  const goalKcal = data.target?.dailyKcal ?? null;
+  return {
+    target: data.target,
+    exercises: data.exercises,
+    heading: day.heading,
+    isToday: day.isToday,
+    eatenKcal,
+    goalKcal,
+    leftKcal: goalKcal === null ? null : Math.max(goalKcal - eatenKcal, 0),
+    burnedKcal:
+      data.exercises.length === 0
+        ? null
+        : data.exercises.reduce((total, exercise) => total + (exercise.kcalBurned ?? 0), 0),
+    sections,
+  };
+}
 
 export type DiaryDayModel = {
   /** The observed snapshot — `useSyncExternalStore(model.subscribe, model.getSnapshot)`. */
@@ -30,9 +78,29 @@ export type DiaryDayModel = {
   goalKcal(): number | null;
   leftKcal(): number | null;
   sectionKcal(section: DiaryDaySection): number;
+  /** The day's burned-kcal sum (the exercise header figure); null without exercise rows. */
+  burnedKcal(): number | null;
   items(slot: string): DiaryDaySnapshot['sections'][number]['items'];
   /** Tombstone + detail delete — the delete of the food row. */
   delete(item: DiaryDaySnapshot['sections'][number]['items'][number]): Promise<void>;
+  /**
+   * The edit sheet's write: new grams (the kcal recomputed from the stored
+   * per-100g basis, KcalArithmetic) and the (possibly renamed) title; mirror +
+   * detail + one op in ONE batch.
+   */
+  updateEntry(
+    item: DiaryDaySnapshot['sections'][number]['items'][number],
+    grams: number,
+    title?: string,
+  ): Promise<void>;
+  /**
+   * The undo of a delete inside the five-second window: while the tombstone's
+   * op still waits in the outbox, cancel it and restore the rows silently;
+   * once the sync has taken it, re-record the entry as a new change.
+   */
+  undoDelete(item: DiaryDaySnapshot['sections'][number]['items'][number]): Promise<void>;
+  /** One-batch rewrite of the entry and its detail exactly as given (the edit's undo). */
+  writeEntry(entry: DiaryEntry, detail: DiaryEntryDetail): Promise<void>;
   /** Undo path: tombstone by id without needing the observed item. */
   deleteEntry(id: string): Promise<void>;
   /** Local-only exercise write (I4), then notify so Today re-reads. */
@@ -48,11 +116,18 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
   });
 
   let day = initialDay;
-  let snapshot: DiaryDaySnapshot = {
-    target: null,
-    sections: ['breakfast', 'lunch', 'dinner', 'snacks'].map((slot) => ({ slot, items: [] })),
-    exercises: [],
-  };
+  const dayFacts = (forDay: Date) => ({
+    heading: headingOf(forDay),
+    isToday: dayString(forDay) === dayString(deps.now()),
+  });
+  let snapshot: DiaryDaySnapshot = publishDiaryDay(
+    {
+      target: null,
+      sections: ['breakfast', 'lunch', 'dinner', 'snacks'].map((slot) => ({ slot, items: [] })),
+      exercises: [],
+    },
+    dayFacts(initialDay),
+  );
 
   const listeners = new Set<() => void>();
   const emit = () => {
@@ -65,7 +140,9 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
   });
 
   async function refresh(): Promise<void> {
-    snapshot = await loadDay(dayString(day));
+    // The heading and the today flag belong to the day the rows were read for.
+    const forDay = day;
+    snapshot = publishDiaryDay(await loadDay(dayString(forDay)), dayFacts(forDay));
     emit();
   }
 
@@ -86,17 +163,13 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
       day = date;
       void refresh();
     },
-    dayHeading: () =>
-      day.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }),
-    isToday: () => dayString(day) === dayString(deps.now()),
-    eatenKcal: () =>
-      snapshot.sections.reduce((total, section) => total + sectionKcalOf(section), 0),
-    goalKcal: () => snapshot.target?.dailyKcal ?? null,
-    leftKcal: () => {
-      const goal = snapshot.target?.dailyKcal;
-      return goal === undefined ? null : Math.max(goal - eatenKcalOf(), 0);
-    },
-    sectionKcal: sectionKcalOf,
+    dayHeading: () => headingOf(day),
+    isToday: () => dayFacts(day).isToday,
+    eatenKcal: () => snapshot.eatenKcal,
+    goalKcal: () => snapshot.goalKcal,
+    leftKcal: () => snapshot.leftKcal,
+    sectionKcal: kcalOfSection,
+    burnedKcal: () => snapshot.burnedKcal,
     items: (slot: string) => snapshot.sections.find((section) => section.slot === slot)?.items ?? [],
     async delete(item) {
       // Tombstone (not hard delete) keeps the sync history; the detail row
@@ -116,6 +189,52 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
       deps.notify();
       await refresh();
     },
+    async updateEntry(item, grams, title = item.title) {
+      // The recomputed kcal comes from the entry's own per-100g basis, the
+      // same KcalArithmetic rule the review sheet uses; without a basis
+      // (no stored grams) the stored kcal is kept.
+      const basis =
+        item.kcal !== null && item.grams !== null && item.grams > 0
+          ? (item.kcal / item.grams) * 100
+          : null;
+      const stamp = deps.now();
+      await deps.diaryEntries.recordUpserts(
+        [
+          {
+            entry: { ...item.entry, displayText: title, updatedAt: stamp },
+            detail: {
+              ...item.detail,
+              grams,
+              kcal: basis === null ? item.kcal : manualKcal(basis, grams),
+              title,
+            },
+          },
+        ],
+        stamp,
+      );
+      deps.notify();
+      await refresh();
+    },
+    async undoDelete(item) {
+      // One transaction re-checks the op inside itself (the review
+      // correction): only a still-pending tombstone cancels and restores
+      // silently; an op the sync already took falls back to the re-record —
+      // the restored row never sits with no op while the server holds the
+      // tombstone.
+      const cancelled = await cancelTombstoneAndRestore(deps.db, item.id, item.entry, item.detail);
+      if (!cancelled) {
+        // The sync has taken the tombstone: the entry comes back the way a
+        // save records it — one batch, one new op.
+        await deps.diaryEntries.recordUpserts([{ entry: item.entry, detail: item.detail }], deps.now());
+      }
+      deps.notify();
+      await refresh();
+    },
+    async writeEntry(entry, detail) {
+      await deps.diaryEntries.recordUpserts([{ entry, detail }], deps.now());
+      deps.notify();
+      await refresh();
+    },
     async addExercise(type, durationMin, kcalBurned) {
       await deps.tracking.addExercise({
         id: deps.newId(),
@@ -131,12 +250,4 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
       await refresh();
     },
   };
-
-  function sectionKcalOf(section: DiaryDaySection): number {
-    return section.items.reduce((total, item) => total + (item.kcal ?? 0), 0);
-  }
-
-  function eatenKcalOf(): number {
-    return snapshot.sections.reduce((total, section) => total + sectionKcalOf(section), 0);
-  }
 }

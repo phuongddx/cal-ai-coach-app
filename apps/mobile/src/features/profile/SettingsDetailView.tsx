@@ -38,14 +38,14 @@ export type SettingsDetailViewProps = {
 };
 
 export function SettingsDetailView({ model, planName }: SettingsDetailViewProps) {
-  useSyncExternalStore(model.subscribe, model.getRevision);
+  const snapshot = useSyncExternalStore(model.subscribe, model.getSnapshot);
   const { colors } = useTokens();
   const [showsDeleteConfirmation, setShowsDeleteConfirmation] = useState(false);
   // The design flag is the single source of the switch value: flipping it
   // re-renders every screen through the design hooks (I7).
   const policyOn = useEdSafeMode();
 
-  const exportLoaded = model.exportedCsv !== null && !model.exportEmpty;
+  const exportLoaded = snapshot.exportLoaded;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -125,12 +125,12 @@ export function SettingsDetailView({ model, planName }: SettingsDetailViewProps)
           <Text style={[typography.footnote, { color: colors.textSecondary }]}>
             {settingsCopy.wellnessDescription}
           </Text>
-          {model.wellnessWriteError !== null && (
+          {snapshot.wellnessWriteError !== null && (
             <View testID="settings.wellnessError">
               {/* RN-only: the Swift write is a synchronous UserDefaults set; the
                   async database write can fail and the screen says so instead of
                   silently keeping a dead switch. */}
-              <BannerNote text={model.wellnessWriteError} />
+              <BannerNote text={snapshot.wellnessWriteError} />
             </View>
           )}
         </View>
@@ -141,7 +141,7 @@ export function SettingsDetailView({ model, planName }: SettingsDetailViewProps)
               {settingsCopy.burnAddBackTitle}
             </Text>
             <Switch
-              value={model.burnAddBackOn}
+              value={snapshot.burnAddBackOn}
               onValueChange={(on) => void model.setBurnAddBack(on)}
               testID="settings.burnAddBackToggle"
             />
@@ -163,7 +163,7 @@ export function SettingsDetailView({ model, planName }: SettingsDetailViewProps)
           >
             <SettingsRow icon="square.and.arrow.up" label={settingsCopy.exportRowTitle} />
           </Pressable>
-          {model.exportEmpty && (
+          {snapshot.exportEmpty && (
             <View style={styles.exportRow} testID="settings.exportEmpty">
               <BannerNote
                 text={`**${settingsCopy.exportEmptyTitle}.** ${settingsCopy.exportEmptyBody}`}
@@ -172,12 +172,12 @@ export function SettingsDetailView({ model, planName }: SettingsDetailViewProps)
               />
             </View>
           )}
-          {model.exportShare.kind === 'failed' && (
+          {snapshot.exportShare.kind === 'failed' && (
             <View style={styles.exportRow} testID="settings.exportError">
               <BannerNote
                 variant="error"
                 markdown
-                text={`**${settingsCopy.exportFailedTitle}.** ${model.exportShare.reason}`}
+                text={`**${settingsCopy.exportFailedTitle}.** ${snapshot.exportShare.reason}`}
               />
               {/* The frame's error code line (x-write-*). The frame's "Contact
                   us" button is not drawn: no support address exists in the app
@@ -196,7 +196,7 @@ export function SettingsDetailView({ model, planName }: SettingsDetailViewProps)
               </View>
             </View>
           )}
-          {model.exportShare.kind === 'cancelled' && (
+          {snapshot.exportShare.kind === 'cancelled' && (
             <View style={styles.exportRow} testID="settings.exportCancelled">
               {/* A cancelled share is not an error: the file stays, the row
                   offers "Share again" and "Done" (frame x-cancel). */}

@@ -41,10 +41,10 @@ export type PlanRevealScreenProps = {
 };
 
 export function PlanRevealScreen({ model, onFinished }: PlanRevealScreenProps) {
-  useOnboardingModel(model);
+  const snapshot = useOnboardingModel(model);
   const { colors } = useTokens();
   const [editing, setEditing] = useState(false);
-  const reveal = model.reveal;
+  const reveal = snapshot.reveal;
 
   async function continuePressed(): Promise<void> {
     await model.persistAndFinish();
@@ -173,9 +173,9 @@ export function PlanRevealScreen({ model, onFinished }: PlanRevealScreenProps) {
                   )}
                 </View>
               )}
-              {model.persistError !== null && (
+              {snapshot.persistError !== null && (
                 <View testID="plan.persistError">
-                  <BannerNote text={model.persistError} />
+                  <BannerNote text={snapshot.persistError} />
                 </View>
               )}
             </>

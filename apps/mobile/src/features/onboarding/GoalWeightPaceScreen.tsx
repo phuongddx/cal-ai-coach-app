@@ -7,7 +7,7 @@
  * value is always the engine's clamped result. The card prints the pace the
  * engine returns, and a clamp shows the verbatim safety-floor banner on the
  * caution tokens, as today. The segment's selection follows the raw request
- * (`model.requestedPaceRaw`), which can differ from the clamped stored value.
+ * (`snapshot.requestedPaceRaw`), which can differ from the clamped stored value.
  * The typed goal weight clamps on blur through the model to the old wheel's
  * range (the owner decision): typing never clamps and an empty field writes
  * nothing.
@@ -44,22 +44,22 @@ const PACE_OPTIONS = [
 type PaceOptionValue = (typeof PACE_OPTIONS)[number]['value'];
 
 export function GoalWeightPaceScreen({ model }: { model: OnboardingModel }) {
-  useOnboardingModel(model);
+  const snapshot = useOnboardingModel(model);
   const { colors } = useTokens();
-  const showsPace = model.draft.goal === 'lose' || model.draft.goal === 'gain';
+  const showsPace = snapshot.draft.goal === 'lose' || snapshot.draft.goal === 'gain';
   const [goalWeightText, setGoalWeightText] = useState(() =>
-    String(Math.round(model.draft.goalWeightKg ?? model.draft.weightKg)),
+    String(Math.round(snapshot.draft.goalWeightKg ?? snapshot.draft.weightKg)),
   );
 
-  const goalWeightKg = Math.round(model.draft.goalWeightKg ?? model.draft.weightKg);
+  const goalWeightKg = Math.round(snapshot.draft.goalWeightKg ?? snapshot.draft.weightKg);
   // The pace the engine returns for the draft as it stands (0.45 for the
   // default draft — the decision: the card and the readout print it).
-  const enginePace = TargetsEngine.targets(model.draft).paceKgPerWeek;
+  const enginePace = TargetsEngine.targets(snapshot.draft).paceKgPerWeek;
   const paceText = enginePace.toFixed(2);
 
   // The segment shows the option nearest the raw request (the stored pace can
   // be the clamped result, which matches no option).
-  const paceOption: PaceOptionValue = nearestPaceOption(model.requestedPaceRaw ?? 0.5);
+  const paceOption: PaceOptionValue = nearestPaceOption(snapshot.requestedPaceRaw ?? 0.5);
 
   const goalWeightChange = (text: string): void => {
     setGoalWeightText(text);
@@ -80,7 +80,7 @@ export function GoalWeightPaceScreen({ model }: { model: OnboardingModel }) {
     <StepScaffold
       title="Your target"
       subtitle="We recommend gradual, sustainable progress"
-      progress={model.progress}
+      progress={snapshot.progress}
       action={() => model.advance()}
     >
       <View style={styles.rows}>
@@ -136,7 +136,7 @@ export function GoalWeightPaceScreen({ model }: { model: OnboardingModel }) {
                 keep this pace without feeling hungry all the time.
               </Text>
             </View>
-            {model.paceClamped && (
+            {snapshot.paceClamped && (
               <View
                 testID="onboarding.safetyFloor"
                 style={[

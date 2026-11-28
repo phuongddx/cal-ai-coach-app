@@ -37,7 +37,7 @@ const STROKE = size.ringCompactStroke;
 const RING_SIZE = size.ringCompact;
 
 export function GeneratingPlanScreen({ model }: { model: OnboardingModel }) {
-  useOnboardingModel(model);
+  const snapshot = useOnboardingModel(model);
   const { colors } = useTokens();
 
   useEffect(() => {
@@ -46,17 +46,17 @@ export function GeneratingPlanScreen({ model }: { model: OnboardingModel }) {
 
   // The formula is the engine's own math over the draft — the same calls the
   // model's generation makes (ProjectionScreen reads the engine the same way).
-  const bmr = TargetsEngine.bmr(model.draft);
-  const tdee = TargetsEngine.tdee(bmr, model.draft.activityLevel);
-  const targets = TargetsEngine.targets(model.draft);
+  const bmr = TargetsEngine.bmr(snapshot.draft);
+  const tdee = TargetsEngine.tdee(bmr, snapshot.draft.activityLevel);
+  const targets = TargetsEngine.targets(snapshot.draft);
   const activityTitle =
-    LEVELS.find((entry) => entry.level === model.draft.activityLevel)?.title ?? model.draft.activityLevel;
-  const factor = ACTIVITY_MULTIPLIER[model.draft.activityLevel];
+    LEVELS.find((entry) => entry.level === snapshot.draft.activityLevel)?.title ?? snapshot.draft.activityLevel;
+  const factor = ACTIVITY_MULTIPLIER[snapshot.draft.activityLevel];
   // The pace line exists only where the quiz carries a pace (lose/gain); the
   // label names the engine's clamped pace, the value the plan's real delta.
   const pace = targets.paceKgPerWeek;
-  const showsPace = model.draft.requestedPaceKgPerWeek !== null;
-  const paceSign = model.draft.goal === 'gain' ? '+' : '−';
+  const showsPace = snapshot.draft.requestedPaceKgPerWeek !== null;
+  const paceSign = snapshot.draft.goal === 'gain' ? '+' : '−';
   const paceDelta = Math.abs(tdee - targets.dailyKcal);
 
   const radius = (RING_SIZE - STROKE) / 2;
@@ -71,7 +71,7 @@ export function GeneratingPlanScreen({ model }: { model: OnboardingModel }) {
     >
       <View style={styles.rail}>
         <Text style={[styles.stepCaption, { color: colors.text2 }]}>Step 8 of 9</Text>
-        <ProgressRail progress={model.progress} />
+        <ProgressRail progress={snapshot.progress} />
       </View>
       <View style={styles.content}>
         <View

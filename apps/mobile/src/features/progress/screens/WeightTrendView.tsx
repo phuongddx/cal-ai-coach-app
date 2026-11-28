@@ -12,7 +12,7 @@ import { SymbolView } from 'expo-symbols';
 import { Card, TrendChart, radius, space, typography, useTokens } from '../../../design';
 
 import { RANGE_WINDOW_DAYS, type ProgressRange } from '../progressMath';
-import type { ProgressModel } from '../progressModel';
+import { weightPointsOf, type ProgressModel } from '../progressModel';
 import { weightTrendA11yLabel } from '../weightChartDescriptor';
 import { WeightLogSheet } from './WeightLogSheet';
 
@@ -35,13 +35,13 @@ export function trendCopy(kgLost: number, windowDays: number): { symbol: 'arrow.
 
 export function WeightTrendView({ model, range = 'month' }: WeightTrendViewProps) {
   const { colors, typography: type } = useTokens();
-  useSyncExternalStore(model.subscribe, model.getSnapshot, model.getSnapshot);
+  const snapshot = useSyncExternalStore(model.subscribe, model.getSnapshot, model.getSnapshot);
   const [isLogSheetPresented, setIsLogSheetPresented] = useState(false);
 
   const windowDays = RANGE_WINDOW_DAYS[range];
-  const points = model.weightPoints(range);
+  const points = weightPointsOf(snapshot.weights, snapshot.today, range);
   const startKg = points[0]?.value ?? null;
-  const latestKg = model.latestKg();
+  const latestKg = snapshot.weights.at(-1)?.kg ?? null;
   const kgLost = startKg !== null && latestKg !== null ? startKg - latestKg : 0;
   const copy = trendCopy(kgLost, windowDays);
   const currentWeightText = latestKg !== null ? latestKg.toFixed(1) : '—';

@@ -22,10 +22,10 @@ import { useOnboardingModel } from './useOnboardingModel';
 import type { OnboardingModel } from './onboardingModel';
 
 export function BodyMetricsScreen({ model }: { model: OnboardingModel }) {
-  useOnboardingModel(model);
+  const snapshot = useOnboardingModel(model);
   const { colors } = useTokens();
-  const [heightText, setHeightText] = useState(() => String(Math.round(model.draft.heightCm)));
-  const [weightText, setWeightText] = useState(() => String(Math.round(model.draft.weightKg)));
+  const [heightText, setHeightText] = useState(() => String(Math.round(snapshot.draft.heightCm)));
+  const [weightText, setWeightText] = useState(() => String(Math.round(snapshot.draft.weightKg)));
 
   // The typed text is the field's state; the model receives every value that
   // parses, so the draft never holds a stale number when the flow continues.
@@ -59,8 +59,8 @@ export function BodyMetricsScreen({ model }: { model: OnboardingModel }) {
     <StepScaffold
       title="About you"
       subtitle="Used to calculate your targets"
-      progress={model.progress}
-      ctaEnabled={!model.isDobGateBlocked}
+      progress={snapshot.progress}
+      ctaEnabled={!snapshot.isDobGateBlocked}
       action={() => model.advance()}
     >
       <View style={styles.rows}>
@@ -68,14 +68,14 @@ export function BodyMetricsScreen({ model }: { model: OnboardingModel }) {
           <View testID="onboarding.sexFemale">
             <ChipOption
               title="Female"
-              isSelected={model.draft.sex === 'female'}
+              isSelected={snapshot.draft.sex === 'female'}
               onSelect={() => model.selectSex('female')}
             />
           </View>
           <View testID="onboarding.sexMale">
             <ChipOption
               title="Male"
-              isSelected={model.draft.sex === 'male'}
+              isSelected={snapshot.draft.sex === 'male'}
               onSelect={() => model.selectSex('male')}
             />
           </View>
@@ -101,13 +101,13 @@ export function BodyMetricsScreen({ model }: { model: OnboardingModel }) {
         <View testID="onboarding.dobField">
           <WheelField
             label="Date of birth"
-            items={model.dobYears}
-            selection={model.birthYear}
+            items={snapshot.dobYears as number[]}
+            selection={snapshot.birthYear}
             onSelectionChange={(year) => model.setBirthYear(year)}
             displayText={(year) => String(year)}
           />
         </View>
-        {model.isDobGateBlocked && (
+        {snapshot.isDobGateBlocked && (
           <Text testID="onboarding.dobGate" style={[styles.footnote, { color: colors.errorInk }]}>
             {onboardingCopy.dobGateFootnote}
           </Text>

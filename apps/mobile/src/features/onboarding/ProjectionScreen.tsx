@@ -27,12 +27,12 @@ const MAX_WEEKS = 156;
 type Point = { week: number; weight: number };
 
 export function ProjectionScreen({ model }: { model: OnboardingModel }) {
-  useOnboardingModel(model);
+  const snapshot = useOnboardingModel(model);
   const { colors } = useTokens();
 
-  const start = model.draft.weightKg;
-  const goalTarget = TargetsEngine.sanitizedGoalWeightKg(model.draft.goalWeightKg ?? start);
-  const pace = TargetsEngine.targets(model.draft).paceKgPerWeek;
+  const start = snapshot.draft.weightKg;
+  const goalTarget = TargetsEngine.sanitizedGoalWeightKg(snapshot.draft.goalWeightKg ?? start);
+  const pace = TargetsEngine.targets(snapshot.draft).paceKgPerWeek;
   const delta = Math.abs(start - goalTarget);
   const weeks = pace > 0 ? Math.min(Math.ceil(delta / pace), MAX_WEEKS) : 0;
 
@@ -60,13 +60,13 @@ export function ProjectionScreen({ model }: { model: OnboardingModel }) {
   }));
 
   const kgDifference =
-    model.draft.goal === 'gain'
+    snapshot.draft.goal === 'gain'
       ? Math.round(Math.max(goalTarget - start, 0))
       : Math.round(Math.max(start - goalTarget, 0));
-  const kgLabel = model.draft.goal === 'gain' ? 'kg to gain' : 'kg to lose';
+  const kgLabel = snapshot.draft.goal === 'gain' ? 'kg to gain' : 'kg to lose';
 
   const weeksAhead = Math.max(weeks, 1);
-  const goalDate = new Date(model.currentDate());
+  const goalDate = new Date(snapshot.currentDate);
   goalDate.setDate(goalDate.getDate() + weeksAhead * 7);
   const goalDateText = `${MONTHS[goalDate.getMonth()]} ${goalDate.getFullYear()}`;
 
@@ -74,7 +74,7 @@ export function ProjectionScreen({ model }: { model: OnboardingModel }) {
     <StepScaffold
       title="Your projection"
       subtitle="Based on your inputs"
-      progress={model.progress}
+      progress={snapshot.progress}
       action={() => model.advance()}
     >
       <View style={styles.rows}>

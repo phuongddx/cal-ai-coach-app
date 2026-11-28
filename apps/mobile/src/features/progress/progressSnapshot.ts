@@ -20,6 +20,8 @@ import { addDays, dayString } from './progressMath';
 export type DayKcal = { day: string; kcal: number | null };
 
 export type ProgressSnapshotData = {
+  /** The local day (`YYYY-MM-DD`) the snapshot was read on: the end of every trailing window. */
+  today: string;
   target: UserTarget | null;
   weights: WeightLog[];
   weekKcals: DayKcal[];
@@ -104,6 +106,7 @@ export function createProgressSnapshotLoader(
     }
 
     return {
+      today: dayString(now),
       target,
       weights,
       weekKcals,
