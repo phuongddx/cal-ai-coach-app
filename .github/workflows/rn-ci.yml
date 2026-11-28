@@ -88,8 +88,8 @@ jobs:
 
       - name: Make sure psql client tools and uuidgen are present
         run: |
-          command -v psql || sudo apt-get update && sudo apt-get install -y postgresql-client
-          command -v uuidgen || sudo apt-get install -y uuid-runtime
+          command -v psql >/dev/null 2>&1 || { sudo apt-get update && sudo apt-get install -y postgresql-client; }
+          command -v uuidgen >/dev/null 2>&1 || sudo apt-get install -y uuid-runtime
 
       - name: Roles, database, migrations, API (secrets generated in this job)
         env:

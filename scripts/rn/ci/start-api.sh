@@ -25,7 +25,8 @@ export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
 PG_PORT="${PG_PORT:-5432}"
 API_PORT="${API_PORT:-8787}"
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# scripts/rn/ci/ is three levels below the repo root (start-api.sh at scripts/rn/ needs two).
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SUPER_URL="postgres://postgres:${POSTGRES_SUPER_PASSWORD:-postgres}@127.0.0.1:$PG_PORT/postgres"
 # Letters and digits only: both passwords travel inside connection strings.
 OWNER_PASSWORD="${COACHCAL_OWNER_PASSWORD:-ownerlocalci0}"
