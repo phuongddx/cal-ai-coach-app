@@ -1,0 +1,56 @@
+# U-82 flow 02 — the four tabs of the shell and the diary day sheet.
+# Mirrors scripts/rn/evidence/flows/02-tabs.sh and 04-diary-sheet.sh. Each tab is recognised by
+# what its own screen shows (the raw text the accessibility tree carries, even where the design
+# uppercases it visually): Progress has the title "Progress"; Coach shows "Today's insights";
+# Profile shows "Goals & targets". coachcal://diary opens the formSheet, recognised by its
+# "Breakfast" section.
+appId: com.nextlabs.coachcal
+name: 02 the four tabs and the diary day sheet
+---
+- launchApp:
+    appId: com.nextlabs.coachcal
+- openLink: exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 180000
+- openLink: coachcal://debug?action=seed
+- extendedWaitUntil:
+    visible: "Debug console"
+    timeout: 30000
+- openLink: coachcal:///
+- extendedWaitUntil:
+    visible: "Chicken rice bowl"
+    timeout: 60000
+- assertVisible:
+    id: "food-row-kcal:Chicken rice bowl"
+- takeScreenshot: 02-today
+
+- tapOn: "Progress"
+- extendedWaitUntil:
+    visible: "Progress"
+    timeout: 20000
+- takeScreenshot: 02-tab-progress
+
+- tapOn: "Coach"
+- extendedWaitUntil:
+    visible: "Today's insights"
+    timeout: 20000
+- takeScreenshot: 02-tab-coach
+
+- tapOn: "Profile"
+- extendedWaitUntil:
+    visible: "Goals & targets"
+    timeout: 20000
+- takeScreenshot: 02-tab-profile
+
+- tapOn: "Today"
+- extendedWaitUntil:
+    visible: "Chicken rice bowl"
+    timeout: 20000
+
+- openLink: coachcal://diary
+- extendedWaitUntil:
+    visible: "Breakfast"
+    timeout: 30000
+- takeScreenshot: 02-diary-sheet
+- openLink: coachcal:///

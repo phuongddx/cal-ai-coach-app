@@ -1,0 +1,16 @@
+# U-82 flow 04 — a launch with --ccEDSafe shows no calorie number on Today.
+# The workflow launches the app with `simctl launch <udid> com.nextlabs.coachcal --ccEDSafe`
+# (the evidence harness's way), so this flow only opens the dev client URL. The seeded meal row
+# keeps its title, and its kcal clause (food-row-kcal:<title>, present on the flow 02 Today
+# screenshot) is gone: no calorie figure is on screen.
+appId: com.nextlabs.coachcal
+name: 04 a launch with --ccEDSafe shows no calorie number on Today
+---
+- openLink: exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+- extendedWaitUntil:
+    visible: "Chicken rice bowl"
+    timeout: 180000
+- assertVisible: "Chicken rice bowl"
+- assertNotVisible:
+    id: "food-row-kcal:Chicken rice bowl"
+- takeScreenshot: 04-today-edsafe
