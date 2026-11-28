@@ -7,7 +7,7 @@
  * branch). With `onPickRow` the view is a picker: a row tap or its add button
  * hands the row to the caller instead of opening the manual-log sheet.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { CatalogRepository } from '../../../data/repos/catalogRepository';
@@ -93,14 +93,16 @@ export function FoodSearchView({
   const [manualRow, setManualRow] = useState<FoodSearchRow | null>(null);
   const [isCustomSheetPresented, setIsCustomSheetPresented] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [, setVersion] = useState(0);
-  useEffect(() => model.subscribe(() => setVersion((version) => version + 1)), [model]);
+  // The compiler cannot see the model's in-place mutation, so the state rides the
+  // immutable snapshot (the DiaryDayModel pattern; found in U-74 stage B when the
+  // search field never updated on the Simulator).
+  const { query, results, recents, saved } = useSyncExternalStore(
+    model.subscribe,
+    model.getSnapshot,
+    model.getSnapshot,
+  );
 
-  const query = model.getQuery();
   const trimmed = query.trim();
-  const results = model.getResults();
-  const recents = model.getRecents();
-  const saved = model.getSaved();
 
   /** Typing is a search: the segment follows the query out of Recent. */
   const onQueryChange = (text: string) => {

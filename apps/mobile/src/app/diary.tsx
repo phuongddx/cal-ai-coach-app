@@ -63,9 +63,11 @@ export default function DiaryScreen() {
   const [session, setSession] = useState<DiarySession | null>(null);
 
   // The frame's detents (medium + large) are a native sheet option, so they
-  // belong here in the route file, not in the view (U-71 findings).
+  // belong here in the route file, not in the view (U-71 findings). The sheet
+  // expands to the large detent after opening — the frame (10) draws it large;
+  // the medium detent stays draggable.
   useEffect(() => {
-    navigation.setOptions({ sheetAllowedDetents: [0.5, 1] });
+    navigation.setOptions({ sheetAllowedDetents: [0.5, 1], sheetInitialDetentIndex: 1 });
   }, [navigation]);
 
   useEffect(() => {

@@ -82,7 +82,7 @@ export function DiaryEditSheet({ item, model, onDismiss, onSaved, onDelete }: Di
     displayedProtein !== null || displayedCarbs !== null || displayedFat !== null;
 
   return (
-    <Sheet>
+    <Sheet detent="large" style={{ flex: 1 }}>
       <View style={styles.bar} testID="diary.edit">
         <GlassIconButton icon="back" accessibilityLabel="Close" testID="diary.edit.close" onPress={onDismiss} />
         <Text

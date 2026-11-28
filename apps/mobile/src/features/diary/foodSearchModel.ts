@@ -46,8 +46,22 @@ export const RECENT_LIMIT = 5;
 /** FoodSearchModel.scheduleSearch's 200 ms debounce (T-P04-04). */
 const SEARCH_DEBOUNCE_MS = 200;
 
+/**
+ * The immutable snapshot the view reads through useSyncExternalStore (the DiaryDayModel
+ * pattern): the React Compiler cannot see the model's in-place mutation, so per-field
+ * getters memoize stale values and the search field never updates (found in U-74 stage B).
+ */
+export type FoodSearchSnapshot = {
+  query: string;
+  results: readonly FoodSearchRow[];
+  recents: readonly FoodSearchRow[];
+  saved: readonly FoodSearchRow[];
+};
+
 export type FoodSearchModel = {
   getQuery(): string;
+  /** The immutable state the view subscribes to. */
+  getSnapshot(): FoodSearchSnapshot;
   /** Setting the query schedules the debounced search, as the Swift didSet does. */
   setQuery(query: string): void;
   getResults(): FoodSearchRow[];
@@ -67,10 +81,12 @@ export function createFoodSearchModel(deps: { catalog: CatalogRepository }): Foo
   let results: FoodSearchRow[] = [];
   let recents: FoodSearchRow[] = [];
   let saved: FoodSearchRow[] = [];
+  let snapshot: FoodSearchSnapshot = { query, results, recents, saved };
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   const listeners = new Set<() => void>();
   const emit = () => {
+    snapshot = { query, results, recents, saved };
     for (const listener of [...listeners]) listener();
   };
 
@@ -116,6 +132,7 @@ export function createFoodSearchModel(deps: { catalog: CatalogRepository }): Foo
 
   return {
     getQuery: () => query,
+    getSnapshot: () => snapshot,
     setQuery(next: string) {
       query = next;
       if (debounceTimer !== null) {

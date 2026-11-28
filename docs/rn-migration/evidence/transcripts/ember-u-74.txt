@@ -1,0 +1,387 @@
+  ok: simulator already booted
+  ok: simulator ready (A902237E-29DE-4A6F-9E93-23199FC2107F)
+  ok: appearance light
+
+=== seed: wipe the store, seed the demo persona and the Debug meals, land on Today ===
+
+=== opening the app via the dev client URL with launch arguments: --ccFreshStart --ccSeedNoTargets ===
+  ok: launched com.nextlabs.coachcal with: --ccFreshStart --ccSeedNoTargets
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== deep link: coachcal:///?seed=1 ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: found text: Spaghetti Bolognese
+
+=== deep link: coachcal://debug?action=seed ===
+  ok: found title 'Debug console' (Heading at y=118.66666666666669)
+
+=== deep link: coachcal:/// ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: found text: Chicken rice bowl
+
+=== opening the app via the dev client URL ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== the water log sheet ===
+  tap label prefix Water,
+  tap at (201, 633)
+  ok: tap at (201, 633)
+  ok: found text: 250 ml
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-07/u74-water-sheet.png (235 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-07-u74-water-sheet.png
+  tap last label Close
+  tap at (364, 725)
+  ok: tap at (364, 725)
+
+=== the diary day sheet in light ===
+
+=== deep link: coachcal://diary ===
+  ok: the diary sheet is open at the large detent
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-01/u74-diary-day-light.png (270 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-01-u74-diary-day-light.png
+
+=== the add-food sheet (DY-02, derived) ===
+  tap 'add, Add dinner' () at (201, 566) from frame x=16 y=544.66665649414062 w=370 h=43
+  ok: tap at (201, 566)
+  ok: found text: Add food
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-02/u74-add-food-sheet.png (139 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-02-u74-add-food-sheet.png
+  tap last label Close
+  tap at (364, 65)
+  ok: tap at (364, 65)
+  ok: found text: Breakfast
+
+=== the exercise log sheet (DY-06, derived) ===
+  tap 'add, Add exercise' () at (201, 820) from frame x=16 y=799 w=370 h=43
+  ok: tap at (201, 820)
+  ok: found text: Save
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-06/u74-exercise-sheet.png (116 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-06-u74-exercise-sheet.png
+  tap last label Close
+  tap at (364, 631)
+  ok: tap at (364, 631)
+  ok: found text: Breakfast
+
+=== the custom-food sheet (DY-04, derived) ===
+  tap 'add, Add dinner' () at (201, 566) from frame x=16 y=544.66665649414062 w=370 h=43
+  ok: tap at (201, 566)
+  ok: found text: Add food
+  tap 'Search' () at (295, 251) from frame x=205 y=201 w=181 h=100.33333587646484
+  ok: tap at (295, 251)
+  ok: found text: Add to Dinner
+  tap 'Create custom food' () at (201, 644) from frame x=16 y=622.99998474121094 w=370 h=43
+  ok: tap at (201, 644)
+  ok: found text: Protein g
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-04/u74-custom-food-sheet.png (140 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-04-u74-custom-food-sheet.png
+  tap last label Close
+  tap at (364, 506)
+  ok: tap at (364, 506)
+  ok: found text: Add to Dinner
+
+=== food search with ED-Safe off (DY-03; the frame 15 draws the ED-Safe state) ===
+  tap 'Search foods' () at (212, 83) from frame x=56 y=73 w=313 h=20.333333969116211
+  ok: tap at (212, 83)
+  tap first label Paste
+  tap at (55, 131)
+  ok: tap at (55, 131)
+  ok: found text: Results for
+  tap label prefix Results for
+  tap at (201, 181)
+  ok: tap at (201, 181)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-03/u74-food-search-off-light.png (216 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-03-u74-food-search-off-light.png
+
+=== the manual log sheet with ED-Safe off (DY-05; the frame 16 draws the ED-Safe state) ===
+  ok: found text: Log White Rice
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-05/u74-manual-log-off-light.png (114 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-05-u74-manual-log-off-light.png
+
+=== relaunching the app ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app relaunched, showing 'Today'
+
+=== deep link: coachcal://diary ===
+  ok: the diary sheet is open at the large detent
+
+=== the edit sheet in light (DY-08, frame 29) ===
+  ok: tapped the Spaghetti Bolognese row
+  ok: found text: Edit item
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-08/u74-edit-light.png (157 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-08-u74-edit-light.png
+  tap last label Close
+  tap at (38, 117)
+  ok: tap at (38, 117)
+  ok: found text: Breakfast
+
+=== the delete confirmation in light (frame 32) ===
+  ok: long-pressed the food row
+  ok: found text: Delete Spaghetti Bolognese?
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-08/u74-delete-light.png (394 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-08-u74-delete-light.png
+  ok: tap --label Cancel
+
+=== the saved toast in light (frame 35) ===
+  ok: opened the edit sheet
+  ok: found text: Edit item
+  tap label prefix Increase Spaghetti Bolognese
+  tap at (348, 336)
+  ok: tap at (348, 336)
+  ok: stepper +10 g
+  tap 'Save changes' () at (201, 458) from frame x=16 y=430 w=370 h=56
+  ok: tap at (201, 458)
+  ok: found text: Changes saved
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-08/u74-saved-light.png (432 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-08-u74-saved-light.png
+
+=== the deleted toast with undo in light (frame 38) ===
+  ok: long-pressed the food row
+  ok: found text: Delete Spaghetti Bolognese?
+  ok: tap --label Delete item
+  ok: found text: Spaghetti Bolognese deleted
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-08/u74-undo-light.png (430 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-08-u74-undo-light.png
+  tap 'Undo' () at (355, 102) from frame x=336 y=93 w=38 h=18
+  ok: tap at (355, 102)
+
+=== dark phase: re-seed, then the day sheet in dark ===
+  ok: appearance dark
+
+=== opening the app via the dev client URL with launch arguments: --ccFreshStart --ccSeedNoTargets ===
+  ok: launched com.nextlabs.coachcal with: --ccFreshStart --ccSeedNoTargets
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== deep link: coachcal:///?seed=1 ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: found text: Spaghetti Bolognese
+
+=== deep link: coachcal://debug?action=seed ===
+  ok: found title 'Debug console' (Heading at y=118.66666666666669)
+
+=== deep link: coachcal:/// ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: found text: Chicken rice bowl
+
+=== opening the app via the dev client URL ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== deep link: coachcal://diary ===
+  ok: the diary sheet is open at the large detent
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-01/u74-diary-day-dark.png (269 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-01-u74-diary-day-dark.png
+
+=== the edit sheet in dark ===
+  ok: found text: Edit item
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-08/u74-edit-dark.png (163 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-08-u74-edit-dark.png
+  tap last label Close
+  tap at (38, 117)
+  ok: tap at (38, 117)
+  ok: found text: Breakfast
+
+=== the delete confirmation in dark ===
+  ok: long-pressed the food row
+  ok: found text: Delete Spaghetti Bolognese?
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-08/u74-delete-dark.png (337 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-08-u74-delete-dark.png
+  ok: tap --label Cancel
+
+=== the saved toast in dark ===
+  ok: opened the edit sheet
+  ok: found text: Edit item
+  tap label prefix Increase Spaghetti Bolognese
+  tap at (348, 336)
+  ok: tap at (348, 336)
+  tap 'Save changes' () at (201, 458) from frame x=16 y=430 w=370 h=56
+  ok: tap at (201, 458)
+  ok: found text: Changes saved
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-08/u74-saved-dark.png (310 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-08-u74-saved-dark.png
+
+=== the deleted toast with undo in dark ===
+  ok: found text: Delete Spaghetti Bolognese?
+  ok: tap --label Delete item
+  ok: found text: Spaghetti Bolognese deleted
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-08/u74-undo-dark.png (308 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-08-u74-undo-dark.png
+  tap 'Undo' () at (355, 102) from frame x=336 y=93 w=38 h=18
+  ok: tap at (355, 102)
+
+=== ED-Safe dark: re-seed, relaunch with --ccEDSafe, the search and manual log ===
+
+=== opening the app via the dev client URL with launch arguments: --ccFreshStart --ccSeedNoTargets ===
+  ok: launched com.nextlabs.coachcal with: --ccFreshStart --ccSeedNoTargets
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== deep link: coachcal:///?seed=1 ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: found text: Spaghetti Bolognese
+
+=== deep link: coachcal://debug?action=seed ===
+  ok: found title 'Debug console' (Heading at y=118.66666666666669)
+
+=== deep link: coachcal:/// ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: found text: Chicken rice bowl
+
+=== opening the app via the dev client URL ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== opening the app via the dev client URL with launch arguments: --ccEDSafe ===
+  ok: launched com.nextlabs.coachcal with: --ccEDSafe
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== deep link: coachcal://diary ===
+  ok: the diary sheet is open at the large detent
+  tap 'add, Add dinner' () at (201, 540) from frame x=16 y=519 w=370 h=43
+  ok: tap at (201, 540)
+  ok: found text: Add food
+  tap 'Search' () at (295, 251) from frame x=205 y=201 w=181 h=100.33333587646484
+  ok: tap at (295, 251)
+  ok: found text: Add to Dinner
+  tap 'Search foods' () at (212, 83) from frame x=56 y=73 w=313 h=20.333333969116211
+  ok: tap at (212, 83)
+  tap first label Paste
+  tap at (55, 131)
+  ok: tap at (55, 131)
+  ok: found text: Results for
+  tap label prefix Results for
+  tap at (201, 181)
+  ok: tap at (201, 181)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-03/u74-food-search-ed-dark.png (187 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-03-u74-food-search-ed-dark.png
+  ok: found text: Log White Rice
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-05/u74-manual-log-ed-dark.png (142 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-05-u74-manual-log-ed-dark.png
+
+=== opening the app via the dev client URL with launch arguments: --ccEDSafe ===
+  ok: launched com.nextlabs.coachcal with: --ccEDSafe
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== deep link: coachcal://diary ===
+  ok: the diary sheet is open at the large detent
+
+=== ED-Safe light: re-seed, relaunch with --ccEDSafe, the search and manual log ===
+  ok: appearance light
+
+=== opening the app via the dev client URL with launch arguments: --ccFreshStart --ccSeedNoTargets ===
+  ok: launched com.nextlabs.coachcal with: --ccFreshStart --ccSeedNoTargets
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== deep link: coachcal:///?seed=1 ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: found text: Spaghetti Bolognese
+
+=== deep link: coachcal://debug?action=seed ===
+  ok: found title 'Debug console' (Heading at y=118.66666666666669)
+
+=== deep link: coachcal:/// ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: found text: Chicken rice bowl
+
+=== opening the app via the dev client URL ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== opening the app via the dev client URL with launch arguments: --ccEDSafe ===
+  ok: launched com.nextlabs.coachcal with: --ccEDSafe
+An error was encountered processing the command (domain=NSPOSIXErrorDomain, code=60):
+Simulator device failed to open exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081.
+Operation timed out
+Underlying error (domain=NSPOSIXErrorDomain, code=60):
+	The operation couldn’t be completed. Operation timed out
+	Operation timed out
+  note: simctl openurl timed out (attempt 1)
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== deep link: coachcal://diary ===
+  ok: the diary sheet is open at the large detent
+  tap 'add, Add dinner' () at (201, 540) from frame x=16 y=519 w=370 h=43
+  ok: tap at (201, 540)
+  ok: found text: Add food
+  tap 'Search' () at (295, 251) from frame x=205 y=201 w=181 h=100.33333587646484
+  ok: tap at (295, 251)
+  ok: found text: Add to Dinner
+  tap 'Search foods' () at (212, 83) from frame x=56 y=73 w=313 h=20.333333969116211
+  ok: tap at (212, 83)
+  tap first label Paste
+  tap at (55, 131)
+  ok: tap at (55, 131)
+  ok: found text: Results for
+  tap label prefix Results for
+  tap at (201, 181)
+  ok: tap at (201, 181)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-03/u74-food-search-ed-light.png (199 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-03-u74-food-search-ed-light.png
+  ok: found text: Log White Rice
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-05/u74-manual-log-ed-light.png (139 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-05-u74-manual-log-ed-light.png
+
+=== opening the app via the dev client URL with launch arguments: --ccEDSafe ===
+  ok: launched com.nextlabs.coachcal with: --ccEDSafe
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+
+=== deep link: coachcal://diary ===
+  ok: the diary sheet is open at the large detent
+
+=== the edit sheet under ED-Safe ===
+  ok: found text: Edit item
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-08/u74-edit-ed.png (160 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-08-u74-edit-ed.png
+  tap last label Close
+  tap at (38, 117)
+  ok: tap at (38, 117)
+  ok: found text: Breakfast
+
+=== the delete confirmation under ED-Safe ===
+  ok: long-pressed the food row
+  ok: found text: Delete Spaghetti Bolognese?
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-08/u74-delete-ed.png (360 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-08-u74-delete-ed.png
+  ok: tap --label Cancel
+
+=== the saved toast under ED-Safe ===
+  ok: opened the edit sheet
+  ok: found text: Edit item
+  tap label prefix Increase Spaghetti Bolognese
+  tap at (348, 303)
+  ok: tap at (348, 303)
+  tap 'Save changes' () at (201, 425) from frame x=16 y=397 w=370 h=56
+  ok: tap at (201, 425)
+  ok: found text: Changes saved
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-08/u74-saved-ed.png (406 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-08-u74-saved-ed.png
+
+=== the deleted toast with undo under ED-Safe ===
+  ok: found text: Delete Spaghetti Bolognese?
+  ok: tap --label Delete item
+  ok: found text: Spaghetti Bolognese deleted
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-08/u74-undo-ed.png (405 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-08-u74-undo-ed.png
+  tap 'Undo' () at (355, 102) from frame x=336 y=93 w=38 h=18
+  ok: tap at (355, 102)
+
+=== High Contrast: the edit sheet (frame 59) ===
+
+=== relaunching the app ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app relaunched, showing 'Today'
+
+=== deep link: coachcal://diary ===
+  ok: the diary sheet is open at the large detent
+  ok: found text: Edit item
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/DY-08/u74-edit-hc-light.png (156 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-74/docs/rn-migration/evidence/tmp/DY-08-u74-edit-hc-light.png
+
+=== flow done — 0 failed ===
