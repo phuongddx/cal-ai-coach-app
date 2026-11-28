@@ -100,7 +100,10 @@ jobs:
 
       - name: API suites (Jest with the database up)
         env:
-          RN_API_ENV_FILE: ${{ runner.temp }}/coachcal-ci-api.env
+          # THROWAWAY RED PROOF (removed in the next commit): point the harness at a file that
+          # does not exist, so every SQL-backed suite prints [sql-skip] and the next step must
+          # fail the job.
+          RN_API_ENV_FILE: ${{ runner.temp }}/coachcal-ci-api-missing-on-purpose.env
         run: |
           set -o pipefail
           npm run test --workspaces --if-present -- --testTimeout=120000 2>&1 | tee "$RUNNER_TEMP/test.log"
