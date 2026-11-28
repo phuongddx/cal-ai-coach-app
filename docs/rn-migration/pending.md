@@ -4,42 +4,45 @@ A turn that a worker result started cannot address that worker without the rewor
 thread. A turn opens at most five new threads: a further unit of the same worker goes into a
 thread that is already open, with its thread id, or waits for the next turn.
 
-## State on 2026-11-28 at 13:25
+## State on 2026-11-28 at 13:55
 
-`main` is `769c0a0`. Landed today: PR 53, 55, 54, 50, 42, 47, 56, 43, 36.
+`main` is `7f10adf`. Landed today: PR 53, 55, 54, 50, 42, 47, 56, 43, 36, 57, 59, 39.
 
 | Unit | Worker (thread) | State | Next |
 |---|---|---|---|
-| U-74e diary evidence | Worker-S2 (44b9402a) | running on the Simulator (it resumed at 12:33; pictures exist in its worktree) | when its pull request opens: read every screenshot, check rule 23; after PR 37 merges it captures again the rows the four fixes change (the delete confirm, the undo toasts, Delete inside the edit sheet) |
-| U-82 gates on GitHub Actions | Worker-G1 (73e61e95) | retry after a rate limit (files were intact in the worktree) | gate on the full gate, review, merge; then write the line that starts U-70 and create the worktree rn-u-70 |
-| U-74 correction (PR 37) | Worker-G2 (8f3ad0f1) | running: the evidence leaves the branch, the four fixes, the three fixes found on the device stay | the full gate on a tree with it and a re-read; merge; then the lines to Worker-S1 (item 4 of U-72b) and Worker-S2 (re-capture) |
-| U-77c sign-in code step | Worker-S1 (994c6d28) | PR 57 open at 6da649e; gate w5d and review running | merge if both pass |
-| U-72b scan, part one | Worker-S1 (994c6d28, after U-77c) | starting (its worktree shows a merge in progress) | gate, review, merge; item 4 after PR 37 |
-| U-70 Swift cleanup | Worker-G1 (73e61e95, after U-82) | queued | create the worktree rn-u-70 from `main` after U-82; merge LAST after the tag |
-| U-76e Today evidence | Worker-S2 | brief ready (with the limits of the harness) | send when U-74e reports |
+| U-74e diary evidence | Worker-S2 (44b9402a) | running on the Simulator | when its pull request opens: open every screenshot, read every row, check rule 23; after PR 37 merges it captures again the rows the four fixes change |
+| U-82 gates on GitHub Actions | Worker-G1 (73e61e95) | fixing three should-fixes; the iOS job queued on GitHub | when its run is green with artifacts: review done (PASS+NOTES), merge; from then a merge takes its verdict from GitHub Actions |
+| U-74 correction (PR 37) | Worker-G2 (8f3ad0f1) | running: the evidence leaves the branch, the four fixes, the three fixes found on the device stay | the full gate on a tree with it and a re-read; merge; then the lines below |
+| U-70 Swift cleanup | Worker-S1 (10185721) | starting from main 7f10adf | review, gate, merge LAST after the tag |
+| U-83 two evidence sessions | nobody | brief ready | after U-74e reports: the Simulator between two units (Worker-G2 after PR 37, or another) |
+| U-76e, U-73e, U-75e, U-77e, U-72e, U-77ce | nobody | rows written (briefs/evidence-rows.md) | one at a time on the Simulator, two at a time after U-83 |
 
 ## The lines the owner writes into threads
 
-- To Worker-S1 (994c6d28) when PR 37 is merged: "PR 37 is on main: do item 4 of U-72b".
+- To Worker-S1 (10185721 or its scan thread) when PR 37 is merged: "PR 37 is on main: do item 4
+  of U-72b (the picker)" — a new branch from main, since PR 39 is merged.
 - To Worker-S2 (44b9402a) when PR 37 is merged: "PR 37 is on main with the four fixes: merge
-  origin/main in rn-u-74e and capture again the delete confirm (three rows and High Contrast), the
-  two undo toasts, and the Delete of the edit sheet; then push and open the pull request."
-- To Worker-G1 (73e61e95) when the pull request of U-82 is merged: "U-82 is merged: start U-70 in
-  .worktrees/rn-u-70 on rn/u-70-swift-cleanup" (create the worktree and the node_modules first).
+  origin/main in rn-u-74e and capture again the delete confirm (three rows and High Contrast),
+  the two undo toasts, and the Delete of the edit sheet; then push and open the pull request."
+- To Worker-G1 (73e61e95) when the pull request of U-82 is merged: its next unit (an evidence
+  unit, once the Simulator is free).
 
-## After each merge
+## The order to the end
 
-- The evidence units that remain: onboarding (U-73e), progress and coach (U-75e), profile,
-  settings and billing (U-77e), Today (U-76e), scan (after PR 39), sign-in (after PR 57). Once
-  the iOS workflow with Maestro is on `main`, prefer artifacts from GitHub Actions, and keep the
-  machine of Phương for what only the Simulator can show (High Contrast through the real setting).
-- High Contrast: `xcrun simctl ui <udid> increase_contrast enabled`.
-- The limits of the harness are in `briefs/U-76e.md` (from findings U-74 section 12).
+1. PR 37 merged (diary code) → U-74e evidence merged.
+2. PR 58 merged (gates on GitHub Actions) → merges take their verdict from GitHub.
+3. U-83 (two Simulators) → the six evidence units, two at a time.
+4. Every parity row with its evidence → `done`.
+5. The tag `archive/swiftui-final` on main, then the pull request of U-70 merged last.
+6. `docs/rn-migration/report.md` in Vietnamese: the six sections, the list of design deviations,
+   what Phương does himself (Icon Composer, the support address, the products of the App Store,
+   the promise about training models, the pages of Terms and Privacy).
 
 ## For the next owner pull request
 
-- `docs/rn-migration/plan.md`: the rule "do the work, then report" and the rule that an owner
-  pull request with a script or a workflow runs the full gate before its merge.
-- The parity rows of PR 43 and PR 36 (OB-01 to OB-10, PR-01 to PR-03: partial with the evidence of
-  the merge; the Simulator evidence pending).
+- The parity rows of PR 39 (SC-01 to SC-07: partial with the evidence of the merge) and of PR 57.
 - An owner pull request that adds a script runs the full gate on its tree before the merge.
+- The follow-ups for the final report: the undo of a save that fails in the scan (nothing shown);
+  whole centimetres for a decimal height; `purchaseSelected` without a catch in the paywall shell;
+  the paragraph on testIDs in the parity detail of sign-in; the label "Report sent" in the parity
+  detail of the scan.
