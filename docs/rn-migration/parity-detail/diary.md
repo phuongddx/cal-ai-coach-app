@@ -23,6 +23,7 @@ live-diary join and its localtime day grouping are part of the behavior under te
 | ED-safe hides the summary card, the section kcal and the exercise kcal; the policy stays in `EdSafeCollapse` (I7) | `DiaryDayView.swift` (`.edSafeHidden()`) | `screens/DiaryDayView.tsx` (`EdSafeCollapse`) | `__tests__/DiaryDayView.test.tsx` › "the summary card and the kcal clauses hide in the ED-safe mode" |
 | The route opens as the diary sheet; `coachcal://diary?date=` picks the local day (WR-08) | `AppEnvironment.swift` (`linkDate`) | `src/app/diary.tsx` + `diaryMath.ts` (`linkDate`) | `__tests__/DiaryWaterExercise.test.ts` › "diary deep link date parses to local calendar day" |
 | Model re-reads after every local write and sync run; notify fans out after writes | `DiaryDayModel.swift` (observation) + rule 19 | `diaryDayModel.ts` (`subscribe`, `refresh`, `deps.notify`) | exercised by every model twin; the route wires `getSyncRuntime().subscribe` |
+| The day sheet reads the snapshot the model replaces on every change — heading, today flag, totals, section kcal — never the model in render (React Compiler, U-84) | — (React Compiler rule) | `diaryDayModel.ts` (`publishDiaryDay`) + `screens/DiaryDayView.tsx` | `__tests__/DiaryDayViewSnapshot.test.tsx` › "a save through the model moves the row, the section kilocalories and the totals"; "a delete through the model removes the row and moves the section kilocalories and the totals" (red under `npm run test:compiler` before the fix) |
 
 ## DY-02 — add food sheet with receipt and Undo
 
