@@ -38,4 +38,20 @@ describe('BadgeTile', () => {
       'Marathon, locked, 30-day streak',
     );
   });
+
+  it('draws an Ember icon instead of the emoji when iconName is given', async () => {
+    await render(<BadgeTile iconName="flame" emoji="🔥" name="On fire" detail="7-day streak" />);
+    expect(screen.getByTestId('icon:flame', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.queryByText('🔥', { includeHiddenElements: true })).toBeNull();
+    expect(screen.getByTestId('badge-tile:On fire')).toHaveProp('accessibilityLabel', 'On fire, earned');
+  });
+
+  it('draws the Ember icon in the muted ink when locked, and works without an emoji', async () => {
+    await render(<BadgeTile iconName="trophy" name="Marathon" detail="30-day streak" isLocked />);
+    expect(screen.getByTestId('icon:trophy', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByTestId('badge-tile:Marathon')).toHaveProp(
+      'accessibilityLabel',
+      'Marathon, locked, 30-day streak',
+    );
+  });
 });

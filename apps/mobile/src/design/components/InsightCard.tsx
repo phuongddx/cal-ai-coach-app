@@ -4,25 +4,41 @@
  * blue left bar on an `infoTint` background (Ember `#core` insight).
  */
 
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SymbolView, type SFSymbol } from 'expo-symbols';
 
-import { radius, space, typography, useTokens } from '../tokens';
+import { radius, size, space, typography, useTokens } from '../tokens';
+
+import { Icon } from './Icon';
+import type { IconName } from './iconShapes';
 
 export type InsightVariant = 'accent' | 'info';
 
 export type InsightCardProps = {
   title: string;
   text: string;
+  /** SF Symbol name of the earlier callers. Ignored when `iconName` is given. */
   icon?: string;
+  /** Ember canvas glyph (`#i-*`) for the 40 pt icon tile, instead of the SF Symbol. */
+  iconName?: IconName;
   variant?: InsightVariant;
+  /** One optional action row under the text (a link-style button, at least 44 pt tall). */
+  action?: InsightCardAction;
+};
+
+export type InsightCardAction = {
+  label: string;
+  onPress: () => void;
+  testID?: string;
 };
 
 export function InsightCard({
   title,
   text,
   icon = 'lightbulb',
+  iconName,
   variant = 'accent',
+  action,
 }: InsightCardProps) {
   const { colors } = useTokens();
   const isInfo = variant === 'info';
@@ -43,11 +59,29 @@ export function InsightCard({
     >
       <View style={[styles.bar, { backgroundColor: barColor }]} />
       <View style={[styles.iconTile, { backgroundColor: tileBackground }]}>
-        <SymbolView name={icon as SFSymbol} size={17} tintColor={iconColor} />
+        {iconName != null ? (
+          <Icon name={iconName} size={20} color={iconColor} />
+        ) : (
+          <SymbolView name={icon as SFSymbol} size={17} tintColor={iconColor} />
+        )}
       </View>
       <View style={styles.textColumn}>
         <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
         <Text style={[styles.text, { color: colors.text2 }]}>{text}</Text>
+        {action != null && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={action.label}
+            testID={action.testID ?? `insight-card:${variant}:action`}
+            onPress={action.onPress}
+            hitSlop={space.sm}
+            style={styles.action}
+          >
+            <Text style={[styles.actionLabel, { color: isInfo ? colors.infoInk : colors.accentInk }]}>
+              {action.label}
+            </Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -86,5 +120,14 @@ const styles = StyleSheet.create({
   },
   text: {
     ...typography.subhead,
+  },
+  action: {
+    minHeight: size.tapTarget,
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+  },
+  actionLabel: {
+    ...typography.subhead,
+    fontWeight: '600',
   },
 });

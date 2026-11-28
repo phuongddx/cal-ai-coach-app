@@ -462,7 +462,7 @@ Units, in order; U-71 first because every other unit reads its tokens:
 |---|---|---|---|
 | U-71 Ember design system (Worker-S1) | PL-06, PL-07 | `apps/mobile/src/design/tokens.ts` holds every token of `tokens.css` for light and dark, one to one, under names that keep today's keys working; the design components follow the component mapping and the color rules of `design-system.md`; the token test compares with `tokens.css`; a `SideBySide` evidence helper renders an RN frame and its Ember frame | nothing |
 | U-71b Ember components, second batch (Worker-S1) | PL-07 | the icon set of the canvas, `GlassIconButton`, `SheetHeader`, `Segment`, `EdSafeNote`, `FillField`, `GramsRuler` and the icon tile of `OptionCard`, built once in `src/design` for every restyle unit | U-71 |
-| U-72 Scan on Ember | SC-01 to SC-07 | the six frames of the scan loop and Describe mode | U-71, U-71b |
+| U-72 Scan on Ember | SC-01 to SC-07 | the six frames of the scan loop and Describe mode | U-71, U-71b; stage A2 also needs the picker of U-74 on `main` |
 | U-73 Onboarding on Ember | OB-01 to OB-10 | the nine steps | U-71 |
 | U-74 Diary sheets on Ember | DY-01 to DY-07 | Diary day, add food, food search, manual log, exercise, custom food, water; the ED-Safe leak fixes | U-71 |
 | U-75 Progress and Coach on Ember | PG-01 to PG-04, CH-01 | both tabs, the chart tokens, the Coach actions | U-71 |
@@ -471,6 +471,10 @@ Units, in order; U-71 first because every other unit reads its tokens:
 | U-78 Widgets and Live Activity on Ember (native slot) | PL-11, PL-12 | small, medium and Lock Screen widgets, the ED-Safe variants, the Live Activity in both places | U-71, the native slot |
 | U-79 The native launch-argument reader (Worker-S2; native slot and Simulator slot) | PL-05 | a local Expo module reads the process arguments once at launch; the nine `--cc*` arguments work on a device as they did in the SwiftUI app; the harness passes them to `simctl launch` | nothing |
 | U-80 App icon "Ember ring" (native slot) | PL-17 | starts when Designer delivers the complete icon: the flattened 1024 icon without alpha as the store icon, the Icon Composer document for the four appearances where `ios.icon` takes a `.icon` directory (the config type of SDK 58 says so; the prebuild result is what proves it), the compliance check on the built app, and every step that needs Icon Composer by hand written down for Phương | the complete icon set, the native slot |
+| U-71c Ember rounds 2 and 3 in the app (Worker-S1) | PL-06, PL-07 | tokens by the chain `tokens.css`, `tokens.json`, `emberTokens.generated.ts`; High Contrast; four component gaps | U-71b |
+| U-77b Sign-in on Ember | AU-01 | the seven sign-in frames: the native buttons of Apple and Google, the error under the field | U-71c |
+| U-81 A fresh install shows onboarding (Worker-S2; Simulator slot) | PL-01, PL-05 | the root gate: reproduced, the cause proven by a log, fixed where the launch goes wrong, a test that fails without the fix, the seeding workaround of the harness removed | PR 38 |
+| U-61c The catalog of every frame | QA-04 | `docs/design/ember/FRAMES.md` covers the 107 frames and maps the new screens to their parity rows | U-71c |
 
 Topology of phase 4: U-71 owned `apps/mobile/src/design/**`, and U-71b owns it until it merges. A
 restyle unit owns its feature tree and its route files, and changes a design component only through
@@ -510,6 +514,15 @@ Decisions the owner took for the behaviors the frames add. Each brief holds the 
 | The Export tap shares a file | U-77 binds the tap to `exportCsvAndShare`; today it shares the text, as before U-42 |
 | `SecondaryButton` without an action in Settings | `action` becomes required in U-77; the billing buttons stay inert until products exist |
 | The label of the ring | U-76 decides between "remaining" and the frame's "kcal left" |
+| "Report a problem" on the review | A report unlocks Save, as the correction of the SwiftUI app did. Nothing leaves the device, so the sent state says the report is saved on this device and the photo toggle goes; an endpoint with storage is a follow-up |
+| The billing buttons of Settings | visibly disabled with a note while no product exists |
+| The Export tap | opens the share with the file; a dismissed share is not an error |
+| The paywall | a shell with three states that never shows a price; it ends in the failed state until a store is connected |
+| The cancel flow | its primary opens the subscriptions page of the App Store |
+| The goal floor of the target sheet | the floor the engine returns, one flat minimum; the height-based minimum of the frame is an engine follow-up |
+| Chips, the back button and the typed fields of onboarding | chips at 44 pt in U-71c; no back button; no clamp while typing, and the ranges of the old wheels when the field loses focus (height 120 to 220 cm, weight 35 to 200 kg, goal 40 to 150 kg) |
+| Delete and edit in the diary | the action sheet of the system, an undo toast for five seconds (`diary.toast.undo`), the label "Edited" that persists, and a saved toast with its undo |
+| "Set a reminder" in Coach | not drawn until a reminders preference exists and something calls `refreshNotifications()` |
 
 Evidence of phase 4: for every frame, a Simulator screenshot of the RN screen next to the Ember
 frame (light, dark and ED-Safe where the design has them), and a list of deviations with reasons.
@@ -535,6 +548,61 @@ U-77 after U-73, U-75 after U-74, U-76 and U-78 after U-79, then the A2 and B st
 Still open from the fourth wave: `refreshNotifications()` has no caller; the Export tap shares text;
 the harness flows 06 and 07 of U-33 wait on `rn/u-33-harness` (cherry-pick `006ca49`, the branch
 carries a reverted commit in its history); `features/ember` and `src/spike` go in U-24.
+
+## The closing plan (set on 2026-11-27 at night)
+
+Zed set the goal for the whole migration: every screen on Ember with the new frames, tokens from
+`tokens.json`, a Simulator screenshot next to its frame for every screen, CI green, and the Swift
+cleanup merged after the tag `archive/swiftui-final`. The order below reaches the exit condition
+with one Simulator and one native slot. Each restyle unit merges at the end of its stage B.
+
+State at 21:00: merged through PR 35 (and PR 34, the second batch of components); `main` is
+`812e926`. Open: PR 36 (U-73), PR 37 (U-74), PR 38 (U-79, under review), PR 39 (U-72). Running:
+U-71c (Worker-S1), U-75 stage A (Worker-G1), U-77 stage A (Worker-G2).
+
+| Step | Unit | Who | Needs |
+|---|---|---|---|
+| 1 | U-79, the launch arguments on a device (PR 38) | Worker-S2 | merged after review and gates |
+| 2 | U-81, a fresh install shows onboarding | Worker-S2 | the Simulator slot |
+| 3 | U-71c, the design of rounds 2 and 3 in the app | Worker-S1 | merged after review and gates |
+| 4 | Stage A2 of U-73, U-75, U-77 and U-74 | each unit's worker | U-71c on `main` |
+| 5 | Stage B of U-74, then U-73, U-75, U-77 | each unit's worker | the Simulator slot, one at a time, in that order |
+| 6 | Stage A2 and B of U-72 | Worker-S1 | U-74 on `main` for the picker, then the Simulator slot |
+| 7 | U-76 Today on Ember, with the four-digit ring number and the macro row checked on the Simulator | Worker-S2 | U-74 on `main` (it mounts the water card), the Simulator slot |
+| 8 | U-77b Sign-in on Ember | the first free worker | U-71c, the Simulator slot |
+| 9 | U-61c, the catalog of the 107 frames | the first free worker | U-71c |
+| 10 | U-78 Widgets and Live Activity, U-80 the app icon, U-50 telemetry | Worker-S2 | the native slot, one build for all three |
+| 11 | U-24, the spike files go, with the caller of `refreshNotifications()` and the reminders preference | the first free worker | nothing native |
+| 12 | U-61, the API integration tests on PostgreSQL 17 in RN CI | the first free worker | nothing |
+| 13 | U-70, the cleanup: tag `archive/swiftui-final` at the last commit that holds `native/`, then one pull request | Worker-S2 | every screen merged and evidenced |
+| 14 | `docs/rn-migration/report.md` in Vietnamese, the six sections | the owner | step 13 |
+
+Follow-ups that stay outside the exit condition: server stages for Analyzing, a pre-scan
+entitlement read, servings in the scan contract, a report endpoint with storage, store products
+with a purchase SDK, the height-based goal floor (an engine change), unit conversion, "Prefer not to
+say", the Food / Exercise / Custom food segment, haptics.
+
+## Decisions taken after the closing plan (2026-11-27, at night)
+
+State at 23:20: steps 1 (PR 38), 2 (PR 46), 3 (PRs 41, 44, 45, 49) and 9 (PR 48) landed; step 4
+is reported on every branch; step 5 runs (the stage B of U-74 holds the Simulator); step 8 runs
+(PR 47). The Ember design on `main` holds 115 frames after PR 51.
+
+| The question | Decision | Where |
+|---|---|---|
+| Sign-in by password, as the frames of round 3 draw it | not built: the app signs in with the code; the API has no account creation by password and no reset route; frames 63 to 67 are reference only | U-77b, PR 51 |
+| The privacy line about training models and the footnote about Terms | not drawn until Phương supplies the promise and the pages | U-77b |
+| The e-mail field one tap deeper | the one exception to standing order 22: the tests of the e-mail flow open that step first; sentences and identifiers stay | U-77b |
+| The code step of sign-in | on frames 108 to 115: six cells over one hidden field, "Resend code in" after 60 s, "Use a different email" | U-77b, after the components of U-71g |
+| The ED-safe screen of free text | every form of the calorie words; `kilocalorie` joins the vocabulary in U-71g | PR 49 |
+| A unit is drained from its artifact | a pushed branch and an open pull request are read before the worker's message arrives | U-81, PR 46 |
+| The method of standing order 21 | it was wrong for statically linked pods; the order now names `scripts/rn/check-native-modules.sh` | PR 46 and the owner pull request that follows PR 51 |
+| The number of a frame | keyed on the id of its figure, so a reworded caption or a frame added in the middle of the canvas shifts nothing | PR 51 |
+| The screenshots `run-all.sh` rewrites | a unit restores every screenshot outside its own rows before it commits | standing order 23 |
+
+Follow-ups added tonight: a password sign-in (a product decision for Phương), the Terms and the
+Privacy Policy pages, the promise about training models, a direct test of a signed-out deep link to
+a guarded route, High Contrast on a device, the resend limit of the server read by the client.
 
 ## Waves 5 to 7 (outline; scoped at the drain before each)
 

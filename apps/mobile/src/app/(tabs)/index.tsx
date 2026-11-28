@@ -3,14 +3,13 @@
  * environment, the session store, the debug flags, the sync fan-out and the design ED-safe setter. It builds the
  * model's readers and hands them to `features/today` (standing-order rule 19).
  *
- * Launch arguments cannot be read on a device until U-51, so under `__DEV__` the route also takes query
- * parameters with the same meaning: `coachcal://?edSafe=1` turns ED-safe mode on for the session, and
- * `coachcal://?seed=1` seeds the demo persona once (SeedDataManager.ensureSeeded). U-51 replaces both.
+ * Launch arguments reach the app through the launch sequence (U-79): `--ccEDSafe` turns ED-safe mode on
+ * there, so the route needs no switch of its own. Under `__DEV__` it still takes `coachcal://?seed=1`, which
+ * seeds the demo persona once (SeedDataManager.ensureSeeded).
  */
 import { dayKey } from '@coachcal/core';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Linking } from 'react-native';
 
 import { getSessionStore } from '../../data/auth';
 import { getDataEnvironment } from '../../data/environment';
@@ -52,17 +51,15 @@ function makeRuntimeSubscribe(): (listener: () => void) => () => void {
 }
 
 export default function TodayRoute() {
-  const params = useLocalSearchParams<{ edSafe?: string; seed?: string }>();
-  const edSafeParam = firstParam(params.edSafe);
+  const params = useLocalSearchParams<{ seed?: string }>();
   const seedParam = firstParam(params.seed);
   const sync = useSyncState();
   const [model, setModel] = useState<TodayModel | null>(null);
 
-  // The development switches: the launch flag, plus the query parameter under __DEV__.
+  // The launch flag; the launch sequence has applied it already, this keeps a route that mounts first safe.
   useEffect(() => {
     if (getDebugFlags().edSafe) setEdSafeMode(true);
-    if (__DEV__ && edSafeParam !== undefined) setEdSafeMode(edSafeParam === '1');
-  }, [edSafeParam]);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -117,7 +114,6 @@ export default function TodayRoute() {
       isOffline={isOffline}
       onStartSetup={() => router.push('/onboarding')}
       onOpenDiary={(day) => router.push({ pathname: '/diary', params: { date: dayKey(day) } })}
-      onOpenHealthSettings={() => void Linking.openSettings()}
     />
   );
 }

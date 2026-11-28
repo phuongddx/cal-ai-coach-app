@@ -25,7 +25,9 @@ function makeModel() {
   return createOnboardingModel({
     ownerId: '11111111-2222-4333-8444-555555555555',
     now: () => new Date('2026-09-14T00:00:00Z'),
-    disableAnimations: true,
+    policyStorageKey: 'onboarding.policy.key',
+    applyPolicyFlag: jest.fn(),
+    writeSetting: jest.fn(async () => undefined),
     saveTarget: jest.fn(async () => undefined),
     notify: jest.fn(),
     requestHealthAccess: jest.fn(async () => 'denied'),

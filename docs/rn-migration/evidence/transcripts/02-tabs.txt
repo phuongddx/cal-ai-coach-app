@@ -1,34 +1,34 @@
   ok: simulator already booted
-  ok: simulator ready (85024D2F-71DE-43C0-8E11-CE58F4578FC3)
+  ok: simulator ready (A902237E-29DE-4A6F-9E93-23199FC2107F)
 
 === opening the app via the dev client URL ===
-  ok: found title 'Today' (Heading at y=326)
+  ok: found title 'Today' (Heading at y=92.333335876464844)
   ok: app is showing 'Today' (attempt 1)
 
 === tab: Progress ===
   tap 'Progress' (RadioButton) at (158, 822) from frame x=110.66666666666669 y=795 w=95 h=54
   ok: tap at (158, 822)
-  ok: found title 'Progress' (StaticText at y=122.66666412353516)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/PL-01/02-tab-progress.png (156 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/PL-01-02-tab-progress.png
+  ok: found title 'Progress' (StaticText at y=370)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-01/02-tab-progress.png (582 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/PL-01-02-tab-progress.png
 
 === tab: Coach ===
   tap 'Coach' (RadioButton) at (243, 822) from frame x=196.33333333333334 y=795 w=95.000000000000028 h=54
   ok: tap at (243, 822)
-  ok: found title 'Coach' (StaticText at y=88)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/PL-01/02-tab-coach.png (155 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/PL-01-02-tab-coach.png
+  ok: found title 'TODAY'S INSIGHTS' (Heading at y=370)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-01/02-tab-coach.png (426 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/PL-01-02-tab-coach.png
 
 === tab: Profile ===
   tap 'Profile' (RadioButton) at (329, 822) from frame x=282 y=795 w=95 h=54
   ok: tap at (329, 822)
-  ok: found title 'Profile' (StaticText at y=89.666664123535156)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/PL-01/02-tab-profile.png (153 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/PL-01-02-tab-profile.png
+  ok: found title 'GOALS & TARGETS' (Heading at y=370)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-01/02-tab-profile.png (334 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/PL-01-02-tab-profile.png
 
 === back to Today ===
   tap 'Today' (RadioButton) at (72, 822) from frame x=25 y=795 w=95 h=54
   ok: tap at (72, 822)
-  ok: found title 'Today' (Heading at y=326)
+  ok: found title 'Today' (Heading at y=92.333335876464844)
 
 === flow done — 0 failed ===

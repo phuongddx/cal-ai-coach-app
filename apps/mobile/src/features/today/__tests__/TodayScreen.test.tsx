@@ -6,7 +6,7 @@
  *
  * Documented adaptations (parity-detail/today.md):
  *  - A pixel snapshot cannot run in Jest. The matrix asserts what the Swift snapshot shows in each of the
- *    four states (the ring label, the goal line, the Health Score card, the meals with and without kcal);
+ *    four states (the ring label, the Eaten and Goal figures or the ED-safe guidance, the meals with and without kcal);
  *    the pixels are the Simulator screenshots of TD-01.
  *  - The Swift UI tests launch the app with `--cc*` arguments; here the seed is the same persona
  *    (`createSeedDataManager`) and the ED-safe launch argument is the design setter.
@@ -95,13 +95,13 @@ describe('TodayDiarySnapshotTests twins', () => {
       const ring = within(screen.getByTestId('today.ring'));
       if (state.safeMode) {
         expect(ring.getByLabelText('On track')).toBeOnTheScreen();
-        expect(screen.queryByTestId('today.healthScore')).toBeNull();
-        expect(screen.queryByText(/kcal goal/)).toBeNull();
+        expect(screen.queryByText('Goal')).toBeNull(); // U-76: was the goal line "of N kcal goal"
+        expect(screen.getByText(/Steady meals keep energy even\./)).toBeOnTheScreen();
         expect(screen.queryByTestId('food-row-kcal:Spaghetti Bolognese')).toBeNull(); // the row drops its kcal
       } else {
         expect(ring.getByLabelText(/calories remaining of 2150 goal/)).toBeOnTheScreen();
-        expect(screen.getByTestId('today.healthScore')).toBeOnTheScreen();
-        expect(screen.getByText('of 2,150 kcal goal')).toBeOnTheScreen();
+        expect(within(screen.getByTestId('today.goalKcal')).getByText('2,150')).toBeOnTheScreen(); // U-76: was the line "of 2,150 kcal goal"
+        expect(screen.getByText('kcal left')).toBeOnTheScreen();
         expect(screen.getByTestId('food-row-kcal:Spaghetti Bolognese')).toHaveTextContent('543 kcal');
       }
       await view.unmount();

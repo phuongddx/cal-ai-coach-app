@@ -1,7 +1,7 @@
 /**
  * CCOptionCard (Components/Controls.swift). Selectable option row with icon
- * tile; the selected/unselected visual state mapping is exposed for contract
- * tests exactly as in Swift.
+ * tile (no tile when neither `icon` nor `iconName` is passed); the selected/unselected visual
+ * state mapping is exposed for contract tests exactly as in Swift.
  */
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -31,12 +31,19 @@ export function optionCardBorder(colors: Colors, isSelected: boolean): { width: 
   return isSelected ? { width: 2, color: colors.accentStrong } : { width: 1, color: colors.border };
 }
 
-export function optionCardIconTile(colors: Colors, isSelected: boolean): string {
-  return isSelected ? colors.accentTint : colors.fill;
+/** Card fill: the frames tint the whole selected card (`accentTint`); unselected stays `card`. */
+export function optionCardBackground(colors: Colors, isSelected: boolean): string {
+  return isSelected ? colors.accentTint : colors.card;
 }
 
+/** Icon tile: orange `accent` disc on the tinted selected card (frames 21/22/24), `fill` otherwise. */
+export function optionCardIconTile(colors: Colors, isSelected: boolean): string {
+  return isSelected ? colors.accent : colors.fill;
+}
+
+/** Glyph ink: `onAccent` on the orange tile when selected, `text2` otherwise. */
 export function optionCardIconColor(colors: Colors, isSelected: boolean): string {
-  return isSelected ? colors.accentInk : colors.text2;
+  return isSelected ? colors.onAccent : colors.text2;
 }
 
 export function optionCardA11yLabel(title: string, subtitle: string | undefined, isSelected: boolean): string {
@@ -57,21 +64,24 @@ export function OptionCard({ title, subtitle, icon, iconName, isSelected, onSele
       style={[
         styles.card,
         {
-          backgroundColor: colors.card,
+          backgroundColor: optionCardBackground(colors, isSelected),
           borderWidth: border.width,
           borderColor: border.color,
         },
       ]}
     >
-      <View style={[styles.iconTile, { backgroundColor: optionCardIconTile(colors, isSelected) }]}>
-        {iconName != null ? (
-          <Icon name={iconName} size={22} color={optionCardIconColor(colors, isSelected)} />
-        ) : (
-          icon != null && (
+      {(iconName != null || icon != null) && (
+        <View
+          testID={`option-card:${title}:tile`}
+          style={[styles.iconTile, { backgroundColor: optionCardIconTile(colors, isSelected) }]}
+        >
+          {iconName != null ? (
+            <Icon name={iconName} size={22} color={optionCardIconColor(colors, isSelected)} />
+          ) : (
             <SymbolView name={icon as SFSymbol} size={20} tintColor={optionCardIconColor(colors, isSelected)} />
-          )
-        )}
-      </View>
+          )}
+        </View>
+      )}
       <View style={styles.textColumn}>
         <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
         {subtitle != null && (

@@ -30,7 +30,9 @@ function makeModel(saveTarget: (target: unknown) => Promise<void> = async () => 
   const model = createOnboardingModel({
     ownerId: '11111111-2222-4333-8444-555555555555',
     now: () => new Date('2026-09-14T00:00:00Z'),
-    disableAnimations: true,
+    policyStorageKey: 'onboarding.policy.key',
+    applyPolicyFlag: jest.fn(),
+    writeSetting: jest.fn(async () => undefined),
     saveTarget,
     notify: jest.fn(),
     requestHealthAccess: jest.fn(async () => 'denied'),
@@ -150,5 +152,22 @@ describe('plan reveal screen', () => {
     expect(screen.getByTestId('plan.macro.protein')).toBeOnTheScreen();
     expect(screen.getByTestId('plan.adjust')).toBeOnTheScreen();
     expect(screen.getByTestId('plan.medicalDisclaimer')).toBeOnTheScreen();
+  });
+
+  it('the edit panel hides the kcal row in ED-safe mode and keeps the macro grams', async () => {
+    setEdSafeMode(true);
+    await render(<PlanRevealScreen model={makeModel()} onFinished={jest.fn()} />);
+
+    await userEvent.press(screen.getByRole('button', { name: 'Not right? Adjust targets' }));
+    // The kcal row collapses with its steppers; 'Daily calories' is gone.
+    expect(screen.queryByText('Daily calories')).toBeNull();
+    expect(screen.queryByTestId('plan.editKcal')).toBeNull();
+    expect(screen.queryByTestId('plan.editKcal.decrement')).toBeNull();
+    expect(screen.queryByTestId('plan.editKcal.increment')).toBeNull();
+    // The macro grams stay editable (the decision: ED-safe hides kcal only).
+    expect(screen.getByTestId('plan.editProtein')).toBeOnTheScreen();
+    expect(screen.getByTestId('plan.editCarbs')).toBeOnTheScreen();
+    expect(screen.getByTestId('plan.editFat')).toBeOnTheScreen();
+    expect(screen.getByTestId('plan.editProtein.decrement')).toBeOnTheScreen();
   });
 });

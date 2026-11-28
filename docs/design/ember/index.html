@@ -59,6 +59,7 @@
   <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></symbol>
   <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></symbol>
   <symbol id="i-moonsun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"/></symbol>
+  <symbol id="i-carrot" viewBox="0 0 24 24"><path d="M2.3 21.7s9.9-3.5 12.7-6.4a4.5 4.5 0 0 0-6.4-6.3C5.8 11.8 2.3 21.7 2.3 21.7zM8.6 14l-2-2M15.3 15l-2.4-2.5"/><path d="M22 9s-1.3-2-3.5-2C16.9 7 15 9 15 9s1.3 2 3.5 2S22 9 22 9z"/><path d="M15 2s-2 1.3-2 3.5S15 9 15 9s2-1.8 2-3.5C17 3.3 15 2 15 2z"/></symbol>
   <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10z"/><path d="M2 21c0-3 1.9-5.4 5.2-6"/></symbol>
   <symbol id="i-dumbbell" viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></symbol>
   <symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.5"/></symbol>
@@ -69,7 +70,7 @@
   <h1>Neon orange, honest numbers.</h1>
   <p>One brand colour for the icon, app, widgets and web. Orange fills always carry black labels, and orange text uses a darker “ink” on light backgrounds. The scan loop keeps the confidence badge visible on every scan, lets you type grams directly, and keeps billing one tap from Settings. ED-Safe hides every calorie number, including the four sheets that used to show them.</p>
   <nav class="toc">
-    <a href="#system">Design system</a><a href="#scan">Scan loop</a><a href="#core">Today · Diary · Progress · Coach</a><a href="#profile">Profile · Settings</a><a href="#billing">Plans · Quota · Cancel</a><a href="#onboarding">Onboarding (9)</a><a href="#glance">Widget · Live Activity</a><a href="#icon">App icon</a><a href="design-system.md">Tokens + handoff</a><a href="research.md">Research note</a>
+    <a href="#system">Design system</a><a href="#scan">Scan loop</a><a href="#core">Today · Diary · Progress · Coach</a><a href="#profile">Profile · Settings</a><a href="#billing">Plans · Quota · Cancel</a><a href="#onboarding">Onboarding (9)</a><a href="#glance">Widget · Live Activity</a><a href="#icon">App icon</a><a href="#diaryedit">Diary edit</a><a href="#export">Export errors</a><a href="#darkmode">Dark: Onboarding · Billing</a><a href="#hc">High Contrast</a><a href="#auth">Sign in (email code)</a><a href="#target">Edit goal</a><a href="#scansheets">Describe · Report</a><a href="#paywallstates">Paywall: no price</a><a href="#glance2">Widget ED · LA steps</a><a href="#darkmore">Dark: Profile · Settings</a><a href="design-system.md">Tokens + handoff</a><a href="research.md">Research note</a>
   </nav>
 </header>
 
@@ -90,9 +91,9 @@
         <div class="ph-camera" style="position:absolute;inset:0"></div>
         <div class="ph-bowl" style="position:absolute;left:55px;top:250px;width:280px;height:280px;border-radius:50%;opacity:.92;filter:saturate(1.05)"></div>
         <div style="position:absolute;top:62px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;z-index:5">
-          <a class="glassbtn" aria-label="Close" style="background:rgba(0,0,0,.45);color:#fff;border-color:rgba(255,255,255,.12)"><svg class="i"><use href="#i-x"/></svg></a>
-          <span class="chip" style="background:rgba(0,0,0,.55);color:#F7F5F2;height:32px;font-size:13px"><svg class="i sm"><use href="#i-scan"/></svg>2 of 3 free scans left this week</span>
-          <a class="glassbtn" aria-label="Flash off" style="background:rgba(0,0,0,.45);color:#fff;border-color:rgba(255,255,255,.12)"><svg class="i md"><use href="#i-flash"/></svg></a>
+          <a class="glassbtn on-media" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></a>
+          <span class="chip" style="background:var(--cc-media-scrim-strong);color:var(--cc-on-media);height:32px;font-size:13px"><svg class="i sm"><use href="#i-scan"/></svg>2 of 3 free scans left this week</span>
+          <a class="glassbtn on-media" aria-label="Flash off"><svg class="i md"><use href="#i-flash"/></svg></a>
         </div>
         <!-- brackets -->
         <svg style="position:absolute;left:39px;top:234px;width:312px;height:312px" viewBox="0 0 312 312" fill="none" stroke="#FF6A00" stroke-width="5" stroke-linecap="round"><path d="M4 52V28A24 24 0 0 1 28 4h24M260 4h24a24 24 0 0 1 24 24v24M308 260v24a24 24 0 0 1-24 24h-24M52 308H28A24 24 0 0 1 4 284v-24"/></svg>
@@ -106,9 +107,9 @@
           <span class="chip" style="background:rgba(42,39,36,.85);color:#F7F5F2">Describe</span>
         </div>
         <div style="position:absolute;bottom:46px;left:0;right:0;display:flex;justify-content:space-around;align-items:center;padding:0 28px">
-          <a class="glassbtn" aria-label="Choose from library" style="width:52px;height:52px;background:rgba(42,39,36,.85);color:#fff;border-color:transparent"><svg class="i"><use href="#i-image"/></svg></a>
+          <a class="glassbtn" aria-label="Choose from library" style="width:52px;height:52px;background:rgba(42,39,36,.85);color:var(--cc-on-media);border-color:transparent"><svg class="i"><use href="#i-image"/></svg></a>
           <a aria-label="Take photo" style="width:var(--shutter);height:var(--shutter);border-radius:50%;border:4px solid #F7F5F2;display:grid;place-items:center"><span style="width:60px;height:60px;border-radius:50%;background:var(--cc-accent)"></span></a>
-          <a class="glassbtn" aria-label="Switch camera" style="width:52px;height:52px;background:rgba(42,39,36,.85);color:#fff;border-color:transparent"><svg class="i"><use href="#i-flip"/></svg></a>
+          <a class="glassbtn" aria-label="Switch camera" style="width:52px;height:52px;background:rgba(42,39,36,.85);color:var(--cc-on-media);border-color:transparent"><svg class="i"><use href="#i-flip"/></svg></a>
         </div>
       </div>
       <figcaption>Viewfinder
@@ -303,7 +304,7 @@
           </div>
           <div class="ember" data-id="today.ring">
             <div style="display:flex;gap:18px;align-items:center">
-              <div class="ring" style="--ring:150px">
+              <div class="ring" style="--ring:var(--ring-md)">
                 <svg viewBox="0 0 184 184"><circle cx="92" cy="92" r="76" fill="none" stroke="#3A342F" stroke-width="16"/><circle cx="92" cy="92" r="76" fill="none" stroke="#FF6A00" stroke-width="16" stroke-linecap="round" stroke-dasharray="291 478"/></svg>
                 <div class="center"><div class="num" style="font:700 36px/1 var(--cc-font-round);color:#F7F5F2">816</div><div style="font:500 13px/1.2 var(--cc-font);color:#ABA6A0;margin-top:4px">kcal left</div></div>
               </div>
@@ -343,7 +344,7 @@
           <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:8px"><div><div class="subtitle">Tuesday, 24 Nov</div><div class="largetitle">Today</div></div><span class="chip" style="height:32px;font-size:13px;background:var(--cc-caution-tint);color:var(--cc-caution-ink)">Offline · syncs later</span></div>
           <div class="ember" style="margin-top:16px">
             <div style="display:flex;gap:18px;align-items:center">
-              <div class="ring" style="--ring:150px"><svg viewBox="0 0 184 184"><circle cx="92" cy="92" r="76" fill="none" stroke="#3A342F" stroke-width="16"/><circle cx="92" cy="92" r="76" fill="none" stroke="#FF6A00" stroke-width="16" stroke-linecap="round" stroke-dasharray="291 478"/></svg>
+              <div class="ring" style="--ring:var(--ring-md)"><svg viewBox="0 0 184 184"><circle cx="92" cy="92" r="76" fill="none" stroke="#3A342F" stroke-width="16"/><circle cx="92" cy="92" r="76" fill="none" stroke="#FF6A00" stroke-width="16" stroke-linecap="round" stroke-dasharray="291 478"/></svg>
                 <div class="center"><div class="num" style="font:700 36px/1 var(--cc-font-round)">816</div><div style="font:500 13px/1.2 var(--cc-font);color:#ABA6A0;margin-top:4px">kcal left</div></div></div>
               <div style="flex:1;display:flex;flex-direction:column;gap:12px;font:500 13px/1.25 var(--cc-font);color:#ABA6A0">
                 <div>Eaten<div class="num" style="font:700 20px var(--cc-font-round);color:#F7F5F2;margin-top:2px">1,284</div></div>
@@ -381,7 +382,7 @@
           <div style="margin-top:8px"><div class="subtitle">Tuesday, 24 Nov</div><div class="largetitle">Today</div></div>
           <div class="ember" style="margin-top:16px">
             <div style="display:flex;gap:18px;align-items:center">
-              <div class="ring" style="--ring:150px"><svg viewBox="0 0 184 184"><circle cx="92" cy="92" r="76" fill="none" stroke="#3A342F" stroke-width="16"/><circle cx="92" cy="92" r="76" fill="none" stroke="#FF6A00" stroke-width="16" stroke-linecap="round" stroke-dasharray="291 478"/></svg>
+              <div class="ring" style="--ring:var(--ring-md)"><svg viewBox="0 0 184 184"><circle cx="92" cy="92" r="76" fill="none" stroke="#3A342F" stroke-width="16"/><circle cx="92" cy="92" r="76" fill="none" stroke="#FF6A00" stroke-width="16" stroke-linecap="round" stroke-dasharray="291 478"/></svg>
                 <div class="center"><div style="font:700 22px/1.1 var(--cc-font);color:#F7F5F2">On track</div><div style="font:500 13px/1.2 var(--cc-font);color:#ABA6A0;margin-top:4px">2 of 3 meals</div></div></div>
               <div style="flex:1;font:400 15px/1.45 var(--cc-font);color:#ABA6A0">Steady meals keep energy even. <span style="color:#F7F5F2">Dinner is next.</span></div>
             </div>
@@ -485,9 +486,9 @@
             <div style="font:600 13px var(--cc-font);color:#FF7A1F;letter-spacing:.02em">THIS WEEK</div>
             <div style="font:700 22px/1.25 var(--cc-font);margin-top:8px">Protein hit target on 5 of 7 days. Your best week yet.</div>
             <div style="display:flex;gap:10px;margin-top:16px">
-              <div style="flex:1;background:#2A2724;border-radius:14px;padding:10px 12px"><div class="num" style="font:700 22px var(--cc-font-round)">19</div><div style="font:500 12px var(--cc-font);color:#ABA6A0">meals logged</div></div>
-              <div style="flex:1;background:#2A2724;border-radius:14px;padding:10px 12px"><div class="num" style="font:700 22px var(--cc-font-round)">5/7</div><div style="font:500 12px var(--cc-font);color:#ABA6A0">protein days</div></div>
-              <div style="flex:1;background:#2A2724;border-radius:14px;padding:10px 12px"><div class="num" style="font:700 22px var(--cc-font-round)">12</div><div style="font:500 12px var(--cc-font);color:#ABA6A0">day streak</div></div>
+              <div style="flex:1;background:var(--cc-ember-tile);border-radius:14px;padding:10px 12px"><div class="num" style="font:var(--t-num-md)">19</div><div style="font:500 12px var(--cc-font);color:#ABA6A0">meals logged</div></div>
+              <div style="flex:1;background:var(--cc-ember-tile);border-radius:14px;padding:10px 12px"><div class="num" style="font:var(--t-num-md)">5/7</div><div style="font:500 12px var(--cc-font);color:#ABA6A0">protein days</div></div>
+              <div style="flex:1;background:var(--cc-ember-tile);border-radius:14px;padding:10px 12px"><div class="num" style="font:var(--t-num-md)">12</div><div style="font:500 12px var(--cc-font);color:#ABA6A0">day streak</div></div>
             </div>
           </div>
           <div class="sechead"><span>Insights</span></div>
@@ -535,7 +536,7 @@
           </div>
           <div class="sechead"><span>App</span></div>
           <div class="group">
-            <div class="cell"><span class="ic" style="background:#E5243B"><svg class="i"><use href="#i-heart"/></svg></span><span class="lbl">Apple Health</span><span class="val" style="color:var(--cc-success-ink)">Connected</span><svg class="i chev"><use href="#i-chev"/></svg></div>
+            <div class="cell"><span class="ic" style="background:var(--cc-apple-health)"><svg class="i"><use href="#i-heart"/></svg></span><span class="lbl">Apple Health</span><span class="val" style="color:var(--cc-success-ink)">Connected</span><svg class="i chev"><use href="#i-chev"/></svg></div>
             <div class="cell"><span class="ic" style="background:#5F5B57"><svg class="i"><use href="#i-ruler"/></svg></span><span class="lbl">Units</span><div class="seg" style="width:140px;padding:2px"><a class="on" style="height:30px">kg</a><a style="height:30px">lb</a></div></div>
             <div class="cell"><span class="ic" style="background:#5F5B57"><svg class="i"><use href="#i-help"/></svg></span><span class="lbl">Settings</span><svg class="i chev"><use href="#i-chev"/></svg></div>
           </div>
@@ -552,7 +553,7 @@
           <div class="navbar"><a class="glassbtn" aria-label="Back to Profile"><svg class="i"><use href="#i-back"/></svg></a><span class="t">Settings</span><span style="width:44px"></span></div>
           <div class="sechead" style="margin-top:8px"><span>Subscription</span></div>
           <div class="card" style="padding:16px">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><b style="font:700 17px var(--cc-font)">CoachCal Plus · Yearly</b><div style="font:400 15px/1.45 var(--cc-font);color:var(--cc-text-2);margin-top:4px">Renews 12 Dec 2026 for <b style="color:var(--cc-text)">$39.99</b>.<br>Billed by Apple. No hidden fees.</div></div><span class="badge hi mini">Active</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><b style="font:700 17px var(--cc-font)">CoachCal Plus · Yearly</b><div style="font:400 15px/1.45 var(--cc-font);color:var(--cc-text-2);margin-top:4px">Renews 12 Dec 2026 for <b style="color:var(--cc-text)"><span class="pv">{price}</span></b>.<br>Billed by Apple. No hidden fees.</div></div><span class="badge hi mini">Active</span></div>
             <div style="display:flex;gap:8px;margin-top:14px"><a class="btn secondary" style="height:44px;font-size:15px">Change plan</a><a class="btn destructive" style="height:44px;font-size:15px" data-id="settings.cancelSubscription">Cancel subscription</a></div>
             <a class="btn ghost" style="height:44px;font-size:15px;margin-top:4px">Billing history · Restore purchases</a>
           </div>
@@ -660,18 +661,18 @@
           </div>
           <a style="display:flex;align-items:center;gap:12px;border:2px solid var(--cc-accent);border-radius:18px;padding:14px 16px;background:var(--cc-accent-tint)">
             <span style="width:24px;height:24px;border-radius:50%;background:var(--cc-accent);display:grid;place-items:center;color:#0B0A09"><svg class="i sm" style="stroke-width:3"><use href="#i-check"/></svg></span>
-            <div style="flex:1"><b style="font:700 17px var(--cc-font)">Yearly</b><div style="font:400 13px/1.4 var(--cc-font);color:var(--cc-text-2)">7 days free, then $39.99 / year</div></div>
-            <div style="text-align:right"><b class="num" style="font:700 17px var(--cc-font-round)">$3.33</b><div style="font:400 12px var(--cc-font);color:var(--cc-text-2)">per month</div></div>
+            <div style="flex:1"><b style="font:700 17px var(--cc-font)">Yearly</b><div style="font:400 13px/1.4 var(--cc-font);color:var(--cc-text-2)"><span class="pv">{trial}</span> free, then <span class="pv">{yearly}</span> / year</div></div>
+            <div style="text-align:right"><b class="num" style="font:700 17px var(--cc-font-round)"><span class="pv">{perMonth}</span></b><div style="font:400 12px var(--cc-font);color:var(--cc-text-2)">per month</div></div>
           </a>
           <a style="display:flex;align-items:center;gap:12px;border:1.5px solid var(--cc-separator);border-radius:18px;padding:14px 16px;margin-top:8px">
             <span style="width:24px;height:24px;border-radius:50%;border:2px solid var(--cc-text-3)"></span>
-            <div style="flex:1"><b style="font:700 17px var(--cc-font)">Monthly</b><div style="font:400 13px var(--cc-font);color:var(--cc-text-2)">$7.99 / month, no trial</div></div>
-            <b class="num" style="font:700 17px var(--cc-font-round)">$7.99</b>
+            <div style="flex:1"><b style="font:700 17px var(--cc-font)">Monthly</b><div style="font:400 13px var(--cc-font);color:var(--cc-text-2)"><span class="pv">{monthly}</span> / month, no trial</div></div>
+            <b class="num" style="font:700 17px var(--cc-font-round)"><span class="pv">{monthly}</span></b>
           </a>
         </div>
         <div class="dock">
-          <a class="btn primary">Start 7-day free trial</a>
-          <div class="note">Free for 7 days, then $39.99/year. We'll remind you 2 days before you're charged. Cancel any time in Settings.<br><a style="color:var(--cc-text-2);text-decoration:underline">Terms</a> · <a style="color:var(--cc-text-2);text-decoration:underline">Privacy</a></div>
+          <a class="btn primary">Start <span class="pv">{trial}</span> free trial</a>
+          <div class="note">Free for <span class="pv">{trial}</span>, then <span class="pv">{yearly}</span>/year. We'll remind you 2 days before you're charged. Cancel any time in Settings.<br><a style="color:var(--cc-text-2);text-decoration:underline">Terms</a> · <a style="color:var(--cc-text-2);text-decoration:underline">Privacy</a></div>
         </div>
       </div>
       <figcaption>Plans / paywall
@@ -716,8 +717,74 @@
 <section class="band" id="icon">
   <header><h2>7 · App icon: “Ember ring”</h2><p>One idea: an open progress ring that also reads as a C, with an ember dot where the ring stops. It is built as two layers (background plus foreground) for Icon Composer, so Liquid Glass can add its own highlight. The layers are square, unmasked and opaque. Default, Dark, Clear and Tinted variants keep the same shapes.</p></header>
   <div class="row" id="iconRow"></div>
+  <h3 style="font:600 17px/1.3 var(--cc-font);margin:40px 0 6px">Icon Composer file: rendered by Apple's own renderer (27/11)</h3>
+  <p style="font:400 14px/1.5 var(--cc-font);color:#5F5B57;max-width:900px;margin-bottom:20px">These six images were exported from <code>icon/AppIcon.icon</code> with Icon Composer's command-line renderer (<code>ictool</code>, Xcode 27.1), not drawn by hand. Two glass layers (ring, dot) sit on a solid orange fill; Dark, Clear and Tinted come from per-appearance fills inside the file. Steps for opening and shipping it: <a href="icon/ICON-COMPOSER.md">icon/ICON-COMPOSER.md</a>.</p>
+  <div class="row" id="iconComposerRow">
+    <figure class="frame" id="icon-default" data-frame="icon-default" style="width:200px"><img src="icon/composer/AppIcon-Default-1024.png" width="180" height="180" alt="Default appearance"><figcaption>Default<span>Orange fill, black glass ring and dot.</span></figcaption></figure>
+    <figure class="frame" id="icon-dark" data-frame="icon-dark" style="width:200px"><img src="icon/composer/AppIcon-Dark-1024.png" width="180" height="180" alt="Dark appearance"><figcaption>Dark<span>Ember-black fill, orange ring, brighter ember dot.</span></figcaption></figure>
+    <figure class="frame" id="icon-clear-light" data-frame="icon-clear-light" style="width:200px"><img src="icon/composer/AppIcon-ClearLight-1024.png" width="180" height="180" alt="Clear light appearance"><figcaption>Clear light<span>System glass; the glyph keeps its shape.</span></figcaption></figure>
+    <figure class="frame" id="icon-clear-dark" data-frame="icon-clear-dark" style="width:200px"><img src="icon/composer/AppIcon-ClearDark-1024.png" width="180" height="180" alt="Clear dark appearance"><figcaption>Clear dark</figcaption></figure>
+    <figure class="frame" id="icon-tinted-light" data-frame="icon-tinted-light" style="width:200px"><img src="icon/composer/AppIcon-TintedLight-1024.png" width="180" height="180" alt="Tinted light appearance"><figcaption>Tinted light<span>Ring white (most recognisable part), dot light grey.</span></figcaption></figure>
+    <figure class="frame" id="icon-tinted-dark" data-frame="icon-tinted-dark" style="width:200px"><img src="icon/composer/AppIcon-TintedDark-1024.png" width="180" height="180" alt="Tinted dark appearance"><figcaption>Tinted dark</figcaption></figure>
+  </div>
 </section>
 
+<!-- ============ 8. DIARY: EDIT AN ITEM (27/11) ============ -->
+<section class="band" id="diaryedit">
+  <header><h2>8 · Diary: edit an item</h2><p>Tap any Diary row to edit it inside the Diary sheet. The grams control is the same one as Review: a typed field, 44 pt −/+ at 10 g a step, the drag ruler and serving chips. Meal can be changed here too. Delete asks once, then offers Undo for 5 seconds. ED-Safe hides only kcal: confidence, grams and weight stay.</p></header>
+  <div class="row" id="diaryEditRow"></div>
+</section>
+
+<!-- ============ 9. EXPORT CSV ERRORS (27/11) ============ -->
+<section class="band" id="export">
+  <header><h2>9 · Export diary as CSV: error states</h2><p>Settings → Export diary opens a sheet with a date range. Three things can go wrong: the file can't be written, the range has no entries, or the person closes the share sheet. Each one keeps the sheet open, says what happened in plain words and offers the next step. Only the write failure uses red.</p></header>
+  <div class="row" id="exportRow"></div>
+</section>
+
+<!-- ============ 10. DARK MODE: ONBOARDING + BILLING (27/11) ============ -->
+<section class="band" id="darkmode" style="background:#1A1816">
+  <header><h2 style="color:#F7F5F2">10 · Dark mode: Onboarding (9) and Billing</h2><p style="color:#ABA6A0">The same screens built from the dark token set, no new layout. Step 1 was already dark. Billing sheets sit on ccElevated so they lift off the dimmed app. <b style="color:#F7F5F2">The paywall shows no prices:</b> every price is a StoreKit placeholder (see the Plans frame).</p></header>
+  <div class="row" id="onbDark"></div>
+  <div class="row" id="billingDarkRow" style="margin-top:48px"></div>
+</section>
+
+<!-- ============ 11. HIGH CONTRAST (27/11) ============ -->
+<section class="band" id="hc">
+  <header><h2>11 · High Contrast (Increase Contrast)</h2><p>The High Contrast set now lives in <code>tokens.css</code> (classes <code>.hc</code> and <code>.dark.hc</code>) and in <code>tokens.json</code> (<code>highContrastLight</code>, <code>highContrastDark</code>). The table below is read live from the CSS, so it cannot drift.</p></header>
+  <div class="row" id="hcRow"></div>
+</section>
+
+<!-- ============ 12–17 · ROUND 3 (27/11/2026) ============ -->
+<section class="band" id="auth">
+  <header><h2>12 · Sign in: Apple, Google, email code</h2><p>One entry screen, then email sign-in with a 6-digit code: type the address, tap Send code, type the code, tap Verify. New and known addresses take the same path, so there is no Create account switch. Brand buttons follow Apple's and Google's own rules (native buttons in the app). Errors are inline and never say whether an address has an account.</p></header>
+  <div class="row" id="authRow"></div>
+  <h3 style="font:600 17px/1.3 var(--cc-font);margin:40px 0 6px">Email code: the path built now (27/11, round 4)</h3>
+  <p style="font:400 14px/1.5 var(--cc-font);color:#5F5B57;max-width:900px;margin-bottom:20px">The entry screen (first two frames above) is built as drawn. The email + password, wrong password and reset frames above are kept only as reference for a possible future password sign-in; they are not built now.</p>
+  <div class="row" id="authCodeRow"></div>
+</section>
+<section class="band" id="target">
+  <header><h2>13 · Profile: edit goal sheet</h2><p>Goal weight and pace in one sheet, with the new daily target shown live before saving. ED-Safe hides the kcal only. Goals under the healthy range are clamped with a calm explanation.</p></header>
+  <div class="row" id="targetRow"></div>
+</section>
+<section class="band" id="scansheets">
+  <header><h2>14 · Scan sheets: Describe a meal, Report a problem</h2><p>Describe is the text path into the same scan pipeline (kind: text). “Fix Issue” becomes <b>Report a problem</b>: an honest name, since a report does not change the diary. Direct fixes are always offered first.</p></header>
+  <div class="row" id="scanSheetsRow"></div>
+</section>
+<section class="band" id="paywallstates">
+  <header><h2>15 · Paywall when the App Store returns no price</h2><p>All prices on the canvas are placeholders like <span class="pv">{yearly}</span>: the app shows StoreKit's localized prices. These two states cover the moments when there are none yet.</p></header>
+  <div class="row" id="paywallStateRow"></div>
+</section>
+<section class="band" id="glance2" style="background:#D9D4CE">
+  <header><h2>16 · Medium widget (ED-Safe) and Live Activity while processing</h2><p>The widget swaps macro grams for meals logged. The Live Activity names each real server step instead of a fake timer.</p></header>
+  <div class="row" id="glance2Row"></div>
+</section>
+<section class="band" id="darkmore" style="background:#1A1816">
+  <header><h2 style="color:#F7F5F2">17 · Dark: Profile, Settings, Food search, Manual log</h2><p style="color:#ABA6A0">The section 3 screens in dark. Quota sheet and cancel flow in dark are already in section 10.</p></header>
+  <div class="row" id="darkMoreRow"></div>
+</section>
+
+<script src="screens-additions.js"></script>
+<script src="screens-more.js"></script>
 <script src="screens.js"></script>
 </body>
 </html>

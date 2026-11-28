@@ -15,7 +15,12 @@ import { Platform, useColorScheme } from 'react-native';
 
 import { darkColors, lightColors, withAlpha } from '../tokens';
 
-import { glassIconButtonColors, GlassIconButton, hasNativeGlass } from './GlassIconButton';
+import {
+  glassDisabledGlyphAlpha,
+  glassIconButtonColors,
+  GlassIconButton,
+  hasNativeGlass,
+} from './GlassIconButton';
 
 const mockUseColorScheme = useColorScheme as jest.MockedFunction<typeof useColorScheme>;
 
@@ -46,18 +51,56 @@ describe('GlassIconButton', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('draws the dark glass with a light glyph over media, in both schemes', async () => {
+  it('draws mediaScrim with an onMedia glyph over media, in both schemes', async () => {
     for (const scheme of ['light', 'dark'] as const) {
       mockUseColorScheme.mockReturnValue(scheme);
       await render(
         <GlassIconButton icon="x" tone="overMedia" accessibilityLabel="Close" testID={`media-${scheme}`} />,
       );
       expect(screen.getByTestId(`media-${scheme}`)).toHaveStyle({
-        backgroundColor: withAlpha(darkColors.bg, 0.45),
+        backgroundColor: (scheme === 'dark' ? darkColors : lightColors).mediaScrim,
       });
     }
-    const colors = glassIconButtonColors(lightColors, false, 'overMedia');
-    expect(colors.glyph).toBe(lightColors.emberText);
+    for (const [palette, dark] of [[lightColors, false], [darkColors, true]] as const) {
+      expect(glassIconButtonColors(palette, dark, 'overMedia')).toEqual({
+        background: palette.mediaScrim,
+        border: 'transparent',
+        glyph: palette.onMedia,
+      });
+    }
+  });
+
+  describe('disabled', () => {
+    it('reports its state, ignores presses and dims the glyph', async () => {
+      const onPress = jest.fn();
+      await render(
+        <GlassIconButton icon="flash" accessibilityLabel="Flash" testID="off" onPress={onPress} disabled />,
+      );
+      const button = screen.getByTestId('off');
+      expect(button).toHaveProp('accessibilityState', { disabled: true });
+      await userEvent.press(button);
+      expect(onPress).not.toHaveBeenCalled();
+      expect(glassDisabledGlyphAlpha).toBe(0.4);
+    });
+
+    it('is enabled by default and reports that', async () => {
+      const onPress = jest.fn();
+      await render(<GlassIconButton icon="flash" accessibilityLabel="Flash" testID="on" onPress={onPress} />);
+      expect(screen.getByTestId('on')).toHaveProp('accessibilityState', { disabled: false });
+      await userEvent.press(screen.getByTestId('on'));
+      expect(onPress).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('spoken value', () => {
+    it('carries an optional accessibility value and none by default', async () => {
+      await render(
+        <GlassIconButton icon="flip" accessibilityLabel="Switch camera" accessibilityValueText="Back camera" testID="flip" />,
+      );
+      expect(screen.getByTestId('flip')).toHaveAccessibilityValue({ text: 'Back camera' });
+      await render(<GlassIconButton icon="flip" accessibilityLabel="Switch camera" testID="plain" />);
+      expect(screen.getByTestId('plain').props.accessibilityValue?.text).toBeUndefined();
+    });
   });
 
   it('draws the surface glass of the canvas on a surface: card at 78% light, text at 10% dark', async () => {
@@ -98,20 +141,22 @@ describe('GlassIconButton native glass (D14)', () => {
     expect(hasNativeGlass()).toBe(false);
     await render(<GlassIconButton icon="x" tone="overMedia" accessibilityLabel="Close" testID="g" />);
     expect(screen.queryByTestId('g:glass')).toBeNull();
-    expect(screen.getByTestId('g')).toHaveStyle({ backgroundColor: withAlpha(darkColors.bg, 0.45) });
+    expect(screen.getByTestId('g')).toHaveStyle({ backgroundColor: darkColors.mediaScrim });
+  });
+
+  it('a disabled button keeps its glass and its disc, ignores presses and reports the state', async () => {
+    setVersion('26.5');
+    const onPress = jest.fn();
+    await render(<GlassIconButton icon="x" accessibilityLabel="Close" testID="g" onPress={onPress} disabled />);
+    expect(screen.getByTestId('g:glass')).toBeOnTheScreen();
+    expect(screen.getByTestId('g')).toHaveProp('accessibilityState', { disabled: true });
+    expect(screen.getByTestId('g')).toHaveStyle({ opacity: 1 });
+    await userEvent.press(screen.getByTestId('g'));
+    expect(onPress).not.toHaveBeenCalled();
   });
 
   it('does not ask the native module when the system version is unknown', () => {
     setVersion(undefined);
     expect(hasNativeGlass()).toBe(false);
-  });
-});
-
-describe('GlassIconButton spoken value', () => {
-  it('carries an optional accessibility value and none by default', async () => {
-    await render(<GlassIconButton icon="flip" accessibilityLabel="Switch camera" accessibilityValueText="Back camera" testID="flip" />);
-    expect(screen.getByTestId('flip')).toHaveAccessibilityValue({ text: 'Back camera' });
-    await render(<GlassIconButton icon="flip" accessibilityLabel="Switch camera" testID="plain" />);
-    expect(screen.getByTestId('plain').props.accessibilityValue?.text).toBeUndefined();
   });
 });

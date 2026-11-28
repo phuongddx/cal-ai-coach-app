@@ -109,7 +109,8 @@ dismiss_open_dialog() {
 # A title proves a screen mounted. Verified on iOS 26.4: during the tab-switch transition the
 # incoming title can be reported at an intermediate y (< 200) before it settles (placeholder
 # titles settle at y ~ 408), and on the home screen bottom elements report bogus small y. So a
-# title that names a tab only counts once it sits below y=200; Heading titles (Today header,
+# title that names a tab only counts once it sits below y=200, or (U-79: the real screens put their
+# title at y ~ 100) when it is not a tab-bar RadioButton and sits below y=60; Heading titles (Today header,
 # nav header) and non-tab titles count anywhere in the content area (y < 700).
 _wait_title() {
   local text="$1" sec="${2:-15}" deadline="$((SECONDS + ${2:-15}))" hit tabs
@@ -118,7 +119,7 @@ _wait_title() {
       tabs="$(ui_labels | awk -F'\t' '$2 == "RadioButton" {print $1}' | sort -u)"
       hit="$(ui_labels | awk -F'\t' -v t="$text" '
         $1 == t && $4 < 700 {
-          if ($2 ~ /Heading/ || $4 + 0 > 200) { print; exit }
+          if ($2 ~ /Heading/ || $4 + 0 > 200 || ($2 !~ /RadioButton/ && $4 + 0 > 60)) { print; exit }
         }')"
       if [ -z "$hit" ] && ! grep -qxF -- "$text" <<<"$tabs"; then
         hit="$(ui_labels | awk -F'\t' -v t="$text" '$1 == t && $4 < 700 {print; exit}')"
@@ -145,11 +146,33 @@ require_title() {
 # Open the dev client pointed at Metro and wait for a screen title in the content area
 # (not the tab bar). Default: "Today" within 90 s on the second attempt. Fatal: the app never
 # became usable. The first attempt allows 45 s; a retry covers a slow dialog or a cold dev client.
+#
+#   app_open [title] [seconds] [launch argument ...]
+#
+# Launch arguments (U-79, PL-05) are the Swift app's `--cc*` flags: when any follow the two positional
+# parameters the app is terminated and launched with `xcrun simctl launch <udid> <bundle id> <args>`, so
+# the process arguments reach the native module that reads them, and only then is the dev client URL
+# opened (the running process keeps its arguments). A value belongs in its own argument, as in Swift:
+#   app_open Today 90 --ccEDSafe --ccFixedClock 2026-11-27T09:00:00Z --ccScanScenario 402
+# Without launch arguments nothing changes: the app is opened through the dev client URL only.
 app_open() {
   local text="${1:-Today}" sec="${2:-90}" wait_sec
-  step "opening the app via the dev client URL"
+  local launch_args=()
+  if [ "$#" -gt 2 ]; then launch_args=("${@:3}"); fi
+  step "opening the app via the dev client URL${launch_args[*]:+ with launch arguments: ${launch_args[*]}}"
+  if [ "${#launch_args[@]}" -gt 0 ]; then
+    xcrun simctl terminate "$UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
+    sleep 1
+    xcrun simctl launch "$UDID" "$BUNDLE_ID" "${launch_args[@]}" >/dev/null \
+      || fatal "simctl launch with arguments failed: ${launch_args[*]}"
+    ok "launched $BUNDLE_ID with: ${launch_args[*]}"
+  fi
   for attempt in 1 2; do
-    xcrun simctl openurl "$UDID" "$DEV_CLIENT_URL" || bad "simctl openurl failed (attempt $attempt)"
+    if ! xcrun simctl openurl "$UDID" "$DEV_CLIENT_URL"; then
+      # After a launch with arguments the app already reconnects to the last Metro, so a timed-out
+      # openurl is only a note there; without launch arguments it stays a failure.
+      if [ "${#launch_args[@]}" -gt 0 ]; then echo "  note: simctl openurl timed out (attempt $attempt)"; else bad "simctl openurl failed (attempt $attempt)"; fi
+    fi
     dismiss_open_dialog || true
     if [ "$attempt" -eq 1 ]; then wait_sec=45; else wait_sec="$sec"; fi
     if _wait_title "$text" "$wait_sec"; then

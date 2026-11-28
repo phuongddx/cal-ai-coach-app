@@ -1,8 +1,9 @@
 /**
  * Debug and fixture flags (PL-05). The names are the Swift app's launch arguments, read once at
- * startup. Reading process arguments needs a native module and a native build, which belongs to the
- * native slot (U-50); until then the flags are set through `setDebugFlags` by tests and by the debug
- * console. `flagsFromArguments` is the parser that reader will call with the process arguments.
+ * startup: `xcrun simctl launch <udid> com.nextlabs.coachcal --ccEDSafe` reaches the app through the local
+ * Expo module `modules/coachcal-launch-arguments` (U-79), `loadLaunchArguments()` asks it, and the launch
+ * sequence applies the answer with `applyLaunchArguments` before it reads anything else. Tests and the
+ * debug console set the flags through `setDebugFlags`. `flagsFromArguments` is the parser.
  *
  * The seven arguments `DebugLaunchArguments.parse()` reads (`AppEnvironment.swift`) follow it exactly:
  * six are bare switches matched by exact name, and `--ccFixedClock` takes the NEXT argument as an
@@ -11,6 +12,8 @@
  * arguments and keep their own forms.
  */
 import { useSyncExternalStore } from 'react';
+
+import { readLaunchArguments } from '../../modules/coachcal-launch-arguments';
 
 export type DebugFlags = {
   freshStart: boolean;
@@ -75,6 +78,30 @@ export function flagsFromArguments(argv: readonly string[]): DebugFlags {
   if (scenario !== null && scenario.length > 0) flags.scanScenario = scenario;
 
   return flags;
+}
+
+/**
+ * The process arguments of this launch; an empty list when the native module is missing (Jest, a
+ * development client built before U-79), so nothing crashes on an old build. Asynchronous because the
+ * launch sequence awaits its steps; the native call itself is synchronous.
+ */
+export async function loadLaunchArguments(): Promise<string[]> {
+  return readLaunchArguments();
+}
+
+/**
+ * Applies the flags an argument list asks for on top of the flags in effect. An argument wins over a flag
+ * set earlier in the same launch; a flag the list does not mention keeps its value (the arguments are
+ * bare switches and values, so an absent one cannot switch anything off). Returns the flags in effect.
+ */
+export function applyLaunchArguments(argv: readonly string[]): Readonly<DebugFlags> {
+  const parsed = flagsFromArguments(argv);
+  const patch: Partial<Record<keyof DebugFlags, DebugFlags[keyof DebugFlags]>> = {};
+  for (const key of Object.keys(parsed) as Array<keyof DebugFlags>) {
+    if (parsed[key] !== DEFAULT_DEBUG_FLAGS[key]) patch[key] = parsed[key];
+  }
+  setDebugFlags(patch as Partial<DebugFlags>);
+  return getDebugFlags();
 }
 
 let current: DebugFlags = { ...DEFAULT_DEBUG_FLAGS };

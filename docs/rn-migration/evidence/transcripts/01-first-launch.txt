@@ -1,22 +1,42 @@
   ok: simulator already booted
-  ok: simulator ready (85024D2F-71DE-43C0-8E11-CE58F4578FC3)
+  ok: simulator ready (A902237E-29DE-4A6F-9E93-23199FC2107F)
   ok: appearance light
 
 === fresh install of the built dev client ===
   ok: uninstalled + installed com.nextlabs.coachcal
   ok: app: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-native/apps/mobile/build-output/CoachCal-dev.app
 
+=== part 1: a fresh install shows onboarding ===
+
 === opening the app via the dev client URL ===
-  ok: found title 'Today' (Heading at y=326)
+  ok: found title 'Track calories with a photo' (StaticText at y=370)
+  ok: app is showing 'Track calories with a photo' (attempt 1)
+  ok: found text: Get started
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-01/fresh-install-after.png (174 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/PL-01-fresh-install-after.png
+
+=== part 2: seed the demo persona, then show Today ===
+
+=== opening the app via the dev client URL with launch arguments: --ccSeedNoTargets ===
+  ok: launched com.nextlabs.coachcal with: --ccSeedNoTargets
+  ok: found title 'Today' (Heading at y=92.333335876464844)
   ok: app is showing 'Today' (attempt 1)
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/PL-01/01-first-launch-light.png (612 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/PL-01-01-first-launch-light.png
+
+=== deep link: coachcal:///?seed=1 ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: found text: Spaghetti Bolognese
+
+=== opening the app via the dev client URL ===
+  ok: found title 'Today' (Heading at y=92.333335876464844)
+  ok: app is showing 'Today' (attempt 1)
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-01/01-first-launch-light.png (386 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/PL-01-01-first-launch-light.png
 
 === switch to dark ===
   ok: appearance dark
   ok: found text: Today
-  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/PL-01/01-first-launch-dark.png (507 KB)
-  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-14/docs/rn-migration/evidence/tmp/PL-01-01-first-launch-dark.png
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/PL-01/01-first-launch-dark.png (373 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-81/docs/rn-migration/evidence/tmp/PL-01-01-first-launch-dark.png
   ok: appearance light
 
 === flow done — 0 failed ===
