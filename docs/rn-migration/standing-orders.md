@@ -49,8 +49,10 @@ that has to be repeated in briefs belongs here.
    token.
 9. Read every Swift or Deno source you port in full before you write. Port its tests with it: one
    Jest case per old test case, same behavior sentence as the test name.
-10. Before you report, at the repo root: `npm test`, `npm run typecheck` and `npm run parity:check`
-    are green. Quote their last lines in the report.
+10. Before you report, at the repo root: `bash scripts/rn/gate.sh` is green. It runs `npm test`,
+    `npm run typecheck` and `npm run parity:check`, one gate on the machine at a time (another
+    unit's gate makes it wait), and prints the last lines of each. Quote them in the report. Never
+    run the three commands outside it while another unit may be running its own.
 11. A command that can run over a minute writes to a log file in the log directory and gets a long
     timeout. Never rerun a timed-out command unchanged; read its log first.
 12. `export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8` before anything that runs CocoaPods or
