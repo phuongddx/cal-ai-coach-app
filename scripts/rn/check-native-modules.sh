@@ -17,11 +17,13 @@ app=${app%/}
 
 if [ ! -d "$app" ]; then echo "native-modules: no app bundle at $app" >&2; exit 1; fi
 
-# package in apps/mobile/package.json | a string its native code contains
+# package in apps/mobile/package.json | a string its native code contains.
+# A marker must be a name that only the code of that module holds: a string another pod carries
+# (ExpoTaskManager reaches the build through expo-notifications) would let a missing module pass.
 markers="
 expo|ExpoModulesCore
 expo-apple-authentication|AppleAuthentication
-expo-background-task|ExpoTaskManager
+expo-background-task|ExpoBackgroundTask
 expo-camera|ExpoCamera
 expo-constants|EXConstants
 expo-crypto|ExpoCrypto
@@ -44,13 +46,13 @@ expo-updates|ExpoUpdates
 expo-web-browser|ExpoWebBrowser
 expo-widgets|ExpoWidgets
 @expo/ui|ExpoUI
-@kingstinct/react-native-healthkit|HealthKit
-@react-native-community/netinfo|NetInfo
+@kingstinct/react-native-healthkit|ReactNativeHealthkit
+@react-native-community/netinfo|RNCNetInfo
 react-native|ReactNativeDependencies
 react-native-gesture-handler|RNGestureHandler
 react-native-nitro-modules|NitroModules
 react-native-reanimated|Reanimated
-react-native-safe-area-context|SafeAreaContext
+react-native-safe-area-context|RNCSafeAreaContext
 react-native-screens|RNSScreen
 react-native-svg|RNSVG
 react-native-worklets|Worklets
