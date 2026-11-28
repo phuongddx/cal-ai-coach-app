@@ -1,0 +1,61 @@
+# Launched by the workflow after the seed flow: `--ccSeedNoTargets` was only the seeding launch;
+# this flow's plain launchApp relaunch opens the shell on the seeded target. Each tab is
+# recognised by what its own screen renders: Progress has the title "Progress", Coach the header
+# "Insights", Profile the header "Plan". coachcal://diary opens the formSheet, recognised by its
+# meal sections ("Breakfast" — the section headers carry a slot emoji, so the wait is a regex).
+appId: com.nextlabs.coachcal
+name: 03 the four tabs and the diary day sheet
+---
+- launchApp:
+    appId: com.nextlabs.coachcal
+- openLink: exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+- tapOn:
+    text: "^Open$"
+    optional: true
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 180000
+- scrollUntilVisible:
+    element: "Spaghetti Bolognese"
+    direction: DOWN
+    timeout: 60000
+- assertVisible:
+    id: "food-row-kcal:Spaghetti Bolognese"
+- takeScreenshot: 03-today-seeded
+
+- tapOn: "Progress"
+- extendedWaitUntil:
+    visible: "Progress"
+    timeout: 20000
+- takeScreenshot: 03-tab-progress
+
+- tapOn: "Coach"
+- extendedWaitUntil:
+    visible: "Insights"
+    timeout: 20000
+- takeScreenshot: 03-tab-coach
+
+- tapOn: "Profile"
+- extendedWaitUntil:
+    visible: "Plan"
+    timeout: 20000
+- takeScreenshot: 03-tab-profile
+
+- tapOn: "Today"
+- extendedWaitUntil:
+    visible: "Spaghetti Bolognese"
+    timeout: 20000
+
+- openLink: coachcal://diary
+- tapOn:
+    text: "^Open$"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: ".*Breakfast"
+    timeout: 30000
+- takeScreenshot: 03-diary-sheet
+- openLink: coachcal:///
+- tapOn:
+    text: "^Open$"
+    optional: true

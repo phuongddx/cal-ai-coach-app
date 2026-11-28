@@ -1,0 +1,144 @@
+name: RN iOS
+
+# The React Native app (apps/mobile) on a GitHub-hosted macOS runner: expo prebuild, a Debug
+# build for the Simulator, Metro, then the Maestro flows of .maestro/. This is the evidence
+# harness of scripts/rn/evidence, rewritten for CI: nothing here runs on a machine of the
+# project. Triggers are the pull request and a manual run only — pushes wait for the PR.
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # One run per pull request (or branch on a manual run); a newer push cancels the older run.
+  group: rn-ios-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    name: Build, install and run the Maestro flows
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+      METRO_PORT: '8081'
+      BUNDLE_ID: com.nextlabs.coachcal
+      MAESTRO_CLI_NO_ANALYTICS: '1'
+      # The XCTest driver compiles and launches on the cold CI simulator; the default startup
+      # timeout ("iOS driver not ready in time") is far too short, and even five minutes was
+      # exceeded once (run 46147000869) when the compile started from a cold cache.
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: '900000'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app
+
+      - name: Use Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Expo prebuild for iOS (generates ios/ and runs pod install)
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform ios
+
+      - name: Build the app for the Simulator
+        working-directory: apps/mobile
+        run: xcodebuild
+          -workspace ios/CoachCal.xcworkspace
+          -scheme CoachCal
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath build
+          CODE_SIGNING_ALLOWED=NO
+          build
+
+      - name: Boot a Simulator
+        run: |
+          UDID="$(bash scripts/rn/ci/pick-simulator.sh)"
+          echo "simulator: $UDID"
+          echo "SIM_UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+
+      - name: Install the app
+        run: xcrun simctl install "$SIM_UDID" "apps/mobile/build/Build/Products/Debug-iphonesimulator/CoachCal.app"
+
+      - name: Start Metro
+        working-directory: apps/mobile
+        run: |
+          nohup npx expo start --dev-client --port "$METRO_PORT" > "$RUNNER_TEMP/metro.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/metro.pid"
+
+      - name: Wait until Metro serves the bundle
+        run: bash scripts/rn/ci/wait-metro.sh 180 "$RUNNER_TEMP/metro.log"
+
+      - name: Install Maestro
+        run: |
+          if [ -n "${JAVA_HOME_21_ARM64:-}" ]; then
+            echo "JAVA_HOME=$JAVA_HOME_21_ARM64" >> "$GITHUB_ENV"
+          fi
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+          # GITHUB_PATH applies to later steps only; export it for this step's version check.
+          export PATH="$HOME/.maestro/bin:$PATH"
+          maestro --version
+
+      - name: Flow 01 — a fresh install shows onboarding
+        run: |
+          touch "$RUNNER_TEMP/maestro-start-marker"
+          sleep 1
+          maestro test .maestro/01-fresh-install-onboarding.yaml
+
+      - name: Flow 02 — seed the demo persona (launched with --ccSeedNoTargets)
+        run: |
+          xcrun simctl terminate "$SIM_UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
+          sleep 1
+          # --ccSeedNoTargets lets the shell mount, where the Today route takes
+          # coachcal:///?seed=1 and seeds the full demo persona (one target included).
+          xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID" --ccSeedNoTargets
+          maestro test .maestro/02-seed-persona.yaml
+
+      - name: Flow 03 — the seeded Today, the four tabs and the diary sheet
+        run: maestro test .maestro/03-today-tabs-diary-sheet.yaml
+
+      - name: Flow 04 — the scan fixture recomputes kcal (launched with --ccScanScenario 200)
+        run: |
+          xcrun simctl terminate "$SIM_UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
+          sleep 1
+          xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID" --ccScanScenario 200
+          maestro test .maestro/04-scan-fixture-recompute.yaml
+
+      - name: Flow 05 — ED-safe Today (launched with --ccEDSafe)
+        run: |
+          xcrun simctl terminate "$SIM_UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
+          sleep 1
+          xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID" --ccEDSafe
+          maestro test .maestro/05-edsafe-today.yaml
+
+      - name: Collect screenshots and reports
+        if: always()
+        run: |
+          mkdir -p artifacts/maestro
+          find "$HOME/.maestro" -name '*.png' -newer "$RUNNER_TEMP/maestro-start-marker" \
+            -exec cp {} artifacts/maestro/ \; 2>/dev/null || true
+          cp -R "$HOME/.maestro/tests" artifacts/maestro/tests 2>/dev/null || true
+          cp "$RUNNER_TEMP/metro.log" artifacts/maestro/metro.log 2>/dev/null || true
+          echo "collected:"; ls -la artifacts/maestro || true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rn-ios-maestro
+          path: artifacts/
+          if-no-files-found: warn

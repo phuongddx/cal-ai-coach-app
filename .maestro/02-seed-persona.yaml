@@ -1,0 +1,25 @@
+# U-82 flow 02 — seed the demo persona, then the seeded Today.
+# Launched by the workflow with `simctl launch --ccSeedNoTargets` (the evidence harness's way,
+# flow 01 part 2): the shell shows without a target, so the Today route mounts and
+# `coachcal:///?seed=1` seeds the full demo persona — one target (the gate needs it), with
+# "Spaghetti Bolognese" as today's meal. The list can sit below the fold on the runner's screen,
+# so the row is scrolled to, not assumed.
+appId: com.nextlabs.coachcal
+name: 02 seeding the demo persona brings the seeded Today
+---
+- openLink: exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+- tapOn:
+    text: "^Open$"
+    optional: true
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 120000
+
+- openLink: "coachcal:///?seed=1"
+- tapOn:
+    text: "^Open$"
+    optional: true
+- scrollUntilVisible:
+    element: "Spaghetti Bolognese"
+    direction: DOWN
+    timeout: 90000
