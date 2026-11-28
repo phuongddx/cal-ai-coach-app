@@ -10,7 +10,7 @@ import type { Insight } from '../../data/repos/engagementRepository';
 import type { EngagementRepository } from '../../data/repos/engagementRepository';
 
 import { createCoachSnapshotLoader, type WeekStats } from './coachSnapshot';
-import { dayString } from '../progress/progressMath';
+import { addDays, dateFromDay, dayString } from '../progress/progressMath';
 
 export type { WeekStats };
 
@@ -29,6 +29,12 @@ export type CoachSnapshot = {
   insights: Insight[];
   weekStats: WeekStats;
   targetKcal: number | null;
+  /**
+   * The local days behind each insight, keyed by the insight's id (frame 12:
+   * "See the days"). An insight absent here — or with an empty list — shows
+   * no action row.
+   */
+  insightDays: Record<string, string[]>;
 };
 
 export type CoachModel = {
@@ -50,6 +56,7 @@ export function createCoachModel(deps: CoachDeps): CoachModel {
     insights: [],
     weekStats: { daysLogged: 0, daysOnTarget: 0, weeksAllLogged: 0, kgThisWeek: 0 },
     targetKcal: null,
+    insightDays: {},
   };
 
   const listeners = new Set<() => void>();
@@ -65,7 +72,15 @@ export function createCoachModel(deps: CoachDeps): CoachModel {
   async function refresh(): Promise<void> {
     const data = await load(deps.now());
     const insights = await deps.engagement.insights(dayString(deps.now()));
-    snapshot = { insights, weekStats: data.stats, targetKcal: data.targetKcal };
+    const today = dayString(deps.now());
+    const insightDays: Record<string, string[]> = {};
+    for (const insight of insights) {
+      const days = insightDaysFor(insight.kind, today, data.loggedDays, data.weekDays);
+      if (days.length > 0) {
+        insightDays[insight.id] = days;
+      }
+    }
+    snapshot = { insights, weekStats: data.stats, targetKcal: data.targetKcal, insightDays };
     emit();
   }
 
@@ -82,9 +97,10 @@ export function createCoachModel(deps: CoachDeps): CoachModel {
 }
 
 /**
- * CoachModel.greeting — the hour buckets of the Swift static. The `timeZone`
- * argument is the calendar seam: the UI passes none (the process zone, like
- * `Calendar.current`); tests can pin a zone as their fixture.
+ * CoachModel.greeting — the hour buckets of the Swift static, without the
+ * emoji the frame drops. The `timeZone` argument is the calendar seam: the
+ * UI passes none (the process zone, like `Calendar.current`); tests can pin
+ * a zone as their fixture.
  */
 export function greeting(date: Date, timeZone?: string): string {
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -94,10 +110,49 @@ export function greeting(date: Date, timeZone?: string): string {
   });
   const hour = Number(formatter.format(date));
   if (hour < 12) {
-    return 'Good morning! 👋';
+    return 'Good morning';
   }
   if (hour < 17) {
-    return 'Good afternoon! 👋';
+    return 'Good afternoon';
   }
-  return 'Good evening! 👋';
+  return 'Good evening';
+}
+
+/**
+ * The local days behind an insight (frame 12's "See the days") — derived
+ * only from data the snapshot loader already holds, so the list stays local.
+ * The streak insight lists the consecutive logged days ending today; the
+ * weekly-average kinds list the week's logged days; a kind the snapshot has
+ * no days for (hydration — water is not in the read yet) lists none.
+ */
+export function insightDaysFor(
+  kind: string,
+  today: string,
+  loggedDays: readonly string[],
+  weekDays: readonly string[],
+): string[] {
+  const logged = new Set(loggedDays);
+  switch (kind) {
+    case 'streak': {
+      const days: string[] = [];
+      let cursor = today;
+      // Walk back over consecutive logged days; the 28-day read caps the walk.
+      for (let step = 0; step < 28; step += 1) {
+        if (!logged.has(cursor)) {
+          break;
+        }
+        days.unshift(cursor);
+        const date = dateFromDay(cursor);
+        if (date === null) {
+          break;
+        }
+        cursor = dayString(addDays(date, -1));
+      }
+      return days;
+    }
+    case 'protein':
+      return weekDays.filter((day) => logged.has(day));
+    default:
+      return [];
+  }
 }

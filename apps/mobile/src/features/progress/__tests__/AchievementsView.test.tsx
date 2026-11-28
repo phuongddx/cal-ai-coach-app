@@ -49,9 +49,8 @@ describe('AchievementsView screen', () => {
     expect(screen.getByText('Personal best: 18 days')).toBeOnTheScreen();
     expect(screen.getByText('1 freeze left')).toBeOnTheScreen();
 
-    // Earned grid (3) before the locked grid (2), Swift order.
-    expect(screen.getByText('Earned badges')).toBeOnTheScreen();
-    expect(screen.getByText('Unlock next')).toBeOnTheScreen();
+    // One "Badges" grid: earned (3) before locked (2), Swift order.
+    expect(screen.getByText('Badges')).toBeOnTheScreen();
     expect(screen.getByTestId('badge-tile:First Scan')).toBeOnTheScreen();
     expect(screen.getByTestId('badge-tile:7-Day Streak')).toBeOnTheScreen();
     expect(screen.getByTestId('badge-tile:Hydration Habit')).toBeOnTheScreen();
@@ -75,7 +74,7 @@ describe('AchievementsView screen', () => {
     await render(<AchievementsView model={model} />);
 
     expect(screen.queryByLabelText('12 day streak, 1 freeze left')).toBeNull();
-    expect(screen.queryByText('Earned badges')).toBeNull();
+    expect(screen.queryByText('Badges')).toBeNull();
     expect(screen.getByLabelText('Progress photos, coming later')).toBeOnTheScreen();
   });
 });

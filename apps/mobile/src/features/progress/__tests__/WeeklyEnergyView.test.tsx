@@ -1,8 +1,8 @@
 /**
- * RNTL screen test of WeeklyEnergyView (PG-03): the seven value-labeled bars,
- * the day-initial captions and the average footer — and the ED-safe backstop:
- * the whole card renders nothing while the mode is on (the collapse component
- * owns the policy, invariant I7).
+ * RNTL screen test of WeeklyEnergyView (PG-03): the seven value-labeled bars
+ * in accentStrong with the "avg N kcal" header figure — and the ED-safe
+ * backstop: the whole card renders nothing while the mode is on (the
+ * collapse component owns the policy, invariant I7).
  */
 import { render, screen } from '@testing-library/react-native';
 
@@ -45,13 +45,12 @@ describe('WeeklyEnergyView screen', () => {
     setEdSafeMode(false);
   });
 
-  it('the card shows the seven day columns with value labels and the average footer', async () => {
+  it('the card shows the seven day columns with value labels and the average figure', async () => {
     const { model, fixture } = await makeSeededModel();
     await render(<WeeklyEnergyView model={model} />);
 
     expect(screen.getByText('Weekly energy')).toBeOnTheScreen();
-    expect(screen.getByText('Avg deficit')).toBeOnTheScreen();
-    expect(screen.getByText('−1721 kcal/day')).toBeOnTheScreen(); // 2150 − 429 avg
+    expect(screen.getByText('avg 429 kcal')).toBeOnTheScreen(); // the seeded days average 429 kcal
 
     // Today's seeded meal is one of the seven per-day value labels.
     expect(screen.getByText('543')).toBeOnTheScreen();
@@ -68,8 +67,7 @@ describe('WeeklyEnergyView screen', () => {
     await render(<WeeklyEnergyView model={model} />);
 
     expect(screen.queryByText('Weekly energy')).toBeNull();
-    expect(screen.queryByText('Avg deficit')).toBeNull();
-    expect(screen.queryByText('−1721 kcal/day')).toBeNull();
+    expect(screen.queryByText('avg 429 kcal')).toBeNull();
     expect(screen.queryByText('543')).toBeNull();
     expect(screen.toJSON()).toBeNull();
   });
