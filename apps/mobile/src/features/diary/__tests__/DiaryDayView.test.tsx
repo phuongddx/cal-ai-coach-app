@@ -5,7 +5,7 @@
  * prove the components own the branch (I7).
  */
 import { ActionSheetIOS } from 'react-native';
-import { fireEvent, render, screen, userEvent, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, userEvent, waitFor, within } from '@testing-library/react-native';
 import { setEdSafeMode } from '../../../design';
 
 import type { DiaryDeps } from '../deps';
@@ -247,8 +247,9 @@ describe('DiaryDayView screen', () => {
       (index: number) => void,
     ];
     expect(options.title).toBe('Delete Overnight Oats?');
-    // The sheet keeps its word: the message names the undo that follows.
-    expect(options.message).toBe('This removes 320 kcal from Breakfast. You can undo for 5 seconds.');
+    // The message never carries a kcal figure (ED-safe rule, every mode); the
+    // sentence about the five-second undo stays.
+    expect(options.message).toBe('This will remove it from Breakfast. You can undo for 5 seconds.');
     expect(options.options).toEqual(['Delete item', 'Cancel']);
     expect(options.destructiveButtonIndex).toBe(0);
     expect(options.cancelButtonIndex).toBe(1);
@@ -314,6 +315,32 @@ describe('DiaryDayView screen', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it('the delete confirmation carries no kcal', async () => {
+    const showActionSheet = jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions').mockImplementation(() => {});
+    // The sheet's item carries a kcal figure; the message must not repeat it.
+    await renderDay(makeModel(makeSnapshot(), { delete: jest.fn(async () => undefined) }));
+    fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
+    const [options] = showActionSheet.mock.calls[0] as unknown as [
+      { title: string; message: string },
+      (index: number) => void,
+    ];
+    expect(options.message).toBe('This will remove it from Breakfast. You can undo for 5 seconds.');
+    expect(options.message).not.toContain('320');
+  });
+
+  it('the delete confirmation carries no kcal under the ED-safe policy either', async () => {
+    setEdSafeMode(true);
+    const showActionSheet = jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions').mockImplementation(() => {});
+    await renderDay(makeModel(makeSnapshot(), { delete: jest.fn(async () => undefined) }));
+    fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
+    const [options] = showActionSheet.mock.calls[0] as unknown as [
+      { title: string; message: string },
+      (index: number) => void,
+    ];
+    expect(options.message).toBe('This will remove it from Breakfast. You can undo for 5 seconds.');
+    expect(options.message).not.toContain('320');
   });
 
   it('Add food opens the add-food sheet with the empty rail', async () => {
@@ -442,23 +469,6 @@ describe('DiaryDayView screen', () => {
       ),
     );
   });
-
-  it('the edit sheet Delete item opens the delete confirmation', async () => {
-    const model = makeModel(makeSnapshot(), { delete: jest.fn(async () => undefined) });
-    await renderDay(model);
-
-    await userEvent.press(screen.getByTestId('diary.foodRow'));
-    const showActionSheet = jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions').mockImplementation(() => {});
-    await userEvent.press(await screen.findByText('Delete item'));
-    expect(showActionSheet).toHaveBeenCalledTimes(1);
-    const [options] = showActionSheet.mock.calls[0] as unknown as [
-      { title: string; message: string },
-      (index: number) => void,
-    ];
-    expect(options.title).toBe('Delete Overnight Oats?');
-    expect(model.delete).not.toHaveBeenCalled();
-  });
-
   it('the edit save shows the changes-saved toast with undo', async () => {
     const writeEntry = jest.fn(async () => undefined);
     const updateEntry = jest.fn(async () => undefined);

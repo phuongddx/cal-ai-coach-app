@@ -2,8 +2,10 @@
  * DiaryDayView.swift — the day sheet: date pager, Eaten/Goal/Left summary,
  * the four meal sections with dashed add buttons, the exercise section, the
  * saved toast with Undo, the delete confirmation and the sheet stack (add
- * food, exercise). The kcal clauses collapse through EdSafeCollapse — the
- * components own that policy (I7); the feature holds no ED-safe branch.
+ * food, exercise). The delete/edit undo toasts queue; the window of each
+ * counts from its own appearance. The kcal clauses collapse through
+ * EdSafeCollapse — the components own that policy (I7); the feature holds no
+ * ED-safe branch.
  */
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { ActionSheetIOS, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -53,8 +55,10 @@ const SLOT_ICONS: Record<string, IconName> = {
 
 /**
  * The undo toasts of the frames: the delete's (diary.toast.undo) and the edit
- * save's (diary.toast.undoEdit). Each stays five seconds; the undo inside the
- * window is a model write, after the window the toast just leaves.
+ * save's (diary.toast.undoEdit). They queue (the review correction): the
+ * oldest shows first, each stays five seconds counted from the moment it
+ * reaches the front, and the undo inside the window is a model write — after
+ * the window the toast just leaves.
  */
 type UndoToast =
   | { kind: 'delete'; item: DiaryDayItem }
@@ -68,16 +72,21 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
   const [isExerciseSheetPresented, setIsExerciseSheetPresented] = useState(false);
   const [addFoodSlot, setAddFoodSlot] = useState<string | null>(null);
   const [savedToast, setSavedToast] = useState<SavedReceipt | null>(null);
-  const [undoToast, setUndoToast] = useState<UndoToast | null>(null);
+  const [undoQueue, setUndoQueue] = useState<UndoToast[]>([]);
+  const currentUndo = undoQueue[0] ?? null;
 
-  // The five-second window: after it the toast leaves and the action is final.
+  // The five-second window of the toast at the front of the queue: it counts
+  // from the moment THIS toast appeared (a later enqueue never resets it).
+  // After it the toast leaves and the action is final.
   useEffect(() => {
-    if (undoToast === null) {
+    if (currentUndo === null) {
       return undefined;
     }
-    const timer = setTimeout(() => setUndoToast(null), UNDO_WINDOW_MS);
+    const timer = setTimeout(() => {
+      setUndoQueue((queue) => queue.slice(1));
+    }, UNDO_WINDOW_MS);
     return () => clearTimeout(timer);
-  }, [undoToast]);
+  }, [currentUndo]);
 
   const snapshot = model.getSnapshot();
 
@@ -88,19 +97,36 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
     }
   };
 
+  const enqueueUndo = (toast: UndoToast) => {
+    setUndoQueue((queue) => [...queue, toast]);
+  };
+
+  /** The front toast's undo: that one action, then the next toast's window. */
+  const undoCurrent = () => {
+    if (currentUndo === null) {
+      return;
+    }
+    setUndoQueue((queue) => {
+      return queue.slice(1);
+    });
+    if (currentUndo.kind === 'delete') {
+      void model.undoDelete(currentUndo.item);
+    } else {
+      void model.writeEntry(currentUndo.prev.entry, currentUndo.prev.detail);
+    }
+  };
+
   /**
    * The d-delete confirmation: the system action sheet. The message keeps its
-   * word — the undo of the frames follows the delete.
+   * word — the undo of the frames follows the delete — and never carries a
+   * kcal figure (ED-safe: the number hides in every mode, review correction).
    */
   const confirmDelete = (item: DiaryDayItem) => {
     const meal = mealName(item.mealSlot);
     ActionSheetIOS.showActionSheetWithOptions(
       {
         title: `Delete ${item.title}?`,
-        message:
-          item.kcal !== null
-            ? `This removes ${item.kcal} kcal from ${meal}. You can undo for 5 seconds.`
-            : `This will remove it from ${meal}. You can undo for 5 seconds.`,
+        message: `This will remove it from ${meal}. You can undo for 5 seconds.`,
         options: ['Delete item', 'Cancel'],
         destructiveButtonIndex: 0,
         cancelButtonIndex: 1,
@@ -110,7 +136,7 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
           return;
         }
         void model.delete(item).then(() => {
-          setUndoToast({ kind: 'delete', item });
+          enqueueUndo({ kind: 'delete', item });
         });
       },
     );
@@ -123,7 +149,7 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
 
   const onEditSaved = (prev: DiaryDayItem, grams: number, name: string) => {
     setEditItem(null);
-    setUndoToast({ kind: 'edit', prev, name, grams });
+    enqueueUndo({ kind: 'edit', prev, name, grams });
   };
 
   return (
@@ -224,28 +250,22 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
         </View>
       )}
 
-      {undoToast !== null && undoToast.kind === 'delete' && (
+      {currentUndo !== null && currentUndo.kind === 'delete' && (
         <View style={styles.toastOverlay} pointerEvents="box-none" testID="diary.toast.undo">
           <Toast
-            title={`${undoToast.item.title} deleted`}
-            message={`Removed from ${mealName(undoToast.item.mealSlot)}`}
-            onUndo={() => {
-              void model.undoDelete(undoToast.item);
-              setUndoToast(null);
-            }}
+            title={`${currentUndo.item.title} deleted`}
+            message={`Removed from ${mealName(currentUndo.item.mealSlot)}`}
+            onUndo={undoCurrent}
           />
         </View>
       )}
 
-      {undoToast !== null && undoToast.kind === 'edit' && (
+      {currentUndo !== null && currentUndo.kind === 'edit' && (
         <View style={styles.toastOverlay} pointerEvents="box-none" testID="diary.toast.undoEdit">
           <Toast
             title="Changes saved"
-            message={`${undoToast.name} · ${undoToast.grams} g`}
-            onUndo={() => {
-              void model.writeEntry(undoToast.prev.entry, undoToast.prev.detail);
-              setUndoToast(null);
-            }}
+            message={`${currentUndo.name} · ${currentUndo.grams} g`}
+            onUndo={undoCurrent}
           />
         </View>
       )}
@@ -276,7 +296,10 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
               onSaved={onEditSaved}
               onDelete={(item) => {
                 setEditItem(null);
-                confirmDelete(item);
+                // The action sheet waits a tick: presenting it in the same
+                // handler that closes the sheet swallows the presentation on
+                // this iOS (the stage-B finding).
+                setTimeout(() => confirmDelete(item), 0);
               }}
             />
           )}
