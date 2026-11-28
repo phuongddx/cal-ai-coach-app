@@ -86,6 +86,8 @@ const HIDDEN_MESSAGES = [
   'calories,',
   'kilojoule',
   'About 300 cal',
+  'About 500 kilocalories',
+  'kilocalorie',
 ];
 const SHOWN_MESSAGES = [
   'Changes saved',

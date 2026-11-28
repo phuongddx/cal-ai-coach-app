@@ -109,3 +109,33 @@ describe('OptionCard iconName (Ember icon tile and selected check)', () => {
     expect(screen.queryByTestId('option-card:Lose weight:check')).toBeNull();
   });
 });
+
+describe('OptionCard without an icon (U-71g)', () => {
+  it('draws no icon tile when neither icon nor iconName is passed', async () => {
+    await render(<OptionCard title="Sedentary" subtitle="Little exercise" isSelected={false} />);
+    expect(screen.queryByTestId('option-card:Sedentary:tile')).toBeNull();
+    expect(screen.getByText('Sedentary')).toBeOnTheScreen();
+    expect(screen.getByText('Little exercise')).toBeOnTheScreen();
+  });
+
+  it('still draws the tile for an icon name and for an SF Symbol name', async () => {
+    await render(
+      <>
+        <OptionCard title="A" iconName="flame" isSelected={false} />
+        <OptionCard title="B" icon="flame" isSelected={false} />
+      </>,
+    );
+    expect(screen.getByTestId('option-card:A:tile')).toHaveStyle({ width: 48, height: 48 });
+    expect(screen.getByTestId('option-card:B:tile')).toHaveStyle({ width: 48, height: 48 });
+  });
+
+  it('keeps the selected state and the SF Symbol check on a card with no icon', async () => {
+    const onSelect = jest.fn();
+    await render(<OptionCard title="Sedentary" isSelected onSelect={onSelect} />);
+    const card = screen.getByTestId('option-card:Sedentary');
+    expect(card).toHaveProp('accessibilityLabel', 'Sedentary, selected');
+    expect(card).toHaveStyle({ backgroundColor: lightColors.accentTint, borderWidth: 2 });
+    await userEvent.press(card);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+});
