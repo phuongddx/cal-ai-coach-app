@@ -1,17 +1,16 @@
 /**
- * RNTL screen test of WaterLogSheet (DY-07): the ring, the totals copy, the
- * ±250 ml tiles with their Swift identifiers and the close button.
+ * RNTL screen test of WaterLogSheet (DY-07): the tile, the totals copy, the
+ * ±250 ml chips with their Swift identifiers and the close button.
  */
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { WaterLogSheet } from '../screens/WaterCard';
 
 describe('WaterLogSheet screen', () => {
-  it('the sheet shows the ring, the glasses and the day total', async () => {
+  it('the sheet shows the tile, the glasses and the day total', async () => {
     await render(<WaterLogSheet totalMl={1250} glasses={8} onQuickAdd={() => undefined} onDismiss={() => undefined} />);
 
     expect(screen.getByText('Water')).toBeOnTheScreen();
-    expect(screen.getByTestId('water-droplet-ring', { includeHiddenElements: true })).toBeOnTheScreen();
     expect(screen.getByText('5 of 8 glasses')).toBeOnTheScreen();
     expect(screen.getByText('1,250 ml today')).toBeOnTheScreen();
     expect(screen.getByTestId('water.close')).toBeOnTheScreen();

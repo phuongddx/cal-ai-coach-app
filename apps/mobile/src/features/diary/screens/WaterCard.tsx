@@ -1,65 +1,38 @@
 /**
- * WaterCard.swift / WaterLogSheet.swift — the compact droplet-ring water card
- * and its log sheet with ±250 ml tiles. Water is glasses progress, not kcal
- * data: it deliberately bypasses the calorie ring's ED-safe policy and stays
- * visible under the mode. Mounted by the Today surface (U-33); owned here by
- * DY-07.
+ * WaterCard.swift / WaterLogSheet.swift — the compact water card and its log
+ * sheet with the frame's info-tint droplet tile and the ±250 ml chips. Water
+ * is glasses progress, not kcal data: it deliberately bypasses the calorie
+ * ring's ED-safe policy and stays visible under the mode. Mounted by the
+ * Today surface (U-33); owned here by DY-07.
  */
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
-import Svg, { Circle } from 'react-native-svg';
 
-import { Sheet, size, space, useTokens, withAlpha, type Colors } from '../../../design';
+import { Icon, Sheet, SheetHeader, size, space, useEdSafeMode, useTokens } from '../../../design';
 
-import { glassesLogged, GLASS_ML } from '../waterModel';
+import { glassesLogged, litresText, GLASS_ML } from '../waterModel';
 
 /**
- * WaterDropletRing — the 56pt goal-variant ring geometry with a droplet
- * center, a fraction-of-goal lime arc.
+ * WaterDropletTile — the frame's 40 pt info-tint tile with the droplet glyph
+ * (Today-light water card). Decorative: accessibility-hidden, as the ring was.
  */
-export function WaterDropletRing({ waterMl, goalMl }: { waterMl: number; goalMl: number }) {
+export function WaterDropletTile() {
   const { colors } = useTokens();
-  const fraction = goalMl > 0 ? Math.min(Math.max(waterMl / goalMl, 0), 1) : 0;
-  const stroke = size.ringGoalStroke;
-  const radius = (size.ringGoal - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
   return (
     <View
-      testID="water-droplet-ring"
-      style={{ width: size.ringGoal, height: size.ringGoal, alignItems: 'center', justifyContent: 'center' }}
+      style={{
+        width: 40,
+        height: 40,
+        borderRadius: 14,
+        backgroundColor: colors.infoTint,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <Svg width={size.ringGoal} height={size.ringGoal} style={StyleSheet.absoluteFill}>
-        <Circle
-          cx={size.ringGoal / 2}
-          cy={size.ringGoal / 2}
-          r={radius}
-          stroke={ringTrackColor(colors)}
-          strokeWidth={stroke}
-          fill="none"
-        />
-        <Circle
-          cx={size.ringGoal / 2}
-          cy={size.ringGoal / 2}
-          r={radius}
-          stroke={colors.accentLime}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          fill="none"
-          strokeDasharray={`${circumference * fraction} ${circumference}`}
-          rotation={-90}
-          origin={`${size.ringGoal / 2}, ${size.ringGoal / 2}`}
-        />
-      </Svg>
-      <SymbolView name="drop.fill" size={14} tintColor={colors.accentInk} />
+      <Icon name="drop" size={16} color={colors.infoInk} />
     </View>
   );
-}
-
-function ringTrackColor(colors: Colors): string {
-  // Dark mode strokes the track at white 10%; light mode uses the surface.
-  return colors.background === '#000000' ? withAlpha('#FFFFFF', 0.1) : colors.surface;
 }
 
 export type WaterCardProps = {
@@ -70,11 +43,19 @@ export type WaterCardProps = {
 
 export function WaterCard({ waterMl, glasses, onTap }: WaterCardProps) {
   const { colors, radius, typography } = useTokens();
+  const edSafe = useEdSafeMode();
   const logged = glassesLogged(waterMl);
+  // The Today frame: litres in the normal mode, glasses under ED-Safe. The
+  // mode read is the third documented stay (findings, U-74 §10) until
+  // EdSafeAlternate is on main.
+  const copy = edSafe
+    ? `${logged} of ${glasses} glasses`
+    : `${litresText(waterMl)} of ${litresText(glasses * GLASS_ML)} L`;
+  const chip = edSafe ? '+ 1 glass' : '+ 250 ml';
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Water, ${logged} of ${glasses} glasses`}
+      accessibilityLabel={`Water, ${copy}`}
       testID="today.waterCard"
       onPress={onTap}
       style={[
@@ -82,45 +63,36 @@ export function WaterCard({ waterMl, glasses, onTap }: WaterCardProps) {
         { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.lg },
       ]}
     >
-      <WaterDropletRing waterMl={waterMl} goalMl={glasses * GLASS_ML} />
+      <WaterDropletTile />
       <View style={styles.cardText}>
         <Text style={[typography.headline, { color: colors.textPrimary }]}>Water</Text>
-        <Text style={[typography.subhead, { color: colors.textSecondary }]}>
-          {`${logged} of ${glasses} glasses`}
-        </Text>
+        <Text style={[typography.subhead, { color: colors.textSecondary }]}>{copy}</Text>
       </View>
-      <SymbolView name="chevron.right" size={12} weight="semibold" tintColor={colors.textTertiary} />
+      {/* The frame's "+ 250 ml" / "+ 1 glass" chip: a 44 pt display target on
+          the card (the quick-add lives in the log sheet — the card's props are
+          frozen, so the whole card taps into the sheet). */}
+      <View style={[styles.chip, { backgroundColor: colors.fill, borderRadius: radius.pill }]}>
+        <Text style={[styles.chipText, { color: colors.textPrimary }]}>{chip}</Text>
+      </View>
     </Pressable>
   );
 }
 
-export type WaterLogSheetProps = {
-  totalMl: number;
+export type WaterLogSheetProps = {  totalMl: number;
   glasses: number;
   onQuickAdd: (deltaMl: number) => void;
   onDismiss: () => void;
 };
 
 export function WaterLogSheet({ totalMl, glasses, onQuickAdd, onDismiss }: WaterLogSheetProps) {
-  const { colors, radius, typography } = useTokens();
+  const { colors, typography } = useTokens();
   const logged = glassesLogged(totalMl);
   return (
     <Sheet>
-      <View style={styles.header}>
-        <Text style={[typography.heading, { color: colors.textPrimary }]}>Water</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          testID="water.close"
-          onPress={onDismiss}
-          style={styles.closeButton}
-        >
-          <SymbolView name="xmark" size={14} weight="semibold" tintColor={colors.textSecondary} />
-        </Pressable>
-      </View>
+      <SheetHeader title="Water" onClose={onDismiss} testID="water" />
 
       <View style={styles.summaryRow}>
-        <WaterDropletRing waterMl={totalMl} goalMl={glasses * GLASS_ML} />
+        <WaterDropletTile />
         <View style={styles.summaryText}>
           <Text style={[typography.headline, { color: colors.textPrimary }]}>
             {`${logged} of ${glasses} glasses`}
@@ -170,9 +142,9 @@ function QuickAddTile({
       accessibilityRole="button"
       testID={identifier}
       onPress={() => onQuickAdd(delta)}
-      style={[styles.tile, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.md }]}
+      style={[styles.tile, { backgroundColor: colors.fill, borderRadius: radius.md }]}
     >
-      <SymbolView name={symbol} size={15} weight="semibold" tintColor={colors.textPrimary} />
+      <Icon name={symbol} size={15} color={colors.textPrimary} />
       <Text style={styles.tileTitle}>{title}</Text>
     </Pressable>
   );
@@ -181,19 +153,23 @@ function QuickAddTile({
 const styles = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: space.lg, borderWidth: 1, padding: space.lg },
   cardText: { flex: 1, gap: 2 },
-  header: { flexDirection: 'row', alignItems: 'center' },
-  closeButton: { marginLeft: 'auto', width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  chip: {
+    minHeight: size.tap,
+    paddingHorizontal: space.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipText: { fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
   summaryRow: { flexDirection: 'row', alignItems: 'center', gap: space.lg, paddingVertical: space.sm },
   summaryText: { gap: 4 },
   tileRow: { flexDirection: 'row', gap: space.sm },
   tile: {
     flex: 1,
-    minHeight: 44,
+    minHeight: size.tap,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: space.xs,
-    borderWidth: 1,
   },
   tileTitle: { fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
 });

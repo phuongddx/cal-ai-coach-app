@@ -5,6 +5,7 @@
  * the screen.
  */
 import { fireEvent, render, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { setEdSafeMode } from '../../../design';
 
 import { ManualLogSheet } from '../screens/ManualLogSheet';
 import type { FoodSearchRow } from '../foodSearchModel';
@@ -42,6 +43,10 @@ async function renderSheet(row: FoodSearchRow, onSave = jest.fn(), onDismiss = j
   return { onSave, onDismiss };
 }
 
+afterEach(() => {
+  setEdSafeMode(false);
+});
+
 describe('ManualLogSheet screen', () => {
   it('the per-100g sheet shows the stepper and the derived kcal of the default grams', async () => {
     await renderSheet(ROW_PER_100G);
@@ -53,8 +58,31 @@ describe('ManualLogSheet screen', () => {
     expect(screen.getByTestId('ccstepper.increment')).toBeOnTheScreen();
     // 165 × 150 / 100 → 248, the Swift UI test's figure.
     expect(screen.getByTestId('manual.kcal')).toHaveTextContent('248');
-    expect(screen.getByRole('button', { name: 'Save to Lunch' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Add to Lunch' })).toBeOnTheScreen();
     expect(screen.getByTestId('manual.save')).toBeOnTheScreen();
+  });
+
+  it('the kcal figure swaps for the note card in the ED-safe mode and back when it is off', async () => {
+    await renderSheet(ROW_PER_100G);
+
+    expect(screen.getByTestId('manual.kcal')).toHaveTextContent('248');
+    expect(screen.queryByText('No numbers needed.')).toBeNull();
+
+    setEdSafeMode(true);
+    await waitFor(() => expect(screen.queryByTestId('manual.kcal')).toBeNull());
+    expect(screen.getByText('No numbers needed.')).toBeOnTheScreen();
+    expect(
+      screen.getByText(
+        "We'll estimate the energy from the name and amount and keep it hidden, so your plan stays accurate.",
+      ),
+    ).toBeOnTheScreen();
+    // Grams and Save stay.
+    expect(screen.getByTestId('manual.stepper')).toBeOnTheScreen();
+    expect(screen.getByTestId('manual.save')).toBeOnTheScreen();
+
+    setEdSafeMode(false);
+    await waitFor(() => expect(screen.getByTestId('manual.kcal')).toHaveTextContent('248'));
+    expect(screen.queryByText('No numbers needed.')).toBeNull();
   });
 
   it('the kcal live-recomputes through DiaryMath at every stepper value', async () => {
@@ -71,7 +99,7 @@ describe('ManualLogSheet screen', () => {
 
   it('saving passes the detail with the derived kcal, the grams and the slot', async () => {
     const { onSave } = await renderSheet(ROW_PER_100G);
-    await userEvent.press(screen.getByRole('button', { name: 'Save to Lunch' }));
+    await userEvent.press(screen.getByRole('button', { name: 'Add to Lunch' }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     const detail = onSave.mock.calls[0][0];
@@ -105,7 +133,7 @@ describe('ManualLogSheet screen', () => {
   it('the per-serving save stores servingGrams × servings as grams', async () => {
     const { onSave } = await renderSheet(ROW_PER_SERVING);
     await userEvent.press(screen.getByTestId('ccstepper.increment'));
-    await userEvent.press(screen.getByRole('button', { name: 'Save to Lunch' }));
+    await userEvent.press(screen.getByRole('button', { name: 'Add to Lunch' }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     const detail = onSave.mock.calls[0][0];

@@ -4,11 +4,10 @@
  */
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
 
 import type { CatalogRepository } from '../../../data/repos/catalogRepository';
 import type { Clock, IdGenerator } from '../../../data/repos/sqlDb';
-import { ChipOption, PrimaryButton, Sheet, useTokens } from '../../../design';
+import { ChipOption, EdSafeNote, Icon, PrimaryButton, Sheet, SheetHeader, space, useEdSafeMode, useTokens } from '../../../design';
 
 import {
   canSaveCustomFood,
@@ -40,7 +39,9 @@ export function CustomFoodSheet({
   now,
   newId,
 }: CustomFoodSheetProps) {
-  const { colors, space, radius, typography } = useTokens();
+  const { colors, radius, space, typography } = useTokens();
+  const edSafe = useEdSafeMode();
+  const [advancedExpanded, setAdvancedExpanded] = useState(false);
   const model = useMemo(
     () => createCustomFoodModel({ catalog, userId, now, newId }),
     [catalog, userId, now, newId],
@@ -78,18 +79,7 @@ export function CustomFoodSheet({
 
   return (
     <Sheet>
-      <View style={styles.header}>
-        <Text style={[typography.heading, { color: colors.textPrimary }]}>Create custom food</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          testID="custom.close"
-          onPress={onDismiss}
-          style={styles.closeButton}
-        >
-          <SymbolView name="xmark" size={14} weight="semibold" tintColor={colors.textSecondary} />
-        </Pressable>
-      </View>
+      <SheetHeader title="Create custom food" onClose={onDismiss} testID="custom" />
 
       <Field
         title="Name"
@@ -110,41 +100,105 @@ export function CustomFoodSheet({
         ))}
       </View>
 
-      <Field
-        title="kcal"
-        value={draft.kcalText}
-        onChangeText={(text) => patch({ kcalText: text })}
-        identifier="custom.kcalField"
-        keyboardType="numbers-and-punctuation"
-      />
-      <Field
-        title="Protein g"
-        value={draft.proteinText}
-        onChangeText={(text) => patch({ proteinText: text })}
-        identifier="custom.proteinField"
-        keyboardType="number-pad"
-      />
-      <Field
-        title="Carbs g"
-        value={draft.carbsText}
-        onChangeText={(text) => patch({ carbsText: text })}
-        identifier="custom.carbsField"
-        keyboardType="number-pad"
-      />
-      <Field
-        title="Fat g"
-        value={draft.fatText}
-        onChangeText={(text) => patch({ fatText: text })}
-        identifier="custom.fatField"
-        keyboardType="number-pad"
-      />
-      <Field
-        title="Fiber g"
-        value={draft.fiberText}
-        onChangeText={(text) => patch({ fiberText: text })}
-        identifier="custom.fiberField"
-        keyboardType="number-pad"
-      />
+      {edSafe && (
+        <EdSafeNote
+          title="Name and serving only."
+          // The fold collapses without a blur: no blur package exists, so the
+          // note must not promise one (stage A2 owner decision).
+          body={`Nutrition fields fold into \u201CAdvanced\u201D, collapsed.`}
+        />
+      )}
+
+      {edSafe ? (
+        <>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: advancedExpanded }}
+            onPress={() => setAdvancedExpanded((expanded) => !expanded)}
+            style={styles.advancedHeader}
+          >
+            <Text style={[typography.subhead, { color: colors.textPrimary, fontWeight: '600' }]}>Advanced</Text>
+            <Icon name={advancedExpanded ? 'minus' : 'chev'} size={12} color={colors.textSecondary} />
+          </Pressable>
+          {advancedExpanded && (
+            <>
+              <Field
+                title="kcal"
+                value={draft.kcalText}
+                onChangeText={(text) => patch({ kcalText: text })}
+                identifier="custom.kcalField"
+                keyboardType="numbers-and-punctuation"
+              />
+              <Field
+                title="Protein g"
+                value={draft.proteinText}
+                onChangeText={(text) => patch({ proteinText: text })}
+                identifier="custom.proteinField"
+                keyboardType="number-pad"
+              />
+              <Field
+                title="Carbs g"
+                value={draft.carbsText}
+                onChangeText={(text) => patch({ carbsText: text })}
+                identifier="custom.carbsField"
+                keyboardType="number-pad"
+              />
+              <Field
+                title="Fat g"
+                value={draft.fatText}
+                onChangeText={(text) => patch({ fatText: text })}
+                identifier="custom.fatField"
+                keyboardType="number-pad"
+              />
+              <Field
+                title="Fiber g"
+                value={draft.fiberText}
+                onChangeText={(text) => patch({ fiberText: text })}
+                identifier="custom.fiberField"
+                keyboardType="number-pad"
+              />
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <Field
+            title="kcal"
+            value={draft.kcalText}
+            onChangeText={(text) => patch({ kcalText: text })}
+            identifier="custom.kcalField"
+            keyboardType="numbers-and-punctuation"
+          />
+          <Field
+            title="Protein g"
+            value={draft.proteinText}
+            onChangeText={(text) => patch({ proteinText: text })}
+            identifier="custom.proteinField"
+            keyboardType="number-pad"
+          />
+          <Field
+            title="Carbs g"
+            value={draft.carbsText}
+            onChangeText={(text) => patch({ carbsText: text })}
+            identifier="custom.carbsField"
+            keyboardType="number-pad"
+          />
+          <Field
+            title="Fat g"
+            value={draft.fatText}
+            onChangeText={(text) => patch({ fatText: text })}
+            identifier="custom.fatField"
+            keyboardType="number-pad"
+          />
+          <Field
+            title="Fiber g"
+            value={draft.fiberText}
+            onChangeText={(text) => patch({ fiberText: text })}
+            identifier="custom.fiberField"
+            keyboardType="number-pad"
+          />
+        </>
+      )}
       {draft.basis === 'per_serving' && (
         <Field
           title="Serving grams"
@@ -201,8 +255,13 @@ function Field({
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center' },
-  closeButton: { marginLeft: 'auto', width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   basisRow: { flexDirection: 'row', gap: 8 },
+  advancedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 44,
+    paddingHorizontal: space.sm,
+  },
   field: { borderWidth: 1 },
 });

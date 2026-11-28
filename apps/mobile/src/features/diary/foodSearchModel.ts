@@ -52,7 +52,10 @@ export type FoodSearchModel = {
   setQuery(query: string): void;
   getResults(): FoodSearchRow[];
   getRecents(): FoodSearchRow[];
+  /** The Saved segment's rows: the custom foods the user has. */
+  getSaved(): FoodSearchRow[];
   loadRecents(): Promise<void>;
+  loadSaved(): Promise<void>;
   applySearch(rawQuery: string): Promise<void>;
   subscribe(listener: () => void): () => void;
   /** Cancels the pending debounce timer. */
@@ -63,6 +66,7 @@ export function createFoodSearchModel(deps: { catalog: CatalogRepository }): Foo
   let query = '';
   let results: FoodSearchRow[] = [];
   let recents: FoodSearchRow[] = [];
+  let saved: FoodSearchRow[] = [];
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   const listeners = new Set<() => void>();
@@ -76,9 +80,17 @@ export function createFoodSearchModel(deps: { catalog: CatalogRepository }): Foo
     emit();
   }
 
+  /** The Saved segment's rows — every custom food the user has (LOG-08). */
+  async function loadSaved(): Promise<void> {
+    const customs = await deps.catalog.customFoods().catch(() => []);
+    saved = customs.map(rowFromCustom);
+    emit();
+  }
+
   // The Swift init's `Task { await loadRecents() }` — the Recent card is there
   // before the first query.
   void loadRecents();
+  void loadSaved();
 
   /** Local LIKE search only — zero network (LOG-04). */
   async function applySearch(rawQuery: string): Promise<void> {
@@ -118,7 +130,9 @@ export function createFoodSearchModel(deps: { catalog: CatalogRepository }): Foo
     },
     getResults: () => results,
     getRecents: () => recents,
+    getSaved: () => saved,
     loadRecents,
+    loadSaved,
     applySearch,
     subscribe(listener: () => void) {
       listeners.add(listener);
