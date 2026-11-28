@@ -7,7 +7,7 @@
  * EdSafeCollapse — the components own that policy (I7); the feature holds no
  * ED-safe branch.
  */
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ActionSheetIOS, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -74,6 +74,24 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
   const [savedToast, setSavedToast] = useState<SavedReceipt | null>(null);
   const [undoQueue, setUndoQueue] = useState<UndoToast[]>([]);
   const currentUndo = undoQueue[0] ?? null;
+  // The live queue through a ref (review note 5): a tap processed in the turn
+  // where the front's timer fired reads the current front, not the render's.
+  const undoQueueRef = useRef<UndoToast[]>([]);
+  undoQueueRef.current = undoQueue;
+  // The deferred action sheet's timer handle (review note 4): cleared when the
+  // view unmounts, and the presentation checks the view is still there.
+  const actionSheetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+      if (actionSheetTimerRef.current !== null) {
+        clearTimeout(actionSheetTimerRef.current);
+        actionSheetTimerRef.current = null;
+      }
+    },
+    [],
+  );
 
   // The five-second window of the toast at the front of the queue: it counts
   // from the moment THIS toast appeared (a later enqueue never resets it).
@@ -82,7 +100,9 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
     if (currentUndo === null) {
       return undefined;
     }
+    console.log('PROBE arm timer, front:', currentUndo?.kind === 'delete' ? currentUndo.item.title : currentUndo?.kind);
     const timer = setTimeout(() => {
+      console.log('PROBE timer fired');
       setUndoQueue((queue) => queue.slice(1));
     }, UNDO_WINDOW_MS);
     return () => clearTimeout(timer);
@@ -101,18 +121,22 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
     setUndoQueue((queue) => [...queue, toast]);
   };
 
-  /** The front toast's undo: that one action, then the next toast's window. */
+  /**
+   * The front toast's undo: that one action, then the next toast's window.
+   * The front comes from the live queue (the ref, review note 5), and the
+   * slice applies only while that toast is still the head — a tap processed
+   * in the turn where the front's timer fired cannot slice the queue twice.
+   */
   const undoCurrent = () => {
-    if (currentUndo === null) {
+    const front = undoQueueRef.current[0];
+    if (front === undefined) {
       return;
     }
-    setUndoQueue((queue) => {
-      return queue.slice(1);
-    });
-    if (currentUndo.kind === 'delete') {
-      void model.undoDelete(currentUndo.item);
+    setUndoQueue((queue) => (queue[0] === front ? queue.slice(1) : queue));
+    if (front.kind === 'delete') {
+      void model.undoDelete(front.item);
     } else {
-      void model.writeEntry(currentUndo.prev.entry, currentUndo.prev.detail);
+      void model.writeEntry(front.prev.entry, front.prev.detail);
     }
   };
 
@@ -298,8 +322,14 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
                 setEditItem(null);
                 // The action sheet waits a tick: presenting it in the same
                 // handler that closes the sheet swallows the presentation on
-                // this iOS (the stage-B finding).
-                setTimeout(() => confirmDelete(item), 0);
+                // this iOS (the stage-B finding). The handle is kept and the
+                // view's unmount clears it; a gone view never presents (note 4).
+                actionSheetTimerRef.current = setTimeout(() => {
+                  actionSheetTimerRef.current = null;
+                  if (mountedRef.current) {
+                    confirmDelete(item);
+                  }
+                }, 0);
               }}
             />
           )}

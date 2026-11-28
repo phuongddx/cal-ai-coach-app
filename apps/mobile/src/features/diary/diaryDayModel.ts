@@ -11,7 +11,7 @@ import type { DiaryEntry, DiaryEntryDetail } from '../../data/repos/diaryEntryRe
 
 import type { DiaryDeps } from './deps';
 import { dayString, manualKcal } from './diaryMath';
-import { cancelTombstoneAndRestore, createDiaryDayLoader, type DiaryDayExercise, type DiaryDaySection, type DiaryDaySnapshotData } from './diarySnapshot';
+import { undoRecordWithOps, createDiaryDayLoader, type DiaryDayExercise, type DiaryDaySection, type DiaryDaySnapshotData } from './diarySnapshot';
 
 export type DiaryDaySnapshot = DiaryDaySnapshotData;
 export type { DiaryDayExercise, DiaryDaySection };
@@ -170,22 +170,29 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
       await refresh();
     },
     async undoDelete(item) {
-      // One transaction re-checks the op inside itself (the review
-      // correction): only a still-pending tombstone cancels and restores
-      // silently; an op the sync already took falls back to the re-record —
-      // the restored row never sits with no op while the server holds the
-      // tombstone.
-      const cancelled = await cancelTombstoneAndRestore(deps.db, item.id, item.entry, item.detail);
-      if (!cancelled) {
-        // The sync has taken the tombstone: the entry comes back the way a
-        // save records it — one batch, one new op.
-        await deps.diaryEntries.recordUpserts([{ entry: item.entry, detail: item.detail }], deps.now());
-      }
+      // The owner's design (the second correction): ONE write for every
+      // undo — the record's pending ops are replaced by one upsert op of the
+      // restored entry, stamped with the undo's time — so no engine state
+      // (unread op, push in flight, acknowledged push) can drop the entry.
+      await undoRecordWithOps(deps.db, {
+        entryId: item.id,
+        entry: item.entry,
+        detail: item.detail,
+        now: deps.now(),
+        newId: deps.newId,
+      });
       deps.notify();
       await refresh();
     },
     async writeEntry(entry, detail) {
-      await deps.diaryEntries.recordUpserts([{ entry, detail }], deps.now());
+      // The edit's undo: the same one-transaction write as the delete's.
+      await undoRecordWithOps(deps.db, {
+        entryId: entry.id,
+        entry,
+        detail,
+        now: deps.now(),
+        newId: deps.newId,
+      });
       deps.notify();
       await refresh();
     },

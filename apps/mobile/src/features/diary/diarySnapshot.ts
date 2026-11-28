@@ -8,12 +8,14 @@ import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 
 import { diaryEntries, diaryEntryDetails, pendingOps } from '../../data/db/schema';
 import {
+  entryToRow,
   rowToDetail,
   rowToEntry,
+  snapshotFor,
   type DiaryEntry,
   type DiaryEntryDetail,
 } from '../../data/repos/diaryEntryRepository';
-import { inTransaction, type SqlDb } from '../../data/repos/sqlDb';
+import { fromIso, inTransaction, toIso, type SqlDb } from '../../data/repos/sqlDb';
 import type { TargetRepository, UserTarget } from '../../data/repos/targetRepository';
 import { rowToExerciseLog, type TrackingRepository } from '../../data/repos/trackingRepository';
 
@@ -128,72 +130,65 @@ function rowToExerciseRows(rows: ExerciseRow[]): DiaryDayExercise[] {
 }
 
 /**
- * The delete-undo seam (DY-08, the d-deleted frames; the review correction's
- * one-transaction rule). The undo's decision reads the outbox INSIDE the same
- * transaction that cancels: while the tombstone's pending op is still there,
- * it is cancelled and the rows are restored silently (the device keeps no
- * trace of the delete); once the sync has taken the op, the seam reports it
- * and the model re-records the entry the way a save does. Runs over the
- * injected handle — the same seam the snapshot loader uses.
+ * The undo seam (DY-08, the d-deleted frames; the second correction's design,
+ * the owner's): an undo is ONE write, the same for the delete's and for the
+ * edit's undo. In ONE transaction it (a) deletes every pending op of the
+ * record — the tombstone, or the edit's upsert, whatever waits; (b) writes
+ * the mirror row of the restored entry with `updatedAt` = the time of the
+ * undo, strictly later than the time of the op it replaces (with a clock
+ * that stands still, one millisecond later); (c) writes the detail row; and
+ * (d) inserts exactly ONE upsert op stamped with that same time. There is NO
+ * branch that restores a row with zero ops: whichever state the sync engine
+ * is in — the op unread, the push in flight, the push acknowledged — the
+ * record ends with a pending upsert whose `updatedAt` beats anything the
+ * server may hold.
  */
+export type UndoRecordArgs = {
+  entryId: string;
+  entry: DiaryEntry;
+  detail: DiaryEntryDetail;
+  now: Date;
+  newId: () => string;
+};
 
-/**
- * The undo's one transaction: look whether the tombstone's op still waits,
- * and only then cancel it and restore the mirror + detail rows exactly as
- * given, with no new op. Returns false when the op is already gone — the
- * sync took it in the gap between the tap and this write — and nothing is
- * restored; the caller re-records the entry with its one new op instead, so
- * a server tombstone can never out-argue a restored row that carries no op.
- */
-export async function cancelTombstoneAndRestore(
-  db: SqlDb,
-  entryId: string,
-  entry: DiaryEntry,
-  detail: DiaryEntryDetail,
-): Promise<boolean> {
-  return inTransaction(db, async (tx) => {
-    const rows = await tx
-      .select({ opId: pendingOps.opId })
+export async function undoRecordWithOps(db: SqlDb, args: UndoRecordArgs): Promise<void> {
+  await inTransaction(db, async (tx) => {
+    const pending = await tx
+      .select({ opId: pendingOps.opId, clientTimestamp: pendingOps.clientTimestamp })
       .from(pendingOps)
-      .where(and(eq(pendingOps.recordId, entryId), eq(pendingOps.kind, 'tombstone')))
-      .limit(1);
-    const opId = rows[0]?.opId;
-    if (opId === undefined) {
-      return false;
+      .where(eq(pendingOps.recordId, args.entryId));
+    const pendingTimes = pending.map((row) => fromIso(String(row.clientTimestamp)).getTime());
+    // Strictly later than everything it replaces (the owner's one-millisecond
+    // rule for a clock that stands still).
+    const undoTime = new Date(Math.max(args.now.getTime(), args.entry.updatedAt.getTime(), ...pendingTimes, 0) + 1);
+    if (pending.length > 0) {
+      await tx.delete(pendingOps).where(eq(pendingOps.recordId, args.entryId));
     }
-    await tx.delete(pendingOps).where(eq(pendingOps.opId, opId));
+    const restored: DiaryEntry = { ...args.entry, updatedAt: undoTime };
+    const mirrorRow = entryToRow(restored);
     await tx
       .insert(diaryEntries)
-      .values({
-        id: entry.id,
-        userId: entry.userId,
-        displayText: entry.displayText,
-        createdAt: entry.createdAt.toISOString(),
-        updatedAt: entry.updatedAt.toISOString(),
-        deletedAt: entry.deletedAt === null ? null : entry.deletedAt.toISOString(),
-        serverVersion: entry.serverVersion,
-        acceptedOpId: entry.acceptedOpId,
-        serverUpdatedAt: entry.serverUpdatedAt.toISOString(),
-      })
-      .onConflictDoUpdate({
-        target: diaryEntries.id,
-        set: {
-          displayText: entry.displayText,
-          updatedAt: entry.updatedAt.toISOString(),
-          deletedAt: entry.deletedAt === null ? null : entry.deletedAt.toISOString(),
-          serverVersion: entry.serverVersion,
-          acceptedOpId: entry.acceptedOpId,
-          serverUpdatedAt: entry.serverUpdatedAt.toISOString(),
-        },
-      });
+      .values(mirrorRow)
+      .onConflictDoUpdate({ target: diaryEntries.id, set: mirrorRow });
     await tx
       .insert(diaryEntryDetails)
-      .values({ ...detail, ...detailToDetailRow(detail) })
+      .values({ ...args.detail, ...detailToDetailRow(args.detail) })
       .onConflictDoUpdate({
         target: diaryEntryDetails.entryId,
-        set: { ...detailToDetailRow(detail) },
+        set: { ...detailToDetailRow(args.detail) },
       });
-    return true;
+    await tx.insert(pendingOps).values({
+      opId: args.newId(),
+      tableName: 'diary_entries',
+      recordId: args.entryId,
+      kind: 'upsert',
+      snapshot: snapshotFor(restored),
+      clientTimestamp: toIso(undoTime),
+      createdAt: toIso(args.now),
+      dispatchAttempts: 0,
+      nextRetryAt: null,
+      quarantined: false,
+    });
   });
 }
 

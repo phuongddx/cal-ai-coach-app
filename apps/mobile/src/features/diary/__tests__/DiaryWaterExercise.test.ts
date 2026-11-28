@@ -230,8 +230,10 @@ describe('DiaryWaterExerciseTests twins', () => {
     expect(stored?.grams).toBe(350);
     const entry = await fetchDiaryEntry(harness.deps.db, dinner.id);
     expect(entry?.deletedAt).toBeNull();
-    // The tombstone op was cancelled, not replaced: the device keeps no trace.
-    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(0);
+    // The second correction's design: the undo replaces the tombstone op by
+    // ONE upsert op of the restored entry — the record never sits with zero
+    // ops, so a server tombstone can never out-argue the restore.
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(1);
     expect(model.items('dinner')[0]?.title).toBe('Spaghetti Bolognese');
   });
 

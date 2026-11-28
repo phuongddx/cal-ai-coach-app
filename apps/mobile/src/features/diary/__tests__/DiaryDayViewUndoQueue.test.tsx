@@ -177,11 +177,19 @@ async function renderQueue(model: DiaryDayModel): Promise<void> {
   await render(<DiaryDayView model={model} deps={makeDeps()} onCapture={() => undefined} />);
 }
 
+let previousActEnvironment: boolean | undefined;
+
 beforeAll(() => {
   // The enqueue microtasks and the five-second window timers fire outside
   // fireEvent's act scope; with the act environment on, their commits land
-  // through the scheduler and waitFor observes them.
+  // through the scheduler and waitFor observes them. Saved and restored so
+  // the flag cannot leak into the other files of this worker.
+  previousActEnvironment = (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT;
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+});
+
+afterAll(() => {
+  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = previousActEnvironment;
 });
 
 afterEach(() => {

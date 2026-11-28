@@ -146,6 +146,11 @@ function makeDeps(overrides: Partial<DiaryDeps> = {}): DiaryDeps {
 
 async function renderDay(model = makeModel(), deps = makeDeps()) {
   await render(<DiaryDayView model={model} deps={deps} onCapture={() => undefined} />);
+  // The first commit can land on a later scheduler pass when this file runs
+  // after the sql.js-heavy suites: settle before the interactions.
+  await act(async () => {
+    await Promise.resolve();
+  });
   return { model, deps };
 }
 
@@ -298,19 +303,20 @@ describe('DiaryDayView screen', () => {
 
       fireEvent(screen.getByTestId('diary.foodRow'), 'longPress');
       const [, callback] = showActionSheet.mock.calls[0] as unknown as [(index: number) => void, (index: number) => void];
-      callback(0);
-      // Fake timers fake the macrotasks only: flush the promise's microtasks.
-      for (let tick = 0; tick < 5; tick += 1) {
-        await Promise.resolve();
-      }
-      expect(screen.getByTestId('diary.toast.undo')).toBeOnTheScreen();
+      // Hold act open across the delete's promise so the enqueue commits in scope.
+      await act(async () => {
+        callback(0);
+        await waitFor(() => expect(screen.getByTestId('diary.toast.undo')).toBeOnTheScreen());
+      });
+      expect(screen.getByText('Overnight Oats deleted')).toBeOnTheScreen();
 
-      jest.advanceTimersByTime(5000);
+      await act(async () => {
+        jest.advanceTimersByTime(5000);
+      });
       // The dismissal's render flushes on a real macrotask (React's scheduler
-      // is not faked): hand the loop back first.
+      // is not faked): hand the loop back first, then poll under real timers.
       jest.useRealTimers();
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(screen.queryByTestId('diary.toast.undo')).toBeNull();
+      await waitFor(() => expect(screen.queryByTestId('diary.toast.undo')).toBeNull());
       expect(undoDelete).not.toHaveBeenCalled();
     } finally {
       jest.useRealTimers();
