@@ -38,7 +38,7 @@ iOS app (apps/mobile)  ── HTTPS, bearer session ──►  Hono API (apps/ap
 
 | Path | Model | Authority |
 | --- | --- | --- |
-| `apps/mobile/` | Expo app: `src/app` routes, `src/design`, `src/features`, `src/data`, `src/platform`, `src/debug`, `modules/` | `apps/mobile/app.config.ts`, `package.json` |
+| `apps/mobile/` | Expo app: `src/app` routes, `src/design`, `src/features`, `src/data`, `src/platform`, `src/debug`, `src/spike`, `modules/` | `apps/mobile/app.config.ts`, `package.json` |
 | `apps/api/` | Hono API, SQL migrations, VPS deploy kit | `apps/api/package.json`, `src/app.ts` |
 | `packages/core/` | Pure domain (no `react-native`, no `node:` imports) | `packages/core/src/index.ts` |
 | `packages/api-contract/` | Zod wire contracts + `golden/` fixtures | `packages/api-contract/src/index.ts` |
@@ -48,6 +48,8 @@ iOS app (apps/mobile)  ── HTTPS, bearer session ──►  Hono API (apps/ap
 | `docs/rn-migration/` | The migration record: spec, plan, parity table, findings, evidence | `README.md` there |
 | `docs/design/ember/` | The Ember design: tokens, frames, design system | `README.md` there |
 | `docs/engineering/` | Stable engineering knowledge (conventions, infra, stack) | files in this directory |
+| `docs/features/` | Feature specs (starter; currently empty) | `.agents/templates/spec.md` |
+| `docs/superpowers/` | Historical plans and specs | — |
 | `plans/` | Dated execution reports and proof records | `plans/reports/` |
 | `.agents/` | Agent starter structure: skills, policies, hooks, templates | `.agents/templates/` |
 | `.planning/` | Live planning state (gitignored) | — |

@@ -4,14 +4,18 @@ Derived from current source. Cite-grade references in parentheses.
 
 ## TypeScript / React Native
 
-- TypeScript strict in every workspace (`tsconfig.base.json`: `strict`, `noUncheckedIndexedAccess`,
-  `isolatedModules`). React 19 on Hermes with the New Architecture; code must stay React Compiler-safe:
+- TypeScript strict in every workspace (`apps/api` and the two packages extend `tsconfig.base.json`:
+  `strict`, `noUncheckedIndexedAccess`, `isolatedModules`; `apps/mobile` extends `expo/tsconfig.base`
+  and sets only `strict`). React 19 on Hermes with the New Architecture; code must stay React Compiler-safe:
   external stores are read with `useSyncExternalStore` and a stable snapshot
   (`apps/mobile/src/design/edSafe.ts`).
 - Features are model + view pairs under `apps/mobile/src/features/<feature>/`: a plain-TypeScript
-  model or reducer (`scanModel.ts`, `diaryDayModel.ts`, `onboardingModel.ts`) and thin views. A
-  feature never imports another feature's internals; it navigates by typed route and reads shared
-  data through `src/data` and `src/design`. `src/app/` holds route files only; tests never live there.
+  model or reducer (`scanModel.ts`, `diaryDayModel.ts`, `onboardingModel.ts`) and thin views. The
+  rule: a feature does not import another feature's internals; it navigates by typed route and reads
+  shared data through `src/data` and `src/design`. What the code does today: `coach` imports `progress`
+  (`coachModel.ts`, `coachSnapshot.ts`, `screens/CoachView.tsx`), `profile` imports `onboarding`
+  (`ProfileView.tsx`, `TargetEditSheet.tsx`) and `today` imports `diary` (`TodayView.tsx`); no test
+  checks the rule. `src/app/` holds route files only; tests never live there.
 - `apps/mobile/src/platform/appEnvironment.tsx` + `rootRuntime.ts` and
   `apps/mobile/src/data/environment.ts` are the composition root: constructor injection of ports and
   closures (API client, repositories, `SyncStore`, `SyncTransport`, `now: () => Date`). No service
@@ -27,8 +31,11 @@ Derived from current source. Cite-grade references in parentheses.
 - Ids: `apps/mobile/src/data/sync/uuid.ts` is the only id source on the client; every id that reaches
   the server is a UUID v4. After a repository write call `notifyLocalMutation()`.
 - ED-safe: `apps/mobile/src/design/edSafe.ts` is the only file that exports ED-safe functions;
-  components own the policy branch. Feature code hides a calorie framing with `EdSafeCollapse` and
-  does not call `edSafeMode(`, `edSafeHidden(` or `useEdSafeHidden(` to decide what to show.
+  components own the policy branch. The rule: feature code hides a calorie framing with
+  `EdSafeCollapse` and does not call `edSafeMode(`, `edSafeHidden(` or `useEdSafeHidden(` to decide what
+  to show; reading `useEdSafeMode()` for a switch state is fine. No test checks it. The diary has three
+  recorded stays of `useEdSafeMode()`: the caption of the custom food sheet, the field fold of the
+  search, and litres or glasses of the water card.
 - Design tokens: `docs/design/ember/tokens.css` → `tokens.json` → `emberTokens.generated.ts`
   (`node scripts/rn/gen-tokens.mjs`) → `tokens.ts`. Feature code uses tokens and design components,
   never a literal color. Generated files (`emberTokens.generated.ts`, `data/db/migrations.ts`,

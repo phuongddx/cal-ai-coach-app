@@ -13,7 +13,7 @@ confidence on every scan, and ED-safe guardrails.
 | `packages/core/` | Pure TypeScript domain shared by the app and the API (kcal arithmetic, targets, streaks, sync rules) |
 | `packages/api-contract/` | Zod wire contracts and golden fixtures shared by the app and the API |
 | `scripts/rn/` | Gates and tools: parity gate, token generator, API start/stop, smoke scripts, evidence harness |
-| `docs/` | `rn-migration/` (the migration record), `design/ember/` (the design), `engineering/` (conventions, infrastructure, stack) |
+| `docs/` | `rn-migration/` (the migration record), `design/ember/` (the design), `engineering/` (conventions, infrastructure, stack), `superpowers/` (historical plans and specs), `features/` (feature specs, empty) |
 | `supabase/`, `scripts/*.ts` | The previous Supabase backend and its Deno harnesses (see the last section) |
 
 `AGENTS.md` is the guide for contributors and agents; `ARCHITECTURE.md` is the one-page map.
@@ -62,7 +62,7 @@ No App Store or TestFlight submission is set up from this app yet.
 
 ## The migration record
 
-The SwiftUI app and the Supabase backend were replaced by this stack in November 2026. The record is
+The SwiftUI app was replaced by this stack in November 2026; the Supabase backend is kept until the Hono backend runs on a server. The record is
 in `docs/rn-migration/`: `spec.md` (decisions and invariants), `plan.md`, `parity.tsv` (one row per
 feature of the old app, with status and evidence), `findings/` and `evidence/`. The git tag
 `archive/swiftui-final` holds the last commit that contained the SwiftUI app.

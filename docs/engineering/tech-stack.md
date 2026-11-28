@@ -54,5 +54,5 @@ dev dependencies of the API. One root `package-lock.json`; `overrides` pin `reac
 
 ## Tooling that is needed only for some work
 
-- Xcode (26.x SDK) for `expo prebuild`, `expo run:ios`, the Simulator and artifact checks; `axe` for
+- Xcode (27.1 on the machine that builds, as `docs/rn-migration/build-recipe.md` records) for `expo prebuild`, `expo run:ios`, the Simulator and artifact checks; `axe` for
   the evidence harness; Docker for the deploy kit; Deno and the Supabase CLI for the legacy stack.
