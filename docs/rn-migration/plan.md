@@ -644,3 +644,19 @@ a guarded route, High Contrast on a device, the resend limit of the server read 
 Check out `rn/orchestrate`, read `ledger.tsv` (last row per unit is its state) and `trail.tsv`.
 A `running` unit lost its worker: its brief is in `briefs/`, its branch may hold commits; re-dispatch
 with the brief and the partial result. A `pass` whose PR head moved is void.
+
+Two rules the owner broke once each, written here so a later session reads them:
+
+- **Do the work, then report.** A turn of the owner never ends with a status message while
+  something is left that does not depend on another bot. On 2026-11-27 the owner ended a turn with
+  a merge, two tool fixes and six open pull requests pending, and nothing moved for twelve hours.
+- **The gate applies to the owner too.** A pull request of the owner that adds a script, a
+  workflow or anything else the gates can see runs the full gate on its tree before the merge, like
+  any other. Documentation alone may merge on the owner's own check. PR 55 and PR 56 were merged
+  on the owner's check alone; their trees passed the next gates.
+
+State on 2026-11-28 at 13:30: `main` is `ae34e23`; ten pull requests landed that day (53, 55, 54,
+50, 42, 47, 56, 43, 36, 57). A restyle unit merges when its review and its gates are green, and its
+evidence on the Simulator is a pull request of its own (decision of Zed). The gates move to
+GitHub-hosted runners in U-82; `scripts/rn/gate.sh` keeps one gate at a time on the machine until
+then. The parity table reads 89 rows: 19 done, 64 partial, 5 todo, 1 n/a.
