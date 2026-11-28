@@ -1,0 +1,183 @@
+name: RN Evidence
+
+# The evidence harness (scripts/rn/evidence/run-all.sh) on a GitHub-hosted macOS runner: the
+# Simulator, Metro, axe and the flows run on GitHub, so an evidence unit captures its rows
+# without holding the Simulator of the machine. Manual runs only: an evidence unit dispatches it
+# on its own branch (docs/rn-migration/findings/U-82b.md holds the three commands).
+#
+# The built app comes from a Debug xcodebuild whose DerivedData is cached under the hash of
+# everything the native build reads; a run after an unchanged native setup restores it and the
+# build step prints the hit and the duration.
+
+on:
+  workflow_dispatch:
+    inputs:
+      flows:
+        description: Flow names without .sh, space separated; empty runs every flow
+        required: false
+        default: ''
+        type: string
+
+concurrency:
+  # One run per ref: two units on two branches run at once; a newer dispatch on the same branch
+  # cancels the older one.
+  group: rn-evidence-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evidence:
+    name: Evidence flows on the Simulator
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+      METRO_PORT: '8081'
+      BUNDLE_ID: com.nextlabs.coachcal
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app
+
+      - name: Use Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Expo prebuild for iOS (generates ios/ and runs pod install)
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform ios
+
+      - name: Cache the Simulator build
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: apps/mobile/build
+          key: rn-evidence-build-${{ hashFiles('package-lock.json', 'apps/mobile/package.json', 'apps/mobile/app.config.ts', 'apps/mobile/modules/**', 'apps/mobile/plugins/**') }}
+
+      - name: Build the app for the Simulator
+        working-directory: apps/mobile
+        run: |
+          echo "cache hit (exact key): ${{ steps.cache.outputs.cache-hit }}"
+          started="$(date +%s)"
+          xcodebuild
+            -workspace ios/CoachCal.xcworkspace
+            -scheme CoachCal
+            -configuration Debug
+            -sdk iphonesimulator
+            -destination 'generic/platform=iOS Simulator'
+            -derivedDataPath build
+            CODE_SIGNING_ALLOWED=NO
+            build
+          echo "build duration: $(( $(date +%s) - started ))s"
+
+      - name: Pick and boot the device (iPhone 17 Pro on the newest runtime of the image)
+        run: |
+          UDID="$(bash scripts/rn/ci/pick-evidence-device.sh)"
+          echo "device: $UDID"
+          echo "SIM_UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+
+      - name: Install the app on the device
+        run: xcrun simctl install "$SIM_UDID" "apps/mobile/build/Build/Products/Debug-iphonesimulator/CoachCal.app"
+
+      - name: Install axe (the harness drives the app with it)
+        run: |
+          # The formula lives in a tap (the machine's 2.1.1 comes from the same one).
+          brew tap cameroncooke/axe
+          brew install cameroncooke/axe/axe
+          axe --version
+
+      - name: Seed the demo persona (the state flow 01 part 2 leaves behind)
+        # run-all.sh does not install or seed; a subset without flow 01 needs a store whose gate
+        # is open and whose persona is seeded, or its first app_open "Today" hits onboarding and
+        # dies. Flow 01 part 2's recipe, inline: launch once with --ccSeedNoTargets (the shell
+        # mounts without a target), open the dev client, and Today seeds the demo persona.
+        run: |
+          DEV_URL="exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A${METRO_PORT}"
+          cd apps/mobile
+          nohup npx expo start --dev-client --port "$METRO_PORT" > "$RUNNER_TEMP/metro-seed.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/metro-seed.pid"
+          cd "$GITHUB_WORKSPACE"
+          bash scripts/rn/ci/wait-metro.sh 180 "$RUNNER_TEMP/metro-seed.log"
+          xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID" --ccSeedNoTargets
+          sleep 2
+          xcrun simctl openurl "$SIM_UDID" "$DEV_URL" || true
+          seeded=0
+          for i in $(seq 1 240); do
+            if axe describe-ui --udid "$SIM_UDID" 2>/dev/null | grep -qF "Spaghetti Bolognese"; then
+              seeded=1
+              break
+            fi
+            # Every 20 s: re-open the URL (a slow first bundle), tap the "Open in CoachCal?"
+            # dialog away when it is up, and retry the seed link. Silent when not there.
+            if [ "$((i % 20))" -eq 0 ]; then
+              xcrun simctl openurl "$SIM_UDID" "$DEV_URL" >/dev/null 2>&1 || true
+              axe tap --label Open --udid "$SIM_UDID" >/dev/null 2>&1 || true
+              xcrun simctl openurl "$SIM_UDID" "coachcal:///?seed=1" >/dev/null 2>&1 || true
+              axe tap --label Open --udid "$SIM_UDID" >/dev/null 2>&1 || true
+            fi
+            sleep 1
+          done
+          if [ "$seeded" -ne 1 ]; then
+            echo "FAIL: the demo persona was not seeded within 240 s"
+            axe describe-ui --udid "$SIM_UDID" 2>/dev/null | head -40 || true
+            exit 1
+          fi
+          echo "seed: the demo persona is on Today (Spaghetti Bolognese found)"
+          xcrun simctl terminate "$SIM_UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
+          # Free port 8081: run-all.sh starts its own Metro and refuses a served port.
+          kill "$(cat "$RUNNER_TEMP/metro-seed.pid")" 2>/dev/null || true
+          for i in $(seq 1 20); do
+            [ -z "$(lsof -ti ":$METRO_PORT" -sTCP:LISTEN 2>/dev/null)" ] && break
+            sleep 1
+          done
+          if [ -n "$(lsof -ti ":$METRO_PORT" -sTCP:LISTEN 2>/dev/null)" ]; then
+            echo "FAIL: port $METRO_PORT is still held after the seed Metro stopped"
+            lsof -nP -iTCP:"$METRO_PORT" -sTCP:LISTEN || true
+            exit 1
+          fi
+
+      - name: Run the evidence flows (run-all starts its own Metro; exit code = failed expectations)
+        env:
+          FLOWS: ${{ inputs.flows }}
+          COACHCAL_APP_PATH: ${{ github.workspace }}/apps/mobile/build/Build/Products/Debug-iphonesimulator/CoachCal.app
+          COACHCAL_LOG_DIR: ${{ runner.temp }}/rn-logs
+        run: bash scripts/rn/evidence/run-all.sh
+
+      - name: Collect the evidence files
+        if: always()
+        run: |
+          mkdir -p artifacts/evidence
+          # Every file under docs/rn-migration/evidence the run created or changed (tracked and
+          # untracked; -z keeps paths unquoted). Ignored paths (evidence/tmp/) never appear.
+          while IFS= read -r -d '' entry; do
+            path="${entry:3}"
+            if [[ "$path" == *" -> "* ]]; then path="${path##* -> }"; fi
+            if [ -n "$path" ] && [ -e "$path" ]; then
+              mkdir -p "artifacts/evidence/$(dirname "$path")"
+              cp -R "$path" "artifacts/evidence/$path"
+            fi
+          done < <(git status --porcelain -z -- docs/rn-migration/evidence)
+          cp -R docs/rn-migration/evidence/transcripts artifacts/evidence/transcripts 2>/dev/null || true
+          # The Metro log of run-all (COACHCAL_LOG_DIR) and the seed phase's Metro log.
+          mkdir -p artifacts/rn-logs
+          cp -R "$RUNNER_TEMP/rn-logs"/. artifacts/rn-logs/ 2>/dev/null || true
+          cp "$RUNNER_TEMP/metro-seed.log" artifacts/rn-logs/metro-seed.log 2>/dev/null || true
+          echo "collected:"; find artifacts -type f | head -40
+
+      - name: Upload the evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rn-evidence-${{ github.run_id }}
+          path: artifacts/
+          if-no-files-found: warn

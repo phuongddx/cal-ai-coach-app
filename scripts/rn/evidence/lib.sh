@@ -28,11 +28,11 @@ UDID="${SIM_UDID:-$(sim_udid)}"
 BUNDLE_ID="${APP_BUNDLE_ID:-com.nextlabs.coachcal}"
 # The built Debug dev client (read only, built by the native unit; never rebuilt here).
 APP_PATH="${COACHCAL_APP_PATH:-/Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-native/apps/mobile/build-output/CoachCal-dev.app}"
-DEV_CLIENT_URL="exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
+DEV_CLIENT_URL="exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A${METRO_PORT:-8081}"
 METRO_PORT="${METRO_PORT:-8081}"
 METRO_STATUS_URL="http://localhost:$METRO_PORT/status"
 
-LOG_DIR="/private/var/folders/nn/n6wtxkdd3n10d78wf4xmygrm0000gp/T/opencode/rn-logs"
+LOG_DIR="${COACHCAL_LOG_DIR:-/private/var/folders/nn/n6wtxkdd3n10d78wf4xmygrm0000gp/T/opencode/rn-logs}"
 EV_DIR="$EVID_REPO_ROOT/docs/rn-migration/evidence"
 TMP_DIR="$EV_DIR/tmp"
 TRANSCRIPTS_DIR="$EV_DIR/transcripts"
