@@ -45,7 +45,84 @@ jobs:
         run: npm run typecheck
 
       - name: Test
-        run: npm test
+        # The 120 s test timeout the owner's gate-integrate.sh uses: a loaded machine makes the
+        # 15 s default of apps/mobile fire on snapshot-matrix suites that pass on a fresh runner.
+        run: npm run test --workspaces --if-present -- --testTimeout=120000
 
       - name: Parity gate
         run: npm run parity:check
+
+  integration:
+    name: API suites against PostgreSQL 17, smoke and sync scripts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      # The env file scripts/rn/start-api.sh would write on a machine: the smoke scripts and the
+      # Jest SQL harness read it (apps/api/src/testing/sqlHarness.ts honors RN_API_ENV_FILE).
+      RN_API_ENV_FILE: ${{ runner.temp }}/coachcal-ci-api.env
+      # The smoke scripts call "$PG_BIN/psql"; the runner ships the client at /usr/bin.
+      PG_BIN: /usr/bin
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Make sure psql client tools and uuidgen are present
+        run: |
+          command -v psql || sudo apt-get update && sudo apt-get install -y postgresql-client
+          command -v uuidgen || sudo apt-get install -y uuid-runtime
+
+      - name: Roles, database, migrations, API (secrets generated in this job)
+        run: bash scripts/rn/ci/start-api.sh
+
+      - name: API suites (Jest with the database up)
+        run: |
+          set -o pipefail
+          npm run test --workspaces --if-present -- --testTimeout=120000 2>&1 | tee "$RUNNER_TEMP/test.log"
+
+      # The suites print [sql-skip] when they cannot reach the database; a silent skip is a
+      # failure here (the same rule gate-integrate.sh applies on a machine).
+      - name: Fail when a SQL suite skipped
+        run: |
+          count="$(grep -c 'sql-skip' "$RUNNER_TEMP/test.log" || true)"
+          echo "[sql-skip] lines: $count"
+          if [ "$count" -gt 0 ]; then
+            grep -n 'sql-skip' "$RUNNER_TEMP/test.log"
+            echo "::error::A SQL-backed suite skipped even though PostgreSQL 17 is a service of this job."
+            exit 1
+          fi
+
+      - name: Smoke scan
+        run: bash scripts/rn/smoke-scan.sh
+
+      - name: Smoke auth
+        run: bash scripts/rn/smoke-auth.sh
+
+      - name: End-to-end sync
+        run: bash scripts/rn/e2e-sync.sh
+
+      - name: Stop the API
+        if: always()
+        run: bash scripts/rn/ci/stop-api.sh
