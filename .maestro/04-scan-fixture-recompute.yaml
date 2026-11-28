@@ -1,4 +1,4 @@
-# U-82 flow 03 — the scan fixture recomputes kcal from the grams.
+# U-82 flow 04 — the scan fixture recomputes kcal from the grams.
 # The workflow launches the app with `simctl launch <udid> com.nextlabs.coachcal
 # --ccScanScenario 200` (the evidence harness's way: process arguments reach the native
 # launch-arguments module), so this flow only opens the dev client URL.
@@ -10,7 +10,7 @@
 # a pixel: scan.shutter, ccstepper.increment (the design Stepper's plus button inside the
 # scan.grams wrapper), asserted through the review's kcal texts.
 appId: com.nextlabs.coachcal
-name: 03 the scan fixture recomputes kcal from the grams
+name: 04 the scan fixture recomputes kcal from the grams
 ---
 - openLink: exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
 - tapOn:
@@ -27,14 +27,14 @@ name: 03 the scan fixture recomputes kcal from the grams
 - extendedWaitUntil:
     visible: "Scan Food"
     timeout: 30000
-- takeScreenshot: 03-scan-capture
+- takeScreenshot: 04-scan-capture
 - tapOn:
     id: "scan.shutter"
 - extendedWaitUntil:
     visible: "Review"
     timeout: 30000
 - assertVisible: "464 kcal"
-- takeScreenshot: 03-scan-review-464
+- takeScreenshot: 04-scan-review-464
 
 - tapOn:
     id: "ccstepper.increment"
@@ -44,4 +44,4 @@ name: 03 the scan fixture recomputes kcal from the grams
     id: "ccstepper.increment"
 - assertVisible: "508 kcal"
 - assertNotVisible: "464 kcal"
-- takeScreenshot: 03-scan-review-508
+- takeScreenshot: 04-scan-review-508

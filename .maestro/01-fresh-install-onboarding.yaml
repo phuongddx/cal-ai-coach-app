@@ -1,0 +1,22 @@
+# U-82 flow 01 — a fresh install shows onboarding.
+# Mirrors scripts/rn/evidence/flows/01-first-launch.sh part 1: no target stored, so the gate
+# shows the onboarding hero. The persona is seeded in flow 02 (the debug seed action only adds
+# two meals, no target: the gate would stay here).
+appId: com.nextlabs.coachcal
+name: 01 a fresh install shows onboarding
+---
+- launchApp:
+    appId: com.nextlabs.coachcal
+    clearState: true
+- openLink: exp+coachcal://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+# The system asks "Open in CoachCal?" for every simctl openurl of a custom scheme; the evidence
+# harness taps it away the same way (lib.sh dismiss_open_dialog).
+- tapOn:
+    text: "^Open$"
+    optional: true
+# The first load compiles the whole Metro bundle on a cold runner; five minutes is the ceiling.
+- extendedWaitUntil:
+    visible: "Track calories with a photo"
+    timeout: 300000
+- assertVisible: "Get started"
+- takeScreenshot: 01-onboarding-fresh-install
