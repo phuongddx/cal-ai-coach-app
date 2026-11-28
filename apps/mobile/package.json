@@ -9,7 +9,9 @@
     "android": "expo run:android",
     "prebuild:ios": "expo prebuild --platform ios",
     "test": "jest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:compiler": "jest --config jest.compiler.config.js",
+    "test:guard": "node --test scripts/guard-snapshot-read.test.mjs"
   },
   "dependencies": {
     "@coachcal/api-contract": "*",
