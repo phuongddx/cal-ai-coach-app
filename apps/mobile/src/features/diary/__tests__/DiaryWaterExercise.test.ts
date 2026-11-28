@@ -23,6 +23,7 @@ import {
 } from '../../../data/repos/diaryEntryRepository';
 import { createDiaryDetailRepository } from '../../../data/repos/diaryDetailRepository';
 import { createCatalogRepository } from '../../../data/repos/catalogRepository';
+import { pendingOps } from '../../../data/db/schema';
 import { createTargetRepository } from '../../../data/repos/targetRepository';
 import { createTrackingRepository } from '../../../data/repos/trackingRepository';
 import { createSeedDataManager, DEMO_USER_ID } from '../../../data/repos/seedDataManager';
@@ -184,6 +185,73 @@ describe('DiaryWaterExerciseTests twins', () => {
     expect(dinnerSection).toBeDefined();
     expect(model.sectionKcal(dinnerSection as NonNullable<typeof dinnerSection>)).toBe(dinner.kcal);
     expect(model.eatenKcal()).toBe(dinner.kcal as number); // today carries exactly one seeded meal
+  });
+
+  // DY-08 (Ember edit sheet): the edit recomputes the kcal from the entry's
+  // own per-100g basis and writes mirror + detail + exactly one pending op in
+  // one batch, then notifies.
+  it('editing a food recomputes the kcal and writes one batch with one pending op', async () => {
+    const harness = await makeHarness();
+    const model = await makeDiaryModel(harness);
+    const dinner = model.items('dinner')[0];
+    expect(dinner.kcal).toBe(roundKcal(155, 350)); // the seeded basis is 155 per100g
+
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(0); // the seed enqueues no ops
+
+    await model.updateEntry(dinner, 300);
+
+    const stored = await fetchDiaryEntryDetail(harness.deps.db, dinner.id);
+    expect(stored?.grams).toBe(300);
+    expect(stored?.kcal).toBe(roundKcal(155, 300)); // 155 × 300 / 100 → 465
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(1); // exactly one outbox op
+    expect(harness.notifyCount()).toBeGreaterThan(0); // the notify fans out after the write
+
+    // The model re-read itself: the day query returns the edited row.
+    expect(model.items('dinner')[0]?.kcal).toBe(roundKcal(155, 300));
+    expect(model.items('dinner')[0]?.grams).toBe(300);
+  });
+
+  // The delete-undo (DY-08, the d-deleted frames): inside the window the
+  // tombstone's pending op is cancelled and the rows come back silently.
+  it('the undo of a delete inside the window restores the entry and its detail', async () => {
+    const harness = await makeHarness();
+    const model = await makeDiaryModel(harness);
+    const dinner = model.items('dinner')[0];
+
+    await model.delete(dinner);
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(1);
+    expect(await fetchDiaryEntryDetail(harness.deps.db, dinner.id)).toBeNull();
+
+    await model.undoDelete(dinner);
+
+    const stored = await fetchDiaryEntryDetail(harness.deps.db, dinner.id);
+    expect(stored?.kcal).toBe(roundKcal(155, 350));
+    expect(stored?.grams).toBe(350);
+    const entry = await fetchDiaryEntry(harness.deps.db, dinner.id);
+    expect(entry?.deletedAt).toBeNull();
+    // The tombstone op was cancelled, not replaced: the device keeps no trace.
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(0);
+    expect(model.items('dinner')[0]?.title).toBe('Spaghetti Bolognese');
+  });
+
+  // An undo after the sync has pushed: the entry is recorded again the way a
+  // save records it — one new op.
+  it('an undo after the sync has pushed records the entry again', async () => {
+    const harness = await makeHarness();
+    const model = await makeDiaryModel(harness);
+    const dinner = model.items('dinner')[0];
+
+    await model.delete(dinner);
+    // The ack takes the op: the outbox row leaves.
+    await harness.deps.db.delete(pendingOps);
+
+    await model.undoDelete(dinner);
+
+    const stored = await fetchDiaryEntryDetail(harness.deps.db, dinner.id);
+    expect(stored?.kcal).toBe(roundKcal(155, 350));
+    const entry = await fetchDiaryEntry(harness.deps.db, dinner.id);
+    expect(entry?.deletedAt).toBeNull();
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(1);
   });
 
   // testManualLogKcalMatchesKcalArithmeticAtEveryStepperValue — manual-log

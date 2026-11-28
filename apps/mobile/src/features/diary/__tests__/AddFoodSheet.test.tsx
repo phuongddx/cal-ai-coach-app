@@ -2,7 +2,8 @@
  * RNTL screen test of AddFoodSheet (DY-02): the five quick-action tiles, the
  * saved-meals rail and its empty card, and the Swift identifiers.
  */
-import { render, screen, userEvent, within } from '@testing-library/react-native';
+import { render, screen, userEvent, waitFor, within } from '@testing-library/react-native';
+import { setEdSafeMode } from '../../../design';
 
 import { AddFoodSheet } from '../screens/AddFoodSheet';
 import type { SavedMeal } from '../../../data/repos/catalogRepository';
@@ -39,6 +40,10 @@ async function renderSheet(savedMeals: SavedMeal[]) {
   );
   return { onCapture, onSearch, onRelog, onDismiss };
 }
+
+afterEach(() => {
+  setEdSafeMode(false);
+});
 
 describe('AddFoodSheet screen', () => {
   it('the sheet opens on Lunch with the five quick-action tiles', async () => {
@@ -95,6 +100,19 @@ describe('AddFoodSheet screen', () => {
     await pressTile('search');
     expect(onSearch).toHaveBeenCalledTimes(1);
     expect(onCapture).not.toHaveBeenCalledWith('search');
+  });
+
+  it('the rail card kcal hides in the ED-safe mode and returns when it is off', async () => {
+    await renderSheet([makeMeal()]);
+
+    expect(screen.getByText('464 kcal')).toBeOnTheScreen();
+
+    setEdSafeMode(true);
+    await waitFor(() => expect(screen.queryByText('464 kcal')).toBeNull());
+    expect(screen.getByLabelText('Log saved meal, Chicken Rice Bowl')).toBeOnTheScreen();
+
+    setEdSafeMode(false);
+    await waitFor(() => expect(screen.getByText('464 kcal')).toBeOnTheScreen());
   });
 
   it('a rail card tap hands the meal to the re-log and Close dismisses', async () => {
