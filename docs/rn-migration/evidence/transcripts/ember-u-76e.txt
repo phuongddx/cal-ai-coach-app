@@ -1,0 +1,175 @@
+
+=== setup: a fresh install, the demo persona (target 2150), light ===
+  ok: simulator already booted
+  ok: simulator ready (A902237E-29DE-4A6F-9E93-23199FC2107F)
+  ok: appearance light
+
+=== fresh install of the built dev client ===
+  ok: uninstalled + installed com.nextlabs.coachcal
+  ok: app: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-native/apps/mobile/build-output/CoachCal-dev.app
+
+=== opening the app via the dev client URL ===
+  ok: found title 'Track calories with a photo' (StaticText at y=370)
+  ok: app is showing 'Track calories with a photo' (attempt 1)
+
+=== opening the app via the dev client URL with launch arguments: --ccSeedNoTargets ===
+  ok: launched com.nextlabs.coachcal with: --ccSeedNoTargets
+  ok: found title 'Today' (Heading at y=318)
+  ok: app is showing 'Today' (attempt 1)
+
+=== deep link: coachcal:///?seed=1 ===
+  ok: found title 'Today' (Heading at y=318)
+  ok: found text: Spaghetti Bolognese
+
+=== opening the app via the dev client URL ===
+  ok: found title 'Today' (Heading at y=318)
+  ok: app is showing 'Today' (attempt 1)
+
+=== the empty day: the persona, then the Debug console action reset (diary rows only) ===
+
+=== deep link: coachcal://debug?action=reset ===
+  ok: found title 'Debug console' (Heading at y=118.66666666666669)
+
+=== deep link: coachcal:/// ===
+  ok: found title 'Today' (Heading at y=318)
+  ok: found text: calories remaining
+  ok: found text: No meals logged yet
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/TD-01/u76e-empty-light.png (524 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/tmp/TD-01-u76e-empty-light.png
+
+=== proof 1 (empty-light): the number inside the ring ===
+  ring label frame (x y w h, pt): 36 237.33332824707031 150 150
+  inner box (px): x 171..495, y 774..1098 (108.0 x 108.0 pt)
+  text bands inside the ring: 2 (the number, then the caption "kcal left")
+  band 1: height 26.0 pt, width 90.3 pt, x 66.0..156.0 pt
+  band 2: height 9.7 pt, width 47.0 pt, x 87.7..134.3 pt
+  the number: ONE band, width 90.3 pt of the 150 pt ring (60%), of the 124 pt inside the stroke (73%)
+
+=== proof 2 (empty-light): the macro cards against the screen width 402 pt ===
+  macro-card Protein (empty-light): x=32.333333969116211 y=439.66667747497559 w=160.66667175292969 h=34 right-edge=193.0 of 402
+  macro-card Carbs (empty-light): x=209.0000057220459 y=439.66667747497559 w=160.66667175292969 h=34 right-edge=369.7 of 402
+  macro-card Fat (empty-light): x=32.333333969116211 y=489.66667938232422 w=160.66667175292969 h=34 right-edge=193.0 of 402
+  macro-card Fiber (empty-light): x=209.0000057220459 y=489.66667938232422 w=160.66667175292969 h=34 right-edge=369.7 of 402
+  ok: all four macro cards sit inside 0..402 pt (empty-light)
+
+=== the empty day in dark ===
+  ok: appearance dark
+  ok: found text: calories remaining
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/TD-01/u76e-empty-dark.png (509 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/tmp/TD-01-u76e-empty-dark.png
+
+=== proof 1 (empty-dark): the number inside the ring ===
+  ring label frame (x y w h, pt): 36 237.33332824707031 150 150
+  inner box (px): x 171..495, y 774..1098 (108.0 x 108.0 pt)
+  text bands inside the ring: 2 (the number, then the caption "kcal left")
+  band 1: height 26.0 pt, width 90.3 pt, x 66.0..156.0 pt
+  band 2: height 9.7 pt, width 47.0 pt, x 87.7..134.3 pt
+  the number: ONE band, width 90.3 pt of the 150 pt ring (60%), of the 124 pt inside the stroke (73%)
+  ok: appearance light
+
+=== the meals of the frames: the Debug console action seed ===
+
+=== deep link: coachcal://debug?action=seed ===
+  ok: found title 'Debug console' (Heading at y=118.66666666666669)
+
+=== deep link: coachcal:/// ===
+  ok: found title 'Today' (Heading at y=318)
+  ok: found text: Chicken rice bowl
+  ok: found text: Overnight oats
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/TD-01/u76e-today-light.png (563 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/tmp/TD-01-u76e-today-light.png
+
+=== proof 2 (light): the macro cards against the screen width 402 pt ===
+  macro-card Protein (light): x=32.333333969116211 y=439.66667747497559 w=160.66667175292969 h=34 right-edge=193.0 of 402
+  macro-card Carbs (light): x=209.0000057220459 y=439.66667747497559 w=160.66667175292969 h=34 right-edge=369.7 of 402
+  macro-card Fat (light): x=32.333333969116211 y=489.66667938232422 w=160.66667175292969 h=34 right-edge=193.0 of 402
+  macro-card Fiber (light): x=209.0000057220459 y=489.66667938232422 w=160.66667175292969 h=34 right-edge=369.7 of 402
+  ok: all four macro cards sit inside 0..402 pt (light)
+
+=== proof 1 (seeded-light): the number inside the ring ===
+  ring label frame (x y w h, pt): 36 237.33332824707031 150 150
+  inner box (px): x 171..495, y 774..1098 (108.0 x 108.0 pt)
+  text bands inside the ring: 2 (the number, then the caption "kcal left")
+  band 1: height 26.0 pt, width 88.0 pt, x 68.0..155.7 pt
+  band 2: height 9.7 pt, width 47.0 pt, x 87.7..134.3 pt
+  the number: ONE band, width 88.0 pt of the 150 pt ring (59%), of the 124 pt inside the stroke (71%)
+
+=== the meals below the fold: scroll and capture ===
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/TD-01/u76e-today-light-meals.png (458 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/tmp/TD-01-u76e-today-light-meals.png
+
+=== High Contrast (the setting of the Simulator: increase_contrast) ===
+  ok: found text: calories remaining
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/TD-01/u76e-today-high-contrast.png (534 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/tmp/TD-01-u76e-today-high-contrast.png
+
+=== proof 2 (high-contrast): the macro cards against the screen width 402 pt ===
+  macro-card Protein (high-contrast): x=32.333333969116211 y=439.66667747497559 w=160.66667175292969 h=34 right-edge=193.0 of 402
+  macro-card Carbs (high-contrast): x=209.0000057220459 y=439.66667747497559 w=160.66667175292969 h=34 right-edge=369.7 of 402
+  macro-card Fat (high-contrast): x=32.333333969116211 y=489.66667938232422 w=160.66667175292969 h=34 right-edge=193.0 of 402
+  macro-card Fiber (high-contrast): x=209.0000057220459 y=489.66667938232422 w=160.66667175292969 h=34 right-edge=369.7 of 402
+  ok: all four macro cards sit inside 0..402 pt (high-contrast)
+
+=== dark, offline (--ccForceOffline) ===
+  ok: appearance dark
+
+=== opening the app via the dev client URL with launch arguments: --ccForceOffline ===
+  ok: launched com.nextlabs.coachcal with: --ccForceOffline
+  ok: found title 'Today' (Heading at y=163.33332824707031)
+  ok: app is showing 'Today' (attempt 1)
+  ok: found text: Offline · syncs later
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/TD-01/u76e-today-dark-offline.png (552 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/tmp/TD-01-u76e-today-dark-offline.png
+
+=== proof 2 (dark-offline): the macro cards against the screen width 402 pt ===
+  macro-card Protein (dark-offline): x=32.333333969116211 y=439.66667747497559 w=160.66667175292969 h=34 right-edge=193.0 of 402
+  macro-card Carbs (dark-offline): x=209.0000057220459 y=439.66667747497559 w=160.66667175292969 h=34 right-edge=369.7 of 402
+  macro-card Fat (dark-offline): x=32.333333969116211 y=489.66667938232422 w=160.66667175292969 h=34 right-edge=193.0 of 402
+  macro-card Fiber (dark-offline): x=209.0000057220459 y=489.66667938232422 w=160.66667175292969 h=34 right-edge=369.7 of 402
+  ok: all four macro cards sit inside 0..402 pt (dark-offline)
+
+=== proof 1 (dark-offline): the number inside the ring ===
+  ring label frame (x y w h, pt): 36 237.33332824707031 150 150
+  inner box (px): x 171..495, y 774..1098 (108.0 x 108.0 pt)
+  text bands inside the ring: 2 (the number, then the caption "kcal left")
+  band 1: height 26.0 pt, width 88.0 pt, x 68.0..155.7 pt
+  band 2: height 9.7 pt, width 47.0 pt, x 87.7..134.3 pt
+  the number: ONE band, width 88.0 pt of the 150 pt ring (59%), of the 124 pt inside the stroke (71%)
+
+=== the header offline (third look): the frames of the date, the chip and the diary button ===
+  header element [Select date] Button x=16 y=70 w=163.33332824707031 h=18
+  header element [Today] Heading x=16 y=88 w=163.33332824707031 h=41.333332061767578
+  header element [Today] Heading x=16 y=88 w=163.33332824707031 h=41.333332061767578
+  header element [Offline · syncs later] GenericElement x=187.33332824707031 y=83.666666984558105 w=146.66667175292969 h=32
+  header element [Open diary] Button x=342 y=77.666666507720947 w=44 h=44
+  header element [Today] RadioButton x=25 y=795 w=95 h=54
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/TD-01/u76e-header-offline.png (32 KB)
+
+=== light, offline: the header with the light chip ===
+  ok: appearance light
+  ok: found text: Offline · syncs later
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/TD-01/u76e-today-light-offline.png (572 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/tmp/TD-01-u76e-today-light-offline.png
+
+=== ED-Safe on (--ccEDSafe), light ===
+
+=== opening the app via the dev client URL with launch arguments: --ccEDSafe ===
+  ok: launched com.nextlabs.coachcal with: --ccEDSafe
+  ok: found title 'Today' (Heading at y=318)
+  ok: app is showing 'Today' (attempt 1)
+  ok: found text: Steady meals keep energy even
+  screenshot: /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/TD-01/u76e-today-ed-safe.png (563 KB)
+  full-size (untracked): /Users/ddphuong/Projects/next-labs/cal-ai-coach-app/.worktrees/rn-u-76e/docs/rn-migration/evidence/tmp/TD-01-u76e-today-ed-safe.png
+
+=== proof 2 (ed-safe): the macro cards against the screen width 402 pt ===
+  macro-card Protein (ed-safe): x=32.333333969116211 y=439.66667747497559 w=160.66667175292969 h=34 right-edge=193.0 of 402
+  macro-card Carbs (ed-safe): x=209.0000057220459 y=439.66667747497559 w=160.66667175292969 h=34 right-edge=369.7 of 402
+  macro-card Fat (ed-safe): x=32.333333969116211 y=489.66667938232422 w=160.66667175292969 h=34 right-edge=193.0 of 402
+  macro-card Fiber (ed-safe): x=209.0000057220459 y=489.66667938232422 w=160.66667175292969 h=34 right-edge=369.7 of 402
+  ok: all four macro cards sit inside 0..402 pt (ed-safe)
+  ok: ED-Safe shows no number left
+
+=== put the Simulator back: terminate the app, light, contrast off ===
+  ok: appearance light
+
+=== flow done — 0 failed ===
