@@ -1,7 +1,7 @@
 /**
  * DiaryMath (ManualLogSheet.swift) plus the small shared helpers of the diary
- * feature: the slot order, the display name and emoji of a slot, and the
- * WR-08 deep-link day parse. Pure functions only.
+ * feature: the slot order, the display name of a slot, and the WR-08
+ * deep-link day parse. Pure functions only.
  */
 import { dayKey, roundKcal } from '@coachcal/core';
 
@@ -27,20 +27,6 @@ export function servingKcal(perServingKcal: number, servings: number): number {
 /** ManualLogSheet.mealName / DiaryDayView.mealName — "breakfast" → "Breakfast". */
 export function mealName(slot: string): string {
   return slot.charAt(0).toUpperCase() + slot.slice(1);
-}
-
-/** DiaryDayView.slotEmoji — the section header emoji. */
-export function slotEmoji(slot: string): string {
-  switch (slot) {
-    case 'breakfast':
-      return '☀️';
-    case 'lunch':
-      return '🌤️';
-    case 'dinner':
-      return '🌙';
-    default:
-      return '🍎';
-  }
 }
 
 /** DiaryDayModel.dayString — the canonical local day key (DayKey). */

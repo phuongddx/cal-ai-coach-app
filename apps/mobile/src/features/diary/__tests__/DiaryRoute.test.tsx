@@ -11,6 +11,7 @@ import { render, screen } from '@testing-library/react-native';
 jest.mock('expo-router', () => ({
   router: { dismiss: jest.fn(), push: jest.fn() },
   useLocalSearchParams: () => ({}),
+  useNavigation: () => ({ setOptions: jest.fn() }),
 }));
 jest.mock('../../../data/auth', () => ({ getSessionStore: () => ({ getSession: () => null }) }));
 jest.mock('../../../data/environment', () => ({

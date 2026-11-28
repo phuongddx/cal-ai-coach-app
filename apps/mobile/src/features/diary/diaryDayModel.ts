@@ -7,10 +7,11 @@
  * write the injected `notify` fans out before the model re-reads itself.
  */
 import { fetchDiaryEntry } from '../../data/repos/diaryEntryRepository';
+import type { DiaryEntry, DiaryEntryDetail } from '../../data/repos/diaryEntryRepository';
 
 import type { DiaryDeps } from './deps';
-import { dayString } from './diaryMath';
-import { createDiaryDayLoader, type DiaryDayExercise, type DiaryDaySection, type DiaryDaySnapshotData } from './diarySnapshot';
+import { dayString, manualKcal } from './diaryMath';
+import { undoRecordWithOps, createDiaryDayLoader, type DiaryDayExercise, type DiaryDaySection, type DiaryDaySnapshotData } from './diarySnapshot';
 
 export type DiaryDaySnapshot = DiaryDaySnapshotData;
 export type { DiaryDayExercise, DiaryDaySection };
@@ -30,9 +31,29 @@ export type DiaryDayModel = {
   goalKcal(): number | null;
   leftKcal(): number | null;
   sectionKcal(section: DiaryDaySection): number;
+  /** The day's burned-kcal sum (the exercise header figure); null without exercise rows. */
+  burnedKcal(): number | null;
   items(slot: string): DiaryDaySnapshot['sections'][number]['items'];
   /** Tombstone + detail delete — the delete of the food row. */
   delete(item: DiaryDaySnapshot['sections'][number]['items'][number]): Promise<void>;
+  /**
+   * The edit sheet's write: new grams (the kcal recomputed from the stored
+   * per-100g basis, KcalArithmetic) and the (possibly renamed) title; mirror +
+   * detail + one op in ONE batch.
+   */
+  updateEntry(
+    item: DiaryDaySnapshot['sections'][number]['items'][number],
+    grams: number,
+    title?: string,
+  ): Promise<void>;
+  /**
+   * The undo of a delete inside the five-second window: while the tombstone's
+   * op still waits in the outbox, cancel it and restore the rows silently;
+   * once the sync has taken it, re-record the entry as a new change.
+   */
+  undoDelete(item: DiaryDaySnapshot['sections'][number]['items'][number]): Promise<void>;
+  /** One-batch rewrite of the entry and its detail exactly as given (the edit's undo). */
+  writeEntry(entry: DiaryEntry, detail: DiaryEntryDetail): Promise<void>;
   /** Undo path: tombstone by id without needing the observed item. */
   deleteEntry(id: string): Promise<void>;
   /** Local-only exercise write (I4), then notify so Today re-reads. */
@@ -97,6 +118,12 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
       return goal === undefined ? null : Math.max(goal - eatenKcalOf(), 0);
     },
     sectionKcal: sectionKcalOf,
+    burnedKcal: () => {
+      if (snapshot.exercises.length === 0) {
+        return null;
+      }
+      return snapshot.exercises.reduce((total, exercise) => total + (exercise.kcalBurned ?? 0), 0);
+    },
     items: (slot: string) => snapshot.sections.find((section) => section.slot === slot)?.items ?? [],
     async delete(item) {
       // Tombstone (not hard delete) keeps the sync history; the detail row
@@ -113,6 +140,59 @@ export function createDiaryDayModel(deps: DiaryDeps, initialDay: Date): DiaryDay
       }
       await deps.diaryEntries.recordTombstone(entry, { now: deps.now() });
       await deps.diaryDetails.delete(id);
+      deps.notify();
+      await refresh();
+    },
+    async updateEntry(item, grams, title = item.title) {
+      // The recomputed kcal comes from the entry's own per-100g basis, the
+      // same KcalArithmetic rule the review sheet uses; without a basis
+      // (no stored grams) the stored kcal is kept.
+      const basis =
+        item.kcal !== null && item.grams !== null && item.grams > 0
+          ? (item.kcal / item.grams) * 100
+          : null;
+      const stamp = deps.now();
+      await deps.diaryEntries.recordUpserts(
+        [
+          {
+            entry: { ...item.entry, displayText: title, updatedAt: stamp },
+            detail: {
+              ...item.detail,
+              grams,
+              kcal: basis === null ? item.kcal : manualKcal(basis, grams),
+              title,
+            },
+          },
+        ],
+        stamp,
+      );
+      deps.notify();
+      await refresh();
+    },
+    async undoDelete(item) {
+      // The owner's design (the second correction): ONE write for every
+      // undo — the record's pending ops are replaced by one upsert op of the
+      // restored entry, stamped with the undo's time — so no engine state
+      // (unread op, push in flight, acknowledged push) can drop the entry.
+      await undoRecordWithOps(deps.db, {
+        entryId: item.id,
+        entry: item.entry,
+        detail: item.detail,
+        now: deps.now(),
+        newId: deps.newId,
+      });
+      deps.notify();
+      await refresh();
+    },
+    async writeEntry(entry, detail) {
+      // The edit's undo: the same one-transaction write as the delete's.
+      await undoRecordWithOps(deps.db, {
+        entryId: entry.id,
+        entry,
+        detail,
+        now: deps.now(),
+        newId: deps.newId,
+      });
       deps.notify();
       await refresh();
     },

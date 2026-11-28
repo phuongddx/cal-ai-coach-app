@@ -23,6 +23,8 @@ import {
 } from '../../../data/repos/diaryEntryRepository';
 import { createDiaryDetailRepository } from '../../../data/repos/diaryDetailRepository';
 import { createCatalogRepository } from '../../../data/repos/catalogRepository';
+import { pendingOps } from '../../../data/db/schema';
+import { inTransaction } from '../../../data/repos/sqlDb';
 import { createTargetRepository } from '../../../data/repos/targetRepository';
 import { createTrackingRepository } from '../../../data/repos/trackingRepository';
 import { createSeedDataManager, DEMO_USER_ID } from '../../../data/repos/seedDataManager';
@@ -184,6 +186,105 @@ describe('DiaryWaterExerciseTests twins', () => {
     expect(dinnerSection).toBeDefined();
     expect(model.sectionKcal(dinnerSection as NonNullable<typeof dinnerSection>)).toBe(dinner.kcal);
     expect(model.eatenKcal()).toBe(dinner.kcal as number); // today carries exactly one seeded meal
+  });
+
+  // DY-08 (Ember edit sheet): the edit recomputes the kcal from the entry's
+  // own per-100g basis and writes mirror + detail + exactly one pending op in
+  // one batch, then notifies.
+  it('editing a food recomputes the kcal and writes one batch with one pending op', async () => {
+    const harness = await makeHarness();
+    const model = await makeDiaryModel(harness);
+    const dinner = model.items('dinner')[0];
+    expect(dinner.kcal).toBe(roundKcal(155, 350)); // the seeded basis is 155 per100g
+
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(0); // the seed enqueues no ops
+
+    await model.updateEntry(dinner, 300);
+
+    const stored = await fetchDiaryEntryDetail(harness.deps.db, dinner.id);
+    expect(stored?.grams).toBe(300);
+    expect(stored?.kcal).toBe(roundKcal(155, 300)); // 155 × 300 / 100 → 465
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(1); // exactly one outbox op
+    expect(harness.notifyCount()).toBeGreaterThan(0); // the notify fans out after the write
+
+    // The model re-read itself: the day query returns the edited row.
+    expect(model.items('dinner')[0]?.kcal).toBe(roundKcal(155, 300));
+    expect(model.items('dinner')[0]?.grams).toBe(300);
+  });
+
+  // The delete-undo (DY-08, the d-deleted frames): inside the window the
+  // tombstone's pending op is cancelled and the rows come back silently.
+  it('the undo of a delete inside the window restores the entry and its detail', async () => {
+    const harness = await makeHarness();
+    const model = await makeDiaryModel(harness);
+    const dinner = model.items('dinner')[0];
+
+    await model.delete(dinner);
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(1);
+    expect(await fetchDiaryEntryDetail(harness.deps.db, dinner.id)).toBeNull();
+
+    await model.undoDelete(dinner);
+
+    const stored = await fetchDiaryEntryDetail(harness.deps.db, dinner.id);
+    expect(stored?.kcal).toBe(roundKcal(155, 350));
+    expect(stored?.grams).toBe(350);
+    const entry = await fetchDiaryEntry(harness.deps.db, dinner.id);
+    expect(entry?.deletedAt).toBeNull();
+    // The second correction's design: the undo replaces the tombstone op by
+    // ONE upsert op of the restored entry — the record never sits with zero
+    // ops, so a server tombstone can never out-argue the restore.
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(1);
+    expect(model.items('dinner')[0]?.title).toBe('Spaghetti Bolognese');
+  });
+
+  // An undo after the sync has pushed: the entry is recorded again the way a
+  // save records it — one new op.
+  it('an undo after the sync has pushed records the entry again', async () => {
+    const harness = await makeHarness();
+    const model = await makeDiaryModel(harness);
+    const dinner = model.items('dinner')[0];
+
+    await model.delete(dinner);
+    // The ack takes the op: the outbox row leaves.
+    await harness.deps.db.delete(pendingOps);
+
+    await model.undoDelete(dinner);
+
+    const stored = await fetchDiaryEntryDetail(harness.deps.db, dinner.id);
+    expect(stored?.kcal).toBe(roundKcal(155, 350));
+    const entry = await fetchDiaryEntry(harness.deps.db, dinner.id);
+    expect(entry?.deletedAt).toBeNull();
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(1);
+  });
+
+  // The review correction's race: the sync takes the op in the gap between
+  // the tap and the undo's write. The undo's one transaction re-checks the op
+  // inside itself and falls back to the re-record — the restored row never
+  // sits with no op while the server holds the tombstone.
+  it('an undo whose op the sync takes between the tap and the write re-records the entry', async () => {
+    const harness = await makeHarness();
+    const model = await makeDiaryModel(harness);
+    const dinner = model.items('dinner')[0];
+
+    await model.delete(dinner);
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(1);
+
+    // The take lands in the gap: queued on the same handle ahead of the
+    // undo's write, it deletes the op before the undo's transaction begins.
+    const take = inTransaction(harness.deps.db, (tx) => tx.delete(pendingOps));
+    const undoing = model.undoDelete(dinner);
+    await take;
+    await undoing;
+
+    const entry = await fetchDiaryEntry(harness.deps.db, dinner.id);
+    expect(entry?.deletedAt).toBeNull();
+    const stored = await fetchDiaryEntryDetail(harness.deps.db, dinner.id);
+    expect(stored?.kcal).toBe(roundKcal(155, 350));
+    // The re-record, not a silent restore: exactly one new op waits, and it
+    // is an upsert.
+    expect(await countRows(harness.deps.db, 'pending_ops')).toBe(1);
+    const ops = await harness.deps.db.select({ kind: pendingOps.kind }).from(pendingOps);
+    expect(ops.map((op) => op.kind)).toEqual(['upsert']);
   });
 
   // testManualLogKcalMatchesKcalArithmeticAtEveryStepperValue — manual-log

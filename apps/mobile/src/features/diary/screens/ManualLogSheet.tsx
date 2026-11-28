@@ -5,11 +5,19 @@
  */
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
 
 import type { DiaryEntryDetail } from '../../../data/repos/diaryEntryRepository';
 import type { IdGenerator } from '../../../data/repos/sqlDb';
-import { PrimaryButton, Sheet, Stepper, useTokens } from '../../../design';
+import {
+  EdSafeCollapse,
+  EdSafeNote,
+  Icon,
+  PrimaryButton,
+  Sheet,
+  SheetHeader,
+  Stepper,
+  useTokens,
+} from '../../../design';
 
 import { manualKcal, mealName, servingKcal } from '../diaryMath';
 import type { FoodSearchRow } from '../foodSearchModel';
@@ -57,25 +65,10 @@ export function ManualLogSheet({ row, mealSlot, onSave, onDismiss, newId }: Manu
 
   return (
     <Sheet>
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={[typography.heading, { color: colors.textPrimary }]} numberOfLines={2}>
-            {`Log ${row.name}`}
-          </Text>
-          <Text style={[typography.footnote, { color: colors.textSecondary }]}>
-            {isPerServing ? 'Per serving values' : 'Per 100 g values'}
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          testID="manual.close"
-          onPress={onDismiss}
-          style={styles.closeButton}
-        >
-          <SymbolView name="xmark" size={14} weight="semibold" tintColor={colors.textSecondary} />
-        </Pressable>
-      </View>
+      <SheetHeader title={`Log ${row.name}`} onClose={onDismiss} testID="manual" />
+      <Text style={[typography.footnote, { color: colors.textSecondary }]}>
+        {isPerServing ? 'Per serving values' : 'Per 100 g values'}
+      </Text>
 
       {isPerServing ? (
         <ServingStepper servings={servings} onServingsChange={setServings} />
@@ -85,18 +78,25 @@ export function ManualLogSheet({ row, mealSlot, onSave, onDismiss, newId }: Manu
         </View>
       )}
 
-      <View style={styles.kcalRow}>
-        <Text style={[typography.subhead, { color: colors.textSecondary }]}>kcal</Text>
-        <Text
-          testID="manual.kcal"
-          style={[styles.kcalValue, { color: colors.textPrimary }]}
-        >
-          {`${displayedKcal}`}
-        </Text>
-      </View>
+      <EdSafeCollapse>
+        <View style={styles.kcalRow}>
+          <Text style={[typography.subhead, { color: colors.textSecondary }]}>kcal</Text>
+          <Text
+            testID="manual.kcal"
+            style={[styles.kcalValue, { color: colors.textPrimary }]}
+          >
+            {`${displayedKcal}`}
+          </Text>
+        </View>
+      </EdSafeCollapse>
+
+      <EdSafeNote
+        title="No numbers needed."
+        body="We'll estimate the energy from the name and amount and keep it hidden, so your plan stays accurate."
+      />
 
       <View testID="manual.save">
-        <PrimaryButton title={`Save to ${mealName(mealSlot)}`} action={save} />
+        <PrimaryButton title={`Add to ${mealName(mealSlot)}`} action={save} />
       </View>
     </Sheet>
   );
@@ -113,7 +113,7 @@ function ServingStepper({
   servings: number;
   onServingsChange: (servings: number) => void;
 }) {
-  const { colors, space, radius } = useTokens();
+  const { colors, radius } = useTokens();
   const clamp = (value: number) =>
     Math.min(Math.max(value, SERVING_RANGE.min), SERVING_RANGE.max);
   return (
@@ -127,9 +127,9 @@ function ServingStepper({
         accessibilityRole="button"
         testID="ccstepper.decrement"
         onPress={() => onServingsChange(clamp(servings - 1))}
-        style={[styles.stepButton, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.sm }]}
+        style={[styles.stepButton, { backgroundColor: colors.fill, borderColor: colors.border, borderRadius: radius.sm }]}
       >
-        <SymbolView name="minus" size={16} weight="semibold" tintColor={colors.textPrimary} />
+        <Icon name="minus" size={16} color={colors.textPrimary} />
       </Pressable>
       <Text style={[styles.servingValue, { color: colors.textPrimary }]}>
         {`${servings} serving${servings === 1 ? '' : 's'}`}
@@ -138,18 +138,15 @@ function ServingStepper({
         accessibilityRole="button"
         testID="ccstepper.increment"
         onPress={() => onServingsChange(clamp(servings + 1))}
-        style={[styles.stepButton, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.sm }]}
+        style={[styles.stepButton, { backgroundColor: colors.fill, borderColor: colors.border, borderRadius: radius.sm }]}
       >
-        <SymbolView name="plus" size={16} weight="semibold" tintColor={colors.textPrimary} />
+        <Icon name="plus" size={16} color={colors.textPrimary} />
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'flex-start' },
-  headerText: { flex: 1, gap: 2 },
-  closeButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   kcalRow: {
     flexDirection: 'row',
     alignItems: 'center',
