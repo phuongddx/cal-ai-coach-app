@@ -21,7 +21,8 @@ export type ScanPhase =
   | { kind: 'analyzing' }
   | { kind: 'review' }
   | { kind: 'saved' }
-  | { kind: 'quotaReached'; entitlement: EntitlementState }
+  /** `entitlement` is null when the 402 envelope carried none: the client never invents a limit. */
+  | { kind: 'quotaReached'; entitlement: EntitlementState | null }
   | { kind: 'failed'; failure: ScanFailure };
 
 /** The reasons of "Report a problem" (Ember frames s-fix-*): the Swift `missingItem` is Stage A2 and not offered. */

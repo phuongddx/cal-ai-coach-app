@@ -24,8 +24,10 @@ export type ScanFlowViewProps = {
   onClose: () => void;
   /** Food search escape (the route owns FoodSearchRoute); a meal logged there closes the flow. */
   onSearchManually?: () => void;
-  /** Manual log escape of the quota card. */
+  /** Manual log escape of the quota sheet. */
   onLogManually: () => void;
+  /** "See plans" of the quota sheet: the route opens the plans screen. */
+  onSeePlans: () => void;
   isCameraAccessDenied?: boolean;
   onOpenSettings?: () => void;
   animationsDisabled?: boolean;
@@ -38,6 +40,7 @@ export function ScanFlowView({
   onClose,
   onSearchManually,
   onLogManually,
+  onSeePlans,
   isCameraAccessDenied,
   onOpenSettings,
   animationsDisabled,
@@ -74,6 +77,6 @@ export function ScanFlowView({
     case 'saved':
       return <ScanSavedView model={model} onViewDiary={onClose} onAddMore={() => model.startNewScan()} />;
     case 'quotaReached':
-      return <QuotaReachedView model={model} onLogManually={onLogManually} />;
+      return <QuotaReachedView model={model} onLogManually={onLogManually} onSeePlans={onSeePlans} onClose={onClose} />;
   }
 }

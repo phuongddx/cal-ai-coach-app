@@ -110,10 +110,10 @@ describe('ScanModel transitions', () => {
     await analyzeToEnd(model, '402');
     const phase = model.getState().phase;
     expect(phase.kind).toBe('quotaReached');
-    if (phase.kind === 'quotaReached') expect(phase.entitlement.scanLimit).toBe(3);
+    if (phase.kind === 'quotaReached') expect(phase.entitlement?.scanLimit).toBe(3);
   });
 
-  it('a FREE_LIMIT_REACHED envelope without an entitlement falls back to a free-tier default', async () => {
+  it('a FREE_LIMIT_REACHED envelope without an entitlement reaches quota with no entitlement (no invented limit)', async () => {
     const api = {
       analyzeFood: async () =>
         Promise.reject({ name: 'ScanApiError', kind: 'envelope', status: 402, code: 'FREE_LIMIT_REACHED', isQuotaReached: true, isBarcodeNotFound: false, isSchemaError: false }),
@@ -122,7 +122,7 @@ describe('ScanModel transitions', () => {
     await analyzeToEnd(model, '402');
     const phase = model.getState().phase;
     expect(phase.kind).toBe('quotaReached');
-    if (phase.kind === 'quotaReached') expect(phase.entitlement).toMatchObject({ tier: 'free', scanLimit: 3 });
+    if (phase.kind === 'quotaReached') expect(phase.entitlement).toBeNull();
   });
 
   it('only a FREE_LIMIT_REACHED envelope routes to quota: a flagged non-envelope error and other envelopes fail', async () => {

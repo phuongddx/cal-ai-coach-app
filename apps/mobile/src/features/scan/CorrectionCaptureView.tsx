@@ -58,14 +58,14 @@ export function CorrectionCaptureView({ model, itemId, onDismiss, onEditGrams }:
 
   if (sent) {
     return (
-      <Sheet testID="scan.correction.sheet">
+      <Sheet testID="scan.correction.sheet" style={styles.sentSheet}>
         <View style={styles.headerRow}>
           <View style={styles.flex} />
           <GlassIconButton icon="x" accessibilityLabel="Close" testID="scan.correction.close" onPress={onDismiss} />
         </View>
         <View style={styles.sentBody}>
-          <View style={[styles.sentTile, { backgroundColor: colors.accentTint }]}>
-            <Icon name="check" size={32} color={colors.accentInk} />
+          <View testID="scan.correction.sentTile" style={[styles.sentTile, { backgroundColor: colors.successTint }]}>
+            <Icon name="check" size={32} color={colors.successInk} />
           </View>
           <Text testID="scan.correction.sentTitle" accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
             Thanks, report noted
@@ -80,6 +80,7 @@ export function CorrectionCaptureView({ model, itemId, onDismiss, onEditGrams }:
             <SecondaryButton
               title={fixKind === 'notEaten' ? `Remove ${label}` : `Edit grams of ${label}`}
               testID="scan.correction.fixNow"
+              leading={fixKind === 'notEaten' ? undefined : 'pencil'}
               action={fixNow}
             />
           ) : null}
@@ -201,7 +202,9 @@ const styles = StyleSheet.create({
   fixNow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: size.tap },
   note: { borderRadius: radius.lg, padding: space.lg, minHeight: 64, textAlignVertical: 'top' },
   photoRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  sentBody: { gap: space.md, paddingVertical: space.lg },
+  // Frame 77: a 520 pt sheet whose dock sits at the bottom, the text block above it.
+  sentSheet: { minHeight: 520 },
+  sentBody: { flex: 1, gap: space.md, paddingVertical: space.lg },
   sentTile: { width: 64, height: 64, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center' },
   sentDock: { gap: space.sm, paddingTop: space.xl },
 });

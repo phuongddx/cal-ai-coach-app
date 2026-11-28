@@ -18,7 +18,7 @@ import { act, fireEvent, render, screen, userEvent } from '@testing-library/reac
 import * as ReactNative from 'react-native';
 
 import { buildScanRequest } from '../../data/api/scanClient';
-import { setEdSafeMode } from '../../design';
+import { darkColors, setEdSafeMode } from '../../design';
 import { FixtureScanApi } from '../../testing';
 import { AnalyzingView } from './AnalyzingView';
 import { DescribeMealSheet } from './DescribeMealSheet';
@@ -45,6 +45,20 @@ async function modelInPhase(api: ConstructorParameters<typeof FixtureScanApi>[0]
   const model = makeModel({ api: new FixtureScanApi(api) });
   model.analyze({ thumb: null, request: buildScanRequest({ kind: 'photo', imageBase64: 'bW9jaw==' }) });
   await waitUntil(() => model.getState().phase.kind === phase);
+  return model;
+}
+
+type QuotaEntitlement = { tier: 'free'; scansUsed: number; scanLimit: number; windowResetAt: string };
+
+/** A model in quotaReached whose 402 envelope carries exactly this entitlement (or none). */
+async function quotaModel(entitlement?: QuotaEntitlement): Promise<ScanModel> {
+  const api = {
+    analyzeFood: async () =>
+      Promise.reject({ name: 'ScanApiError', kind: 'envelope', status: 402, code: 'FREE_LIMIT_REACHED', entitlement, isQuotaReached: true, isBarcodeNotFound: false, isSchemaError: false }),
+  };
+  const model = makeModel({ api });
+  model.analyze({ thumb: null, request: buildScanRequest({ kind: 'photo', imageBase64: 'bW9jaw==' }) });
+  await waitUntil(() => model.getState().phase.kind === 'quotaReached');
   return model;
 }
 
@@ -181,6 +195,8 @@ describe('ReviewSheetView (scan-review-light / dark / edsafe / longtitle)', () =
     expect(model.getState().result?.items[0].correction).toEqual({ kind: 'portionOff', note: 'smaller bowl' });
     expect(model.getState().result?.items[0].grams).toBe(320);
     expect(screen.getByTestId('scan.correction.sentTitle')).toBeOnTheScreen();
+    // Frame 77: the confirmation tile is the success tint with a success check, not the accent.
+    expect(screen.getByTestId('scan.correction.sentTile')).toHaveStyle({ backgroundColor: darkColors.successTint });
     await userEvent.press(screen.getByTestId('scan.correction.back'));
     expect(screen.queryByTestId('scan.correction.sheet')).not.toBeOnTheScreen();
     expect(screen.getByText('Report noted')).toBeOnTheScreen();
@@ -234,24 +250,59 @@ describe('ReviewSheetView (scan-review-light / dark / edsafe / longtitle)', () =
 });
 
 describe('QuotaReachedView (scan-quota)', () => {
-  it('shows the quota copy with the reset date and both actions', async () => {
+  const noop = () => {};
+
+  it('shows the quota copy from the server entitlement, with the reset weekday and both actions', async () => {
     const model = await modelInPhase('402', 'quotaReached');
-    await render(<QuotaReachedView model={model} onLogManually={() => {}} />);
-    expect(screen.getByText("You've used all 3 free scans this week")).toBeOnTheScreen();
-    expect(screen.getByTestId('scan.quotaBody')).toHaveTextContent(/Your scans reset .+\. You can still log everything manually\./);
+    await render(<QuotaReachedView model={model} onLogManually={noop} onSeePlans={noop} onClose={noop} />);
+    // The golden 402 fixture carries scanLimit 3 and windowResetAt 2026-09-21 (a Monday).
+    expect(screen.getByText("You've used this week's 3 free scans")).toBeOnTheScreen();
+    expect(screen.getByTestId('scan.quotaBody')).toHaveTextContent(
+      'Scans reset Monday. You can still log anything by search, barcode or description, for free.',
+    );
     expect(screen.getByText('See plans')).toBeOnTheScreen();
-    expect(screen.getByText('Log manually')).toBeOnTheScreen();
+    expect(screen.getByText('Log manually, free')).toBeOnTheScreen();
   });
 
-  it('See plans opens the neutral plans sheet whose Log manually hands off to the route', async () => {
+  it('the limit and the reset day come from the entitlement, never from the client', async () => {
+    const model = await quotaModel({ tier: 'free', scansUsed: 5, scanLimit: 5, windowResetAt: '2026-09-24T10:00:00Z' });
+    await render(<QuotaReachedView model={model} onLogManually={noop} onSeePlans={noop} onClose={noop} />);
+    expect(screen.getByText("You've used this week's 5 free scans")).toBeOnTheScreen();
+    expect(screen.getByTestId('scan.quotaBody')).toHaveTextContent(/^Scans reset Thursday\./);
+  });
+
+  it('without an entitlement the sheet names no number and no day', async () => {
+    const model = await quotaModel();
+    await render(<QuotaReachedView model={model} onLogManually={noop} onSeePlans={noop} onClose={noop} />);
+    expect(screen.getByText("You've used this week's free scans")).toBeOnTheScreen();
+    expect(screen.getByTestId('scan.quotaBody')).toHaveTextContent(
+      'You can still log anything by search, barcode or description, for free.',
+    );
+  });
+
+  it('See plans hands off to the route (the /plans screen), without a local sheet', async () => {
+    const model = await modelInPhase('402', 'quotaReached');
+    const onSeePlans = jest.fn();
+    await render(<QuotaReachedView model={model} onLogManually={noop} onSeePlans={onSeePlans} onClose={noop} />);
+    await userEvent.press(screen.getByTestId('scan.seePlans'));
+    expect(onSeePlans).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('scan.plansSheet')).toBeNull();
+  });
+
+  it('Log manually hands off to the route', async () => {
     const model = await modelInPhase('402', 'quotaReached');
     const onLogManually = jest.fn();
-    await render(<QuotaReachedView model={model} onLogManually={onLogManually} />);
-    await userEvent.press(screen.getByTestId('scan.seePlans'));
-    expect(screen.getByTestId('scan.plansTitle')).toBeOnTheScreen();
-    expect(screen.getByText(/CoachCal plan options will be available at launch/)).toBeOnTheScreen();
-    await userEvent.press(screen.getByTestId('scan.plansLogManually'));
+    await render(<QuotaReachedView model={model} onLogManually={onLogManually} onSeePlans={noop} onClose={noop} />);
+    await userEvent.press(screen.getByTestId('scan.logManually'));
     expect(onLogManually).toHaveBeenCalledTimes(1);
+  });
+
+  it('the close button hands the close to the route', async () => {
+    const model = await modelInPhase('402', 'quotaReached');
+    const onClose = jest.fn();
+    await render(<QuotaReachedView model={model} onLogManually={noop} onSeePlans={noop} onClose={onClose} />);
+    await userEvent.press(screen.getByTestId('scan.quotaClose'));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -263,6 +314,7 @@ describe('ScanFlowView (scan-viewfinder, scan-404 and the phase switch)', () => 
       createCapture={(mode) => createFixtureCaptureService(mode === 'text' ? 'photo' : mode)}
       onClose={() => {}}
       onLogManually={() => {}}
+      onSeePlans={() => {}}
     />
   );
 
