@@ -280,9 +280,12 @@ describe('settings screen', () => {
     // The export row stays enabled — the prepared file is still there.
     expect(screen.getByTestId('settings.row.export').props.accessibilityState?.disabled).toBe(false);
 
-    // "Share again" calls the binding again; "Done" dismisses the row.
+    // "Share again" owns its identifier: the failed row's settings.exportRetry
+    // must not leak into this row (review correction).
+    expect(screen.queryByTestId('settings.exportRetry')).toBeNull();
+    expect(screen.getByTestId('settings.exportShareAgain')).toBeOnTheScreen();
     (deps.shareExport as jest.Mock).mockResolvedValueOnce('shared');
-    await userEvent.press(screen.getByTestId('settings.exportRetry'));
+    await userEvent.press(screen.getByTestId('settings.exportShareAgain'));
     await waitFor(() => expect(deps.shareExport).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.queryByTestId('settings.exportCancelled')).toBeNull());
 

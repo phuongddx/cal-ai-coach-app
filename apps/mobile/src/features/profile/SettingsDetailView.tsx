@@ -208,7 +208,7 @@ export function SettingsDetailView({ model, planName }: SettingsDetailViewProps)
               <View style={styles.exportButtons}>
                 <SecondaryButton
                   title={settingsCopy.exportShareAgain}
-                  testID="settings.exportRetry"
+                  testID="settings.exportShareAgain"
                   action={() => void model.shareExport()}
                 />
                 <SecondaryButton
