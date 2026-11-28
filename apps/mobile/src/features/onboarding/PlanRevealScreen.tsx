@@ -133,13 +133,18 @@ export function PlanRevealScreen({ model, onFinished }: PlanRevealScreenProps) {
                     { backgroundColor: colors.card, borderColor: colors.border },
                   ]}
                 >
-                  <EditRow
-                    label="Daily calories"
-                    value={`${reveal.dailyKcal}`}
-                    identifier="plan.editKcal"
-                    decrement={() => model.adjustRevealKcal(-50)}
-                    increment={() => model.adjustRevealKcal(50)}
-                  />
+                  {/* ED-safe hides kcal only (the decision): the kcal edit row
+                      collapses through the design component (invariant I7);
+                      the macro grams stay editable and visible. */}
+                  <EdSafeCollapse>
+                    <EditRow
+                      label="Daily calories"
+                      value={`${reveal.dailyKcal}`}
+                      identifier="plan.editKcal"
+                      decrement={() => model.adjustRevealKcal(-50)}
+                      increment={() => model.adjustRevealKcal(50)}
+                    />
+                  </EdSafeCollapse>
                   <EditRow
                     label="Protein"
                     value={`${reveal.proteinG} g`}
