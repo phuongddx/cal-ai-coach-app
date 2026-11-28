@@ -23,7 +23,7 @@ Every "screenshot" cell below is therefore `not captured`; the proof is the Jest
 | analyzeDescription (text scan) | ScanModel.analyzeDescription | `scanModel.ts` | "analyzeDescription sends the text as textDescription…" |
 | receive builds ids by index; reportCaptureFailure; retry; retake; startNewScan | ScanModel | `scanModel.ts` | "receive builds ids…", "reportCaptureFailure…", "retry…", "retake…", "startNewScan…" |
 | Displayed kcal recomputed from current grams (I6), negative grams clamp to 0 | ScanModel.setGrams, KcalArithmetic | `scanModel.ts` (`KcalArithmetic.mealKcal` from `@coachcal/core`) | `goldenParityAtFixtureGrams`, `editedGramsNeverEchoFixtureKcal`, `mealKcalIsSumOfRecomputedItemKcal`; "setGrams clamps…"; screens: `testGramsStepperRecomputesKcal` (464 kcal, three presses of `scan.grams.<id>.increment`, 508 kcal read from `scan.itemKcal.<id>`) |
-| Unresolved item gates Save until resolved | ScanModel.captureCorrection | `scanModel.ts` | `unresolvedItemGatesSaveUntilResolved`; "captureCorrection records the note and clears the unresolved flag"; "captureCorrection keeps includePhoto only when it was turned on"; "removeItem…" (4 cases); screens: "Save is disabled while an item is unresolved", "Remove item drops an unresolved item, the total follows and Save opens" |
+| Unresolved item gates Save until resolved | ScanModel.captureCorrection | `scanModel.ts` | `unresolvedItemGatesSaveUntilResolved`; "captureCorrection records the note and clears the unresolved flag"; "captureCorrection stores the reason and the note only, with no photo field"; "removeItem…" (4 cases); screens: "Save is disabled while an item is unresolved", "Remove item drops an unresolved item, the total follows and Save opens" |
 | Hidden-fat total (now a per-item line, no chip) | ScanModel | `scanModel.ts` | "the hidden-fat chip total is the recomputed kcal…" |
 | Meal macros in whole grams from the current grams | ScanModel (added U-72) | `scanModel.ts` (`mealMacros`) | "mealMacros sums the macros of the current grams in whole grams" |
 | Save = one `recordUpserts` then one `notify`; second tap ignored | ScanModel.save | `scanModel.ts`, `scanPersistence.ts` | `concurrentSaveTapsProduceExactlyOneBatch`, `saveEnqueuesOnePendingOpPerEntryAndUndoTombstones`; "save writes once, notifies once…"; screens: call log `['save','notify']` |
@@ -70,7 +70,7 @@ Differences from Swift in SC-02 (intentional):
 | Retake / Close | same | same | screens: "retake and close call back" |
 | Save to chosen meal | same | same | screens: "Save to the chosen meal runs one save…" |
 | Quota sheet on frames 17 / 56 (U-72b): backdrop, `Sheet`, close glass button, 64 pt tile, "You've used this week's N free scans", "Scans reset <weekday>. You can still log anything by search, barcode or description, for free.", dock "See plans" and "Log manually, free". N and the weekday come from the 402 entitlement; with none the sheet names no number and no day. "See plans" calls `onSeePlans` and the route opens `/plans`; the local plans sheet is gone | QuotaReachedView | `QuotaReachedView.tsx`, `app/scan/index.tsx`, `scanCopy.ts` (`resetWeekday`) | screens: "shows the quota copy from the server entitlement…", "the limit and the reset day come from the entitlement…", "without an entitlement the sheet names no number and no day", "See plans hands off to the route…", "Log manually hands off to the route", "the close button hands the close to the route" |
-| Report sent: success-tint tile and success check, 520 pt sheet with the dock at the bottom (frame 77, look only; copy stays "noted") | CorrectionCaptureView | `CorrectionCaptureView.tsx` | screens: "Report a problem records the reason and note…" (tile tint) |
+| Report sent: success-tint tile and success check, 520 pt sheet with the dock at the bottom (frame 77, look only; copy says the report is saved on this device) | CorrectionCaptureView | `CorrectionCaptureView.tsx` | screens: "Report a problem records the reason and note…" (tile tint) |
 | 404 / 422 inline error cards | ScanErrorCard | `ScanFlowView.tsx`, `DescribeMealSheet.tsx` | screens: "a 404 barcode failure…", "a 422 failure…"; screenshots not captured |
 
 ## SC-05 Describe sheet (DescribeMealSheet.swift)
@@ -88,7 +88,7 @@ Differences from Swift in SC-02 (intentional):
 
 | Behavior | Swift source | TS file | Proof |
 |---|---|---|---|
-| "Report a problem" (`scan.fixIssue.<id>`) opens the sheet: item pills, five kinds (wrongFood, portionOff, notEaten, nutritionOff, other), direct fix first (grams editor, remove item), note, "Include the photo" off by default, sent state "Thanks, report noted". Nothing is transmitted (no report endpoint); the entry is not changed; the item stops being "Review needed" | CorrectionCaptureView | `CorrectionCaptureView.tsx` | screens: "Report a problem records the reason and note, leaves the item as it was, and confirms"; "the photo is not included in a report unless the toggle is turned on"; "Report a problem offers the direct fix first: Shouldn't be here removes the item"; "Report a problem on another item: the item pills retarget the report and Wrong amount offers the grams editor"; screenshot not captured |
+| "Report a problem" (`scan.fixIssue.<id>`) opens the sheet: item pills, five kinds (wrongFood, portionOff, notEaten, nutritionOff, other), direct fix first (grams editor, remove item), note, dock "Save report", sent state "Report saved on this device". No photo toggle. Nothing is transmitted (no report endpoint, no photo upload); the entry is not changed; the item stops being "Review needed" | CorrectionCaptureView | `CorrectionCaptureView.tsx` | screens: "Report a problem records the reason and note, leaves the item as it was, and confirms"; "the report sheet has no photo toggle and nothing in it speaks of sending, a team or anyone reading"; "the dock reads Save report and the state after the tap says the report is on this device"; "Report a problem offers the direct fix first: Shouldn't be here removes the item"; "Report a problem on another item: the item pills retarget the report and Wrong amount offers the grams editor"; screenshot not captured |
 
 ## SC-07 Saved screen (ScanSavedView.swift)
 
@@ -120,7 +120,7 @@ leaves the same single-call write" (sql.js). The `expo-sqlite` device path is st
 Added: `scan.modePill.<value>`, `scan.close` (viewfinder), `scan.describe.close`, `scan.describe.counter`,
 `scan.describe.estimating`, `scan.describe.meal`, `scan.describe.sheet`, `scan.removeItem.<id>`, `scan.item.<id>`,
 `scan.hiddenFat.<id>`, `scan.macros`, `scan.edSafeNote`, `scan.grams.<id>.ruler`, `scan.header`,
-`scan.thumb.placeholder`, `scan.correction.item.<id>`, `scan.correction.fixNow`, `scan.correction.includePhoto`,
+`scan.thumb.placeholder`, `scan.correction.item.<id>`, `scan.correction.fixNow`,
 `scan.correction.sentTitle`, `scan.correction.back`.
 
 Removed: `scan.zoom`, `scan.checklist`, `scan.step.<step>`, `scan.warningChip`, `scan.describe.search`,

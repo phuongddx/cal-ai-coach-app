@@ -427,13 +427,11 @@ describe('ScanModel transitions', () => {
     expect(model.mealMacros()).toEqual({ proteinG: 35, carbsG: 70, fatG: 18 });
   });
 
-  it('captureCorrection keeps includePhoto only when it was turned on', () => {
+  it('captureCorrection stores the reason and the note only, with no photo field', () => {
     const model = makeModel();
     model.receive(twoItemResponse());
-    model.captureCorrection('notEaten', '', 0, { includePhoto: false });
-    expect(model.getState().result?.items[0]?.correction).toEqual({ kind: 'notEaten', note: '' });
-    model.captureCorrection('nutritionOff', 'too low', 0, { includePhoto: true });
-    expect(model.getState().result?.items[0]?.correction).toEqual({ kind: 'nutritionOff', note: 'too low', includePhoto: true });
+    model.captureCorrection('nutritionOff', 'too low', 0);
+    expect(model.getState().result?.items[0]?.correction).toEqual({ kind: 'nutritionOff', note: 'too low' });
   });
 
   it('undo without persistence does nothing', async () => {

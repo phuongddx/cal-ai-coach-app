@@ -36,8 +36,8 @@ export const CORRECTION_KIND_TITLE: Record<CorrectionKind, string> = {
   other: 'Something else',
 };
 
-/** `includePhoto` is set only when the person turned the toggle on; nothing is transmitted (no report endpoint exists). */
-export type Correction = { kind: CorrectionKind; note: string; includePhoto?: boolean };
+/** A report stays on this device: no report endpoint exists and no photo is attached. */
+export type Correction = { kind: CorrectionKind; note: string };
 
 export type ScanItem = ScanResponse['items'][number];
 

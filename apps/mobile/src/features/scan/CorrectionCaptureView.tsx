@@ -1,12 +1,12 @@
 /**
  * "Report a problem" (Ember frames s-fix-light / s-fix-dark / s-fix-sent; CorrectionCaptureView.swift): which item,
- * what is wrong, an optional note, "Include the photo" (off by default) and "Send report". A report does not change
- * the item: the sheet offers the direct fixes first ("Fix it now"), and the report is recorded on the item
- * (`captureCorrection`) and shown as "Review needed" cleared, exactly as the Swift sheet did. No report endpoint exists
- * in the contract, so nothing leaves the device; the confirmation says "noted", not "sent".
+ * what is wrong, an optional note and "Save report". A report does not change the item: the sheet offers the direct
+ * fixes first ("Fix it now"), and the report is recorded on the item (`captureCorrection`) and shown as "Review needed"
+ * cleared, exactly as the Swift sheet did. No report endpoint exists in the contract and there is no photo toggle, so
+ * nothing leaves the device: the dock says "Save report" and the confirmation says it is saved on this device.
  */
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { GlassIconButton, Icon, PrimaryButton, radius, SecondaryButton, Sheet, size, space, typography, useTokens } from '../../design';
 import type { ScanModel } from './scanModel';
@@ -44,7 +44,6 @@ export function CorrectionCaptureView({ model, itemId, onDismiss, onEditGrams }:
   const [selectedId, setSelectedId] = useState(itemId);
   const [kind, setKind] = useState<CorrectionKind>('wrongFood');
   const [note, setNote] = useState('');
-  const [includePhoto, setIncludePhoto] = useState(false);
   const [sent, setSent] = useState(false);
   const label = items.find((item) => item.id === selectedId)?.source.label ?? '';
   // The direct fix that fits the reason. Renaming an item is not built (it would leave the grounded nutrition behind).
@@ -68,10 +67,10 @@ export function CorrectionCaptureView({ model, itemId, onDismiss, onEditGrams }:
             <Icon name="check" size={32} color={colors.successInk} />
           </View>
           <Text testID="scan.correction.sentTitle" accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
-            Thanks, report noted
+            Report saved on this device
           </Text>
           <Text style={[typography.body, { color: colors.text2 }]}>
-            Your review hasn't changed: to fix this meal now, edit the item.
+            Nothing leaves it. Your review hasn't changed: to fix this meal now, edit the item.
           </Text>
         </View>
         <View style={styles.sentDock}>
@@ -162,26 +161,12 @@ export function CorrectionCaptureView({ model, itemId, onDismiss, onEditGrams }:
           multiline
           style={[typography.body, styles.note, { color: colors.text, backgroundColor: colors.fill }]}
         />
-
-        <View style={styles.photoRow}>
-          <View style={styles.flex}>
-            <Text style={[typography.headline, { color: colors.text }]}>Include the photo</Text>
-            <Text style={[typography.subhead, { color: colors.text2 }]}>Off by default. Only used to check this report.</Text>
-          </View>
-          <Switch
-            testID="scan.correction.includePhoto"
-            accessibilityLabel="Include the photo"
-            value={includePhoto}
-            onValueChange={setIncludePhoto}
-            trackColor={{ false: colors.fill, true: colors.accent }}
-          />
-        </View>
       </ScrollView>
       <PrimaryButton
-        title="Send report"
+        title="Save report"
         testID="scan.correction.save"
         action={() => {
-          model.captureCorrection(kind, note, selectedId, { includePhoto });
+          model.captureCorrection(kind, note, selectedId);
           setSent(true);
         }}
       />
@@ -201,7 +186,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: size.tap, paddingHorizontal: space.lg, paddingVertical: space.md },
   fixNow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: size.tap },
   note: { borderRadius: radius.lg, padding: space.lg, minHeight: 64, textAlignVertical: 'top' },
-  photoRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   // Frame 77: a 520 pt sheet whose dock sits at the bottom, the text block above it.
   sentSheet: { minHeight: 520 },
   sentBody: { flex: 1, gap: space.md, paddingVertical: space.lg },

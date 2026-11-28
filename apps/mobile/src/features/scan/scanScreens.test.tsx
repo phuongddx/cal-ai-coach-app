@@ -14,7 +14,7 @@ jest.mock('react/jsx-runtime', () => {
   return jest.requireActual(`${root}/react/jsx-runtime`);
 });
 
-import { act, fireEvent, render, screen, userEvent } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, userEvent, within } from '@testing-library/react-native';
 import * as ReactNative from 'react-native';
 
 import { buildScanRequest } from '../../data/api/scanClient';
@@ -202,14 +202,29 @@ describe('ReviewSheetView (scan-review-light / dark / edsafe / longtitle)', () =
     expect(screen.getByText('Report noted')).toBeOnTheScreen();
   });
 
-  it('the photo is not included in a report unless the toggle is turned on', async () => {
+  it('the report sheet has no photo toggle and nothing in it speaks of sending, a team or anyone reading', async () => {
     const model = reviewModel();
     await render(<ReviewSheetView model={model} onClose={() => {}} />);
     await userEvent.press(screen.getByTestId('scan.fixIssue.0'));
-    expect(screen.getByTestId('scan.correction.includePhoto').props.value).toBe(false);
-    fireEvent(screen.getByTestId('scan.correction.includePhoto'), 'valueChange', true);
+    expect(screen.queryByTestId('scan.correction.includePhoto')).toBeNull();
+    expect(screen.queryByText('Include the photo')).toBeNull();
+    expect(screen.queryByText(/Only used to check this report/)).toBeNull();
+    const words = /\b(send|sends|sent|sending|team|read|reads)\b/i;
+    expect(within(screen.getByTestId('scan.correction.sheet')).queryByText(words)).toBeNull();
     await userEvent.press(screen.getByTestId('scan.correction.save'));
-    expect(model.getState().result?.items[0].correction).toEqual({ kind: 'wrongFood', note: '', includePhoto: true });
+    expect(model.getState().result?.items[0].correction).toEqual({ kind: 'wrongFood', note: '' });
+    expect(within(screen.getByTestId('scan.correction.sheet')).queryByText(words)).toBeNull();
+  });
+
+  it('the dock reads Save report and the state after the tap says the report is on this device', async () => {
+    const model = reviewModel();
+    await render(<ReviewSheetView model={model} onClose={() => {}} />);
+    await userEvent.press(screen.getByTestId('scan.fixIssue.0'));
+    expect(screen.getByTestId('scan.correction.save')).toHaveTextContent('Save report');
+    expect(screen.queryByText('Send report')).toBeNull();
+    await userEvent.press(screen.getByTestId('scan.correction.save'));
+    expect(screen.getByTestId('scan.correction.sentTitle')).toHaveTextContent('Report saved on this device');
+    expect(screen.getByText(/nothing leaves it/i)).toBeOnTheScreen();
   });
 
   it("Report a problem offers the direct fix first: Shouldn't be here removes the item", async () => {

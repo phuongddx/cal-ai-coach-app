@@ -240,7 +240,7 @@ export function createScanModel(options: ScanModelOptions) {
     });
   }
 
-  function captureCorrection(kind: CorrectionKind, note: string, itemId: number, options?: { includePhoto?: boolean }): void {
+  function captureCorrection(kind: CorrectionKind, note: string, itemId: number): void {
     const result = state.result;
     if (result === null || !result.items.some((candidate) => candidate.id === itemId)) return;
     set({
@@ -249,7 +249,7 @@ export function createScanModel(options: ScanModelOptions) {
         // Resolving the flagged concern is the only path off "Review needed".
         items: result.items.map((candidate) =>
           candidate.id === itemId
-            ? { ...candidate, correction: options?.includePhoto ? { kind, note, includePhoto: true } : { kind, note }, isUnresolved: false }
+            ? { ...candidate, correction: { kind, note }, isUnresolved: false }
             : candidate,
         ),
       },
