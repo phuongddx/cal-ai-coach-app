@@ -1,7 +1,7 @@
 /**
  * CCOptionCard (Components/Controls.swift). Selectable option row with icon
- * tile; the selected/unselected visual state mapping is exposed for contract
- * tests exactly as in Swift.
+ * tile (no tile when neither `icon` nor `iconName` is passed); the selected/unselected visual
+ * state mapping is exposed for contract tests exactly as in Swift.
  */
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -70,15 +70,18 @@ export function OptionCard({ title, subtitle, icon, iconName, isSelected, onSele
         },
       ]}
     >
-      <View style={[styles.iconTile, { backgroundColor: optionCardIconTile(colors, isSelected) }]}>
-        {iconName != null ? (
-          <Icon name={iconName} size={22} color={optionCardIconColor(colors, isSelected)} />
-        ) : (
-          icon != null && (
+      {(iconName != null || icon != null) && (
+        <View
+          testID={`option-card:${title}:tile`}
+          style={[styles.iconTile, { backgroundColor: optionCardIconTile(colors, isSelected) }]}
+        >
+          {iconName != null ? (
+            <Icon name={iconName} size={22} color={optionCardIconColor(colors, isSelected)} />
+          ) : (
             <SymbolView name={icon as SFSymbol} size={20} tintColor={optionCardIconColor(colors, isSelected)} />
-          )
-        )}
-      </View>
+          )}
+        </View>
+      )}
       <View style={styles.textColumn}>
         <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
         {subtitle != null && (

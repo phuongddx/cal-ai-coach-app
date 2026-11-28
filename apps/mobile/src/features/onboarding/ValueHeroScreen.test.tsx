@@ -18,6 +18,8 @@ jest.mock('react/jsx-runtime', () => {
 
 import { render, screen, userEvent } from '@testing-library/react-native';
 
+import { setEdSafeMode } from '../../design';
+
 import { ValueHeroScreen } from './ValueHeroScreen';
 import { onboardingCopy } from './onboardingCopy';
 import { createOnboardingModel } from './onboardingModel';
@@ -26,7 +28,9 @@ function makeModel() {
   return createOnboardingModel({
     ownerId: '11111111-2222-4333-8444-555555555555',
     now: () => new Date('2026-09-14T00:00:00Z'),
-    disableAnimations: true,
+    policyStorageKey: 'onboarding.policy.key',
+    applyPolicyFlag: jest.fn(),
+    writeSetting: jest.fn(async () => undefined),
     saveTarget: jest.fn(async () => undefined),
     notify: jest.fn(),
     requestHealthAccess: jest.fn(async () => 'denied'),
@@ -34,6 +38,9 @@ function makeModel() {
 }
 
 describe('value hero screen', () => {
+  beforeEach(() => setEdSafeMode(false));
+  afterEach(() => setEdSafeMode(false));
+
   it('shows the locked hero copy, the three feature rows and the ED-safe line', async () => {
     await render(<ValueHeroScreen model={makeModel()} />);
 
@@ -58,5 +65,19 @@ describe('value hero screen', () => {
     expect(screen.getByText('Get started')).toBeOnTheScreen();
     await userEvent.press(screen.getByRole('button', { name: 'Get started' }));
     expect(model.path[model.path.length - 1]).toBe('goal');
+  });
+
+  it('the confidence badge hides in ED-safe mode around the locked copy', async () => {
+    setEdSafeMode(true);
+    try {
+      await render(<ValueHeroScreen model={makeModel()} />);
+
+      // The stage badge carries a kcal number: the design component collapses it.
+      expect(screen.queryByText('High confidence · 624 kcal')).toBeNull();
+      expect(screen.getByText('Track calories with a photo')).toBeOnTheScreen();
+      expect(screen.getByText('The honest AI calorie coach')).toBeOnTheScreen();
+    } finally {
+      setEdSafeMode(false);
+    }
   });
 });

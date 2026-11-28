@@ -1,42 +1,54 @@
 /**
- * AU-01: the sign-in screen (port of SignInView.swift). Three entry points (Sign in with Apple,
- * Continue with Google, e-mail one-time code) behind the same identifiers the XCUITests used:
- * `auth.signInApple`, `auth.signInGoogle`, `auth.emailField`, `auth.sendCode`, `auth.otpField`,
- * `auth.verifyCode`. One busy state disables the whole form; one error line shows what went wrong.
+ * AU-01: the sign-in screen (port of SignInView.swift), on Ember (frames 61 to 67 and 108 to 115). Three
+ * ways in: Sign in with Apple, Continue with Google, and a one-time code sent to the e-mail. Three steps
+ * of one screen: the entry step (`EntryStep`), the e-mail step (`EmailStep`, behind `auth.signInEmail`)
+ * and the code step (`CodeStep`, after `requestCode` answered).
+ *
+ * The identifiers the XCUITests used stay: `auth.signInApple`, `auth.signInGoogle`, `auth.emailField`,
+ * `auth.sendCode`, `auth.otpField`, `auth.verifyCode`, `auth.form`. One busy state disables the whole
+ * form, whichever step is shown; one error line shows what went wrong.
  *
  * Props-driven: the route passes `onSignedIn`; the services default to the app's wiring and are
  * created on first render, so importing this file touches no native module.
  */
-import * as AppleAuthentication from 'expo-apple-authentication';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getAuthServices } from '../../data/auth';
 import type { AuthServices } from '../../data/auth/authServices';
-import { authErrorMessage, isAuthError, type Session } from '../../data/auth/types';
-import { PrimaryButton, radius, SecondaryButton, space, typography, useTokens } from '../../design';
+import type { Session } from '../../data/auth/types';
+import { useTokens } from '../../design';
+import { providerFailure, sendCodeFailure, verifyCodeFailure, type Failure } from './authCopy';
+import { CodeStep } from './CodeStep';
+import { EmailStep } from './EmailStep';
+import { EntryStep } from './EntryStep';
+import { useResendCountdown } from './useResendCountdown';
 
 export type SignInScreenProps = {
   /** Called once with the stored session after any of the three sign-ins succeeds. */
   onSignedIn: (session: Session) => void;
   /** Injected in tests; defaults to the app's services. */
   services?: AuthServices;
+  /** The clock of the resend cooldown, in milliseconds; injected in tests. Defaults to `Date.now`. */
+  now?: () => number;
 };
 
-const APPLE_BUTTON_HEIGHT = 44;
+type Step = 'entry' | 'email' | 'code';
 
-export function SignInScreen({ onSignedIn, services }: SignInScreenProps) {
+export function SignInScreen({ onSignedIn, services, now = Date.now }: SignInScreenProps) {
   const { colors } = useTokens();
   const auth = useRef<AuthServices | null>(services ?? null);
   const getServices = () => (auth.current ??= getAuthServices());
 
+  const [step, setStep] = useState<Step>('entry');
   const [appleAvailable, setAppleAvailable] = useState(false);
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [failure, setFailure] = useState<Failure | null>(null);
   const busy = useRef(false);
+  const { secondsLeft, start: startCountdown } = useResendCountdown(now);
 
   useEffect(() => {
     let live = true;
@@ -50,16 +62,16 @@ export function SignInScreen({ onSignedIn, services }: SignInScreenProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- probe once on mount
   }, []);
 
-  /** Runs one action under the busy state; shows the error line when it throws. */
-  async function run(action: () => Promise<void>) {
+  /** Runs one action under the busy state; shows the failure the mapper gives when it throws. */
+  async function run(action: () => Promise<void>, toFailure: (error: unknown) => Failure) {
     if (busy.current) return;
     busy.current = true;
     setIsBusy(true);
-    setErrorMessage(null);
+    setFailure(null);
     try {
       await action();
     } catch (error) {
-      setErrorMessage(isAuthError(error) ? authErrorMessage(error) : 'Sign-in failed. Please try again.');
+      setFailure(toFailure(error));
     } finally {
       busy.current = false;
       setIsBusy(false);
@@ -68,108 +80,79 @@ export function SignInScreen({ onSignedIn, services }: SignInScreenProps) {
 
   const signedIn = (session: Session) => onSignedIn(session);
 
-  return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <View
-        testID="auth.form"
-        pointerEvents={isBusy ? 'none' : 'auto'}
-        style={styles.form}
-      >
-        <Text style={[styles.title, { color: colors.textPrimary }]}>Sign in to CoachCal</Text>
+  /** Moving between the steps keeps the typed address and drops the old error. */
+  function goTo(next: Step) {
+    setFailure(null);
+    setStep(next);
+  }
 
-        {appleAvailable ? (
-          <AppleAuthentication.AppleAuthenticationButton
-            testID="auth.signInApple"
-            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-            cornerRadius={radius.md}
-            style={styles.apple}
-            onPress={() => void run(async () => signedIn(await getServices().signInWithApple()))}
+  /** Asks for a code and starts the cooldown of Resend once the server accepted. */
+  async function requestCode() {
+    await getServices().requestCode(email);
+    startCountdown();
+  }
+
+  const errorMessage = failure?.message ?? null;
+
+  return (
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.root, { backgroundColor: colors.background }]}>
+      <View testID="auth.form" pointerEvents={isBusy ? 'none' : 'auto'} style={styles.form}>
+        {step === 'entry' ? (
+          <EntryStep
+            appleAvailable={appleAvailable}
+            isBusy={isBusy}
+            errorMessage={errorMessage}
+            onApple={() => void run(async () => signedIn(await getServices().signInWithApple()), providerFailure)}
+            onGoogle={() => void run(async () => signedIn(await getServices().signInWithGoogle()), providerFailure)}
+            onEmail={() => goTo('email')}
           />
         ) : null}
-
-        <View testID="auth.signInGoogle">
-          <SecondaryButton
-            title="Continue with Google"
-            bordered
-            action={() => void run(async () => signedIn(await getServices().signInWithGoogle()))}
+        {step === 'email' ? (
+          <EmailStep
+            email={email}
+            onChangeEmail={(value) => {
+              setEmail(value);
+              setFailure(null);
+            }}
+            isBusy={isBusy}
+            errorMessage={errorMessage}
+            fieldError={failure?.target === 'field'}
+            onBack={() => goTo('entry')}
+            onSendCode={() =>
+              void run(async () => {
+                await requestCode();
+                setOtpCode('');
+                setStep('code');
+              }, sendCodeFailure)
+            }
           />
-        </View>
-
-        <View style={styles.emailBlock}>
-          <TextInput
-            testID="auth.emailField"
-            accessibilityLabel="Email"
-            placeholder="Email"
-            placeholderTextColor={colors.textTertiary}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            textContentType="emailAddress"
-            style={[styles.input, { color: colors.textPrimary, backgroundColor: colors.card, borderColor: colors.border }]}
+        ) : null}
+        {step === 'code' ? (
+          <CodeStep
+            email={email}
+            code={otpCode}
+            onChangeCode={(value) => {
+              setOtpCode(value);
+              setFailure(null);
+            }}
+            isBusy={isBusy}
+            errorMessage={errorMessage}
+            cellsError={failure?.target === 'cells'}
+            secondsLeft={secondsLeft}
+            onBack={() => goTo('email')}
+            onVerify={() =>
+              void run(async () => signedIn(await getServices().verifyCode(email, otpCode)), verifyCodeFailure)
+            }
+            onResend={() => void run(requestCode, sendCodeFailure)}
+            onDifferentEmail={() => goTo('email')}
           />
-
-          {otpSent ? (
-            <>
-              <TextInput
-                testID="auth.otpField"
-                accessibilityLabel="6-digit code"
-                placeholder="6-digit code"
-                placeholderTextColor={colors.textTertiary}
-                value={otpCode}
-                onChangeText={setOtpCode}
-                keyboardType="number-pad"
-                textContentType="oneTimeCode"
-                style={[styles.input, { color: colors.textPrimary, backgroundColor: colors.card, borderColor: colors.border }]}
-              />
-              <View testID="auth.verifyCode">
-                <PrimaryButton
-                  title="Verify"
-                  disabled={isBusy}
-                  action={() => void run(async () => signedIn(await getServices().verifyCode(email, otpCode)))}
-                />
-              </View>
-            </>
-          ) : (
-            <View testID="auth.sendCode">
-              <PrimaryButton
-                title="Send code"
-                disabled={isBusy || email.length === 0}
-                action={() =>
-                  void run(async () => {
-                    await getServices().requestCode(email);
-                    setOtpSent(true);
-                  })
-                }
-              />
-            </View>
-          )}
-        </View>
-
-        {errorMessage !== null ? (
-          <Text accessibilityRole="alert" style={[styles.error, { color: colors.error }]}>
-            {errorMessage}
-          </Text>
         ) : null}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, justifyContent: 'center' },
-  form: { padding: space.xl2, gap: space.xl2 },
-  title: { ...typography.heading, textAlign: 'center' },
-  apple: { height: APPLE_BUTTON_HEIGHT, width: '100%' },
-  emailBlock: { gap: space.md },
-  input: {
-    ...typography.body,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    paddingVertical: space.md,
-    paddingHorizontal: space.lg,
-  },
-  error: { ...typography.footnote, textAlign: 'center' },
+  root: { flex: 1 },
+  form: { flex: 1 },
 });

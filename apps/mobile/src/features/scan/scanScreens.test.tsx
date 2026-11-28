@@ -14,11 +14,11 @@ jest.mock('react/jsx-runtime', () => {
   return jest.requireActual(`${root}/react/jsx-runtime`);
 });
 
-import { act, render, screen, userEvent } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, userEvent, within } from '@testing-library/react-native';
 import * as ReactNative from 'react-native';
 
 import { buildScanRequest } from '../../data/api/scanClient';
-import { setEdSafeMode } from '../../design';
+import { darkColors, setEdSafeMode } from '../../design';
 import { FixtureScanApi } from '../../testing';
 import { AnalyzingView } from './AnalyzingView';
 import { DescribeMealSheet } from './DescribeMealSheet';
@@ -48,18 +48,30 @@ async function modelInPhase(api: ConstructorParameters<typeof FixtureScanApi>[0]
   return model;
 }
 
+type QuotaEntitlement = { tier: 'free'; scansUsed: number; scanLimit: number; windowResetAt: string };
+
+/** A model in quotaReached whose 402 envelope carries exactly this entitlement (or none). */
+async function quotaModel(entitlement?: QuotaEntitlement): Promise<ScanModel> {
+  const api = {
+    analyzeFood: async () =>
+      Promise.reject({ name: 'ScanApiError', kind: 'envelope', status: 402, code: 'FREE_LIMIT_REACHED', entitlement, isQuotaReached: true, isBarcodeNotFound: false, isSchemaError: false }),
+  };
+  const model = makeModel({ api });
+  model.analyze({ thumb: null, request: buildScanRequest({ kind: 'photo', imageBase64: 'bW9jaw==' }) });
+  await waitUntil(() => model.getState().phase.kind === 'quotaReached');
+  return model;
+}
+
 describe('AnalyzingView (scan-analyzing)', () => {
-  it('shows the headings, the thumb, three checklist rows and Cancel while detecting', async () => {
+  it('shows the heading, the thumb and Cancel while analyzing, with no checklist', async () => {
     const model = makeModel({ api: new GateApi() });
     model.analyze({ thumb: null, request: buildScanRequest({ kind: 'photo', imageBase64: 'bW9jaw==' }) });
     await render(<AnalyzingView model={model} animationsDisabled />);
-    expect(screen.getByText('Analyzing your meal')).toBeOnTheScreen();
-    expect(screen.getByText('AI estimate in progress')).toBeOnTheScreen();
+    expect(screen.getByText('Reading your plate')).toBeOnTheScreen();
+    expect(screen.getByText('Usually under 5 seconds')).toBeOnTheScreen();
     expect(screen.getByTestId('scan.analyzing.thumb')).toBeOnTheScreen();
-    expect(screen.getByText('Detecting food')).toBeOnTheScreen();
-    expect(screen.getByText('Reading nutrition')).toBeOnTheScreen();
-    expect(screen.getByText('Checking accuracy')).toBeOnTheScreen();
-    expect(screen.queryByText('Confirming with a second pass')).not.toBeOnTheScreen();
+    expect(screen.queryByTestId('scan.checklist')).not.toBeOnTheScreen();
+    expect(screen.queryByText('Detecting food')).not.toBeOnTheScreen();
     expect(screen.getByText('Cancel')).toBeOnTheScreen();
   });
 
@@ -73,12 +85,15 @@ describe('AnalyzingView (scan-analyzing)', () => {
 });
 
 describe('ReviewSheetView (scan-review-light / dark / edsafe / longtitle)', () => {
-  it('renders the review header, badge, total, warning chip and both ingredient rows', async () => {
+  it('renders the review header, badge, total, macros and both ingredient rows', async () => {
     await render(<ReviewSheetView model={reviewModel()} onClose={() => {}} />);
     expect(screen.getByTestId('scan.review')).toBeOnTheScreen();
     expect(screen.getByTestId('scan.badge')).toBeOnTheScreen();
     expect(screen.getByTestId('scan.totalKcal')).toHaveTextContent('550');
-    expect(screen.getByTestId('scan.warningChip')).toBeOnTheScreen();
+    expect(screen.getByTestId('scan.macros')).toBeOnTheScreen();
+    expect(screen.queryByTestId('scan.warningChip')).not.toBeOnTheScreen();
+    expect(screen.getByTestId('scan.hiddenFat.1')).toBeOnTheScreen();
+    expect(screen.queryByTestId('scan.hiddenFat.0')).not.toBeOnTheScreen();
     expect(screen.getByText('chicken-rice')).toBeOnTheScreen();
     expect(screen.getByText('house-dressing')).toBeOnTheScreen();
     expect(screen.getByTestId('scan.itemKcal.0')).toHaveTextContent('464 kcal');
@@ -93,13 +108,16 @@ describe('ReviewSheetView (scan-review-light / dark / edsafe / longtitle)', () =
     expect(screen.getByText('chicken-rice')).toBeOnTheScreen();
   });
 
-  it('ED-safe hides every kcal figure while the stepper still reads grams', async () => {
+  it('ED-safe hides every kcal figure and shows the note while the grams stay editable', async () => {
     setEdSafeMode(true);
     await render(<ReviewSheetView model={reviewModel()} onClose={() => {}} />);
     expect(screen.queryByTestId('scan.totalKcal')).not.toBeOnTheScreen();
+    expect(screen.queryByTestId('scan.macros')).not.toBeOnTheScreen();
     expect(screen.queryByTestId('scan.itemKcal.0')).not.toBeOnTheScreen();
-    expect(screen.getByTestId('scan.grams.0')).toBeOnTheScreen();
-    expect(screen.getByTestId('stepper:chicken-rice', { includeHiddenElements: true })).toHaveAccessibilityValue({ text: '320 grams' });
+    expect(screen.queryByTestId('scan.hiddenFat.1')).not.toBeOnTheScreen();
+    expect(screen.getByTestId('scan.edSafeNote')).toBeOnTheScreen();
+    expect(screen.getByTestId('scan.grams.0.increment')).toBeOnTheScreen();
+    expect(screen.getByTestId('scan.grams.1')).toBeOnTheScreen();
   });
 
   it('keeps a long meal title editable on one line', async () => {
@@ -110,14 +128,25 @@ describe('ReviewSheetView (scan-review-light / dark / edsafe / longtitle)', () =
     expect(screen.getByTestId('scan.titleField').props.value).toBe(long);
   });
 
-  it('three grams increments recompute the item kcal from the current grams', async () => {
+  it('testGramsStepperRecomputesKcal', async () => {
     const model = reviewModel();
     await render(<ReviewSheetView model={model} onClose={() => {}} />);
+    expect(screen.getByTestId('scan.itemKcal.0')).toHaveTextContent('464 kcal');
     for (let i = 0; i < 3; i += 1) {
-      await userEvent.press(screen.getAllByTestId('ccstepper.increment', { includeHiddenElements: true })[0]);
+      await userEvent.press(screen.getByTestId('scan.grams.0.increment'));
     }
+    // 145 x 350 / 100 = 507.5 -> 508, recomputed from the current grams, never echoing the fixture.
     expect(screen.getByTestId('scan.itemKcal.0')).toHaveTextContent('508 kcal');
     expect(model.getState().result?.items[0].grams).toBe(350);
+  });
+
+  it('tapping the grams pill of another item opens its editor and collapses the first', async () => {
+    await render(<ReviewSheetView model={reviewModel()} onClose={() => {}} />);
+    expect(screen.queryByTestId('scan.grams.1.increment')).not.toBeOnTheScreen();
+    await userEvent.press(screen.getByTestId('scan.grams.1'));
+    expect(screen.getByTestId('scan.grams.1.increment')).toBeOnTheScreen();
+    expect(screen.queryByTestId('scan.grams.0.increment')).not.toBeOnTheScreen();
+    expect(screen.getByTestId('scan.grams.0')).toBeOnTheScreen();
   });
 
   it('Save is disabled while an item is unresolved', async () => {
@@ -128,6 +157,20 @@ describe('ReviewSheetView (scan-review-light / dark / edsafe / longtitle)', () =
     await render(<ReviewSheetView model={model} onClose={() => {}} />);
     expect(screen.getByTestId('scan.reviewNeeded.1')).toBeOnTheScreen();
     expect(screen.getByTestId('scan.save')).toBeDisabled();
+    expect(screen.getByText('Resolve 1 item to save')).toBeOnTheScreen();
+  });
+
+  it('Remove item drops an unresolved item, the total follows and Save opens', async () => {
+    const response = twoItemResponse();
+    response.items[1] = { ...response.items[1], unresolved: true };
+    const model = makeModel({ api: new GateApi(), persistence: (await makeRealPersistence()).persistence });
+    model.receive(response);
+    await render(<ReviewSheetView model={model} onClose={() => {}} />);
+    await userEvent.press(screen.getByTestId('scan.removeItem.1'));
+    expect(screen.queryByTestId('scan.item.1')).not.toBeOnTheScreen();
+    expect(screen.getByTestId('scan.totalKcal')).toHaveTextContent('464');
+    expect(screen.getByTestId('scan.save')).toBeEnabled();
+    expect(screen.getByText('Save to Lunch')).toBeOnTheScreen();
   });
 
   it('retake and close call back', async () => {
@@ -140,16 +183,71 @@ describe('ReviewSheetView (scan-review-light / dark / edsafe / longtitle)', () =
     expect(model.getState().phase.kind).toBe('capture');
   });
 
-  it('Fix Issue opens the correction sheet and Save note marks the item Fix noted', async () => {
+  it('Report a problem records the reason and note, leaves the item as it was, and confirms', async () => {
     const model = reviewModel();
     await render(<ReviewSheetView model={model} onClose={() => {}} />);
     await userEvent.press(screen.getByTestId('scan.fixIssue.0'));
     expect(screen.getByTestId('scan.correction.sheet')).toBeOnTheScreen();
-    await userEvent.press(screen.getByTestId('chip-option:Portion way off'));
+    expect(screen.getByText("It isn't chicken-rice")).toBeOnTheScreen();
+    await userEvent.press(screen.getByTestId('scan.correction.kind.portionOff'));
     await userEvent.type(screen.getByTestId('scan.correction.note'), 'smaller bowl');
     await userEvent.press(screen.getByTestId('scan.correction.save'));
     expect(model.getState().result?.items[0].correction).toEqual({ kind: 'portionOff', note: 'smaller bowl' });
-    expect(screen.getByText('Fix noted')).toBeOnTheScreen();
+    expect(model.getState().result?.items[0].grams).toBe(320);
+    expect(screen.getByTestId('scan.correction.sentTitle')).toBeOnTheScreen();
+    // Frame 77: the confirmation tile is the success tint with a success check, not the accent.
+    expect(screen.getByTestId('scan.correction.sentTile')).toHaveStyle({ backgroundColor: darkColors.successTint });
+    await userEvent.press(screen.getByTestId('scan.correction.back'));
+    expect(screen.queryByTestId('scan.correction.sheet')).not.toBeOnTheScreen();
+    expect(screen.getByText('Report noted')).toBeOnTheScreen();
+  });
+
+  it('the report sheet has no photo toggle and nothing in it speaks of sending, a team or anyone reading', async () => {
+    const model = reviewModel();
+    await render(<ReviewSheetView model={model} onClose={() => {}} />);
+    await userEvent.press(screen.getByTestId('scan.fixIssue.0'));
+    expect(screen.queryByTestId('scan.correction.includePhoto')).toBeNull();
+    expect(screen.queryByText('Include the photo')).toBeNull();
+    expect(screen.queryByText(/Only used to check this report/)).toBeNull();
+    const words = /\b(send|sends|sent|sending|team|read|reads)\b/i;
+    expect(within(screen.getByTestId('scan.correction.sheet')).queryByText(words)).toBeNull();
+    await userEvent.press(screen.getByTestId('scan.correction.save'));
+    expect(model.getState().result?.items[0].correction).toEqual({ kind: 'wrongFood', note: '' });
+    expect(within(screen.getByTestId('scan.correction.sheet')).queryByText(words)).toBeNull();
+  });
+
+  it('the dock reads Save report and the state after the tap says the report is on this device', async () => {
+    const model = reviewModel();
+    await render(<ReviewSheetView model={model} onClose={() => {}} />);
+    await userEvent.press(screen.getByTestId('scan.fixIssue.0'));
+    expect(screen.getByTestId('scan.correction.save')).toHaveTextContent('Save report');
+    expect(screen.queryByText('Send report')).toBeNull();
+    await userEvent.press(screen.getByTestId('scan.correction.save'));
+    expect(screen.getByTestId('scan.correction.sentTitle')).toHaveTextContent('Report saved on this device');
+    expect(screen.getByText(/nothing leaves it/i)).toBeOnTheScreen();
+  });
+
+  it("Report a problem offers the direct fix first: Shouldn't be here removes the item", async () => {
+    const model = reviewModel();
+    await render(<ReviewSheetView model={model} onClose={() => {}} />);
+    await userEvent.press(screen.getByTestId('scan.fixIssue.0'));
+    expect(screen.queryByTestId('scan.correction.fixNow')).not.toBeOnTheScreen();
+    await userEvent.press(screen.getByTestId('scan.correction.kind.notEaten'));
+    expect(screen.getByText('Fix it now: remove the item')).toBeOnTheScreen();
+    await userEvent.press(screen.getByTestId('scan.correction.fixNow'));
+    expect(model.getState().result?.items.map((entry) => entry.source.label)).toEqual(['house-dressing']);
+    expect(screen.queryByTestId('scan.correction.sheet')).not.toBeOnTheScreen();
+  });
+
+  it('Report a problem on another item: the item pills retarget the report and Wrong amount offers the grams editor', async () => {
+    const model = reviewModel();
+    await render(<ReviewSheetView model={model} onClose={() => {}} />);
+    await userEvent.press(screen.getByTestId('scan.fixIssue.0'));
+    await userEvent.press(screen.getByTestId('scan.correction.item.1'));
+    await userEvent.press(screen.getByTestId('scan.correction.kind.portionOff'));
+    await userEvent.press(screen.getByTestId('scan.correction.fixNow'));
+    expect(screen.getByTestId('scan.grams.1.increment')).toBeOnTheScreen();
+    expect(model.getState().result?.items[1].correction).toBeNull();
   });
 
   it('Save to the chosen meal runs one save and shows the saved phase', async () => {
@@ -167,24 +265,59 @@ describe('ReviewSheetView (scan-review-light / dark / edsafe / longtitle)', () =
 });
 
 describe('QuotaReachedView (scan-quota)', () => {
-  it('shows the quota copy with the reset date and both actions', async () => {
+  const noop = () => {};
+
+  it('shows the quota copy from the server entitlement, with the reset weekday and both actions', async () => {
     const model = await modelInPhase('402', 'quotaReached');
-    await render(<QuotaReachedView model={model} onLogManually={() => {}} />);
-    expect(screen.getByText("You've used all 3 free scans this week")).toBeOnTheScreen();
-    expect(screen.getByTestId('scan.quotaBody')).toHaveTextContent(/Your scans reset .+\. You can still log everything manually\./);
+    await render(<QuotaReachedView model={model} onLogManually={noop} onSeePlans={noop} onClose={noop} />);
+    // The golden 402 fixture carries scanLimit 3 and windowResetAt 2026-09-21 (a Monday).
+    expect(screen.getByText("You've used this week's 3 free scans")).toBeOnTheScreen();
+    expect(screen.getByTestId('scan.quotaBody')).toHaveTextContent(
+      'Scans reset Monday. You can still log anything by search, barcode or description, for free.',
+    );
     expect(screen.getByText('See plans')).toBeOnTheScreen();
-    expect(screen.getByText('Log manually')).toBeOnTheScreen();
+    expect(screen.getByText('Log manually, free')).toBeOnTheScreen();
   });
 
-  it('See plans opens the neutral plans sheet whose Log manually hands off to the route', async () => {
+  it('the limit and the reset day come from the entitlement, never from the client', async () => {
+    const model = await quotaModel({ tier: 'free', scansUsed: 5, scanLimit: 5, windowResetAt: '2026-09-24T10:00:00Z' });
+    await render(<QuotaReachedView model={model} onLogManually={noop} onSeePlans={noop} onClose={noop} />);
+    expect(screen.getByText("You've used this week's 5 free scans")).toBeOnTheScreen();
+    expect(screen.getByTestId('scan.quotaBody')).toHaveTextContent(/^Scans reset Thursday\./);
+  });
+
+  it('without an entitlement the sheet names no number and no day', async () => {
+    const model = await quotaModel();
+    await render(<QuotaReachedView model={model} onLogManually={noop} onSeePlans={noop} onClose={noop} />);
+    expect(screen.getByText("You've used this week's free scans")).toBeOnTheScreen();
+    expect(screen.getByTestId('scan.quotaBody')).toHaveTextContent(
+      'You can still log anything by search, barcode or description, for free.',
+    );
+  });
+
+  it('See plans hands off to the route (the /plans screen), without a local sheet', async () => {
+    const model = await modelInPhase('402', 'quotaReached');
+    const onSeePlans = jest.fn();
+    await render(<QuotaReachedView model={model} onLogManually={noop} onSeePlans={onSeePlans} onClose={noop} />);
+    await userEvent.press(screen.getByTestId('scan.seePlans'));
+    expect(onSeePlans).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('scan.plansSheet')).toBeNull();
+  });
+
+  it('Log manually hands off to the route', async () => {
     const model = await modelInPhase('402', 'quotaReached');
     const onLogManually = jest.fn();
-    await render(<QuotaReachedView model={model} onLogManually={onLogManually} />);
-    await userEvent.press(screen.getByTestId('scan.seePlans'));
-    expect(screen.getByTestId('scan.plansTitle')).toBeOnTheScreen();
-    expect(screen.getByText(/CoachCal plan options will be available at launch/)).toBeOnTheScreen();
-    await userEvent.press(screen.getByTestId('scan.plansLogManually'));
+    await render(<QuotaReachedView model={model} onLogManually={onLogManually} onSeePlans={noop} onClose={noop} />);
+    await userEvent.press(screen.getByTestId('scan.logManually'));
     expect(onLogManually).toHaveBeenCalledTimes(1);
+  });
+
+  it('the close button hands the close to the route', async () => {
+    const model = await modelInPhase('402', 'quotaReached');
+    const onClose = jest.fn();
+    await render(<QuotaReachedView model={model} onLogManually={noop} onSeePlans={noop} onClose={onClose} />);
+    await userEvent.press(screen.getByTestId('scan.quotaClose'));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -196,6 +329,7 @@ describe('ScanFlowView (scan-viewfinder, scan-404 and the phase switch)', () => 
       createCapture={(mode) => createFixtureCaptureService(mode === 'text' ? 'photo' : mode)}
       onClose={() => {}}
       onLogManually={() => {}}
+      onSeePlans={() => {}}
     />
   );
 
@@ -203,6 +337,23 @@ describe('ScanFlowView (scan-viewfinder, scan-404 and the phase switch)', () => 
     await render(flow(makeModel({ api: new GateApi() })));
     expect(await screen.findByTestId('scan.fixtureFeed', { includeHiddenElements: true })).toBeOnTheScreen();
     expect(screen.getByTestId('scan.shutter')).toBeOnTheScreen();
+  });
+
+  it('the viewfinder offers the four mode chips, a close button and no zoom readout', async () => {
+    await render(flow(makeModel({ api: new GateApi() })));
+    for (const value of ['photo', 'barcode', 'label', 'text']) {
+      expect(screen.getByTestId(`scan.modePill.${value}`)).toBeOnTheScreen();
+    }
+    expect(screen.getByTestId('scan.close')).toBeOnTheScreen();
+    expect(screen.queryByTestId('scan.zoom')).not.toBeOnTheScreen();
+  });
+
+  it('the Describe chip opens the describe sheet and its close button returns to the camera', async () => {
+    await render(flow(makeModel({ api: new GateApi() })));
+    await userEvent.press(screen.getByTestId('scan.modePill.text'));
+    expect(screen.getByTestId('scan.describeTitle')).toBeOnTheScreen();
+    await userEvent.press(screen.getByTestId('scan.describe.close'));
+    expect(await screen.findByTestId('scan.shutter')).toBeOnTheScreen();
   });
 
   it('text mode shows the describe sheet instead of the viewfinder', async () => {
@@ -247,15 +398,26 @@ describe('ScanFlowView (scan-viewfinder, scan-404 and the phase switch)', () => 
   });
 });
 
-describe('DescribeMealSheet', () => {
-  it('Analyze description is disabled until the text has non-space characters', async () => {
+describe('DescribeMealSheet (s-describe-light / dark / estimating)', () => {
+  it('Estimate is disabled until the text has non-space characters', async () => {
     const model = makeModel({ api: new GateApi() });
     await render(<DescribeMealSheet model={model} />);
     expect(screen.getByTestId('scan.describeSubmit')).toBeDisabled();
+    expect(screen.getByText('Estimate')).toBeOnTheScreen();
     await userEvent.type(screen.getByTestId('scan.describeField'), '   ');
     expect(screen.getByTestId('scan.describeSubmit')).toBeDisabled();
     await userEvent.type(screen.getByTestId('scan.describeField'), 'two eggs');
     expect(screen.getByTestId('scan.describeSubmit')).toBeEnabled();
+  });
+
+  it('shows the helper line and the length over 500, and nothing about free scans', async () => {
+    const model = makeModel({ api: new GateApi() });
+    model.setDescribeText('two eggs');
+    await render(<DescribeMealSheet model={model} />);
+    expect(screen.getByText('Amounts help: “1 cup”, “a palm-sized piece”.')).toBeOnTheScreen();
+    expect(screen.getByTestId('scan.describe.counter')).toHaveTextContent('8/500');
+    expect(screen.getByTestId('scan.describe.meal')).toHaveTextContent('Lunch');
+    expect(screen.queryByText(/free scans/)).not.toBeOnTheScreen();
   });
 
   it('submits the trimmed description as a text scan', async () => {
@@ -268,6 +430,20 @@ describe('DescribeMealSheet', () => {
     expect(api.calls[0]).toMatchObject({ kind: 'text', textDescription: 'two eggs on toast' });
   });
 
+  it('while estimating the field is read-only, the dock says Estimating and Cancel keeps the text', async () => {
+    const model = makeModel({ api: new GateApi() });
+    model.setDescribeText('two eggs on toast');
+    model.analyzeDescription('two eggs on toast');
+    await render(<DescribeMealSheet model={model} />);
+    expect(screen.getByTestId('scan.describe.estimating')).toBeOnTheScreen();
+    expect(screen.getByText('Estimating...')).toBeOnTheScreen();
+    expect(screen.getByTestId('scan.describeSubmit')).toBeDisabled();
+    expect(screen.getByTestId('scan.describeField').props.editable).toBe(false);
+    await userEvent.press(screen.getByTestId('scan.cancel'));
+    expect(model.getState().phase.kind).toBe('capture');
+    expect(model.getState().describeText).toBe('two eggs on toast');
+  });
+
   it('a failure overlays the error card and Back to description returns to capture', async () => {
     const model = await modelInPhase('422', 'failed');
     await render(<DescribeMealSheet model={model} />);
@@ -276,10 +452,12 @@ describe('DescribeMealSheet', () => {
     expect(model.getState().phase.kind).toBe('capture');
   });
 
-  it('the search icon calls the route escape', async () => {
+  it('Search manually on the error card calls the route escape, and there is no search icon in the header', async () => {
     const onSearchManually = jest.fn();
-    await render(<DescribeMealSheet model={makeModel({ api: new GateApi() })} onSearchManually={onSearchManually} />);
-    await userEvent.press(screen.getByLabelText('Search the food database'));
+    const model = await modelInPhase('422', 'failed');
+    await render(<DescribeMealSheet model={model} onSearchManually={onSearchManually} />);
+    expect(screen.queryByTestId('scan.describe.search')).not.toBeOnTheScreen();
+    await userEvent.press(screen.getByTestId('scan.searchManually'));
     expect(onSearchManually).toHaveBeenCalledTimes(1);
   });
 });
@@ -293,23 +471,25 @@ describe('ScanSavedView', () => {
     return { model, calls: real.calls };
   }
 
-  it('shows the toast with the saved kcal, the today peek, and the quick actions', async () => {
+  it('shows the saved screen with the dish and kcal, the today card, Undo and both actions', async () => {
     const { model } = await savedModel();
     await render(<ScanSavedView model={model} onViewDiary={() => {}} onAddMore={() => {}} />);
     expect(screen.getByText('Saved to Lunch')).toBeOnTheScreen();
-    expect(screen.getByText(`${model.getState().savedKcal} kcal added`)).toBeOnTheScreen();
+    expect(screen.getByText(`${model.getState().mealTitle} · ${model.getState().savedKcal} kcal`)).toBeOnTheScreen();
     expect(screen.getByText('Today so far')).toBeOnTheScreen();
     expect(screen.getByTestId('scan.todayKcal')).toBeOnTheScreen();
+    expect(screen.getByTestId('toast:undo')).toBeOnTheScreen();
     expect(screen.getByText('View diary')).toBeOnTheScreen();
-    expect(screen.getByText('Add more')).toBeOnTheScreen();
+    expect(screen.getByText('Scan another')).toBeOnTheScreen();
   });
 
-  it('Undo hides the toast and tombstones the entries, notifying again', async () => {
+  it('Undo tombstones the entries and notifies again, and a second press does nothing more', async () => {
     const { model, calls } = await savedModel();
     await render(<ScanSavedView model={model} onViewDiary={() => {}} onAddMore={() => {}} />);
     await userEvent.press(screen.getByTestId('toast:undo'));
+    await userEvent.press(screen.getByTestId('toast:undo'));
     await waitUntil(() => model.getState().phase.kind === 'review');
-    expect(screen.queryByTestId('scan.savedToast')).not.toBeOnTheScreen();
+    await new Promise((resolve) => setTimeout(resolve, 50));
     expect(calls).toEqual(['save', 'notify', 'notify']);
   });
 
@@ -323,10 +503,14 @@ describe('ScanSavedView', () => {
     expect(model.getState().phase.kind).toBe('capture');
   });
 
-  it('ED-safe collapses the today peek', async () => {
+  it('ED-safe shows the dish without kcal and drops the today card', async () => {
     setEdSafeMode(true);
     const { model } = await savedModel();
     await render(<ScanSavedView model={model} onViewDiary={() => {}} onAddMore={() => {}} />);
+    expect(screen.getByText('Saved to Lunch')).toBeOnTheScreen();
+    expect(screen.getByText(model.getState().mealTitle)).toBeOnTheScreen();
+    expect(screen.queryByText(/kcal/)).not.toBeOnTheScreen();
     expect(screen.queryByTestId('scan.todaySoFar')).not.toBeOnTheScreen();
+    expect(screen.queryByTestId('scan.todayKcal')).not.toBeOnTheScreen();
   });
 });

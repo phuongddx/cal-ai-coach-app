@@ -94,3 +94,36 @@ describe('SecondaryButton', () => {
     );
   });
 });
+
+describe('SecondaryButton leading icon (U-71g)', () => {
+  it('draws an Ember icon before the title, in the text ink', async () => {
+    await render(<SecondaryButton title="Continue with email" leading="mail" action={() => undefined} />);
+    expect(screen.getByTestId('icon:mail')).toBeOnTheScreen();
+    expect(screen.getByText('Continue with email')).toBeOnTheScreen();
+    expect(screen.getByRole('button')).toHaveProp('accessibilityRole', 'button');
+  });
+
+  it('puts the icon first, in a row, and keeps the radius token', async () => {
+    await render(<SecondaryButton title="Continue with email" leading="mail" action={() => undefined} testID="b" />);
+    const row = screen.getByTestId('b.content');
+    expect(row).toHaveStyle({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' });
+    expect(row.children.map((child) => (typeof child === 'string' ? child : child.props.testID))).toEqual([
+      'icon:mail',
+      undefined,
+    ]);
+    expect(screen.getByTestId('b')).toHaveStyle({ borderRadius: 18, minHeight: 56 });
+  });
+
+  it('draws nothing extra without a leading icon', async () => {
+    await render(<SecondaryButton title="Skip" testID="b" action={() => undefined} />);
+    expect(screen.queryByTestId('b.content')).toBeNull();
+    expect(screen.queryByTestId('icon:mail')).toBeNull();
+  });
+
+  it('still fires the action and still dims when disabled', async () => {
+    const action = jest.fn();
+    await render(<SecondaryButton title="Go" leading="mail" action={action} />);
+    await userEvent.press(screen.getByRole('button'));
+    expect(action).toHaveBeenCalledTimes(1);
+  });
+});

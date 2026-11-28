@@ -5,15 +5,17 @@
  * circle plus a progress arc rotated -90° with a round cap.
  */
 
+import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
-import { size, space, useTokens } from '../tokens';
+import { size, space, textStyles, useTokens } from '../tokens';
 
 import { ScaledNumber } from './ScaledNumber';
 import { useEdSafeMode } from '../edSafe';
 
-export type RingVariant = 'hero' | 'compact' | 'goal';
+/** `md` (U-76) is the 150 pt ring of the Today ember card (`--ring-md`, `--ring-md-stroke`). */
+export type RingVariant = 'hero' | 'compact' | 'goal' | 'md';
 
 export type CalorieRingProps = {
   consumed?: number;
@@ -26,6 +28,15 @@ export type CalorieRingProps = {
    * arc and `emberText` labels. Off by default (plain card: `fill` track, `accentStrong` arc).
    */
   onEmber?: boolean;
+  /** Optional (U-76). The word under the remaining number; "remaining" by default, "kcal left" on the Today ember card. */
+  centerLabel?: string;
+  /**
+   * Optional (U-76). Content drawn to the right of the ring while ED-safe mode is off (the ember card's
+   * "Eaten" and "Goal"). The ring owns the branch, so a feature passes both nodes and reads no flag.
+   */
+  aside?: ReactNode;
+  /** Optional (U-76). Content drawn to the right of the ring instead of `aside` while ED-safe mode is on. */
+  edSafeAside?: ReactNode;
 };
 
 /** Props the ring passes to the remaining-number ScaledNumber (asserted in the unit test). */
@@ -35,7 +46,18 @@ const ringGeometry: Record<RingVariant, { size: number; stroke: number }> = {
   hero: { size: size.ringHero, stroke: size.ringHeroStroke },
   compact: { size: size.ringCompact, stroke: size.ringCompactStroke },
   goal: { size: size.ringGoal, stroke: size.ringGoalStroke },
+  md: { size: size.ringMd, stroke: size.ringMdStroke },
 };
+
+/** Variants that draw the remaining number in the centre (the others are a bare ring). */
+const numberVariants: readonly RingVariant[] = ['hero', 'md'];
+
+/**
+ * The remaining number of the `md` ring is the frame's `numLg` (36 pt, 700, rounded), not the 56 pt hero
+ * numeral: four tabular digits at 36 pt are about 86 pt wide, inside the 108 pt the stroke leaves
+ * (150 - 2 x 13 - 2 x padding), and `fitWidth` shrinks the rest.
+ */
+const mdNumberStyle = { fontSize: textStyles.numLg.fontSize, lineHeight: textStyles.numLg.lineHeight } as const;
 
 export function defaultDayProgress(now: Date = new Date()): number {
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -82,6 +104,9 @@ export function CalorieRing({
   variant = 'hero',
   dayProgress,
   onEmber = false,
+  centerLabel = 'remaining',
+  aside,
+  edSafeAside,
 }: CalorieRingProps) {
   const { colors } = useTokens();
   const edSafeMode = useEdSafeMode();
@@ -95,8 +120,10 @@ export function CalorieRing({
   const fraction = calorieProgressFraction(edSafeMode, consumed, goal, dayProgress);
   const edSafeDayProgress = clampToUnitInterval(dayProgress ?? defaultDayProgress());
   const remaining = consumed != null && goal != null ? Math.max(goal - consumed, 0) : null;
+  const sideContent = edSafeMode ? edSafeAside : aside;
+  const medium = variant === 'md';
 
-  return (
+  const ring = (
     <View
       accessible
       accessibilityLabel={calorieRingA11yLabel(edSafeMode, consumed, goal)}
@@ -126,33 +153,54 @@ export function CalorieRing({
       </Svg>
       {edSafeMode ? (
         <View style={[styles.center, { paddingHorizontal: geometry.stroke + space.sm }]} pointerEvents="none">
-          <Text style={[styles.onTrack, { color: primaryText }]}>On track</Text>
+          <Text style={[styles.onTrack, medium && styles.onTrackMd, { color: primaryText }]}>On track</Text>
           <Text
             numberOfLines={1}
             adjustsFontSizeToFit
-            style={[styles.dayPercent, { color: secondaryText }]}
+            style={[styles.dayPercent, medium && styles.dayPercentMd, { color: secondaryText }]}
           >
             {dayPercentText(edSafeDayProgress)}
           </Text>
         </View>
       ) : (
-        variant === 'hero' &&
+        numberVariants.includes(variant) &&
         remaining != null && (
           <View style={[styles.center, { paddingHorizontal: geometry.stroke + space.sm }]} pointerEvents="none">
             <ScaledNumber
               text={`${remaining}`}
               {...remainingNumberProps}
-              style={{ color: primaryText }}
+              style={[medium && mdNumberStyle, { color: primaryText }]}
             />
-            <Text style={[styles.dayPercent, { color: secondaryText }]}>remaining</Text>
+            <Text style={[styles.dayPercent, medium && styles.dayPercentMd, { color: secondaryText }]}>
+              {centerLabel}
+            </Text>
           </View>
         )
       )}
     </View>
   );
+
+  if (sideContent == null) return ring;
+  return (
+    <View style={styles.row}>
+      {ring}
+      <View testID="calorie-ring:aside" style={styles.aside}>
+        {sideContent}
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xl,
+  },
+  aside: {
+    flex: 1,
+    minWidth: 0,
+  },
   ring: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -173,5 +221,13 @@ const styles = StyleSheet.create({
   dayPercent: {
     fontSize: 13,
     fontWeight: '400',
+  },
+  // The `md` ring on the ember card: "On track" 700 22 pt, the caption 500 13 pt (frame Today (ED-Safe)).
+  onTrackMd: {
+    fontSize: textStyles.title2.fontSize,
+    fontWeight: '700',
+  },
+  dayPercentMd: {
+    fontWeight: '500',
   },
 });

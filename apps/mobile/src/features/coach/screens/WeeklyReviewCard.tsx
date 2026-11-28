@@ -1,11 +1,14 @@
 /**
- * WeeklyReviewCard.swift — the weekly review: 3 stats + success
- * encouragement. The mode stat swap lives inside the DS component; this
- * feature file holds no policy branch (GATE-1).
+ * WeeklyReviewCard.swift — the Ember hero card of the Coach tab (frame 12):
+ * the "THIS WEEK" eyebrow, the weekly sentence, and the three stat tiles.
+ * The stat row is the design-system WeeklyReviewStats mounted with `onEmber`
+ * (U-71d): the ED-safe swap still lives in the design system (GATE-1 — this
+ * feature file holds no policy branch), and the tiles read directly on the
+ * ember card as the frame draws them.
  */
-import { View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { BannerNote, Card, SectionHeader, WeeklyReviewStats } from '../../../design';
+import { EmberCard, space, typography, useTokens, WeeklyReviewStats } from '../../../design';
 
 import type { WeekStats } from '../coachSnapshot';
 
@@ -22,24 +25,32 @@ export function encouragement(daysLogged: number): string {
 }
 
 export function WeeklyReviewCard({ stats }: WeeklyReviewCardProps) {
+  const { colors } = useTokens();
   return (
-    <Card>
+    <EmberCard>
       <View style={styles.stack}>
-        <SectionHeader title="Weekly review" />
-
+        <Text style={[typography.footnote, styles.eyebrow, { color: colors.emberAccent }]}>THIS WEEK</Text>
+        <Text style={[styles.sentence, { color: colors.emberText }]}>{encouragement(stats.daysLogged)}</Text>
         <WeeklyReviewStats
+          onEmber
           daysLogged={stats.daysLogged}
           daysOnTarget={stats.daysOnTarget}
           weeksAllLogged={stats.weeksAllLogged}
           kgThisWeek={stats.kgThisWeek}
         />
-
-        <BannerNote text={encouragement(stats.daysLogged)} variant="success" />
       </View>
-    </Card>
+    </EmberCard>
   );
 }
 
-const styles = {
-  stack: { gap: 16 },
-} as const;
+const styles = StyleSheet.create({
+  stack: { gap: space.md },
+  eyebrow: {
+    fontWeight: '600',
+    letterSpacing: 0.4,
+  },
+  sentence: {
+    fontSize: 22,
+    fontWeight: '700',
+  },
+});

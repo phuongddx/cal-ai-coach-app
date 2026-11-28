@@ -15,7 +15,7 @@ import { setEdSafeMode } from '../../../design';
 
 import { createProgressModel } from '../progressModel';
 import { clampKg } from '../progressMath';
-import { makeWeightChartDescriptor, weightYRange } from '../weightChartDescriptor';
+import { makeWeightChartDescriptor, weightTrendA11yLabel, weightYRange } from '../weightChartDescriptor';
 import { addDays } from '../progressMath';
 import { WeeklyEnergyView } from '../screens/WeeklyEnergyView';
 import type { ProgressDeps } from '../progressModel';
@@ -105,9 +105,7 @@ describe('ChartDescriptorTests twins', () => {
     await render(<WeeklyEnergyView model={model} />);
 
     expect(screen.getByText('Weekly energy')).toBeOnTheScreen();
-    expect(screen.getByText('Avg deficit')).toBeOnTheScreen();
-    const footer = screen.getByText(/kcal\/day/);
-    expect(String(footer.props.children)).toContain('1721'); // seeded avg deficit 2150 − 429 → −1721
+    expect(screen.getByText('avg 429 kcal')).toBeOnTheScreen(); // the seeded days' average figure
 
     const clock = fixture.clock();
     const symbols = Array.from({ length: 7 }, (_, index) => intlShortWeekday(addDays(clock, index - 6)));
@@ -117,5 +115,19 @@ describe('ChartDescriptorTests twins', () => {
 
     // Today's seeded meal (Spaghetti Bolognese) is one of the value labels.
     expect(screen.getByText('543')).toBeOnTheScreen();
+  });
+
+  // The frame's chart summary (frame 11): the real numbers over the window.
+  it('the chart summary reads the real numbers over the window', () => {
+    const points = [
+      { date: new Date('2026-11-01T00:00:00Z'), value: 82.4, label: '2026-10-27' },
+      { date: new Date('2026-11-20T00:00:00Z'), value: 81.5, label: '2026-11-16' },
+      { date: new Date('2026-11-24T00:00:00Z'), value: 80.6, label: '2026-11-24' },
+    ];
+    expect(weightTrendA11yLabel(points, 30)).toBe(
+      'Weight trend from 82.4 to 80.6 kilograms over 30 days',
+    );
+    expect(weightTrendA11yLabel(points, 7)).toBe('Weight trend from 82.4 to 80.6 kilograms over 7 days');
+    expect(weightTrendA11yLabel([], 30)).toBe('Weight trend'); // no series, no numbers
   });
 });

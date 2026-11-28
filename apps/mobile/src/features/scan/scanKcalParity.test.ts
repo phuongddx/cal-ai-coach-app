@@ -121,8 +121,9 @@ describe('ScanKcalParityTests twins', () => {
     await waitUntil(() => model.getState().isAnalyzing);
 
     // The cancelled scan's work now completes while the new one is parked — the stale task must not
-    // reset phase/isAnalyzing mid-flight.
-    api.resumeAll(twoItemResponse());
+    // reset phase/isAnalyzing mid-flight. Only the stale call is resumed: with no dwell timer a resumed new call would
+    // reach review at once and hide the very thing under test.
+    api.resumeFirst(twoItemResponse());
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(model.getState().isAnalyzing).toBe(true); // stale resume must not open the re-entrancy gate
     expect(model.getState().phase.kind).not.toBe('capture');

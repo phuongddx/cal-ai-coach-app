@@ -122,6 +122,7 @@ export default function ScanRoute() {
       // FoodSearchRoute and AddFoodSheetRoute belong to other units; until they land both escapes close the flow.
       onSearchManually={close}
       onLogManually={close}
+      onSeePlans={() => router.push('/plans')}
       onOpenSettings={() => void Linking.openSettings()}
       animationsDisabled={getDebugFlags().disableAnimations}
     />

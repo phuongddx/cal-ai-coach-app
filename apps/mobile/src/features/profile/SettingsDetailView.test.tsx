@@ -5,6 +5,11 @@
  * settingsModel.test.tsx carries the Swift SettingsTests sentences; this file
  * covers the screen-level interactions.
  *
+ * U-77 (frame 14 + round-3 export frames): the plan buttons are visibly
+ * disabled with the note that says why, and the export tap opens the share
+ * sheet with the file — the three states (write failed, nothing logged,
+ * cancelled share) render as rows under the export row.
+ *
  * Dual-react preamble: jest-expo pins `react-native` but not `react`; app-side
  * requests are re-pointed onto the renderer's copy. See findings/U-22.md.
  */
@@ -20,7 +25,6 @@ jest.mock('react/jsx-runtime', () => {
 });
 
 import { act, fireEvent, render, screen, userEvent, waitFor } from '@testing-library/react-native';
-import { Share } from 'react-native';
 import { setEdSafeMode } from '../../design';
 
 import { DEMO_USER_ID } from '../../data/repos/seedDataManager';
@@ -46,6 +50,7 @@ function makeModel(overrides: Partial<SettingsModelDeps> = {}) {
     resetLocalData: jest.fn(async () => undefined),
     signOut: jest.fn(async () => undefined),
     csvExportAction: jest.fn(async () => '# user_targets\nid\n'),
+    shareExport: jest.fn(async () => 'shared' as const),
     ...overrides,
   };
   return { model: createSettingsModel(deps), deps };
@@ -57,7 +62,7 @@ describe('settings screen', () => {
 
   it('renders the locked copy and every identifier of the Swift screen', async () => {
     const { model } = makeModel();
-    await render(<SettingsDetailView model={model} />);
+    await render(<SettingsDetailView model={model} planName="Free" />);
 
     expect(screen.getByText(settingsCopy.wellnessTitle)).toBeOnTheScreen();
     expect(screen.getByText(settingsCopy.wellnessDescription)).toBeOnTheScreen();
@@ -66,10 +71,12 @@ describe('settings screen', () => {
     expect(screen.getByText(settingsCopy.deleteAccountConfirm)).toBeOnTheScreen();
     expect(screen.getByText(settingsCopy.billingNote)).toBeOnTheScreen();
     expect(screen.getByText(settingsCopy.versionCaption)).toBeOnTheScreen();
-    expect(screen.getByText('Export CSV')).toBeOnTheScreen();
+    expect(screen.getByText(settingsCopy.exportRowTitle)).toBeOnTheScreen();
     expect(screen.getByText('Subscription')).toBeOnTheScreen();
-    expect(screen.getByText('Help & FAQ')).toBeOnTheScreen();
+    expect(screen.getByText(settingsCopy.supportRowTitle)).toBeOnTheScreen();
     expect(screen.getByText('Contact us')).toBeOnTheScreen();
+    // The plan line of the display-only entitlement state.
+    expect(screen.getByText('Free plan')).toBeOnTheScreen();
 
     expect(screen.getByTestId('settings.wellnessCard')).toBeOnTheScreen();
     expect(screen.getByTestId('settings.edSafeToggle')).toBeOnTheScreen();
@@ -85,13 +92,31 @@ describe('settings screen', () => {
     expect(screen.getByTestId('settings.row.help')).toBeOnTheScreen();
     expect(screen.getByTestId('settings.row.contact')).toBeOnTheScreen();
     expect(screen.getByTestId('settings.version')).toBeOnTheScreen();
+    // No billing history or restore row exists (the frame's ghost line is not
+    // drawn in this build), and no "Active" badge on a Free plan.
+    expect(screen.queryByText('Active')).toBeNull();
+    expect(screen.queryByText('Billing history')).toBeNull();
+    expect(screen.queryByText('Restore purchases')).toBeNull();
+  });
+
+  it('keeps the two billing buttons visibly disabled with the note that says why', async () => {
+    const { model } = makeModel();
+    await render(<SettingsDetailView model={model} planName="Free" />);
+
+    for (const testID of ['settings.changePlan', 'settings.cancelSubscription']) {
+      const button = screen.getByTestId(testID);
+      expect(button.props.accessibilityState?.disabled).toBe(true);
+    }
+    // The design component dims a disabled button (secondaryDisabledOpacity)
+    // and the note names the reason.
+    expect(screen.getByText(settingsCopy.billingNote)).toBeOnTheScreen();
   });
 
   it('flips the wellness switch through the model: stored then applied', async () => {
     // The real design-system setter: the Switch's value IS the design flag, so
     // the flip proves the route-shaped wiring end to end.
     const { model, deps } = makeModel({ applyPolicyFlag: setEdSafeMode });
-    await render(<SettingsDetailView model={model} />);
+    await render(<SettingsDetailView model={model} planName="Free" />);
 
     await act(async () => {
       fireEvent(screen.getByTestId('settings.edSafeToggle'), 'valueChange', true);
@@ -112,7 +137,7 @@ describe('settings screen', () => {
         throw new Error('disk full');
       }),
     });
-    await render(<SettingsDetailView model={model} />);
+    await render(<SettingsDetailView model={model} planName="Free" />);
 
     // The handler catches the rejection (no unhandled rejection escapes), the
     // model records the error, the screen shows it, and the failed write never
@@ -129,7 +154,7 @@ describe('settings screen', () => {
 
   it('persists the burn add-back switch under its storage key', async () => {
     const { model, deps } = makeModel();
-    await render(<SettingsDetailView model={model} />);
+    await render(<SettingsDetailView model={model} planName="Free" />);
 
     await act(async () => {
       fireEvent(screen.getByTestId('settings.burnAddBackToggle'), 'valueChange', true);
@@ -140,7 +165,7 @@ describe('settings screen', () => {
 
   it('deletes the account only after the confirmation with the locked copy', async () => {
     const { model, deps } = makeModel();
-    await render(<SettingsDetailView model={model} />);
+    await render(<SettingsDetailView model={model} planName="Free" />);
 
     // No dialog yet; pressing the entry opens it.
     expect(screen.queryByText(settingsCopy.deleteAccountTitle)).toBeNull();
@@ -163,24 +188,112 @@ describe('settings screen', () => {
     expect(screen.queryByText(settingsCopy.deleteAccountTitle)).toBeNull();
   });
 
-  it('enables Export CSV only after the load resolves and shares the produced export', async () => {
-    const shareSpy = jest
-      .spyOn(Share, 'share')
-      .mockResolvedValue({ action: 'dismissedAction', activityType: undefined });
-    const { model } = makeModel();
-    await render(<SettingsDetailView model={model} />);
+  it('enables the export row after the load and opens the share sheet only on tap', async () => {
+    const { model, deps } = makeModel();
+    const view = await render(<SettingsDetailView model={model} planName="Free" />);
 
     const exportRow = screen.getByTestId('settings.row.export');
+    // Preparing on open: the row is disabled and no share sheet has been
+    // presented.
     expect(exportRow.props.accessibilityState?.disabled).toBe(true);
+    expect(deps.shareExport).not.toHaveBeenCalled();
 
     await model.loadExport();
     expect(exportRow.props.accessibilityState?.disabled).toBe(false);
+
+    // The tap calls the injected `exportCsvAndShare` binding once.
     await userEvent.press(exportRow);
-    expect(shareSpy).toHaveBeenCalledTimes(1);
-    expect(shareSpy.mock.calls[0]?.[0]).toEqual({
-      title: 'CoachCal Data.csv',
-      message: '# user_targets\nid\n',
+    await waitFor(() => expect(deps.shareExport).toHaveBeenCalledTimes(1));
+    // A completed share leaves no row behind.
+    await waitFor(() => expect(screen.queryByTestId('settings.exportCancelled')).toBeNull());
+    await view.unmount();
+  });
+
+  it('shows the write failure with its reason, the EXP-WRITE code, a retry and Contact us', async () => {
+    const { model, deps } = makeModel({
+      shareExport: jest.fn(async () => {
+        throw new Error('The file could not be written.');
+      }),
     });
-    shareSpy.mockRestore();
+    await render(<SettingsDetailView model={model} planName="Free" />);
+    await model.loadExport();
+
+    await userEvent.press(screen.getByTestId('settings.row.export'));
+    await waitFor(() => expect(screen.getByTestId('settings.exportError')).toBeOnTheScreen());
+    expect(screen.getByText("Couldn't create the file.")).toBeOnTheScreen();
+    expect(screen.getByText('The file could not be written.')).toBeOnTheScreen();
+    expect(screen.getByText(settingsCopy.exportFailedCode)).toBeOnTheScreen();
+
+    // The retry calls the binding again; a good attempt clears the row.
+    (deps.shareExport as jest.Mock).mockResolvedValueOnce('shared');
+    await userEvent.press(screen.getByTestId('settings.exportRetry'));
+    await waitFor(() => expect(deps.shareExport).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByTestId('settings.exportError')).toBeNull());
+  });
+
+  it('shows the failed row with exactly the code and the retry: no Contact us while no support address exists', async () => {
+    const { model } = makeModel({
+      shareExport: jest.fn(async () => {
+        throw new Error('disk full');
+      }),
+    });
+    await render(<SettingsDetailView model={model} planName="Free" />);
+    await model.loadExport();
+    await userEvent.press(screen.getByTestId('settings.row.export'));
+    await waitFor(() => expect(screen.getByTestId('settings.exportError')).toBeOnTheScreen());
+
+    // The row shows two things, not three: the EXP-WRITE code and Try again.
+    // The frame's "Contact us" button stays undrawn — no support address
+    // exists in the app yet (the identifier is recorded in the findings).
+    expect(screen.getByText(settingsCopy.exportFailedCode)).toBeOnTheScreen();
+    expect(screen.getByTestId('settings.exportRetry')).toBeOnTheScreen();
+    expect(screen.queryByTestId('settings.exportContact')).toBeNull();
+    expect(screen.queryByText(/@\w+\.\w+/)).toBeNull();
+  });
+
+  it('says so and keeps the row disabled when there is nothing to export', async () => {
+    const { model, deps } = makeModel({
+      // The generator's empty shape: comment sections and blank lines only.
+      csvExportAction: jest.fn(async () => '# user_targets\n\n# weight_logs\n\n'),
+    });
+    await render(<SettingsDetailView model={model} planName="Free" />);
+
+    await model.loadExport();
+    expect(model.exportEmpty).toBe(true);
+    expect(screen.getByTestId('settings.exportEmpty')).toBeOnTheScreen();
+    expect(screen.getByText('Nothing logged yet.')).toBeOnTheScreen();
+    // No share sheet without a file to share.
+    const exportRow = screen.getByTestId('settings.row.export');
+    expect(exportRow.props.accessibilityState?.disabled).toBe(true);
+    await userEvent.press(exportRow);
+    expect(deps.shareExport).not.toHaveBeenCalled();
+  });
+
+  it('treats a cancelled share as not an error: the file stays with Share again and Done', async () => {
+    const { model, deps } = makeModel({ shareExport: jest.fn(async () => 'cancelled' as const) });
+    await render(<SettingsDetailView model={model} planName="Free" />);
+    await model.loadExport();
+
+    await userEvent.press(screen.getByTestId('settings.row.export'));
+    await waitFor(() => expect(screen.getByTestId('settings.exportCancelled')).toBeOnTheScreen());
+    expect(screen.getByText('Not shared.')).toBeOnTheScreen();
+    // The export row stays enabled — the prepared file is still there.
+    expect(screen.getByTestId('settings.row.export').props.accessibilityState?.disabled).toBe(false);
+
+    // "Share again" owns its identifier: the failed row's settings.exportRetry
+    // must not leak into this row (review correction).
+    expect(screen.queryByTestId('settings.exportRetry')).toBeNull();
+    expect(screen.getByTestId('settings.exportShareAgain')).toBeOnTheScreen();
+    (deps.shareExport as jest.Mock).mockResolvedValueOnce('shared');
+    await userEvent.press(screen.getByTestId('settings.exportShareAgain'));
+    await waitFor(() => expect(deps.shareExport).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByTestId('settings.exportCancelled')).toBeNull());
+
+    (deps.shareExport as jest.Mock).mockResolvedValueOnce('cancelled');
+    await userEvent.press(screen.getByTestId('settings.row.export'));
+    await waitFor(() => expect(screen.getByTestId('settings.exportCancelled')).toBeOnTheScreen());
+    await userEvent.press(screen.getByTestId('settings.exportDone'));
+    await waitFor(() => expect(screen.queryByTestId('settings.exportCancelled')).toBeNull());
+    expect(deps.shareExport).toHaveBeenCalledTimes(3);
   });
 });

@@ -4,11 +4,20 @@
  * `TargetsEngine` (pace, reveal kcal, macros), which clamps instead of
  * throwing. Dependencies are constructor-injected (standing order 19): the
  * route file builds them from the data environment, the session store and
- * the debug flags; Jest builds them with test doubles.
+ * the design system's policy flag; Jest builds them with test doubles.
  *
  * React surface: the model bumps a `revision` on every mutation, so screens
  * subscribe with `useSyncExternalStore(model.subscribe, model.getRevision)`
  * and read the fields directly — the RN counterpart of Swift's `@Observable`.
+ *
+ * U-73: the generating step shows the real formula lines — no fake progress —
+ * and, since stage A2, it HOLDS until the user taps its primary button
+ * ("See your plan"): `finishGeneration` computes and stores but no longer
+ * pushes the reveal, `seePlan()` is the only way past the step. The step-7
+ * ED-Safe switch writes the app-wide stored policy through the injected key
+ * and writer, then applies the design flag — the Settings wellness toggle's
+ * exact order, with the key literal owned by the route file (invariant I7:
+ * the feature never spells the stored key or holds the policy branch).
  */
 
 import {
@@ -23,7 +32,7 @@ import {
 import type { UserTarget } from '../../data/repos/targetRepository';
 import { newUuid } from '../../data/sync/uuid';
 
-import { GENERATION_STEPS, onboardingCopy } from './onboardingCopy';
+import { onboardingCopy } from './onboardingCopy';
 
 export type { ActivityLevel, Goal, Sex } from '@coachcal/core';
 
@@ -57,10 +66,15 @@ const QUIZ_INDEX: Record<OnboardingStep, number | null> = {
 
 export const QUIZ_STEP_COUNT = 8;
 export const DEFAULT_BIRTH_YEAR = 1995;
-/** The minimum wall-clock window of the generating screen (Swift `minimumGenerationSeconds`). */
-export const MINIMUM_GENERATION_SECONDS = 2;
 
-export type GenerationStepState = 'idle' | 'active' | 'done';
+/** The old wheels' ranges (OB-06, OB-07) the typed fields clamp to on blur. */
+export const HEIGHT_CM_LIMITS = { min: 120, max: 220 } as const;
+export const WEIGHT_KG_LIMITS = { min: 35, max: 200 } as const;
+export const GOAL_WEIGHT_KG_LIMITS = { min: 40, max: 150 } as const;
+
+function clampBetween(value: number, limits: { min: number; max: number }): number {
+  return Math.min(Math.max(value, limits.min), limits.max);
+}
 
 export type MacroAxis = 'protein' | 'carbs' | 'fat';
 
@@ -78,18 +92,23 @@ export interface OnboardingModelDeps {
   ownerId: string;
   /** The injected clock (`now: @Sendable () -> Date` in the Swift app). */
   now: () => Date;
-  /** `--ccDisableAnimations`: the generating screen skips its minimum window entirely. */
-  disableAnimations: boolean;
   /** The route binds this to the data environment's target save. */
   saveTarget: (target: UserTarget) => Promise<void>;
   /** The route binds this to the sync runtime's local-mutation notify. */
   notify: () => void;
   /** The just-in-time HealthKit ask of the privacy screen (`requestHealthAccess`). */
   requestHealthAccess: () => Promise<'granted' | 'denied'>;
+  /** The app-wide storage key of the ED-Safe policy; the route passes it (U-51 reads the same key at launch). */
+  policyStorageKey: string;
+  /** The route binds the design system's single policy-flag setter. */
+  applyPolicyFlag: (on: boolean) => void;
+  /** The route binds the app-settings write over the data environment's database. */
+  writeSetting: (key: string, value: string) => Promise<void>;
 }
 
 export class OnboardingModel {
   readonly ownerId: string;
+  readonly policyStorageKey: string;
 
   draft: QuizProfile = {
     sex: 'female',
@@ -105,24 +124,29 @@ export class OnboardingModel {
   birthYear = DEFAULT_BIRTH_YEAR;
   dietStyle = 'Standard';
   path: OnboardingStep[] = ['valueHero'];
+  /**
+   * The raw pace the user last asked for, before the engine's clamp — the pace
+   * segment's selection reads this (the stored `requestedPaceKgPerWeek` holds
+   * the engine's clamped result, which can match no segment option).
+   */
+  requestedPaceRaw: number | null = 0.5;
 
   private readonly now: () => Date;
-  private readonly animationsDisabled: boolean;
   private readonly saveTarget: (target: UserTarget) => Promise<void>;
   private readonly notify: () => void;
   readonly requestHealthAccess: () => Promise<'granted' | 'denied'>;
+  private readonly applyPolicyFlag: (on: boolean) => void;
+  private readonly writeSetting: (key: string, value: string) => Promise<void>;
 
   private paceClampedState = false;
   private targetsState: Targets | null = null;
   private revealState: RevealPlan | null = null;
-  private generationStatesState: GenerationStepState[] = GENERATION_STEPS.map(() => 'idle');
-  private generationPercentState: number | null = null;
   private persistErrorState: string | null = null;
+  /** The failed policy write's message; null after a good write (the Settings toggle's record). */
+  private safePolicyWriteErrorState: string | null = null;
   private finishedState = false;
 
   private generationStarted = false;
-  private generationTimer: ReturnType<typeof setTimeout> | null = null;
-  private disposed = false;
 
   private revision = 0;
   private readonly subscribers = new Set<() => void>();
@@ -130,10 +154,12 @@ export class OnboardingModel {
   constructor(deps: OnboardingModelDeps) {
     this.ownerId = deps.ownerId;
     this.now = deps.now;
-    this.animationsDisabled = deps.disableAnimations;
     this.saveTarget = deps.saveTarget;
     this.notify = deps.notify;
     this.requestHealthAccess = deps.requestHealthAccess;
+    this.policyStorageKey = deps.policyStorageKey;
+    this.applyPolicyFlag = deps.applyPolicyFlag;
+    this.writeSetting = deps.writeSetting;
   }
 
   // -- React seam ------------------------------------------------------------
@@ -151,12 +177,6 @@ export class OnboardingModel {
   private touch(): void {
     this.revision += 1;
     for (const listener of [...this.subscribers]) listener();
-  }
-
-  /** Stops the generation timer; the flow view calls it on unmount. */
-  dispose(): void {
-    this.disposed = true;
-    if (this.generationTimer !== null) clearTimeout(this.generationTimer);
   }
 
   // -- Derived state ----------------------------------------------------------
@@ -201,12 +221,8 @@ export class OnboardingModel {
     return this.revealState;
   }
 
-  get generationStates(): readonly GenerationStepState[] {
-    return this.generationStatesState;
-  }
-
-  get generationPercent(): number | null {
-    return this.generationPercentState;
+  get safePolicyWriteError(): string | null {
+    return this.safePolicyWriteErrorState;
   }
 
   get persistError(): string | null {
@@ -251,12 +267,13 @@ export class OnboardingModel {
     this.draft.goal = goal;
     if (goal === 'maintain' || goal === 'habit') {
       this.draft.requestedPaceKgPerWeek = null;
+      this.requestedPaceRaw = null;
       this.paceClampedState = false;
     } else {
       // Always land on an engine-clamped value — re-clamping only when set
       // let the maintain→lose roundtrip keep nil, so the slider displayed
       // 0.50 while the engine computed (and persisted) pace 0.
-      this.setPace(this.draft.requestedPaceKgPerWeek ?? 0.5);
+      this.setPace(this.requestedPaceRaw ?? 0.5);
     }
     this.touch();
   }
@@ -300,9 +317,36 @@ export class OnboardingModel {
     this.touch();
   }
 
-  // The slider value always lands on the engine's clamped result, so the knob
-  // snaps back when the requested pace is unsafe.
+  /**
+   * The typed fields clamp on blur (the owner decision replacing the wheels,
+   * OB-06/OB-07): the parsed text clamps to the old wheel's range — 250 cm
+   * lands 220, 9 cm lands 120 — and typing never clamps (the set* writes stay
+   * raw). The screens call these from FillField's onBlur and show the returned
+   * value, so the field never keeps a number the wheel could not hold.
+   */
+  clampHeightCm(requested: number): number {
+    this.draft.heightCm = clampBetween(requested, HEIGHT_CM_LIMITS);
+    this.touch();
+    return this.draft.heightCm;
+  }
+
+  clampWeightKg(requested: number): number {
+    this.draft.weightKg = clampBetween(requested, WEIGHT_KG_LIMITS);
+    this.touch();
+    return this.draft.weightKg;
+  }
+
+  clampGoalWeightKg(requested: number): number {
+    this.draft.goalWeightKg = clampBetween(requested, GOAL_WEIGHT_KG_LIMITS);
+    this.touch();
+    return this.draft.goalWeightKg;
+  }
+
+  // The stored value always lands on the engine's clamped result; the raw
+  // request is kept for the pace segment's selection (stage A2), which shows
+  // the option the user picked even when the engine clamps it.
   setPace(requested: number): void {
+    this.requestedPaceRaw = requested;
     this.draft.requestedPaceKgPerWeek = requested;
     const computed = TargetsEngine.targets(this.draft);
     this.draft.requestedPaceKgPerWeek = computed.paceKgPerWeek;
@@ -315,40 +359,43 @@ export class OnboardingModel {
     this.touch();
   }
 
+  // -- The step-7 ED-Safe policy switch ---------------------------------------
+
+  /**
+   * The switch's single mutation path (the Settings wellness toggle's order):
+   * persist '1'/'0' first, then apply the design flag, so a failed write never
+   * shows an applied policy. A failed write is recorded (safePolicyWriteError)
+   * and rethrown; the view's handler catches it, so no rejection is unhandled.
+   */
+  async setSafeModePolicy(on: boolean): Promise<void> {
+    try {
+      await this.writeSetting(this.policyStorageKey, on ? '1' : '0');
+    } catch (error) {
+      this.safePolicyWriteErrorState =
+        error instanceof Error ? error.message : 'The setting could not be saved.';
+      this.touch();
+      throw error;
+    }
+    this.safePolicyWriteErrorState = null;
+    this.applyPolicyFlag(on);
+    this.touch();
+  }
+
   // -- Plan generation ---------------------------------------------------------
 
   beginGeneration(): void {
     if (this.generationStarted) return;
     this.generationStarted = true;
-    void this.runGeneration();
+    this.runGeneration();
   }
 
-  private async runGeneration(): Promise<void> {
-    const computed = TargetsEngine.targets(this.draft);
-    if (this.animationsDisabled) {
-      this.finishGeneration(computed);
-      return;
-    }
-    const stepMs = (MINIMUM_GENERATION_SECONDS * 1000) / this.generationStatesState.length;
-    for (let index = 0; index < this.generationStatesState.length; index += 1) {
-      this.generationStatesState[index] = 'active';
-      this.generationPercentState = (index + 1) * 25;
-      this.touch();
-      if (!(await this.delay(stepMs))) return; // cancelled mid-step
-      this.generationStatesState[index] = 'done';
-      this.touch();
-    }
-    this.finishGeneration(computed);
-  }
-
-  /** Resolves after `ms`, or early with false when the model is disposed. */
-  private delay(ms: number): Promise<boolean> {
-    return new Promise((resolve) => {
-      this.generationTimer = setTimeout(() => {
-        this.generationTimer = null;
-        resolve(!this.disposed);
-      }, ms);
-    });
+  /**
+   * The engine computes synchronously, so the generating step shows the real
+   * numbers the moment it appears and the reveal lands at once — the Ember
+   * frame's honest step with no timer and no invented percent.
+   */
+  private runGeneration(): void {
+    this.finishGeneration(TargetsEngine.targets(this.draft));
   }
 
   private finishGeneration(computed: Targets): void {
@@ -360,13 +407,23 @@ export class OnboardingModel {
       fatG: computed.fatG,
       floored: computed.floorsApplied,
     };
-    this.generationStatesState = this.generationStatesState.map(() => 'done');
-    this.generationPercentState = 100;
+    // The step holds: the reveal lands only when the user taps the step's
+    // primary button (seePlan, stage-A2 decision 2) — no auto-advance.
+    this.touch();
+  }
+
+  /**
+   * The generating step's primary button ("See your plan"): the only way past
+   * the step. A no-op anywhere else and before the plan is computed.
+   */
+  seePlan(): void {
+    if (this.currentStep !== 'generating') return;
+    if (this.revealState === null) return;
     this.path.push('planReveal');
     this.touch();
   }
 
-  // Test seam: lands the reveal immediately without the minimum animation window.
+  // Test seam: lands the reveal immediately (the flow's screens assert against it).
   finishGenerationForTesting(): void {
     this.finishGeneration(TargetsEngine.targets(this.draft));
   }

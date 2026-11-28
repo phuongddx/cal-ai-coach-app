@@ -74,7 +74,6 @@ export class TargetEditModel {
     this.dailyKcal = deps.initial.dailyKcal;
     this.goalWeightKg = deps.initial.goalWeightKg ?? deps.initial.weightKg ?? 70;
   }
-
   // -- React seam ------------------------------------------------------------
 
   /** Re-renders subscribers on every mutation; snapshot is a stable number. */
@@ -104,6 +103,23 @@ export class TargetEditModel {
 
   get isFloored(): boolean {
     return this.dailyKcal < this.floorKcal;
+  }
+
+  /**
+   * The engine's clamped read of the displayed goal weight (U-77's guardrail):
+   * `TargetsEngine` has one flat minimum (`minGoalWeightKg`) and no minimum
+   * that depends on the saved height — the frame's height-based healthy floor
+   * is an engine follow-up. When the displayed goal sits under the engine's
+   * minimum, the save clamps and the sheet shows the caution card with the
+   * clamped value; the wheel's own 40…150 range can only carry a sub-floor
+   * goal in from stored data.
+   */
+  get clampedGoalWeightKg(): number {
+    return TargetsEngine.sanitizedGoalWeightKg(this.goalWeightKg);
+  }
+
+  get goalClamped(): boolean {
+    return this.clampedGoalWeightKg !== this.goalWeightKg;
   }
 
   /** The 30/40/30 preview of the current (unclamped display) kcal. */

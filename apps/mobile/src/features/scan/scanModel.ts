@@ -19,9 +19,7 @@ import type { DiaryEntry, EntryDetailUpsert } from '../../data/repos/diaryEntryR
 import { newUuid } from '../../data/sync/uuid';
 import { noopScanActivity } from './scanActivity';
 import {
-  ANALYZING_STEPS,
   MEAL_SLOTS,
-  type AnalyzingStep,
   type CorrectionKind,
   type MealSlot,
   type ResultItem,
@@ -33,15 +31,11 @@ import {
 } from './scanTypes';
 
 export type ScanModelTiming = {
-  /** Minimum dwell per checklist step (`stepInterval`, 0.5 s). */
-  stepIntervalMs: number;
-  /** Past this a real call is very likely mid a tier-2 re-run: show the 4th step (`escalationBudgetSeconds`). */
-  escalationBudgetMs: number;
   /** The Live Activity ends itself this long after the save (60 s). */
   activityLifetimeMs: number;
 };
 
-export const DEFAULT_TIMING: ScanModelTiming = { stepIntervalMs: 500, escalationBudgetMs: 5000, activityLifetimeMs: 60_000 };
+export const DEFAULT_TIMING: ScanModelTiming = { activityLifetimeMs: 60_000 };
 
 export type ScanModelOptions = {
   api: CoachCalApi;
@@ -77,6 +71,14 @@ export function mealKcalOf(state: ScanState): number {
   return (state.result?.items ?? []).reduce((total, candidate) => total + itemKcalOf(state, candidate.id), 0);
 }
 
+/** Protein, carbs and fat of the meal from the CURRENT grams, whole grams (the review's macro dots). */
+export function mealMacrosOf(state: ScanState): { proteinG: number; carbsG: number; fatG: number } {
+  const items = state.result?.items ?? [];
+  const sum = (pick: (per100g: ResultItem['source']['per100g']) => number): number =>
+    Math.round(items.reduce((total, candidate) => total + KcalArithmetic.macroGrams(pick(candidate.source.per100g), candidate.grams), 0));
+  return { proteinG: sum((per100g) => per100g.proteinG), carbsG: sum((per100g) => per100g.carbsG), fatG: sum((per100g) => per100g.fatG) };
+}
+
 export function hasHiddenFat(state: ScanState): boolean {
   return state.result?.items.some((candidate) => candidate.source.hiddenFatLikely) ?? false;
 }
@@ -92,8 +94,13 @@ export function hasUnresolved(state: ScanState): boolean {
   return state.result?.items.some((candidate) => candidate.isUnresolved) ?? false;
 }
 
+/** How many items still need the user's answer: the count the disabled Save names ("Resolve 1 item to save"). */
+export function unresolvedCount(state: ScanState): number {
+  return state.result?.items.filter((candidate) => candidate.isUnresolved).length ?? 0;
+}
+
 export function isSaveEnabled(state: ScanState): boolean {
-  return state.result !== null && !hasUnresolved(state) && !state.isAnalyzing && !state.isSaving && state.savedEntryIds.length === 0;
+  return state.result !== null && state.result.items.length > 0 && !hasUnresolved(state) && !state.isAnalyzing && !state.isSaving && state.savedEntryIds.length === 0;
 }
 
 function initialState(mealSlot: MealSlot): ScanState {
@@ -113,10 +120,6 @@ function initialState(mealSlot: MealSlot): ScanState {
     streakCount: null,
     freezesLeft: 0,
   };
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function createScanModel(options: ScanModelOptions) {
@@ -142,39 +145,26 @@ export function createScanModel(options: ScanModelOptions) {
     if (state.isAnalyzing) return;
     generation += 1;
     const mine = generation;
-    set({ isAnalyzing: true, phase: { kind: 'analyzing', step: 'detecting' }, ...(thumb === undefined ? {} : { captureThumb: thumb }) });
-    const startedAt = Date.now();
+    set({ isAnalyzing: true, phase: { kind: 'analyzing' }, ...(thumb === undefined ? {} : { captureThumb: thumb }) });
     // The API call starts at once; a synchronous throw is a failed call, like a thrown Swift Task.
     const work = (async () => api.analyzeFood(request))();
-    // Watchdog of finishAnalyzing: it is armed here and cleared on every exit path.
-    void finishAnalyzing(work, mine, startedAt);
+    void finishAnalyzing(work, mine);
   }
 
-  async function finishAnalyzing(work: Promise<ScanResponse>, mine: number, startedAt: number): Promise<void> {
+  /**
+   * The scan API answers in one request, so the client observes no stage: no dwell, no timer. The result
+   * (or the failure) lands the moment the call settles, unless a newer generation has taken over.
+   */
+  async function finishAnalyzing(work: Promise<ScanResponse>, mine: number): Promise<void> {
     const stale = () => mine !== generation;
-    const watchdog = setTimeout(() => {
-      if (!stale()) set({ phase: { kind: 'analyzing', step: 'confirming' } });
-    }, timing.escalationBudgetMs);
     try {
       const response = await work;
-      if (stale()) return;
-      const escalated = state.phase.kind === 'analyzing' && state.phase.step === 'confirming';
-      const steps: readonly AnalyzingStep[] = escalated ? ANALYZING_STEPS : ANALYZING_STEPS.slice(0, 3);
-      // Failure states surface immediately; only the success path plays the checklist out to the minimum dwell.
-      for (const [index, step] of steps.entries()) {
-        if (stale()) return;
-        set({ phase: { kind: 'analyzing', step } });
-        const remaining = (index + 1) * timing.stepIntervalMs - (Date.now() - startedAt);
-        if (remaining > 0) await sleep(remaining);
-      }
       // A cancelled run must never touch state: cancelAnalyzing may already have started a new analysis.
       if (stale()) return;
       receive(response);
     } catch (error) {
       if (stale()) return;
       route(error);
-    } finally {
-      clearTimeout(watchdog);
     }
     if (!stale()) set({ isAnalyzing: false });
   }
@@ -213,11 +203,8 @@ export function createScanModel(options: ScanModelOptions) {
   function route(error: unknown): void {
     // Swift: `error.isQuotaReached, case .envelope` — only a decoded FREE_LIMIT_REACHED envelope reaches the quota state.
     if (isScanApiError(error) && error.kind === 'envelope' && error.code === 'FREE_LIMIT_REACHED') {
-      const entitlement =
-        error.entitlement !== undefined
-          ? error.entitlement
-          : { tier: 'free' as const, scansUsed: 0, scanLimit: 3, windowResetAt: now().toISOString() };
-      set({ phase: { kind: 'quotaReached', entitlement } });
+      // The limit and the reset day belong to the server: an envelope without an entitlement yields none.
+      set({ phase: { kind: 'quotaReached', entitlement: error.entitlement ?? null } });
     } else if (isScanApiError(error) && error.isBarcodeNotFound) {
       set({ phase: { kind: 'failed', failure: 'barcodeNotFound' } });
     } else {
@@ -261,10 +248,19 @@ export function createScanModel(options: ScanModelOptions) {
         ...result,
         // Resolving the flagged concern is the only path off "Review needed".
         items: result.items.map((candidate) =>
-          candidate.id === itemId ? { ...candidate, correction: { kind, note }, isUnresolved: false } : candidate,
+          candidate.id === itemId
+            ? { ...candidate, correction: { kind, note }, isUnresolved: false }
+            : candidate,
         ),
       },
     });
+  }
+
+  /** "Remove item": drops the item from the review; the total follows because it is recomputed from the rest. */
+  function removeItem(itemId: number): void {
+    const result = state.result;
+    if (result === null || !result.items.some((candidate) => candidate.id === itemId)) return;
+    set({ result: { ...result, items: result.items.filter((candidate) => candidate.id !== itemId) } });
   }
 
   // MARK: - Save / Undo
@@ -276,7 +272,7 @@ export function createScanModel(options: ScanModelOptions) {
     set({ isSaving: true });
     const stamp = now();
     try {
-      const upserts: EntryDetailUpsert[] = result.items.map((candidate) => {
+      const upserts: EntryDetailUpsert[] = result.items.map((candidate, position) => {
         const entryId = newId();
         const per100g = candidate.source.per100g;
         return {
@@ -294,7 +290,7 @@ export function createScanModel(options: ScanModelOptions) {
           detail: {
             entryId,
             mealSlot: state.mealSlot,
-            title: candidate.id === 0 ? state.mealTitle : candidate.source.label,
+            title: position === 0 ? state.mealTitle : candidate.source.label,
             grams: candidate.grams,
             kcal: itemKcalOf(state, candidate.id),
             proteinG: KcalArithmetic.macroGrams(per100g.proteinG, candidate.grams),
@@ -325,16 +321,22 @@ export function createScanModel(options: ScanModelOptions) {
     }
   }
 
+  /** A second Undo press while the first is still writing must not tombstone twice. */
+  let isUndoing = false;
+
   /** Tombstones the just-written entries and deletes their detail rows. */
   async function undo(): Promise<void> {
-    if (persistence === undefined) return;
-    for (const entryId of state.savedEntryIds) {
+    if (persistence === undefined || state.savedEntryIds.length === 0 || isUndoing) return;
+    isUndoing = true;
+    const entryIds = state.savedEntryIds;
+    for (const entryId of entryIds) {
       const entry: DiaryEntry | null = await persistence.fetchEntry(entryId).catch(() => null);
       if (entry !== null) await persistence.tombstone(entry, { now: now() }).catch(() => undefined);
       await persistence.deleteDetail(entryId).catch(() => undefined);
     }
     notify?.();
     set({ savedEntryIds: [], savedKcal: null, phase: { kind: 'review' } });
+    isUndoing = false;
     await endLiveActivityImmediately();
     await loadSavedContext();
   }
@@ -424,6 +426,7 @@ export function createScanModel(options: ScanModelOptions) {
 
     setGrams,
     captureCorrection,
+    removeItem,
     setMealTitle: (title: string) => set({ mealTitle: title }),
     setMealSlot: (slot: MealSlot) => set({ mealSlot: MEAL_SLOTS.includes(slot) ? slot : state.mealSlot }),
     setDescribeText: (text: string) => set({ describeText: text }),
@@ -433,9 +436,11 @@ export function createScanModel(options: ScanModelOptions) {
 
     itemKcal: (itemId: number) => itemKcalOf(state, itemId),
     mealKcal: () => mealKcalOf(state),
+    mealMacros: () => mealMacrosOf(state),
     hasHiddenFat: () => hasHiddenFat(state),
     hiddenFatAddedKcal: () => hiddenFatAddedKcal(state),
     hasUnresolved: () => hasUnresolved(state),
+    unresolvedCount: () => unresolvedCount(state),
     isSaveEnabled: () => isSaveEnabled(state),
   };
 }

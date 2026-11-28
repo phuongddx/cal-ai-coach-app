@@ -81,7 +81,7 @@ Screen: `features/auth/SignInScreen.tsx`; route: `app/sign-in.tsx` (`router.repl
 
 | Behaviour | Swift source | Proving Jest case |
 |---|---|---|
-| Entry points reachable: title, `auth.signInApple`, `auth.signInGoogle` "Continue with Google", `auth.emailField` "Email", `auth.sendCode` "Send code" | `SignInView.swift`, `SignInFlowTests.testSignInEntryPointsAreReachable` | `sign in screen > the sign in entry points are reachable` |
+| Entry points reachable: title "Sign in to keep your diary safe", `auth.signInApple`, `auth.signInGoogle` "Continue with Google", `auth.signInEmail` "Continue with email"; one tap later `auth.emailField` "Email" and `auth.sendCode` "Send code" | `SignInView.swift`, `SignInFlowTests.testSignInEntryPointsAreReachable` | `sign in screen > the sign in entry points are reachable` |
 | Tapping Apple starts the Apple flow and hands the session on | `SignInFlowTests.testTappingAppleStartsTheAppleFlow` | `sign in screen > tapping Apple starts the Apple sign in and hands the session on` |
 | Apple button only when Apple sign in is available (and the nonce can be hashed) | `SignInView.swift` | `sign in screen > the Apple button is not shown when Apple sign in is not available` |
 | Google sign-in | `SignInView.swift` | `sign in screen > Continue with Google signs in` |
@@ -92,7 +92,45 @@ Screen: `features/auth/SignInScreen.tsx`; route: `app/sign-in.tsx` (`router.repl
 | Busy state disables the form and ignores a second tap | `SignInView.swift` (`.disabled(isBusy)`) | `sign in screen > is busy while a sign in runs: the form is disabled and a second tap does nothing` |
 | SHA-256 nonce before the token reaches Apple | `AppleNonceProvider.swift` | `data/auth/appleNonce.test.ts`, `data/auth/appleSignIn.test.ts > sends the hashed nonce to apple and the raw nonce to the server` |
 
+Ember look (U-77b, frames 61 to 67): two steps of one route. Entry: tile, title, subtitle, privacy line, Apple, Google,
+"or", Continue with email. E-mail step (behind `auth.signInEmail`): header with Back (`auth.emailBack`), title "Sign in with
+email", labeled fields, one sentence after the code is sent (`auth.codeSent`), docked Send code / Verify, one error line.
+
+| Identifier | Status |
+|---|---|
+| `auth.signInEmail` | added: "Continue with email" on the entry step; the e-mail flow starts with a tap on it |
+| `auth.emailBack` | added: Back on the e-mail step, keeps the typed e-mail |
+| `auth.codeSent` | added: "We sent a code to <e-mail>." |
+| `auth.tile` | added: the app tile of the entry step |
+| `auth.emailField.label`, `auth.otpField.label` | added: the labels above the two fields (plain `Text` in `EmailStep.tsx`; `FillField` is not used, it has no keyboard props) |
+| `auth.form`, `auth.signInApple`, `auth.signInGoogle`, `auth.emailField`, `auth.sendCode`, `auth.otpField`, `auth.verifyCode` | kept |
+
+Ember look, round 4 (U-77c, frames 108 to 115): three steps of one route. The e-mail step is now "Continue with email"
+(Back, title, subtitle, `FillField` text variant, docked Send code). Sending the code opens the code step: "Enter the code",
+"We sent a 6-digit code to <e-mail>." (`auth.codeSent`), the six cells of `CodeField` over the hidden `auth.otpField`, docked
+Verify, "Resend code in m:ss" (60 s cooldown of the client, injected clock) and "Use a different email". Two error lines: the
+code could not be sent (field border in error) and the code is wrong or has expired (six cells in error, digits kept).
+
+| Behaviour | Swift source | Proving Jest case |
+|---|---|---|
+| Send code runs `requestCode` once per tap and opens the code step | `SignInView.swift` | `sign in screen, the e-mail step (frames 108 to 111) > Send code is enabled once the address is typed and runs requestCode once per tap` |
+| The sentence carries the address; the cells are the code field | (new) | `sign in screen, the code step (frames 112 to 115) > draws the title, the sentence with the address in bold, the six cells and the note of the frame` |
+| Verify is disabled at five digits, enabled at six; more than six is cut; nothing submits at the sixth digit | `SignInView.swift` | `... > Verify is disabled at five digits and enabled at six`; `> a code of more than six digits is cut to six`; `> nothing submits when the sixth digit lands, and Verify runs verifyCode once with the address and the code` |
+| Resend counts down from 60 s with an injected clock; at zero it calls `requestCode` once with the same address | (new) | `... > Resend code counts down from 60 seconds and is disabled until it reaches zero`; `> a tap on Resend code at zero calls requestCode once more with the same address and starts the 60 seconds again` |
+| Back and "Use a different email" keep the address | (new) | `... > Back on the code step returns to the e-mail step and keeps the address, Back again to the entry step`; `> Use a different email returns to the e-mail step and keeps the typed address` |
+| Code not sent: field border in error and the send line; wrong code: cells in error, digits kept; any other error keeps the service message | (new) | `sign in screen, the e-mail step (frames 108 to 111) > the code could not be sent (%s): the field border in error and the line of frame 110` (the `it.each`, four errors); `... > a code that is wrong or expired: the six cells in error, the digits kept, the line of frame 114, Verify still enabled`; `> an error that maps to neither line keeps the message of the service and the cells stay quiet`; `> a resend the server refuses says so on the code step and keeps the cooldown at zero` |
+| `CodeField` takes `autoFocus` (default false) | (new) | `design/components/CodeField.test.tsx > CodeField autoFocus` |
+
+| Identifier | Status (U-77c) |
+|---|---|
+| `auth.codeCells`, `auth.resendCode`, `auth.useDifferentEmail`, `auth.emailField.ring` | added |
+| `auth.otpField.label` | removed: the cells have no label above them; the input keeps the accessibility label "6-digit code" |
+| `auth.sendCode`, `auth.verifyCode` | kept, now on the buttons themselves |
+
+Details and deviations: `findings/U-77c.md`.
+
 Differences from the SwiftUI screen: the `auth.*` identifiers sit on wrapper views for the design buttons
 (`PrimaryButton` and `SecondaryButton` take no `testID`), so the tests press the button by its label; the
 native Apple button carries `auth.signInApple` itself. The Apple cancel gives the line "Sign-in was cancelled."
-(Swift showed the system error text).
+(Swift showed the system error text). The sign-in/create-account segment, "Forgot password?" and the reset-link screen of
+the Ember frames are not built: the app signs in by code. Details: `findings/U-77b.md`.

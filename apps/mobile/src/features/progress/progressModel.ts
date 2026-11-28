@@ -14,7 +14,7 @@ import type { TargetRepository } from '../../data/repos/targetRepository';
 import type { TrackingRepository } from '../../data/repos/trackingRepository';
 import type { ChartPoint } from '../../design';
 
-import { addDays, clampKg, dateFromDay, dayString } from './progressMath';
+import { addDays, clampKg, dateFromDay, dayString, RANGE_WINDOW_DAYS, type ProgressRange } from './progressMath';
 import { createProgressSnapshotLoader, type DayKcal, type ProgressSnapshotData } from './progressSnapshot';
 import type { EngagementRepository } from '../../data/repos/engagementRepository';
 
@@ -43,7 +43,11 @@ export type ProgressModel = {
   subscribe(listener: () => void): () => void;
   /** Re-reads the database and publishes, then reconciles the streak. */
   refresh(): Promise<void>;
-  weightPoints(): ChartPoint[];
+  /**
+   * The logged weight series, oldest first. Without a range the full
+   * observed series; with one, the trailing window's slice of it.
+   */
+  weightPoints(range?: ProgressRange): ChartPoint[];
   latestKg(): number | null;
   goalKg(): number | null;
   startKg(): number | null;
@@ -139,11 +143,18 @@ export function createProgressModel(deps: ProgressDeps): ProgressModel {
       };
     },
     refresh,
-    weightPoints: () =>
-      snapshot.weights.flatMap((log) => {
+    weightPoints: (range?: ProgressRange) => {
+      const all = snapshot.weights.flatMap((log) => {
         const date = dateFromDay(log.day);
         return date === null ? [] : [{ date, value: log.kg, label: log.day }];
-      }),
+      });
+      if (range === undefined) {
+        return all;
+      }
+      // The trailing window in local days (a day key compares lexicographically).
+      const windowStart = dayString(addDays(deps.now(), -(RANGE_WINDOW_DAYS[range] - 1)));
+      return all.filter((point) => point.label >= windowStart);
+    },
     latestKg: () => snapshot.weights.at(-1)?.kg ?? null,
     goalKg: () => snapshot.target?.goalWeightKg ?? null,
     startKg: () => snapshot.weights[0]?.kg ?? null,

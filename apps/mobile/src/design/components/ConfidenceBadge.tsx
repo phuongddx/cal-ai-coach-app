@@ -18,6 +18,11 @@ export type ConfidenceTier = 'high' | 'medium' | 'low';
 export type ConfidenceBadgeProps = {
   confidence: number;
   compact?: boolean;
+  /**
+   * `dish` (default) names a kind of dish ("High — single item"). `confidence` says the confidence
+   * and nothing about the meal ("High confidence"), as the scan Review frames do.
+   */
+  copy?: 'dish' | 'confidence';
 };
 
 // UI-SPEC lock: High ≥0.85, Medium ≥0.70, Low <0.70.
@@ -27,7 +32,17 @@ export function confidenceTier(confidence: number): ConfidenceTier {
   return 'low';
 }
 
-export function confidenceLabel(tier: ConfidenceTier): string {
+export function confidenceLabel(tier: ConfidenceTier, copy: 'dish' | 'confidence' = 'dish'): string {
+  if (copy === 'confidence') {
+    switch (tier) {
+      case 'high':
+        return 'High confidence';
+      case 'medium':
+        return 'Medium confidence';
+      case 'low':
+        return 'Low confidence';
+    }
+  }
   switch (tier) {
     case 'high':
       return 'High — single item';
@@ -76,10 +91,10 @@ export function confidenceBadgeHeight(compact: boolean): number {
   return compact ? 22 : 28;
 }
 
-export function ConfidenceBadge({ confidence, compact = false }: ConfidenceBadgeProps) {
+export function ConfidenceBadge({ confidence, compact = false, copy = 'dish' }: ConfidenceBadgeProps) {
   const { colors } = useTokens();
   const tier = confidenceTier(confidence);
-  const label = confidenceLabel(tier);
+  const label = confidenceLabel(tier, copy);
   const height = confidenceBadgeHeight(compact);
   return (
     <View style={styles.row} testID={compact ? 'confidence-badge-row:compact' : 'confidence-badge-row'}>
