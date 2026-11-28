@@ -54,7 +54,7 @@ figure.frame figcaption span { display: block; font-weight: 400; color: #5F5B57;
 .dark .tabbar { background: rgba(40,37,34,.72); }
 .tabbar a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 27px; color: var(--cc-text); font: 600 10.5px/1 var(--cc-font); text-decoration: none; }
 .tabbar a.on { background: var(--cc-fill); color: var(--cc-accent-ink); }
-.fab { width: 62px; height: 62px; border-radius: 50%; background: var(--cc-accent); color: var(--cc-on-accent); display: grid; place-items: center; box-shadow: 0 8px 20px rgba(255,106,0,.35), inset 0 1px 0 rgba(255,255,255,.35); }
+.fab { width: var(--fab); height: var(--fab); border-radius: 50%; background: var(--cc-accent); color: var(--cc-on-accent); display: grid; place-items: center; box-shadow: 0 8px 20px rgba(255,106,0,.35), inset 0 1px 0 rgba(255,255,255,.35); }
 .fab svg.i { width: 26px; height: 26px; stroke-width: 2.25; }
 
 /* ---------- Surfaces ---------- */
@@ -76,7 +76,7 @@ figure.frame figcaption span { display: block; font-weight: 400; color: #5F5B57;
 .ember::before { content: ""; position: absolute; width: 280px; height: 280px; right: -90px; top: -110px; background: radial-gradient(closest-side, rgba(255,106,0,.30), transparent); pointer-events: none; }
 
 /* ---------- Buttons ---------- */
-.btn { height: var(--btn); border-radius: 18px; display: flex; align-items: center; justify-content: center; gap: 8px; font: 600 17px/1 var(--cc-font); border: 0; width: 100%; text-decoration: none; }
+.btn { height: var(--btn); border-radius: var(--r-btn); display: flex; align-items: center; justify-content: center; gap: 8px; font: 600 17px/1 var(--cc-font); border: 0; width: 100%; text-decoration: none; }
 .btn.primary { background: var(--cc-accent); color: var(--cc-on-accent); }
 .btn.primary.disabled { background: var(--cc-fill); color: var(--cc-text-2); }
 .btn.secondary { background: var(--cc-fill); color: var(--cc-text); }
@@ -104,8 +104,8 @@ figure.frame figcaption span { display: block; font-weight: 400; color: #5F5B57;
 .ring { position: relative; width: var(--ring); height: var(--ring); }
 .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
 .ring .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-.bar { height: 8px; border-radius: 4px; background: var(--cc-fill); overflow: hidden; }
-.bar > i { display: block; height: 100%; border-radius: 4px; }
+.bar { height: var(--macro-bar); border-radius: calc(var(--macro-bar) / 2); background: var(--cc-fill); overflow: hidden; }
+.bar > i { display: block; height: 100%; border-radius: calc(var(--macro-bar) / 2); }
 .macro { display: flex; flex-direction: column; gap: 8px; }
 .macro .top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; font: 600 15px/1.2 var(--cc-font); }
 .macro .top .v { font: 600 15px/1 var(--cc-font-round); font-variant-numeric: tabular-nums; color: var(--cc-text-2); white-space: nowrap; }

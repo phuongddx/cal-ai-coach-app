@@ -12,12 +12,31 @@ jest.mock('react/jsx-runtime', () => {
 
 import { render, screen } from '@testing-library/react-native';
 
+import { lightColors } from '../tokens';
+
 import { BannerNote, markdownSegments } from './BannerNote';
 
 describe('BannerNote', () => {
-  it.each(['neutral', 'success', 'info'] as const)('renders the %s variant', async (variant) => {
+  it.each(['neutral', 'success', 'info', 'caution', 'error'] as const)('renders the %s variant', async (variant) => {
     await render(<BannerNote text="Note text" variant={variant} />);
     expect(screen.getByTestId(`banner:${variant}`)).toHaveTextContent('Note text');
+  });
+
+  it('paints caution and error with their own tint and border', async () => {
+    await render(
+      <>
+        <BannerNote text="Floor" variant="caution" />
+        <BannerNote text="Export failed" variant="error" />
+      </>,
+    );
+    expect(screen.getByTestId('banner:caution')).toHaveStyle({
+      backgroundColor: lightColors.cautionTint,
+      borderColor: lightColors.caution,
+    });
+    expect(screen.getByTestId('banner:error')).toHaveStyle({
+      backgroundColor: lightColors.errorTint,
+      borderColor: lightColors.error,
+    });
   });
 
   it('defaults to the neutral variant', async () => {

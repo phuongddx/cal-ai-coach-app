@@ -1,11 +1,11 @@
 /**
- * WeekStripView.swift — the horizontal week strip: seven 40pt day cells (weekday initial over a
- * semibold day number); the selected cell has the lime background, radius 12 and black text. The
- * colors are the SwiftUI ones (selected: black / black at 70%; others: tertiary / secondary text).
+ * WeekStripView — the week strip of the Ember frames (U-76): seven 44 by 56 pt cells with the `md` radius,
+ * the weekday initial over a 17 pt rounded day number. The selected cell takes `accentTint` and `accentInk`;
+ * the others `text3` and `text`. The row spreads the cells over the width (`space-between`).
  */
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
-import { radius, space, typography, useTokens } from '../../design';
+import { fontFamily, radius, size, textStyles, useTokens } from '../../design';
 
 import { dayCellLabel, dayNumber, weekdayInitial } from './todayFormat';
 import { isSameDay } from './todayModel';
@@ -35,22 +35,12 @@ export function WeekStripView({ days, selectedDay, onSelect }: WeekStripViewProp
             accessibilityLabel={dayCellLabel(day)}
             accessibilityState={{ selected }}
             onPress={() => onSelect(day)}
-            style={[styles.cell, selected && { backgroundColor: colors.accentLime }]}
+            style={[styles.cell, selected && { backgroundColor: colors.accentTint }]}
           >
-            <Text
-              style={[
-                typography.caption,
-                { color: selected ? 'rgba(0,0,0,0.7)' : colors.textTertiary },
-              ]}
-            >
+            <Text style={[styles.initial, { color: selected ? colors.accentInk : colors.text3 }]}>
               {weekdayInitial(day)}
             </Text>
-            <Text
-              style={[
-                styles.number,
-                { color: selected ? '#000000' : colors.textSecondary },
-              ]}
-            >
+            <Text style={[styles.number, { color: selected ? colors.accentInk : colors.text }]}>
               {dayNumber(day)}
             </Text>
           </Pressable>
@@ -61,14 +51,16 @@ export function WeekStripView({ days, selectedDay, onSelect }: WeekStripViewProp
 }
 
 const styles = StyleSheet.create({
-  row: { gap: space.sm, paddingHorizontal: space.xs },
+  // flexGrow + space-between: seven cells share the width of the screen; a narrow screen scrolls.
+  row: { flexGrow: 1, justifyContent: 'space-between' },
   cell: {
-    width: 40,
-    height: 40,
+    width: size.tap,
+    height: 56,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
   },
-  number: { fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  initial: { fontSize: textStyles.caption1.fontSize, fontWeight: '500' },
+  number: { fontSize: 17, fontWeight: '600', fontFamily: fontFamily.round, fontVariant: ['tabular-nums'] },
 });

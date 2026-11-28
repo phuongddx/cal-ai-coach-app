@@ -5,7 +5,8 @@ import { StyleSheet, View } from 'react-native';
 import { useTokens } from '../../design';
 import { ScanFab } from '../../features/today/ScanFab';
 
-// Tab names and symbols are those of the SwiftUI MainShell.swift.
+// Tab names are those of the SwiftUI MainShell.swift; the symbols follow the Ember design (U-76): Today sun,
+// Progress chart, Coach sparkles (was bell), Profile person (was gear).
 export default function TabsLayout() {
   const { colors } = useTokens();
   const router = useRouter();
@@ -23,11 +24,11 @@ export default function TabsLayout() {
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="coach">
           <NativeTabs.Trigger.Label>Coach</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="bell" md="notifications" />
+          <NativeTabs.Trigger.Icon sf="sparkles" md="auto_awesome" />
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="profile">
           <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="gearshape" md="settings" />
+          <NativeTabs.Trigger.Icon sf="person.crop.circle" md="account_circle" />
         </NativeTabs.Trigger>
       </NativeTabs>
       {/* MainShell's overlay: the Scan button floats at the bottom center, over the tab bar. */}

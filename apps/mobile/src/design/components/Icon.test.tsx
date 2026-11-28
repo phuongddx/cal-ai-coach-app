@@ -42,9 +42,9 @@ function readCanvasSymbols(): CanvasSymbol[] {
 const symbols = readCanvasSymbols();
 
 describe('Icon set against docs/design/ember/index.html', () => {
-  it('reads every symbol of the canvas (51)', () => {
-    expect(canvas.match(/<symbol /g)).toHaveLength(51);
-    expect(symbols).toHaveLength(51);
+  it('reads every symbol of the canvas (52)', () => {
+    expect(canvas.match(/<symbol /g)).toHaveLength(52);
+    expect(symbols).toHaveLength(52);
   });
 
   it('has exactly one name per symbol id, in the canvas order', () => {

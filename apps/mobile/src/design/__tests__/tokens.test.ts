@@ -9,7 +9,9 @@
  *     light adds `.hc`; high contrast dark adds `.dark`, `.hc` and `.dark.hc`).
  *  2. `emberTokens.generated.ts` is what `node scripts/rn/gen-tokens.mjs --check` accepts, and equals
  *     `tokens.json` value by value.
- *  3. Every group and every color `tokens.ts` returns, in each of the four modes, equals the chain.
+ *  3. Every group and every color `tokens.ts` returns, in each of the four modes, equals the chain:
+ *     space, radius, size (the Ember sizes and the earlier keys that follow them), the sixteen text
+ *     styles (`type`) and the earlier typography roles.
  * The last describe proves each link fails when one value changes. The functions that compare are
  * ordinary functions of their inputs, so a changed copy of one side is enough to show the failure.
  */
@@ -29,7 +31,9 @@ import {
   scaledNumberSize,
   size,
   space,
+  textStyles,
   typography,
+  typographyRoleSource,
   withAlpha,
   type ColorMode,
   type Colors,
@@ -46,12 +50,15 @@ const JSON_PATH = join(ROOT, 'docs/design/ember/tokens.json');
 const MODES: readonly ColorMode[] = ['light', 'dark', 'highContrastLight', 'highContrastDark'];
 
 type Declarations = Record<string, string>;
+type TextStyleSource = { size: number; lineHeight: number; weight: number; family: string };
 type Json = {
   color: Record<string, Record<string, string>>;
   font: Record<string, string>;
   space: Record<string, number>;
   radius: Record<string, number>;
   size: Record<string, number>;
+  type: Record<string, TextStyleSource>;
+  typeVar: Record<string, string>;
 };
 
 function parseBlocks(css: string): Record<string, Declarations> {
@@ -134,17 +141,84 @@ function sameNumbers(label: string, expected: Record<string, number>, actual: Re
   return problems;
 }
 
+/**
+ * `--t-*` of tokens.css: `weight sizepx/linepx var(--cc-font)` or `var(--cc-font-round)`, as
+ * `{ camelName: { size, lineHeight, weight, family } }`. Anything else is an error, as in the generator.
+ */
+export function cssTextStyles(root: Declarations): Record<string, TextStyleSource> {
+  const out: Record<string, TextStyleSource> = {};
+  for (const [name, value] of Object.entries(root)) {
+    if (!name.startsWith('t-')) continue;
+    const m = /^(\d{3})\s+([\d.]+)px\/([\d.]+)px\s+var\(--cc-font(-round)?\)$/.exec(value);
+    if (!m) throw new Error(`--${name} is not "weight sizepx/linepx var(--cc-font[-round])": ${value}`);
+    out[camel(name.slice(2))] = { size: +m[2], lineHeight: +m[3], weight: +m[1], family: m[4] ? 'rounded' : 'text' };
+  }
+  return out;
+}
+
+/** The CSS custom property that names each text style: `largeTitle` is `--t-large-title`. */
+export function cssTextStyleVars(root: Declarations): Record<string, string> {
+  return Object.fromEntries(
+    Object.keys(root)
+      .filter((name) => name.startsWith('t-'))
+      .map((name) => [camel(name.slice(2)), `--${name}`]),
+  );
+}
+
+function sameTextStyles(
+  label: string,
+  expected: Record<string, TextStyleSource>,
+  actual: Record<string, TextStyleSource>,
+): string[] {
+  const problems: string[] = [];
+  for (const [name, style] of Object.entries(expected)) {
+    const got = actual[name];
+    if (!got) {
+      problems.push(`${label} ${name}: missing`);
+      continue;
+    }
+    for (const field of ['size', 'lineHeight', 'weight', 'family'] as const) {
+      if (got[field] !== style[field]) problems.push(`${label} ${name}.${field}: is ${String(got[field])}, expected ${String(style[field])}`);
+    }
+  }
+  for (const name of Object.keys(actual)) {
+    if (!(name in expected)) problems.push(`${label} ${name}: not in the source`);
+  }
+  return problems;
+}
+
+function sameStrings(label: string, expected: Record<string, string>, actual: Record<string, string>): string[] {
+  const problems: string[] = [];
+  for (const [key, value] of Object.entries(expected)) {
+    if (actual[key] !== value) problems.push(`${label} ${key}: is ${String(actual[key])}, expected ${value}`);
+  }
+  for (const key of Object.keys(actual)) {
+    if (!(key in expected)) problems.push(`${label} ${key}: not in the source`);
+  }
+  return problems;
+}
+
+/**
+ * The size group is derived, not listed: every variable of tokens.css whose value is a px length and that no
+ * other group claims (space `--s<n>`, radius `--r-*`; text styles `--t-*` are not a bare length). A new
+ * `--ring-xs: 30px` is therefore a size, and the first and the third link of the chain fail until
+ * tokens.json and tokens.ts have it.
+ */
+const PX_LENGTH = /^-?\d+(?:\.\d+)?px$/;
+const isSizeVariable = (name: string, value: string) =>
+  PX_LENGTH.test(value) && !/^s\d+$/.test(name) && !name.startsWith('r-') && !name.startsWith('t-');
+
 function cssNumbers(root: Declarations) {
-  const pick = (test: (name: string) => boolean, rename: (name: string) => string) =>
+  const pick = (test: (name: string, value: string) => boolean, rename: (name: string) => string) =>
     Object.fromEntries(
       Object.entries(root)
-        .filter(([name]) => test(name))
+        .filter(([name, value]) => test(name, value))
         .map(([name, value]) => [rename(name), px(value)]),
     );
   return {
     space: pick((n) => /^s\d+$/.test(n), (n) => n),
     radius: pick((n) => n.startsWith('r-'), (n) => n.slice(2)),
-    size: pick((n) => /^(tap|btn|shutter|ring|ring-stroke)$/.test(n), camel),
+    size: pick(isSizeVariable, camel),
   };
 }
 
@@ -162,16 +236,12 @@ export function compareCssWithJson(css: string, json: Json): string[] {
   problems.push(...sameNumbers('json space', numbers.space, json.space));
   problems.push(...sameNumbers('json radius', numbers.radius, json.radius));
   problems.push(...sameNumbers('json size', numbers.size, json.size));
+  problems.push(...sameTextStyles('json type', cssTextStyles(root), json.type ?? {}));
+  problems.push(...sameStrings('json typeVar', cssTextStyleVars(root), json.typeVar ?? {}));
   return problems;
 }
 
-type Generated = {
-  color: Record<string, Record<string, string>>;
-  font: Record<string, string>;
-  space: Record<string, number>;
-  radius: Record<string, number>;
-  size: Record<string, number>;
-};
+type Generated = Json;
 
 /** Link 2 (values): the generated module against tokens.json. `gen-tokens --check` covers the bytes. */
 export function compareJsonWithGenerated(json: Json, generated: Generated): string[] {
@@ -184,6 +254,8 @@ export function compareJsonWithGenerated(json: Json, generated: Generated): stri
   problems.push(...sameNumbers('generated space', json.space, generated.space));
   problems.push(...sameNumbers('generated radius', json.radius, generated.radius));
   problems.push(...sameNumbers('generated size', json.size, generated.size));
+  problems.push(...sameTextStyles('generated type', json.type, generated.type ?? {}));
+  problems.push(...sameStrings('generated typeVar', json.typeVar, generated.typeVar ?? {}));
   return problems;
 }
 
@@ -193,6 +265,9 @@ type TokenSet = {
   radius: Record<string, number>;
   size: Record<string, number>;
   fontFamily: Record<string, string>;
+  type: Record<string, { fontSize: number; lineHeight: number; fontWeight: string; family: string }>;
+  typography: Record<string, { fontSize: number; fontWeight: string }>;
+  typographyRoleSource: Record<string, string>;
 };
 
 /** Link 3: what tokens.ts returns, mode by mode, against the cascaded tokens.css. */
@@ -231,13 +306,44 @@ export function compareTokensWithChain(css: string, tokens: TokenSet): string[] 
   for (const [name, value] of Object.entries(numbers.size)) {
     if (tokens.size[name] !== value) problems.push(`tokens size.${name} differs`);
   }
+  const styles = cssTextStyles(root);
+  for (const [name, style] of Object.entries(styles)) {
+    const got = tokens.type[name];
+    if (!got) {
+      problems.push(`tokens type.${name}: missing`);
+      continue;
+    }
+    if (got.fontSize !== style.size) problems.push(`tokens type.${name}.fontSize differs`);
+    if (got.lineHeight !== style.lineHeight) problems.push(`tokens type.${name}.lineHeight differs`);
+    if (got.fontWeight !== String(style.weight)) problems.push(`tokens type.${name}.fontWeight differs`);
+    if (got.family !== style.family) problems.push(`tokens type.${name}.family differs`);
+  }
+  for (const name of Object.keys(tokens.type)) {
+    if (!(name in styles)) problems.push(`tokens type.${name}: no source in tokens.css`);
+  }
+  for (const [role, source] of Object.entries(tokens.typographyRoleSource)) {
+    const style = styles[source];
+    const got = tokens.typography[role];
+    if (!style) problems.push(`tokens typography.${role}: ${source} is not in tokens.css`);
+    else if (!got || got.fontSize !== style.size || got.fontWeight !== String(style.weight))
+      problems.push(`tokens typography.${role} is not type.${source}`);
+  }
   return problems;
 }
 
 const css = readFileSync(CSS_PATH, 'utf8');
 const json = JSON.parse(readFileSync(JSON_PATH, 'utf8')) as Json;
 const generated = emberTokens as unknown as Generated;
-const real: TokenSet = { colorsByMode, space, radius, size, fontFamily };
+const real: TokenSet = {
+  colorsByMode,
+  space,
+  radius,
+  size,
+  fontFamily,
+  type: textStyles,
+  typography,
+  typographyRoleSource,
+};
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -308,6 +414,47 @@ describe('link 3: every group tokens.ts returns equals the chain', () => {
     expect([size.tapTarget, size.ringHero, size.ringHeroStroke]).toEqual([size.tap, size.ring, size.ringStroke]);
   });
 
+  it('the earlier keys whose meaning did not change point at the new Ember token', () => {
+    expect(radius.button).toBe(radius.btn);
+    expect(size.macroBarHeight).toBe(size.macroBar);
+    expect(size.ringCompact).toBe(size.ringSm);
+    expect(size.ringCompactStroke).toBe(size.ringSmStroke);
+  });
+
+  it('the variables Designer added in the second sync reach tokens.ts', () => {
+    expect([radius.btn, size.fab, size.ringMd, size.ringMdStroke, size.ringSm, size.ringSmStroke, size.macroBar]).toEqual([
+      json.radius.btn, json.size.fab, json.size.ringMd, json.size.ringMdStroke, json.size.ringSm,
+      json.size.ringSmStroke, json.size.macroBar,
+    ]);
+    for (const mode of MODES) {
+      for (const key of ['appleHealth', 'emberTile', 'mediaScrimStrong'] as const) {
+        expect(colorsByMode[mode][key]).toBe(json.color[mode][key]);
+      }
+    }
+  });
+
+  it('exposes the sixteen text styles under the names of tokens.json', () => {
+    expect(Object.keys(textStyles)).toEqual(Object.keys(json.type));
+    expect(Object.keys(json.type)).toHaveLength(16);
+    expect(getTokens('light').type).toBe(textStyles);
+    expect(textStyles.largeTitle).toEqual({
+      fontSize: json.type.largeTitle.size,
+      lineHeight: json.type.largeTitle.lineHeight,
+      fontWeight: String(json.type.largeTitle.weight),
+      family: json.type.largeTitle.family,
+    });
+    expect(textStyles.numMd.family).toBe('rounded');
+    expect(textStyles.body.family).toBe('text');
+  });
+
+  it('every typeVar names a --t-* variable of tokens.css that holds that text style', () => {
+    const root = cascadeCss(css).light;
+    for (const [name, variable] of Object.entries(json.typeVar)) {
+      expect(root[variable.slice(2)]).toBeDefined();
+      expect(name in textStyles).toBe(true);
+    }
+  });
+
   it('space, radius, size and font do not change with contrast', () => {
     for (const colorScheme of ['light', 'dark']) {
       const normal = getTokens({ colorScheme, highContrast: false });
@@ -317,6 +464,7 @@ describe('link 3: every group tokens.ts returns equals the chain', () => {
       expect(contrast.size).toBe(normal.size);
       expect(contrast.fontFamily).toBe(normal.fontFamily);
       expect(contrast.typography).toBe(normal.typography);
+      expect(contrast.type).toBe(normal.type);
     }
   });
 });
@@ -344,15 +492,17 @@ describe('a key that exists today still resolves (names the app used on main)', 
   it('space, radius, size, typography and the scaled numbers', () => {
     for (const key of ['1', '2', '3', '4', '5', '6', '8', '10', '12', 'xs', 'sm', 'md', 'lg', 'xl', 'xl2', 'xl3', 'xl4', 'xl5'])
       expect(space).toHaveProperty(key);
-    for (const key of ['sm', 'md', 'lg', 'xl', 'pill', 'full', 'button']) expect(radius).toHaveProperty(key);
+    for (const key of ['sm', 'md', 'lg', 'xl', 'pill', 'full', 'button', 'btn']) expect(radius).toHaveProperty(key);
     for (const key of [
       'tap', 'btn', 'shutter', 'ring', 'ringStroke', 'tapTarget', 'fab', 'ringHero', 'ringCompact',
       'ringGoal', 'ringHeroStroke', 'ringCompactStroke', 'ringGoalStroke', 'macroBarHeight',
+      'ringMd', 'ringMdStroke', 'ringSm', 'ringSmStroke', 'macroBar',
     ])
       expect(size).toHaveProperty(key);
     for (const role of ['title', 'heading', 'headline', 'body', 'subhead', 'footnote', 'caption', 'tabLabel'])
       expect(typography).toHaveProperty(role);
     expect(scaledNumberSize).toEqual({ hero: 56, planNumber: 64 });
+    expect(Object.keys(typography)).toEqual(Object.keys(typographyRoleSource));
   });
 
   it('the legacy lime key holds the Ember accent and the label color is never white', () => {
@@ -364,16 +514,23 @@ describe('a key that exists today still resolves (names the app used on main)', 
 describe('what the chain does not hold is one pinned register', () => {
   it('lists exactly the values without a source in tokens.css', () => {
     expect(Object.keys(colorValuesWithoutSource)).toEqual([...colorsWithoutEmberCounterpart]);
-    expect(Object.keys(radiusWithoutSource)).toEqual(['button']);
-    expect(Object.keys(sizeWithoutSource).sort()).toEqual(
-      ['fab', 'macroBarHeight', 'ringCompact', 'ringCompactStroke', 'ringGoal', 'ringGoalStroke'].sort(),
-    );
+    expect([...colorsWithoutEmberCounterpart]).toEqual([]);
+    expect(Object.keys(radiusWithoutSource)).toEqual([]);
+    expect(sizeWithoutSource).toEqual({ ringGoal: 56, ringGoalStroke: 6 });
+    expect(scaledNumberSize).toEqual({ hero: 56, planNumber: 64 });
   });
 
   it('none of those keys exists in the chain', () => {
     for (const key of Object.keys(sizeWithoutSource)) expect(json.size).not.toHaveProperty(key);
     for (const key of Object.keys(radiusWithoutSource)) expect(json.radius).not.toHaveProperty(key);
     for (const key of Object.keys(colorValuesWithoutSource)) expect(json.color.light).not.toHaveProperty(key);
+  });
+
+  it('the file keeps no text style, no radius and no color of its own', () => {
+    const source = readFileSync(join(__dirname, '../tokensWithoutSource.ts'), 'utf8');
+    expect(source).not.toMatch(/#[0-9A-Fa-f]{6}/);
+    expect(source).not.toContain('typography');
+    expect(source).not.toMatch(/fontWeight/);
   });
 });
 
@@ -408,6 +565,25 @@ describe('one changed value fails at each link', () => {
     expect(compareTokensWithChain(changed, real).join('\n')).toContain('colors.newThing: missing');
   });
 
+  it('derives the size group from tokens.css: the eleven known variables, and nothing else', () => {
+    const root = cascadeCss(css).light;
+    const sizes = Object.keys(root).filter((name) => isSizeVariable(name, root[name]));
+    expect(sizes.sort()).toEqual(
+      ['btn', 'fab', 'macro-bar', 'ring', 'ring-md', 'ring-md-stroke', 'ring-sm', 'ring-sm-stroke', 'ring-stroke', 'shutter', 'tap'].sort(),
+    );
+    expect(Object.keys(cssNumbers(root).size).sort()).toEqual(Object.keys(json.size).sort());
+  });
+
+  it('fails the chain when tokens.css gains a px variable that tokens.json and tokens.ts do not have', () => {
+    const changed = css.replace('--macro-bar: 8px;', '--macro-bar: 8px; --ring-xs: 30px;');
+    expect(changed).not.toBe(css);
+    expect(compareCssWithJson(changed, json).join('\n')).toContain('json size ringXs');
+    expect(compareTokensWithChain(changed, real).join('\n')).toContain('tokens size.ringXs differs');
+    // The unchanged file still passes, so the failure comes from the new variable alone.
+    expect(compareCssWithJson(css, json)).toEqual([]);
+    expect(compareTokensWithChain(css, real)).toEqual([]);
+  });
+
   it('fails when a color changes in tokens.json', () => {
     const edited = clone(json);
     edited.color.dark.card = '#1C1A19';
@@ -426,6 +602,87 @@ describe('one changed value fails at each link', () => {
     expect(problems).toContain('json radius md');
     expect(problems).toContain('json size btn');
     expect(problems).toContain('json font.text');
+  });
+
+  it('fails when a size variable changes in tokens.css, tokens.json, the generated module or tokens.ts', () => {
+    for (const [variable, key] of [
+      ['--fab: 62px', 'fab'],
+      ['--ring-md: 150px', 'ringMd'],
+      ['--ring-md-stroke: 13px', 'ringMdStroke'],
+      ['--ring-sm: 120px', 'ringSm'],
+      ['--ring-sm-stroke: 12px', 'ringSmStroke'],
+      ['--macro-bar: 8px', 'macroBar'],
+      ['--r-btn: 18px', 'btn'],
+    ] as const) {
+      const changed = css.replace(variable, variable.replace(/\d+px/, '99px'));
+      expect(changed).not.toBe(css);
+      const problems = compareCssWithJson(changed, json).join('\n');
+      expect(problems).toContain(key);
+    }
+    const edited = clone(json);
+    edited.size.fab = 61;
+    edited.size.macroBar = 9;
+    edited.radius.btn = 17;
+    const jsonProblems = compareCssWithJson(css, edited).join('\n');
+    expect(jsonProblems).toContain('json size fab');
+    expect(jsonProblems).toContain('json size macroBar');
+    expect(jsonProblems).toContain('json radius btn');
+    const generatedEdited = clone(generated);
+    generatedEdited.size.ringSm = 121;
+    expect(compareJsonWithGenerated(json, generatedEdited).join('\n')).toContain('generated size ringSm');
+    const tokensEdited = { ...real, size: { ...size, ringMdStroke: 14, macroBar: 9 } };
+    const tokenProblems = compareTokensWithChain(css, tokensEdited).join('\n');
+    expect(tokenProblems).toContain('size.ringMdStroke');
+    expect(tokenProblems).toContain('size.macroBar');
+  });
+
+  it('fails when a text style changes in tokens.css, tokens.json, the generated module or tokens.ts', () => {
+    const changed = css.replace('--t-body: 400 17px/22px var(--cc-font);', '--t-body: 400 17px/23px var(--cc-font);');
+    expect(changed).not.toBe(css);
+    expect(compareCssWithJson(changed, json).join('\n')).toContain('json type body.lineHeight');
+    expect(compareTokensWithChain(changed, real).join('\n')).toContain('tokens type.body.lineHeight');
+    const rounded = css.replace('--t-num-md: 700 22px/28px var(--cc-font-round);', '--t-num-md: 700 22px/28px var(--cc-font);');
+    expect(rounded).not.toBe(css);
+    expect(compareCssWithJson(rounded, json).join('\n')).toContain('json type numMd.family');
+    const weight = css.replace('--t-title3: 600 20px/25px var(--cc-font);', '--t-title3: 700 20px/25px var(--cc-font);');
+    expect(weight).not.toBe(css);
+    expect(compareTokensWithChain(weight, real).join('\n')).toContain('tokens type.title3.fontWeight');
+    const added = css.replace('--t-body:', '--t-brand-new: 400 10px/12px var(--cc-font);\n  --t-body:');
+    expect(added).not.toBe(css);
+    expect(compareCssWithJson(added, json).join('\n')).toContain('json type brandNew: missing');
+    expect(compareCssWithJson(added, json).join('\n')).toContain('json typeVar brandNew');
+    expect(compareTokensWithChain(added, real).join('\n')).toContain('tokens type.brandNew: missing');
+
+    const edited = clone(json);
+    edited.type.largeTitle.size = 35;
+    edited.typeVar.numXl = '--t-num-xxl';
+    const problems = compareCssWithJson(css, edited).join('\n');
+    expect(problems).toContain('json type largeTitle.size');
+    expect(problems).toContain('json typeVar numXl');
+    const generatedEdited = clone(generated);
+    generatedEdited.type.caption2.weight = 600;
+    delete generatedEdited.typeVar.callout;
+    const generatedProblems = compareJsonWithGenerated(json, generatedEdited).join('\n');
+    expect(generatedProblems).toContain('generated type caption2.weight');
+    expect(generatedProblems).toContain('generated typeVar callout');
+    const tokensEdited = {
+      ...real,
+      type: { ...textStyles, headline: { ...textStyles.headline, fontSize: 18 } },
+    };
+    expect(compareTokensWithChain(css, tokensEdited).join('\n')).toContain('tokens type.headline.fontSize');
+  });
+
+  it('fails when a typography role stops following its text style', () => {
+    const edited = {
+      ...real,
+      typography: { ...typography, body: { fontSize: 16, fontWeight: '400' } },
+    };
+    expect(compareTokensWithChain(css, edited).join('\n')).toContain('typography.body is not type.body');
+    const remapped = {
+      ...real,
+      typographyRoleSource: { ...typographyRoleSource, caption: 'ghostStyle' },
+    };
+    expect(compareTokensWithChain(css, remapped).join('\n')).toContain('ghostStyle is not in tokens.css');
   });
 
   it('fails when a value changes in the generated module', () => {
@@ -481,11 +738,39 @@ describe('one changed value fails at each link', () => {
   });
 });
 
-describe('the scales the CSS does not hold stay as they were', () => {
-  it('typography keeps the system text styles', () => {
-    expect(typography.title).toEqual({ fontSize: 34, fontWeight: '600' });
+describe('the earlier typography roles follow the text styles of the design', () => {
+  it('each role is the size and the weight of the style it reads, nothing else', () => {
+    expect(typographyRoleSource).toEqual({
+      title: 'largeTitle',
+      heading: 'title2',
+      headline: 'headline',
+      body: 'body',
+      subhead: 'subheadline',
+      footnote: 'footnote',
+      caption: 'caption1',
+      tabLabel: 'caption2',
+    });
+    for (const [role, name] of Object.entries(typographyRoleSource)) {
+      const style = json.type[name];
+      expect(typography[role as keyof typeof typography]).toEqual({
+        fontSize: style.size,
+        fontWeight: String(style.weight),
+      });
+    }
+  });
+
+  it('the roles whose size and weight were the same before keep their value', () => {
+    expect(typography.headline).toEqual({ fontSize: 17, fontWeight: '600' });
     expect(typography.body).toEqual({ fontSize: 17, fontWeight: '400' });
+    expect(typography.subhead).toEqual({ fontSize: 15, fontWeight: '400' });
+    expect(typography.footnote).toEqual({ fontSize: 13, fontWeight: '400' });
+    expect(typography.caption).toEqual({ fontSize: 12, fontWeight: '500' });
     expect(typography.tabLabel).toEqual({ fontSize: 11, fontWeight: '500' });
+  });
+
+  it('title and heading take the weight of the design (700, it was 600), with the same size', () => {
+    expect(typography.title).toEqual({ fontSize: 34, fontWeight: '700' });
+    expect(typography.heading).toEqual({ fontSize: 22, fontWeight: '700' });
   });
 
   it('getTokens returns the whole set per scheme, and a bare scheme means normal contrast', () => {

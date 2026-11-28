@@ -158,7 +158,7 @@
 
       frame(7, "Privacy, Health and ED-Safe", title("You choose what we see") +
         `<div class="group" style="margin-top:20px">
-          <div class="cell" style="align-items:flex-start;padding:14px 16px"><span class="ic" style="background:#E5243B">${ic("heart")}</span><span class="lbl">Connect Apple Health<small>Read weight and workouts. Write meals. You'll see Apple's permission sheet next.</small></span><span class="toggle on"></span></div>
+          <div class="cell" style="align-items:flex-start;padding:14px 16px"><span class="ic" style="background:var(--cc-apple-health)">${ic("heart")}</span><span class="lbl">Connect Apple Health<small>Read weight and workouts. Write meals. You'll see Apple's permission sheet next.</small></span><span class="toggle on"></span></div>
           <div class="cell" style="align-items:flex-start;padding:14px 16px"><span class="ic" style="background:#2563EB">${ic("bell")}</span><span class="lbl">Meal reminders<small>Up to 3 a day. Never about weight.</small></span><span class="toggle"></span></div>
           <div class="cell" style="align-items:flex-start;padding:14px 16px"><span class="ic" style="background:var(--cc-fat)">${ic("eyeoff")}</span><span class="lbl">ED-Safe mode<small>Hide calorie numbers everywhere, including your plan on the next screen.</small></span><span class="toggle"></span></div>
         </div>
@@ -179,7 +179,7 @@
 
       frame(9, "Your plan", title("Your plan is ready") +
         `<div class="ember" style="margin-top:20px"><div style="display:flex;gap:18px;align-items:center">
-          <div class="ring" style="--ring:120px"><svg viewBox="0 0 184 184"><circle cx="92" cy="92" r="76" fill="none" stroke="#3A342F" stroke-width="18"/><circle cx="92" cy="92" r="76" fill="none" stroke="#FF6A00" stroke-width="18" stroke-linecap="round" stroke-dasharray="477 478"/></svg><div class="center"><div class="num" style="font:700 26px/1 var(--cc-font-round)">1,750</div><div style="font:500 12px var(--cc-font);color:#ABA6A0">kcal / day</div></div></div>
+          <div class="ring" style="--ring:var(--ring-sm)"><svg viewBox="0 0 184 184"><circle cx="92" cy="92" r="76" fill="none" stroke="#3A342F" stroke-width="18"/><circle cx="92" cy="92" r="76" fill="none" stroke="#FF6A00" stroke-width="18" stroke-linecap="round" stroke-dasharray="477 478"/></svg><div class="center"><div class="num" style="font:700 26px/1 var(--cc-font-round)">1,750</div><div style="font:500 12px var(--cc-font);color:#ABA6A0">kcal / day</div></div></div>
           <div style="flex:1;font:500 14px/1.9 var(--cc-font);color:#ABA6A0"><div><span style="color:#6EA8FF">●</span> Protein <b style="color:#F7F5F2">130 g</b></div><div><span style="color:#3CCFBE">●</span> Carbs <b style="color:#F7F5F2">175 g</b></div><div><span style="color:#B794FF">●</span> Fat <b style="color:#F7F5F2">60 g</b></div></div>
         </div></div>
         <div class="group" style="margin-top:12px"><div class="cell noicon"><span class="lbl">Goal</span><span class="val">76 kg by late March</span></div><div class="cell noicon"><span class="lbl">Free scans</span><span class="val">3 a week</span></div></div>

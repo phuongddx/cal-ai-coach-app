@@ -38,18 +38,26 @@ const cssText = fs.readFileSync(path.join(root, "tokens.css"), "utf8").replace(/
 const declared = [...new Set([...cssText.matchAll(/(--cc-[a-z0-9-]+)\s*:/g)].map((m) => m[1]))].filter((v) => !/font/.test(v));
 const missing = declared.filter((v) => !Object.values(tokens.cssVar).includes(v));
 if (missing.length) { mism += missing.length; out.tokens.missingInJson = missing; }
-const scal = await page.evaluate(() => { const cs = getComputedStyle(document.documentElement); const g = (v) => cs.getPropertyValue(v).trim();
-  return { s: ["s1","s2","s3","s4","s5","s6","s8","s10","s12"].map((k) => [k, g("--" + k)]), r: ["sm","md","lg","xl","pill"].map((k) => [k, g("--r-" + k)]),
-    z: [["tap","--tap"],["btn","--btn"],["shutter","--shutter"],["ring","--ring"],["ringStroke","--ring-stroke"]].map(([k, v]) => [k, g(v)]), f: [g("--cc-font"), g("--cc-font-round")] }; });
+const scal = await page.evaluate(({ sizeKeys, typeVar }) => { const cs = getComputedStyle(document.documentElement); const g = (v) => cs.getPropertyValue(v).trim();
+  return { s: ["s1","s2","s3","s4","s5","s6","s8","s10","s12"].map((k) => [k, g("--" + k)]), r: ["sm","md","lg","xl","pill","btn"].map((k) => [k, g("--r-" + k)]),
+    z: Object.keys(sizeKeys).map((k) => [k, g(sizeKeys[k])]), f: [g("--cc-font"), g("--cc-font-round")],
+    t: Object.entries(typeVar).map(([k, v]) => [k, g(v)]) }; }, { sizeKeys: Object.fromEntries(Object.keys(tokens.size).map((k) => [k, "--" + k.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase())])), typeVar: tokens.typeVar });
 for (const [k, v] of scal.s) { checked++; if (parseFloat(v) !== tokens.space[k]) { mism++; out.tokens["space." + k] = [v, tokens.space[k]]; } }
 for (const [k, v] of scal.r) { checked++; if (parseFloat(v) !== tokens.radius[k]) { mism++; out.tokens["radius." + k] = [v, tokens.radius[k]]; } }
 for (const [k, v] of scal.z) { checked++; if (parseFloat(v) !== tokens.size[k]) { mism++; out.tokens["size." + k] = [v, tokens.size[k]]; } }
+// type: parse the computed custom property and compare with tokens.json.type
+const famOf = (v) => (norm(v).includes(norm(tokens.font.rounded)) ? "rounded" : norm(v).includes(norm(tokens.font.text)) ? "text" : "?");
+for (const [k, v] of scal.t) { checked++; const m = v.match(/^(\d{3})\s+([\d.]+)px\/([\d.]+)px\s+(.+)$/); const j = tokens.type[k];
+  if (!m || !j || +m[1] !== j.weight || +m[2] !== j.size || +m[3] !== j.lineHeight || famOf(m[4]) !== j.family) { mism++; out.tokens["type." + k] = [v, j]; } }
+if (Object.keys(tokens.type).length !== scal.t.length) { mism++; out.tokens["type:count"] = [scal.t.length, Object.keys(tokens.type).length]; }
+const declaredT = [...new Set([...cssText.matchAll(/(--t-[a-z0-9-]+)\s*:/g)].map((m) => m[1]))];
+const missingT = declaredT.filter((v) => !Object.values(tokens.typeVar).includes(v)); if (missingT.length) { mism += missingT.length; out.tokens.missingTypeInJson = missingT; }
 checked += 2; if (norm(scal.f[0]) !== norm(tokens.font.text)) { mism++; out.tokens["font.text"] = [scal.f[0], tokens.font.text]; }
 if (norm(scal.f[1]) !== norm(tokens.font.rounded)) { mism++; out.tokens["font.rounded"] = [scal.f[1], tokens.font.rounded]; }
 console.log(`TOKENS: ${checked} values checked, ${mism} mismatches`);
 
 /* ---------- 2. contrast ---------- */
-const scopes = (process.env.SCOPES || "#diaryEditRow,#exportRow,#onbDark,#billingDarkRow,#hcRow .phone,#authRow,#targetRow,#scanSheetsRow,#paywallStateRow,#darkMoreRow").split(",");
+const scopes = (process.env.SCOPES || "#diaryEditRow,#exportRow,#onbDark,#billingDarkRow,#hcRow .phone,#authRow,#authCodeRow,#targetRow,#scanSheetsRow,#paywallStateRow,#darkMoreRow").split(",");
 const phoneHandles = await page.$$(scopes.map((s) => s.trim().includes(".phone") ? s.trim() : `${s.trim()} .phone`).join(","));
 let worst = 99, n = 0;
 for (const ph of phoneHandles) {

@@ -10,7 +10,8 @@ jest.mock('react/jsx-runtime', () => {
   return jest.requireActual(`${root}/react/jsx-runtime`);
 });
 
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
 import { InsightCard } from './InsightCard';
 
@@ -33,5 +34,28 @@ describe('InsightCard', () => {
     );
     expect(screen.getByTestId('insight-card:info')).toBeOnTheScreen();
     expect(screen.getByText('Protein is up this week.', { includeHiddenElements: true })).toBeOnTheScreen();
+  });
+
+  it('draws an Ember icon in the tile when iconName is given', async () => {
+    await render(<InsightCard title="Trend" text="Up." iconName="chart" />);
+    expect(screen.getByTestId('icon:chart', { includeHiddenElements: true })).toBeOnTheScreen();
+  });
+
+  it('shows no action row by default', async () => {
+    await render(<InsightCard title="Trend" text="Up." />);
+    expect(screen.queryByTestId('insight-card:accent:action')).toBeNull();
+  });
+
+  it('renders one action row: label, role, testID, 44 pt target, calls onPress', async () => {
+    const onPress = jest.fn();
+    await render(
+      <InsightCard title="Trend" text="Up." action={{ label: 'See weekly review', onPress, testID: 'insight.open' }} />,
+    );
+    const action = screen.getByTestId('insight.open');
+    expect(action).toHaveProp('accessibilityRole', 'button');
+    expect(action).toHaveProp('accessibilityLabel', 'See weekly review');
+    expect(StyleSheet.flatten(action.props.style).minHeight).toBeGreaterThanOrEqual(44);
+    await fireEvent.press(action);
+    expect(onPress).toHaveBeenCalledTimes(1);
   });
 });
