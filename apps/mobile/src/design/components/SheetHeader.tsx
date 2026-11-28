@@ -3,7 +3,9 @@
  * left, the title in the middle (600 17), an optional close glass button on the right. A missing
  * button leaves a 44 pt spacer so the title stays centred. Built from `GlassIconButton`.
  *
- * testIDs: `<testID>` (the bar), `<testID>.title`, `<testID>.back`, `<testID>.close`.
+ * testIDs: `<testID>` (the bar), `<testID>.title`, `<testID>.back`, `<testID>.close`. A screen whose
+ * harness identifiers are fixed (the scan review: `scan.retake`, `scan.review`, `scan.close`) passes
+ * `backTestID`, `titleTestID` and `closeTestID`, which win over the derived ones.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
@@ -19,6 +21,9 @@ export type SheetHeaderProps = {
   onClose?: () => void;
   closeAccessibilityLabel?: string;
   testID?: string;
+  backTestID?: string;
+  titleTestID?: string;
+  closeTestID?: string;
 };
 
 export function SheetHeader({
@@ -28,6 +33,9 @@ export function SheetHeader({
   onClose,
   closeAccessibilityLabel = 'Close',
   testID = 'sheet-header',
+  backTestID,
+  titleTestID,
+  closeTestID,
 }: SheetHeaderProps) {
   const { colors } = useTokens();
   return (
@@ -38,14 +46,14 @@ export function SheetHeader({
             icon="back"
             onPress={onBack}
             accessibilityLabel={backAccessibilityLabel}
-            testID={`${testID}.back`}
+            testID={backTestID ?? `${testID}.back`}
           />
         )}
       </View>
       <Text
         accessibilityRole="header"
         numberOfLines={1}
-        testID={`${testID}.title`}
+        testID={titleTestID ?? `${testID}.title`}
         style={[styles.title, { color: colors.text }]}
       >
         {title}
@@ -56,7 +64,7 @@ export function SheetHeader({
             icon="x"
             onPress={onClose}
             accessibilityLabel={closeAccessibilityLabel}
-            testID={`${testID}.close`}
+            testID={closeTestID ?? `${testID}.close`}
           />
         )}
       </View>

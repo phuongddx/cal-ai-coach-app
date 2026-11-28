@@ -1,8 +1,17 @@
 name: CI
 
+# The SwiftUI app in native/. It runs only when a change touches that app or this file: every
+# other push is React Native work, and a macOS runner waited hours for nothing. The workflow goes
+# away with the cleanup of native/.
 on:
   push:
+    paths:
+      - 'native/**'
+      - '.github/workflows/ci.yml'
   pull_request:
+    paths:
+      - 'native/**'
+      - '.github/workflows/ci.yml'
   workflow_dispatch:
 
 jobs:

@@ -63,4 +63,25 @@ describe('SheetHeader', () => {
     expect(screen.getByTestId('header.close')).toBeOnTheScreen();
     expect(screen.getByTestId('header')).toBeOnTheScreen();
   });
+
+  it('lets a screen name its own back, title and close identifiers', async () => {
+    const onBack = jest.fn();
+    const onClose = jest.fn();
+    await render(
+      <SheetHeader
+        title="Review"
+        onBack={onBack}
+        onClose={onClose}
+        backTestID="scan.retake"
+        titleTestID="scan.review"
+        closeTestID="scan.close"
+      />,
+    );
+    expect(screen.getByTestId('scan.review')).toHaveProp('accessibilityRole', 'header');
+    await userEvent.press(screen.getByTestId('scan.retake'));
+    await userEvent.press(screen.getByTestId('scan.close'));
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('sheet-header.back')).toBeNull();
+  });
 });

@@ -10,6 +10,7 @@ import { SymbolView } from 'expo-symbols';
 
 import { radius, space, typography, useTokens } from '../tokens';
 
+import { carriesCalorieFigure } from '../calorieFigure';
 import { useEdSafeMode } from '../edSafe';
 
 export type FoodRowProps = {
@@ -18,11 +19,24 @@ export type FoodRowProps = {
   kcal?: number;
   compactBadge?: ReactNode;
   syncPending?: boolean;
-  /** Short label drawn on the row under the meta, such as "Edited". */
+  /** Short label drawn on the row under the meta, such as "Edited". Hidden under ED-safe when it holds a calorie word or figure. */
   chip?: string;
   /** Identifier of the chip when the caller must keep its own (`diary.editedChip.<id>`). Default `food-row-chip:<title>`. */
   chipTestID?: string;
+  /** Draws the chevron at the end of the row. Default true; the meal rows of Today (frames 07 and 08) draw none. */
+  chevron?: boolean;
+  /**
+   * Draws the number without its unit ("624", frames 07 and 08). Default false ("624 kcal"). The
+   * spoken label of the number keeps the unit. Under ED-safe the number is not drawn at all.
+   */
+  unitHidden?: boolean;
 };
+
+/** The pure ED-safe rule for the chip: kept in every mode, hidden under ED-safe only if it holds a calorie word or figure. */
+export function foodRowVisibleChip(chip: string | undefined, edSafeMode: boolean): string | undefined {
+  if (chip == null || chip.length === 0) return undefined;
+  return edSafeMode && carriesCalorieFigure(chip) ? undefined : chip;
+}
 
 export function FoodRow({
   title,
@@ -32,9 +46,12 @@ export function FoodRow({
   syncPending = false,
   chip,
   chipTestID,
+  chevron = true,
+  unitHidden = false,
 }: FoodRowProps) {
   const { colors } = useTokens();
   const edSafeMode = useEdSafeMode();
+  const visibleChip = foodRowVisibleChip(chip, edSafeMode);
   return (
     <View
       testID={`food-row:${title}`}
@@ -53,12 +70,12 @@ export function FoodRow({
           </Text>
         )}
         {compactBadge}
-        {chip != null && chip.length > 0 && (
+        {visibleChip != null && (
           <View
             testID={chipTestID ?? `food-row-chip:${title}`}
             style={[styles.chip, { backgroundColor: colors.fill }]}
           >
-            <Text style={[styles.chipText, { color: colors.text2 }]}>{chip}</Text>
+            <Text style={[styles.chipText, { color: colors.text2 }]}>{visibleChip}</Text>
           </View>
         )}
       </View>
@@ -69,11 +86,23 @@ export function FoodRow({
         </View>
       )}
       {!edSafeMode && kcal != null && (
-        <Text style={[styles.kcal, { color: colors.text }]} testID={`food-row-kcal:${title}`}>
-          {`${kcal} kcal`}
+        <Text
+          style={[styles.kcal, { color: colors.text }]}
+          testID={`food-row-kcal:${title}`}
+          accessibilityLabel={unitHidden ? `${kcal} kcal` : undefined}
+        >
+          {unitHidden ? `${kcal}` : `${kcal} kcal`}
         </Text>
       )}
-      <SymbolView name="chevron.right" size={12} weight="semibold" tintColor={colors.text3} />
+      {chevron && (
+        <SymbolView
+          testID={`food-row-chevron:${title}`}
+          name="chevron.right"
+          size={12}
+          weight="semibold"
+          tintColor={colors.text3}
+        />
+      )}
     </View>
   );
 }

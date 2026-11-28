@@ -51,7 +51,7 @@ export default function SpikeConsoleScreen() {
       <View testID="debug:flags:card" style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
         <Text style={[styles.cardTitle, { color: c.text }]}>Flags</Text>
         <Text style={[styles.status, { color: c.text3 }]}>
-          Process arguments are read by the native slot (U-50); these switches set the same flags at runtime.
+          Launch arguments are read once at start (a debug build only); these switches set the same flags at runtime.
         </Text>
         {FLAG_SWITCHES.map(({ flag, title, note }) => (
           <FlagRow

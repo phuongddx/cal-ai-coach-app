@@ -1,47 +1,58 @@
 /**
- * TodayView.swift — the Today screen, built from the design system on the tokens. The ED-safe
- * policy is owned by the components (invariant I7): the ring, the food rows and the collapse
- * wrapper read the mode themselves; nothing in this file branches on it.
+ * TodayView — the Today screen on Ember (U-76; frames Today light, dark offline, ED-Safe). Built from the
+ * design system on the tokens. The ED-safe policy is owned by the components (invariant I7): the ring (with
+ * its `aside` and `edSafeAside`), the food rows and the collapse wrapper read the mode themselves; nothing in
+ * this file branches on it.
  *
- * Identifiers: each Swift `accessibilityIdentifier` is the `testID` of the same element.
+ * Identifiers: each Swift `accessibilityIdentifier` is the `testID` of the same element; the ones U-76 adds
+ * are listed in `docs/rn-migration/parity-detail/today.md`.
  */
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  BannerNote,
   CalorieRing,
   ConfidenceBadge,
   EdSafeCollapse,
+  EmberCard,
   FoodRow,
+  GlassIconButton,
+  Icon,
   MacroBar,
-  MacroMiniCard,
-  OfflineBadge,
   PrimaryButton,
   SectionHeader,
-  StreakCard,
+  fontFamily,
   radius,
   size,
   space,
-  typography,
+  streakA11yLabel,
+  textStyles,
   useTokens,
-  withAlpha,
 } from '../../design';
 import { WaterCard, WaterLogSheet } from '../diary/screens/WaterCard';
 
 import { FAB_BOTTOM_PADDING } from './ScanFab';
-import { goalSubheadText, headerDateText, mealMeta } from './todayFormat';
+import {
+  OFFLINE_CHIP_TEXT,
+  edSafeGuidance,
+  freezeLineText,
+  groupedNumber,
+  headerSubtitleText,
+  macroValueText,
+  mealMeta,
+  pendingMealMeta,
+  streakTitleText,
+} from './todayFormat';
 import {
   consumedKcal,
   consumedMacro,
   dayProgress,
   goalKcal,
   goalMacro,
-  stepsDisplayValue,
   waterGlasses,
   weekStripDays,
+  type MacroName,
   type TodayModel,
   type TodaySnapshot,
 } from './todayModel';
@@ -52,10 +63,8 @@ export type TodayViewProps = {
   model: TodayModel;
   isOffline?: boolean;
   onStartSetup?: () => void;
-  /** A meal row (or the "Open diary" link) opens the diary day sheet for this day. */
+  /** A meal row, the header calendar button or the "Diary" link opens the diary day sheet for this day. */
   onOpenDiary?: (day: Date) => void;
-  /** The Steps card when HealthKit access was denied (Swift opens the Settings app). */
-  onOpenHealthSettings?: () => void;
 };
 
 /** CCSpace.xl5: the gap the Swift list keeps between the last row and the Scan button. */
@@ -71,23 +80,12 @@ export function todayBottomPadding(safeAreaBottom: number): number {
   return safeAreaBottom + FAB_BOTTOM_PADDING + size.fab + TODAY_BOTTOM_INSET;
 }
 
-export function TodayView({
-  model,
-  isOffline = false,
-  onStartSetup,
-  onOpenDiary,
-  onOpenHealthSettings,
-}: TodayViewProps) {
+export function TodayView({ model, isOffline = false, onStartSetup, onOpenDiary }: TodayViewProps) {
   const { colors } = useTokens();
   const insets = useSafeAreaInsets();
   const snapshot = useTodaySnapshot(model);
   const [weekStripVisible, setWeekStripVisible] = useState(true);
   const [waterSheetOpen, setWaterSheetOpen] = useState(false);
-
-  // JIT trigger: the Steps card asks for access the first time the screen appears, never at launch.
-  useEffect(() => {
-    void model.loadStepsIfNeeded();
-  }, [model]);
 
   const goal = goalKcal(snapshot);
   const glasses = waterGlasses(snapshot);
@@ -114,13 +112,8 @@ export function TodayView({
           snapshot={snapshot}
           isOffline={isOffline}
           onToggleWeekStrip={() => setWeekStripVisible((visible) => !visible)}
+          onOpenDiary={() => onOpenDiary?.(snapshot.selectedDay)}
         />
-        {isOffline && (
-          <BannerNote
-            text="You're offline — logging still works. Changes sync when you're back online."
-            variant="info"
-          />
-        )}
         {weekStripVisible && (
           <WeekStripView
             days={weekStripDays(model.today())}
@@ -129,18 +122,10 @@ export function TodayView({
           />
         )}
         <HeroCard snapshot={snapshot} goal={goal} now={model.today()} onStartSetup={onStartSetup} />
-        <MacroSection snapshot={snapshot} />
+        <MacroGrid snapshot={snapshot} />
         <WaterCard waterMl={snapshot.waterMl} glasses={glasses} onTap={() => setWaterSheetOpen(true)} />
-        <ScoreAndSteps snapshot={snapshot} onOpenHealthSettings={onOpenHealthSettings} />
-        <View testID="today.streakCard">
-          <StreakCard
-            emoji="🔥"
-            streak={snapshot.streak?.currentStreak ?? 0}
-            title="Keep it up!"
-            freezesLeft={snapshot.streak?.freezesLeft ?? 0}
-          />
-        </View>
-        <RecentMeals snapshot={snapshot} onOpenDiary={onOpenDiary} />
+        <StreakRow snapshot={snapshot} />
+        <Meals snapshot={snapshot} onOpenDiary={onOpenDiary} />
       </ScrollView>
 
       <Modal
@@ -169,39 +154,49 @@ export function TodayView({
   );
 }
 
+/** Frame header: the date over the title on the left; the caution chip (offline) and the calendar glass button on the right. */
 function Header({
   snapshot,
   isOffline,
   onToggleWeekStrip,
+  onOpenDiary,
 }: {
   snapshot: TodaySnapshot;
   isOffline: boolean;
   onToggleWeekStrip: () => void;
+  onOpenDiary: () => void;
 }) {
   const { colors } = useTokens();
   return (
     <View style={styles.header}>
-      <Text accessibilityRole="header" style={[styles.title, { color: colors.textPrimary }]}>
-        Today
-      </Text>
-      <View style={styles.spacer} />
+      <View style={styles.headerText}>
+        <Pressable
+          testID="today.dateSelector"
+          accessibilityRole="button"
+          accessibilityLabel="Select date"
+          accessibilityHint="Shows or hides the week strip"
+          onPress={onToggleWeekStrip}
+          hitSlop={8}
+        >
+          <Text style={[styles.subtitle, { color: colors.text2 }]}>{headerSubtitleText(snapshot.selectedDay)}</Text>
+        </Pressable>
+        <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
+          Today
+        </Text>
+      </View>
       {isOffline && (
-        <View testID="offline.badge">
-          <OfflineBadge />
+        <View
+          testID="offline.badge"
+          accessible
+          accessibilityLabel={OFFLINE_CHIP_TEXT}
+          style={[styles.offlineChip, { backgroundColor: colors.cautionTint }]}
+        >
+          <Text style={[styles.offlineText, { color: colors.cautionInk }]} numberOfLines={1}>
+            {OFFLINE_CHIP_TEXT}
+          </Text>
         </View>
       )}
-      <Pressable
-        testID="today.dateSelector"
-        accessibilityRole="button"
-        accessibilityLabel="Select date"
-        onPress={onToggleWeekStrip}
-        style={styles.dateSelector}
-      >
-        <Text style={[typography.subhead, { color: colors.textSecondary }]}>
-          {headerDateText(snapshot.selectedDay)}
-        </Text>
-        <SymbolView name="chevron.down" size={12} weight="medium" tintColor={colors.textSecondary} />
-      </Pressable>
+      <GlassIconButton icon="cal" accessibilityLabel="Open diary" testID="today.openDiary" onPress={onOpenDiary} />
     </View>
   );
 }
@@ -218,164 +213,180 @@ function HeroCard({
   onStartSetup?: () => void;
 }) {
   const { colors } = useTokens();
-  return (
-    <View style={[styles.card, styles.hero, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      {goal === null ? (
+  if (goal === null) {
+    return (
+      <View style={[styles.card, styles.hero, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View testID="today.emptyState" style={styles.empty}>
-          <Text style={[typography.heading, styles.centered, { color: colors.textPrimary }]}>Set up your plan</Text>
-          <Text style={[typography.subhead, styles.centered, { color: colors.textSecondary }]}>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>Set up your plan</Text>
+          <Text style={[styles.emptyBody, { color: colors.text2 }]}>
             Answer a few questions and we&apos;ll calculate your daily calorie and macro targets.
           </Text>
           <View testID="today.startSetup" style={styles.fullWidth}>
             <PrimaryButton title="Start setup" action={() => onStartSetup?.()} />
           </View>
         </View>
-      ) : (
-        <>
-          <View testID="today.ring">
-            <CalorieRing
-              consumed={consumedKcal(snapshot)}
-              goal={goal}
-              variant="hero"
-              dayProgress={dayProgress(now)}
-            />
-          </View>
-          <EdSafeCollapse>
-            <Text style={[typography.subhead, { color: colors.textSecondary }]}>
-              {`of ${goalSubheadText(goal)} kcal goal`}
-            </Text>
-          </EdSafeCollapse>
-        </>
-      )}
+      </View>
+    );
+  }
+  const eaten = consumedKcal(snapshot);
+  const guidance = edSafeGuidance(now);
+  return (
+    <EmberCard>
+      <View testID="today.ring">
+        <CalorieRing
+          consumed={eaten}
+          goal={goal}
+          variant="md"
+          onEmber
+          centerLabel="kcal left"
+          dayProgress={dayProgress(now)}
+          aside={
+            <View style={styles.asideColumn}>
+              <KcalFigure testID="today.eaten" label="Eaten" value={groupedNumber(eaten)} />
+              <KcalFigure testID="today.goalKcal" label="Goal" value={groupedNumber(goal)} />
+            </View>
+          }
+          edSafeAside={
+            <View>
+              <View
+                testID="today.edSafeGuidance"
+                accessible
+                accessibilityLabel={`${guidance.lead} ${guidance.next}`}
+              >
+                <Text style={[styles.guidance, { color: colors.emberText2 }]}>
+                  {`${guidance.lead} `}
+                  <Text style={{ color: colors.emberText }}>{guidance.next}</Text>
+                </Text>
+              </View>
+              {/* The kcal figures keep their identifiers on collapsed wrappers (frame 09). */}
+              <View style={styles.collapsed}>
+                <View testID="today.eaten" />
+                <View testID="today.goalKcal" />
+              </View>
+            </View>
+          }
+        />
+      </View>
+    </EmberCard>
+  );
+}
+
+/** One "Eaten" / "Goal" pair of the ember card; hidden under ED-safe by the ring's aside choice, plus the collapse wrapper. */
+function KcalFigure({ testID, label, value }: { testID: string; label: string; value: string }) {
+  const { colors } = useTokens();
+  return (
+    <View testID={testID} accessible accessibilityLabel={`${label} ${value} kilocalories`}>
+      <EdSafeCollapse>
+        <Text style={[styles.figureLabel, { color: colors.emberText2 }]}>{label}</Text>
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
+          style={[styles.figureValue, { color: colors.emberText }]}
+        >
+          {value}
+        </Text>
+      </EdSafeCollapse>
     </View>
   );
 }
 
-function MacroSection({ snapshot }: { snapshot: TodaySnapshot }) {
+const MACRO_LABELS: Record<MacroName, string> = { protein: 'Protein', carbs: 'Carbs', fat: 'Fat', fiber: 'Fiber' };
+
+/** The 2 by 2 grid of the frame: two rows of two cells, labels and values on one line. */
+function MacroGrid({ snapshot }: { snapshot: TodaySnapshot }) {
   const { colors } = useTokens();
-  const fiber = consumedMacro(snapshot, 'fiber');
-  const fiberGoal = goalMacro(snapshot, 'fiber');
+  const rows: MacroName[][] = [
+    ['protein', 'carbs'],
+    ['fat', 'fiber'],
+  ];
   return (
-    <View style={styles.macroSection}>
-      <View style={styles.macroRow}>
-        {(['protein', 'carbs', 'fat'] as const).map((macro) => (
-          <MacroMiniCard
-            key={macro}
-            macro={macro}
-            value={consumedMacro(snapshot, macro)}
-            goal={goalMacro(snapshot, macro)}
-          />
-        ))}
-      </View>
+    <View style={[styles.card, styles.macroCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      {rows.map((row) => (
+        <View key={row.join('-')} testID="today.macroRow" style={styles.macroRow}>
+          {row.map((macro) => {
+            const value = consumedMacro(snapshot, macro);
+            const goal = goalMacro(snapshot, macro);
+            return (
+              <View
+                key={macro}
+                testID={`today.macroCard.${macro}`}
+                accessible
+                accessibilityLabel={`${MACRO_LABELS[macro]} ${Math.round(value)} of ${Math.round(goal)} grams`}
+                style={styles.macroCell}
+              >
+                <View style={styles.macroText}>
+                  <Text numberOfLines={1} style={[styles.macroLabel, { color: colors.text2 }]}>
+                    {MACRO_LABELS[macro]}
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.6}
+                    style={[styles.macroValue, { color: colors.text }]}
+                  >
+                    {macroValueText(value, goal)}
+                  </Text>
+                </View>
+                <MacroBar macro={macro} value={value} goal={goal} />
+              </View>
+            );
+          })}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** Streak card of the frames: flame tile, "12-day streak" and the freeze line. Shown in every mode. */
+function StreakRow({ snapshot }: { snapshot: TodaySnapshot }) {
+  const { colors } = useTokens();
+  const days = snapshot.streak?.currentStreak ?? 0;
+  const freezes = snapshot.streak?.freezesLeft ?? 0;
+  return (
+    <View testID="today.streakCard">
       <View
         accessible
-        accessibilityLabel={`Fiber ${Math.round(fiber)} of ${Math.round(fiberGoal)} grams`}
-        style={[styles.card, styles.fiber, { backgroundColor: colors.card, borderColor: colors.border }]}
+        accessibilityLabel={streakA11yLabel(days, freezes)}
+        style={[styles.card, styles.streak, { backgroundColor: colors.card, borderColor: colors.border }]}
       >
-        <View style={styles.fiberHeader}>
-          <View style={[styles.dot, { backgroundColor: colors.macroFiber }]} />
-          <Text style={[typography.caption, { color: colors.textSecondary }]}>Fiber</Text>
-          <View style={styles.spacer} />
-          <Text style={[styles.fiberValue, { color: colors.textPrimary }]}>
-            {`${Math.round(fiber)}/${Math.round(fiberGoal)}g`}
-          </Text>
+        <View style={[styles.streakTile, { backgroundColor: colors.accentTint }]}>
+          <Icon name="flame" size={22} color={colors.accentInk} />
         </View>
-        <MacroBar macro="fiber" value={fiber} goal={fiberGoal} />
+        <View style={styles.streakText}>
+          <Text style={[styles.streakTitle, { color: colors.text }]}>{streakTitleText(days)}</Text>
+          <Text style={[styles.streakLine, { color: colors.text2 }]}>{freezeLineText(freezes)}</Text>
+        </View>
       </View>
     </View>
   );
 }
 
-function ScoreAndSteps({
-  snapshot,
-  onOpenHealthSettings,
-}: {
-  snapshot: TodaySnapshot;
-  onOpenHealthSettings?: () => void;
-}) {
+function Meals({ snapshot, onOpenDiary }: { snapshot: TodaySnapshot; onOpenDiary?: (day: Date) => void }) {
   const { colors } = useTokens();
   return (
-    <View style={styles.statRow}>
-      <EdSafeCollapse>
-        <StatCard
-          testID="today.healthScore"
-          caption="Health Score"
-          value="—"
-          tileTint={withAlpha(colors.success, 0.1)}
-          tile={<Text style={[styles.scoreDash, { color: colors.successInk }]}>—</Text>}
-        />
-      </EdSafeCollapse>
-      <StatCard
-        testID="today.stepsCard"
-        caption="Steps"
-        value={stepsDisplayValue(snapshot)}
-        tileTint={withAlpha(colors.appleHealth, 0.1)}
-        tile={<SymbolView name="figure.walk" size={20} tintColor={colors.appleHealth} />}
-        onPress={snapshot.stepsAccessDenied ? onOpenHealthSettings : undefined}
-      />
-    </View>
-  );
-}
-
-function StatCard({
-  testID,
-  caption,
-  value,
-  tile,
-  tileTint,
-  onPress,
-}: {
-  testID: string;
-  caption: string;
-  value: string;
-  tile: ReactNode;
-  tileTint: string;
-  onPress?: () => void;
-}) {
-  const { colors } = useTokens();
-  return (
-    <Pressable
-      testID={testID}
-      accessible
-      accessibilityLabel={caption}
-      accessibilityRole={onPress === undefined ? undefined : 'button'}
-      disabled={onPress === undefined}
-      onPress={onPress}
-      style={[styles.card, styles.stat, { backgroundColor: colors.card, borderColor: colors.border }]}
-    >
-      <View style={[styles.statTile, { backgroundColor: tileTint }]}>{tile}</View>
-      <View style={styles.statText}>
-        <Text style={[typography.footnote, { color: colors.textSecondary }]}>{caption}</Text>
-        <Text style={[typography.headline, { color: colors.textPrimary }]}>{value}</Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function RecentMeals({
-  snapshot,
-  onOpenDiary,
-}: {
-  snapshot: TodaySnapshot;
-  onOpenDiary?: (day: Date) => void;
-}) {
-  const { colors } = useTokens();
-  return (
-    <View style={styles.recent}>
-      <View style={styles.recentHeader}>
-        <SectionHeader title="Recent meals" />
+    <View style={styles.meals}>
+      <View style={styles.mealsHeader}>
+        <SectionHeader title="Meals" />
         <View style={styles.spacer} />
         <Pressable
-          testID="today.openDiary"
+          testID="today.mealsDiary"
           accessibilityRole="button"
-          accessibilityLabel="Open diary"
+          accessibilityLabel="Diary"
           onPress={() => onOpenDiary?.(snapshot.selectedDay)}
           hitSlop={8}
+          style={styles.diaryLink}
         >
-          <Text style={[typography.caption, { color: colors.accentInk }]}>Open diary</Text>
+          <Text style={[styles.diaryLinkText, { color: colors.accentInk }]}>Diary</Text>
         </Pressable>
       </View>
-      <View testID="today.recentMeals">
+      <View
+        testID="today.recentMeals"
+        style={[styles.card, styles.mealsCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+      >
+        {snapshot.meals.length === 0 && (
+          <Text style={[styles.noMeals, { color: colors.text2 }]}>No meals logged yet</Text>
+        )}
         {snapshot.meals.map((meal) => (
           <Pressable
             key={meal.id}
@@ -386,12 +397,11 @@ function RecentMeals({
           >
             <FoodRow
               title={meal.title}
-              meta={mealMeta(meal.mealSlot, meal.loggedAt)}
+              meta={pendingMealMeta(mealMeta(meal.mealSlot, meal.loggedAt), !meal.isSynced)}
               kcal={meal.kcal ?? undefined}
               compactBadge={
                 meal.confidence === null ? undefined : <ConfidenceBadge confidence={meal.confidence} compact />
               }
-              syncPending={!meal.isSynced}
             />
           </Pressable>
         ))}
@@ -404,27 +414,46 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: space.lg, gap: space.lg },
-  header: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
-  title: { fontSize: 34, fontWeight: '600' },
+  header: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  headerText: { flex: 1, minWidth: 0 },
+  subtitle: { fontSize: textStyles.subheadline.fontSize, fontWeight: '500' },
+  title: { fontSize: textStyles.largeTitle.fontSize, lineHeight: textStyles.largeTitle.lineHeight, fontWeight: '700' },
+  offlineChip: {
+    height: 32,
+    borderRadius: radius.full,
+    paddingHorizontal: space.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  offlineText: { fontSize: textStyles.footnote.fontSize, fontWeight: '600' },
   spacer: { flex: 1 },
-  dateSelector: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  card: { borderWidth: 1, borderRadius: radius.lg },
-  hero: { alignItems: 'center', gap: space.md, padding: space.xl },
+  card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: radius.lg },
+  hero: { alignItems: 'center', padding: space.xl },
   empty: { alignItems: 'center', gap: space.md, alignSelf: 'stretch' },
-  centered: { textAlign: 'center' },
+  emptyTitle: { fontSize: textStyles.title2.fontSize, fontWeight: '600', textAlign: 'center' },
+  emptyBody: { fontSize: textStyles.subheadline.fontSize, textAlign: 'center' },
   fullWidth: { alignSelf: 'stretch' },
-  macroSection: { gap: space.md },
-  macroRow: { flexDirection: 'row', gap: space.sm },
-  fiber: { padding: space.md, gap: space.xs },
-  fiberHeader: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  fiberValue: { fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  statRow: { flexDirection: 'row', gap: space.sm },
-  stat: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md },
-  statTile: { width: 44, height: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  scoreDash: { fontSize: 18, fontWeight: '600' },
-  statText: { gap: 2 },
-  recent: { gap: space.xs },
-  recentHeader: { flexDirection: 'row', alignItems: 'center' },
+  asideColumn: { gap: space.md },
+  figureLabel: { fontSize: textStyles.footnote.fontSize, fontWeight: '500' },
+  figureValue: { fontSize: 20, lineHeight: 24, fontWeight: '700', fontFamily: fontFamily.round, fontVariant: ['tabular-nums'] },
+  guidance: { fontSize: textStyles.body.fontSize - 2, lineHeight: 22 },
+  collapsed: { height: 0, overflow: 'hidden' },
+  macroCard: { padding: space.lg, gap: space.lg },
+  macroRow: { flexDirection: 'row', gap: space.lg },
+  macroCell: { flex: 1, minWidth: 0, gap: space.sm },
+  macroText: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: space.sm },
+  macroLabel: { fontSize: textStyles.footnote.fontSize, fontWeight: '500' },
+  macroValue: { flexShrink: 1, fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  streak: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md },
+  streakTile: { width: size.tap, height: size.tap, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  streakText: { flex: 1, gap: 2 },
+  streakTitle: { fontSize: 16, fontWeight: '600' },
+  streakLine: { fontSize: textStyles.footnote.fontSize },
+  meals: { gap: space.sm },
+  mealsHeader: { flexDirection: 'row', alignItems: 'center' },
+  diaryLink: { minHeight: size.tap, justifyContent: 'center' },
+  diaryLinkText: { fontSize: textStyles.subheadline.fontSize, fontWeight: '600' },
+  mealsCard: { paddingHorizontal: space.md },
+  noMeals: { fontSize: textStyles.subheadline.fontSize, paddingVertical: space.lg, textAlign: 'center' },
   sheetHost: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
 });

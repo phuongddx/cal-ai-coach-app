@@ -52,3 +52,19 @@ describe('ConfidenceBadge rendering', () => {
     expect(screen.getByText('High — single item', { includeHiddenElements: true })).toBeOnTheScreen();
   });
 });
+
+describe('ConfidenceBadge confidence copy (scan Review)', () => {
+  it('says the confidence and nothing about the dish', async () => {
+    expect(confidenceLabel('high', 'confidence')).toBe('High confidence');
+    expect(confidenceLabel('medium', 'confidence')).toBe('Medium confidence');
+    expect(confidenceLabel('low', 'confidence')).toBe('Low confidence');
+    await render(<ConfidenceBadge confidence={0.76} copy="confidence" />);
+    expect(screen.getByText('Medium confidence')).toBeOnTheScreen();
+    expect(screen.queryByText('Medium — mixed dish')).toBeNull();
+  });
+
+  it('keeps the dish copy by default', async () => {
+    await render(<ConfidenceBadge confidence={0.92} />);
+    expect(screen.getByText('High — single item')).toBeOnTheScreen();
+  });
+});
