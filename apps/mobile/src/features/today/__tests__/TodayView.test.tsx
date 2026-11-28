@@ -262,6 +262,15 @@ describe('TodayView', () => {
     expect(screen.getAllByText(/syncs later/)).toHaveLength(1);
   });
 
+  it('draws each meal kcal as the bare number, with no chevron (frames 07 and 08)', async () => {
+    const { model } = await makeModel([meal('a', 'Oats', 320)]);
+    await render(inProvider(<TodayView model={model} />));
+    expect(screen.getByTestId('food-row-kcal:Oats')).toHaveTextContent(/^320$/);
+    expect(screen.getByLabelText('320 kcal')).toBeOnTheScreen(); // the spoken label keeps the unit
+    expect(screen.queryByText('320 kcal')).toBeNull();
+    expect(screen.queryByTestId('food-row-chevron:Oats')).toBeNull();
+  });
+
   it('says so under Meals when the day has none', async () => {
     const { model } = await makeModel([]);
     await render(inProvider(<TodayView model={model} />));

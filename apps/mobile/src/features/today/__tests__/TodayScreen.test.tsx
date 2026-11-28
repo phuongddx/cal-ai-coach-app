@@ -102,7 +102,7 @@ describe('TodayDiarySnapshotTests twins', () => {
         expect(ring.getByLabelText(/calories remaining of 2150 goal/)).toBeOnTheScreen();
         expect(within(screen.getByTestId('today.goalKcal')).getByText('2,150')).toBeOnTheScreen(); // U-76: was the line "of 2,150 kcal goal"
         expect(screen.getByText('kcal left')).toBeOnTheScreen();
-        expect(screen.getByTestId('food-row-kcal:Spaghetti Bolognese')).toHaveTextContent('543 kcal');
+        expect(screen.getByTestId('food-row-kcal:Spaghetti Bolognese')).toHaveTextContent(/^543$/); // U-76e: the bare number of frames 07 and 08, no unit
       }
       await view.unmount();
     }

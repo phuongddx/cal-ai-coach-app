@@ -42,7 +42,7 @@ sleep 2
 console_flag "--ccFixtureCapture" 1
 
 step "--ccRequireSignIn: the gate asks for a session (seeded target, no session)"
-app_open "Sign in to CoachCal" 90 --ccRequireSignIn
+app_open "Sign in to keep your diary safe" 90 --ccRequireSignIn
 shot PL-05 launch-args-require-sign-in
 link "coachcal://debug" "Debug console" 25
 sleep 2
