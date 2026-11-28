@@ -60,7 +60,8 @@ export interface SyncStore {
   /**
    * The due batch of a dispatch (Swift `OutboxRepository.dueOps`): FIFO, not quarantined, retry time
    * passed or never set, at most `limit` rows. Rows that cannot be decoded come back in `undecodable`
-   * and take a batch slot, as they do in Swift.
+   * and take a batch slot, as they do in Swift. One operation per record: an operation that a newer
+   * pending operation of the same record supersedes is removed before the batch is read (U-85).
    */
   dueOperations(limit: number, dueAt: number): Promise<DueBatch>;
   /** Quarantined operations (undecodable rows are left out). */
