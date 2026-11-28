@@ -1,91 +1,104 @@
 /**
- * WeightTrendView.swift — the weight trend card: Current/Goal headers, the
- * chart (from two points) with its chart-descriptor a11y data, the trend
- * direction row, and the Log weight button presenting WeightLogSheet. ED-safe
- * keeps the card (kg framing is not calorie framing) exactly as the Swift
- * ED-safe snapshot.
+ * WeightTrendView.swift — the Ember weight trend card (frame 11): the
+ * "Weight trend" label with the big current value, the direction row over the
+ * selected range window, the Ember chart with its fitted axis, and the
+ * "Log weight" tint chip presenting WeightLogSheet. ED-safe keeps the card
+ * (kg framing is not calorie framing) exactly as the Swift ED-safe snapshot.
  */
 import { useState, useSyncExternalStore } from 'react';
-import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
-import { Card, ChartCard, SectionHeader, PrimaryButton, space, useTokens } from '../../../design';
+import { Card, TrendChart, radius, space, typography, useTokens } from '../../../design';
 
+import { RANGE_WINDOW_DAYS, type ProgressRange } from '../progressMath';
 import type { ProgressModel } from '../progressModel';
+import { weightTrendA11yLabel } from '../weightChartDescriptor';
 import { WeightLogSheet } from './WeightLogSheet';
 
 export type WeightTrendViewProps = {
   model: ProgressModel;
+  /** The selected range window; Month is the segment's default. */
+  range?: ProgressRange;
 };
 
-/** WeightTrendView.trendCopy — direction icon + text; keeps status non-color-only. */
-export function trendCopy(kgLost: number): { symbol: 'arrow.down' | 'arrow.up' | 'arrow.right'; text: string } {
+/** WeightTrendView.trendCopy — direction icon + window text; non-color-only. */
+export function trendCopy(kgLost: number, windowDays: number): { symbol: 'arrow.down' | 'arrow.up' | 'arrow.right'; text: string } {
   if (kgLost > 0.05) {
-    return { symbol: 'arrow.down', text: `${kgLost.toFixed(1)} kg lost · on track` };
+    return { symbol: 'arrow.down', text: `−${kgLost.toFixed(1)} kg in ${windowDays} days` };
   }
   if (kgLost < -0.05) {
-    return { symbol: 'arrow.up', text: `${(-kgLost).toFixed(1)} kg gained` };
+    return { symbol: 'arrow.up', text: `+${(-kgLost).toFixed(1)} kg in ${windowDays} days` };
   }
   return { symbol: 'arrow.right', text: 'holding steady' };
 }
 
-export function WeightTrendView({ model }: WeightTrendViewProps) {
-  const { colors, typography } = useTokens();
+export function WeightTrendView({ model, range = 'month' }: WeightTrendViewProps) {
+  const { colors, typography: type } = useTokens();
   useSyncExternalStore(model.subscribe, model.getSnapshot, model.getSnapshot);
   const [isLogSheetPresented, setIsLogSheetPresented] = useState(false);
 
-  const points = model.weightPoints();
-  const startKg = model.startKg();
+  const windowDays = RANGE_WINDOW_DAYS[range];
+  const points = model.weightPoints(range);
+  const startKg = points[0]?.value ?? null;
   const latestKg = model.latestKg();
   const kgLost = startKg !== null && latestKg !== null ? startKg - latestKg : 0;
-  const copy = trendCopy(kgLost);
-  const currentWeightText = latestKg !== null ? `${latestKg.toFixed(1)} kg` : '—';
-  const goalWeightText = model.goalKg() !== null ? `${(model.goalKg() as number).toFixed(1)} kg` : '—';
+  const copy = trendCopy(kgLost, windowDays);
+  const currentWeightText = latestKg !== null ? latestKg.toFixed(1) : '—';
 
   return (
     <Card>
       <View style={styles.stack}>
         <View style={styles.headerRow}>
           <View style={styles.headerColumn}>
-            <SectionHeader title="Current" />
-            <Text style={[styles.weightValue, { color: colors.textPrimary }]}>{currentWeightText}</Text>
+            <Text style={[type.footnote, { color: colors.text2 }]}>Weight trend</Text>
+            <View style={styles.valueRow}>
+              <Text style={[styles.weightValue, { color: colors.text }]}>{currentWeightText}</Text>
+              <Text style={[typography.subhead, styles.unitText, { color: colors.text2 }]}>kg</Text>
+            </View>
+            <View accessible accessibilityLabel={copy.text} style={styles.progressRow}>
+              <SymbolView
+                name={copy.symbol}
+                size={14}
+                weight="semibold"
+                tintColor={kgLost > 0.05 ? colors.successInk : colors.textSecondary}
+              />
+              <Text
+                style={[
+                  typography.footnote,
+                  styles.progressText,
+                  { color: kgLost > 0.05 ? colors.successInk : colors.textSecondary },
+                ]}
+              >
+                {copy.text}
+              </Text>
+            </View>
           </View>
           <View style={styles.spacer} />
-          <View style={styles.headerColumnTrailing}>
-            <SectionHeader title="Goal" />
-            <Text style={[styles.weightValue, { color: colors.accentInk }]}>{goalWeightText}</Text>
+          <View testID="progress.logWeight">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Log weight"
+              onPress={() => setIsLogSheetPresented(true)}
+              style={[styles.logChip, { backgroundColor: colors.accentTint }]}
+            >
+              <Text style={[typography.subhead, styles.logChipText, { color: colors.accentInk }]}>Log weight</Text>
+            </Pressable>
           </View>
         </View>
 
         {points.length >= 2 ? (
-          <ChartCard points={points} />
+          <TrendChart
+            points={points.map((point) => ({ at: point.date, value: point.value }))}
+            unit="kg"
+            accessibilityLabel={weightTrendA11yLabel(points, windowDays)}
+            testID="chart-card"
+          />
         ) : (
-          <Text style={[styles.emptyTrend, typography.subhead, { color: colors.textSecondary }]}>
+          <Text style={[styles.emptyTrend, type.subhead, { color: colors.textSecondary }]}>
             Log your weight to start the trend
           </Text>
         )}
-
-        <View accessible accessibilityLabel={copy.text} style={styles.progressRow}>
-          <SymbolView
-            name={copy.symbol}
-            size={14}
-            weight="semibold"
-            tintColor={kgLost > 0.05 ? colors.successInk : colors.textSecondary}
-          />
-          <Text
-            style={[
-              typography.subhead,
-              styles.progressText,
-              { color: kgLost > 0.05 ? colors.successInk : colors.textSecondary },
-            ]}
-          >
-            {copy.text}
-          </Text>
-        </View>
-
-        <View testID="progress.logWeight">
-          <PrimaryButton title="Log weight" action={() => setIsLogSheetPresented(true)} />
-        </View>
       </View>
 
       <Modal
@@ -113,11 +126,20 @@ const styles = StyleSheet.create({
   stack: { gap: space.md },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start' },
   headerColumn: { alignItems: 'flex-start', gap: 2 },
-  headerColumnTrailing: { alignItems: 'flex-end', gap: 2 },
+  valueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  weightValue: { fontSize: 28, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  unitText: { fontWeight: '600' },
   spacer: { flex: 1 },
-  weightValue: { fontSize: 20, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  emptyTrend: { textAlign: 'center', paddingVertical: 20 },
   progressRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  progressText: { fontWeight: '500', fontVariant: ['tabular-nums'] },
+  progressText: { fontWeight: '600', fontVariant: ['tabular-nums'] },
+  logChip: {
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: radius.md,
+    paddingHorizontal: space.lg,
+  },
+  logChipText: { fontWeight: '700' },
+  emptyTrend: { textAlign: 'center', paddingVertical: 20 },
   sheetBackdrop: { flex: 1, justifyContent: 'flex-end' },
 });

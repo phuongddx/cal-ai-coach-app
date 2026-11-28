@@ -16,7 +16,7 @@ import { createTargetRepository } from '../../../data/repos/targetRepository';
 import { createTrackingRepository } from '../../../data/repos/trackingRepository';
 import { kgValue, visibleStats } from '../../../design';
 
-import { createCoachModel, greeting } from '../../coach/coachModel';
+import { createCoachModel, greeting, insightDaysFor } from '../../coach/coachModel';
 import { addDays, dayString } from '../progressMath';
 import { createProgressModel } from '../progressModel';
 import { lockedDaysLeft, streakTitle } from '../screens/AchievementsView';
@@ -151,11 +151,37 @@ describe('StreakBadgeInsightTests twins', () => {
   });
 
   // testGreetingBucketsUnderFixedClocks — buckets at 08:00 / 14:00 / 21:00,
-  // pinned to UTC as the fixture (the UI passes the process zone).
+  // pinned to UTC as the fixture (the UI passes the process zone). The frame
+  // drops the emoji and the exclamation, so the strings are plain.
   it('greeting buckets under fixed clocks', () => {
-    expect(greeting(new Date('2026-09-15T08:00:00Z'), 'UTC')).toBe('Good morning! 👋');
-    expect(greeting(new Date('2026-09-15T14:00:00Z'), 'UTC')).toBe('Good afternoon! 👋');
-    expect(greeting(new Date('2026-09-15T21:00:00Z'), 'UTC')).toBe('Good evening! 👋');
+    expect(greeting(new Date('2026-09-15T08:00:00Z'), 'UTC')).toBe('Good morning');
+    expect(greeting(new Date('2026-09-15T14:00:00Z'), 'UTC')).toBe('Good afternoon');
+    expect(greeting(new Date('2026-09-15T21:00:00Z'), 'UTC')).toBe('Good evening');
+  });
+
+  // The days behind an insight (frame 12's "See the days"): the streak's
+  // consecutive logged days, the weekly kinds' logged days, none for a kind
+  // the snapshot holds no days for.
+  it('insight days come from the logged series by kind', () => {
+    const loggedDays = ['2026-01-07', '2026-01-08', '2026-01-09', '2026-01-10', '2026-01-11', '2026-01-12'];
+    const weekDays = ['2026-01-07', '2026-01-08', '2026-01-12'];
+
+    expect(insightDaysFor('streak', '2026-01-12', loggedDays, weekDays)).toEqual([
+      '2026-01-07',
+      '2026-01-08',
+      '2026-01-09',
+      '2026-01-10',
+      '2026-01-11',
+      '2026-01-12',
+    ]); // the consecutive logged days ending today, oldest first
+    expect(insightDaysFor('streak', '2026-01-12', [], weekDays)).toEqual([]); // no logged days, no list
+    expect(insightDaysFor('protein', '2026-01-12', loggedDays, weekDays)).toEqual([
+      '2026-01-07',
+      '2026-01-08',
+      '2026-01-12',
+    ]); // the week's logged days behind the average
+    expect(insightDaysFor('hydration', '2026-01-12', loggedDays, weekDays)).toEqual([]); // water is not in the read yet
+    expect(insightDaysFor('unknown', '2026-01-12', loggedDays, weekDays)).toEqual([]); // a kind without days shows no row
   });
 
   // testSeededStreakBadgesRenderAfterReconcile — the seeded 12-day streak

@@ -11,6 +11,7 @@ jest.mock('react/jsx-runtime', () => {
 });
 
 import { act, render, screen } from '@testing-library/react-native';
+import { Text } from 'react-native';
 
 import {
   calorieProgressFraction,
@@ -19,7 +20,7 @@ import {
   defaultDayProgress,
   remainingNumberProps,
 } from './CalorieRing';
-import { lightColors } from '../tokens';
+import { lightColors, size } from '../tokens';
 import { setEdSafeMode } from '../edSafe';
 
 beforeEach(() => setEdSafeMode(false));
@@ -112,6 +113,86 @@ describe('CalorieRing rendering', () => {
     );
     expect(screen.getByText('50% of day', { includeHiddenElements: true })).toBeOnTheScreen();
     expect(screen.queryByText('remaining', { includeHiddenElements: true })).toBeNull();
+  });
+
+  // U-76: the 150 pt ring of the Today ember card (`size.ringMd`, `size.ringMdStroke`).
+  describe('md variant (U-76)', () => {
+    it('draws at the ring-md size and shows the number and the label "kcal left"', async () => {
+      await render(<CalorieRing consumed={1284} goal={2100} variant="md" centerLabel="kcal left" onEmber />);
+      const ring = screen.getByTestId('calorie-ring:md');
+      expect(ring).toHaveProp('accessibilityLabel', '816 calories remaining of 2100 goal');
+      expect(ring).toHaveStyle({ width: size.ringMd, height: size.ringMd });
+      expect(screen.getByText('816', { includeHiddenElements: true })).toBeOnTheScreen();
+      expect(screen.getByText('kcal left', { includeHiddenElements: true })).toBeOnTheScreen();
+      expect(screen.queryByText('remaining', { includeHiddenElements: true })).toBeNull();
+    });
+
+    it('keeps a four-digit number on one line: fitWidth props and a size below the hero numeral', async () => {
+      await render(<CalorieRing consumed={0} goal={2150} variant="md" centerLabel="kcal left" onEmber />);
+      const number = screen.getByText('2150', { includeHiddenElements: true });
+      expect(number).toHaveProp('numberOfLines', 1);
+      expect(number).toHaveProp('adjustsFontSizeToFit', true);
+      expect(number).toHaveProp('minimumFontScale', 0.5);
+      // the frame's numLg (36) so four tabular digits (about 86 pt) fit the 108 pt inside the stroke
+      expect(number).toHaveStyle({ fontSize: 36 });
+    });
+
+    it('defaults the label to "remaining" like the other variants', async () => {
+      await render(<CalorieRing consumed={543} goal={2150} variant="md" />);
+      expect(screen.getByText('remaining', { includeHiddenElements: true })).toBeOnTheScreen();
+    });
+
+    it('under ED-safe shows "On track" and the day percent, with no number', async () => {
+      await render(<CalorieRing consumed={1284} goal={2100} variant="md" centerLabel="kcal left" dayProgress={0.5} onEmber />);
+      await act(async () => {
+        setEdSafeMode(true);
+      });
+      expect(screen.getByTestId('calorie-ring:md')).toHaveProp('accessibilityLabel', 'On track');
+      expect(screen.getByText('On track', { includeHiddenElements: true })).toBeOnTheScreen();
+      expect(screen.getByText('50% of day', { includeHiddenElements: true })).toBeOnTheScreen();
+      expect(screen.queryByText('816', { includeHiddenElements: true })).toBeNull();
+      expect(screen.queryByText('kcal left', { includeHiddenElements: true })).toBeNull();
+    });
+  });
+
+  // U-76: the right column of the ember card; the policy branch stays in the ring (invariant I7).
+  describe('aside and edSafeAside (U-76)', () => {
+    it('shows the aside beside the ring and not the ED-safe aside while the mode is off', async () => {
+      await render(
+        <CalorieRing
+          consumed={543}
+          goal={2150}
+          variant="md"
+          aside={<Text>eaten and goal</Text>}
+          edSafeAside={<Text>guidance</Text>}
+        />,
+      );
+      expect(screen.getByText('eaten and goal', { includeHiddenElements: true })).toBeOnTheScreen();
+      expect(screen.queryByText('guidance', { includeHiddenElements: true })).toBeNull();
+      expect(screen.getByTestId('calorie-ring:md')).toBeOnTheScreen();
+    });
+
+    it('swaps to the ED-safe aside under ED-safe mode', async () => {
+      await render(
+        <CalorieRing
+          consumed={543}
+          goal={2150}
+          variant="md"
+          aside={<Text>eaten and goal</Text>}
+          edSafeAside={<Text>guidance</Text>}
+        />,
+      );
+      await act(async () => {
+        setEdSafeMode(true);
+      });
+      expect(screen.queryByText('eaten and goal', { includeHiddenElements: true })).toBeNull();
+      expect(screen.getByText('guidance', { includeHiddenElements: true })).toBeOnTheScreen();
+    });
+
+    it('draws no aside column when neither prop is given', async () => {
+      await render(<CalorieRing consumed={543} goal={2150} variant="hero" />);
+      expect(screen.queryByTestId('calorie-ring:aside')).toBeNull();
+    });
   });
 
   it('computes the default day progress inside the unit interval', () => {

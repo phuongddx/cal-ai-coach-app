@@ -5,13 +5,18 @@
  *  - `overMedia`: the glass over a photo or the camera: `mediaScrim` fill, `onMedia` glyph (round 3 tokens,
  *    the same in every mode, High Contrast included).
  *
- * `disabled` dims the glyph, ignores presses and reports `accessibilityState.disabled`.
+ * `disabled` dims the glyph (`glassDisabledGlyphAlpha`), ignores presses and reports `accessibilityState.disabled`.
+ * The glass itself (native or translucent fill) is not dimmed: a disabled button keeps its disc and only the
+ * glyph goes quiet, on every system.
  *
- * There is no blur package, so the glass is a translucent fill (findings U-71b); the canvas's
- * `backdrop-filter: blur(20px)` is not drawn.
+ * Glass (decision D14, U-72): on iOS 26, where `isLiquidGlassAvailable()` is true, the button draws a
+ * native `GlassView` (`expo-glass-effect`, as `features/ember/EmberView.tsx` does) behind the glyph.
+ * Everywhere else (iOS 18, Android, Jest) the glass is the translucent fill of findings U-71b; the
+ * canvas's `backdrop-filter: blur(20px)` is not drawn there.
  */
 
-import { Pressable, StyleSheet } from 'react-native';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { Platform, Pressable, StyleSheet } from 'react-native';
 
 import { size as sizes, useTokens, withAlpha, type Colors } from '../tokens';
 
@@ -24,6 +29,8 @@ export type GlassIconButtonProps = {
   icon: IconName;
   onPress?: () => void;
   accessibilityLabel: string;
+  /** Optional spoken value (the flip button says which camera is in use). */
+  accessibilityValueText?: string;
   testID?: string;
   tone?: GlassTone;
   /** Diameter in points; never below 44 (`--tap`). The viewfinder's library button is 52. */
@@ -56,10 +63,27 @@ export function glassIconButtonColors(
   };
 }
 
+/** Liquid Glass shipped with iOS 26; older systems keep the translucent fill (D14). */
+export const nativeGlassMinIos = 26;
+
+/**
+ * The native glass is only asked for on iOS 26 and later, and only when the native module says it is
+ * there; a missing native module counts as "no".
+ */
+export function hasNativeGlass(): boolean {
+  if (Platform.OS !== 'ios' || !(Number.parseInt(String(Platform.Version), 10) >= nativeGlassMinIos)) return false;
+  try {
+    return isLiquidGlassAvailable();
+  } catch {
+    return false;
+  }
+}
+
 export function GlassIconButton({
   icon,
   onPress,
   accessibilityLabel,
+  accessibilityValueText,
   testID,
   tone = 'onSurface',
   diameter = sizes.tap,
@@ -68,10 +92,12 @@ export function GlassIconButton({
   const { colors, isDark } = useTokens();
   const glass = glassIconButtonColors(colors, isDark, tone);
   const edge = Math.max(diameter, sizes.tap);
+  const nativeGlass = hasNativeGlass();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      accessibilityValue={accessibilityValueText === undefined ? undefined : { text: accessibilityValueText }}
       testID={testID}
       accessibilityState={{ disabled }}
       disabled={disabled}
@@ -82,12 +108,23 @@ export function GlassIconButton({
           width: edge,
           height: edge,
           borderRadius: edge / 2,
-          backgroundColor: glass.background,
-          borderColor: glass.border,
+          // With the native glass the fill and the hairline belong to the glass, not to this view.
+          backgroundColor: nativeGlass ? 'transparent' : glass.background,
+          borderColor: nativeGlass ? 'transparent' : glass.border,
+          overflow: 'hidden',
           opacity: pressed && !disabled ? 0.7 : 1,
         },
       ]}
     >
+      {nativeGlass && (
+        <GlassView
+          testID={testID === undefined ? undefined : `${testID}:glass`}
+          glassEffectStyle="regular"
+          colorScheme={tone === 'overMedia' ? 'dark' : isDark ? 'dark' : 'light'}
+          pointerEvents="none"
+          style={StyleSheet.absoluteFill}
+        />
+      )}
       <Icon
         name={icon}
         size={22}

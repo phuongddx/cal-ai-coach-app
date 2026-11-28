@@ -14,35 +14,29 @@ export const MEAL_SLOTS: readonly MealSlot[] = ['breakfast', 'lunch', 'dinner', 
 /** `ScanMode` of the Swift app: the viewfinder pills plus the describe (text) path. */
 export type ScanMode = 'photo' | 'barcode' | 'label' | 'text';
 
-export type AnalyzingStep = 'detecting' | 'reading' | 'checking' | 'confirming';
-export const ANALYZING_STEPS: readonly AnalyzingStep[] = ['detecting', 'reading', 'checking', 'confirming'];
-
-export const ANALYZING_STEP_TITLE: Record<AnalyzingStep, string> = {
-  detecting: 'Detecting food',
-  reading: 'Reading nutrition',
-  checking: 'Checking accuracy',
-  confirming: 'Confirming with a second pass',
-};
-
 export type ScanFailure = 'barcodeNotFound' | 'analysisFailure';
 
 export type ScanPhase =
   | { kind: 'capture' }
-  | { kind: 'analyzing'; step: AnalyzingStep }
+  | { kind: 'analyzing' }
   | { kind: 'review' }
   | { kind: 'saved' }
-  | { kind: 'quotaReached'; entitlement: EntitlementState }
+  /** `entitlement` is null when the 402 envelope carried none: the client never invents a limit. */
+  | { kind: 'quotaReached'; entitlement: EntitlementState | null }
   | { kind: 'failed'; failure: ScanFailure };
 
-export type CorrectionKind = 'wrongFood' | 'portionOff' | 'missingItem' | 'other';
-export const CORRECTION_KINDS: readonly CorrectionKind[] = ['wrongFood', 'portionOff', 'missingItem', 'other'];
+/** The reasons of "Report a problem" (Ember frames s-fix-*): the Swift `missingItem` is Stage A2 and not offered. */
+export type CorrectionKind = 'wrongFood' | 'portionOff' | 'notEaten' | 'nutritionOff' | 'other';
+export const CORRECTION_KINDS: readonly CorrectionKind[] = ['wrongFood', 'portionOff', 'notEaten', 'nutritionOff', 'other'];
 export const CORRECTION_KIND_TITLE: Record<CorrectionKind, string> = {
   wrongFood: 'Wrong food',
-  portionOff: 'Portion way off',
-  missingItem: 'Missing item',
+  portionOff: 'Wrong amount',
+  notEaten: "Shouldn't be here",
+  nutritionOff: 'Nutrition looks off',
   other: 'Something else',
 };
 
+/** A report stays on this device: no report endpoint exists and no photo is attached. */
 export type Correction = { kind: CorrectionKind; note: string };
 
 export type ScanItem = ScanResponse['items'][number];

@@ -1,6 +1,6 @@
 import { carriesCalorieFigure } from './calorieFigure';
 
-/** The table of the U-71f brief: fifteen texts hidden under ED-safe, ten shown. */
+/** The table of the U-71f brief (fifteen texts hidden under ED-safe, ten shown) and the two kilocalorie rows of U-71g. */
 const HIDDEN = [
   'Calories today: 1,850',
   '640 kcal',
@@ -17,6 +17,8 @@ const HIDDEN = [
   'calories,',
   'kilojoule',
   'About 300 cal',
+  'About 500 kilocalories',
+  'kilocalorie',
 ];
 const SHOWN = [
   'Changes saved',
@@ -41,7 +43,7 @@ describe('carriesCalorieFigure', () => {
   });
 
   it('reads every calorie word without case, as a word, glued to a number or followed by punctuation', () => {
-    for (const word of ['kcal', 'kcals', 'cal', 'cals', 'calorie', 'calories', 'kJ', 'kJs', 'kilojoule', 'kilojoules']) {
+    for (const word of ['kcal', 'kcals', 'cal', 'cals', 'calorie', 'calories', 'kilocalorie', 'kilocalories', 'kJ', 'kJs', 'kilojoule', 'kilojoules']) {
       for (const form of [
         word,
         word.toUpperCase(),

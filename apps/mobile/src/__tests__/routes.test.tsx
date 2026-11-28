@@ -50,9 +50,11 @@ describe('route skeleton', () => {
         '(tabs)/profile.tsx',
         '(tabs)/progress.tsx',
         '_layout.tsx',
+        'cancel-flow.tsx',
         'debug.tsx',
         'diary.tsx',
         'onboarding/index.tsx',
+        'plans.tsx',
         'scan/index.tsx',
         'settings.tsx',
         'sign-in.tsx',
@@ -93,6 +95,8 @@ describe('deep links resolve to their routes', () => {
     ['coachcal://settings', '/settings'],
     ['coachcal://sign-in', '/sign-in'],
     ['coachcal://onboarding', '/onboarding'],
+    ['coachcal://plans', '/plans'],
+    ['coachcal://cancel-flow', '/cancel-flow'],
   ])('%s opens %s', async (url, pathname) => {
     await openDeepLink(url);
     expect(screen).toHavePathname(pathname);

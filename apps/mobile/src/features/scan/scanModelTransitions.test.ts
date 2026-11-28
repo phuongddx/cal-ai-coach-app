@@ -9,7 +9,7 @@ import type { ScanActivityPort, ScanPersistence } from './scanTypes';
 import { FIXED_NOW, GateApi, makeModel, makeRealPersistence, OWNER_ID, twoItemResponse, waitUntil } from './scanTestKit';
 import { buildScanRequest } from '../../data/api/scanClient';
 
-const FAST = { stepIntervalMs: 5, escalationBudgetMs: 40, activityLifetimeMs: 40 };
+const FAST = { activityLifetimeMs: 40 };
 const photo = { thumb: 1, request: buildScanRequest({ kind: 'photo', imageBase64: 'fixture:chicken-rice' }) };
 
 function activityPort(): ScanActivityPort & { start: jest.Mock; update: jest.Mock; end: jest.Mock } {
@@ -46,55 +46,74 @@ describe('ScanModel transitions', () => {
     expect(state.isAnalyzing).toBe(false);
   });
 
-  it('analyze moves capture to analyzing(detecting), keeps the thumb and opens the gate', () => {
+  it('analyze moves capture to analyzing, keeps the thumb and opens the gate', () => {
     const api = new GateApi();
     const model = makeModel({ api, timing: FAST });
     model.analyze(photo);
-    expect(model.getState().phase).toEqual({ kind: 'analyzing', step: 'detecting' });
+    expect(model.getState().phase).toEqual({ kind: 'analyzing' });
     expect(model.getState().isAnalyzing).toBe(true);
     expect(model.getState().captureThumb).toBe(1);
     expect(api.calls).toHaveLength(1);
     model.cancelAnalyzing();
   });
 
-  it('a 200 plays the three checklist steps and lands in review with the result', async () => {
+  it('a 200 lands in review with the result and no step in between', async () => {
     const model = makeModel({ api: new FixtureScanApi('200'), timing: FAST });
-    const steps: string[] = [];
+    const phases: string[] = [];
     model.subscribe(() => {
-      const phase = model.getState().phase;
-      if (phase.kind === 'analyzing' && steps[steps.length - 1] !== phase.step) steps.push(phase.step);
+      const kind = model.getState().phase.kind;
+      if (phases[phases.length - 1] !== kind) phases.push(kind);
     });
     await analyzeToEnd(model, '200');
-    expect(steps).toEqual(['detecting', 'reading', 'checking']);
+    expect(phases).toEqual(['analyzing', 'review']);
     expect(model.getState().phase).toEqual({ kind: 'review' });
     expect(model.getState().result?.items.length).toBeGreaterThan(0);
     expect(model.getState().isAnalyzing).toBe(false);
   });
 
-  it('a call that outlasts the escalation budget shows the fourth step before review', async () => {
+  it('analyzing without a timer: nothing advances by itself while the call is pending', async () => {
+    jest.useFakeTimers();
+    try {
+      const api = new GateApi();
+      const model = makeModel({ api, timing: FAST });
+      let notifications = 0;
+      model.subscribe(() => {
+        notifications += 1;
+      });
+      model.analyze(photo);
+      const after = notifications;
+      await jest.advanceTimersByTimeAsync(60_000);
+      expect(model.getState().phase).toEqual({ kind: 'analyzing' });
+      expect(model.getState().isAnalyzing).toBe(true);
+      expect(notifications).toBe(after);
+      api.resumeAll(twoItemResponse());
+      await jest.advanceTimersByTimeAsync(0);
+      expect(model.getState().phase).toEqual({ kind: 'review' });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('a response lands in review the moment the call settles, without a dwell', async () => {
     const api = new GateApi();
     const model = makeModel({ api, timing: FAST });
     model.analyze(photo);
-    await waitUntil(() => {
-      const phase = model.getState().phase;
-      return phase.kind === 'analyzing' && phase.step === 'confirming';
-    });
     api.resumeAll(twoItemResponse());
-    await waitUntil(() => model.getState().phase.kind === 'review');
-    expect(model.getState().isAnalyzing).toBe(false);
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(model.getState().phase).toEqual({ kind: 'review' });
   });
 
   it('a 402 surfaces immediately as quotaReached carrying the entitlement', async () => {
-    const model = makeModel({ api: new FixtureScanApi('402'), timing: { ...FAST, stepIntervalMs: 500 } });
-    const startedAt = Date.now();
+    const model = makeModel({ api: new FixtureScanApi('402'), timing: FAST });
     await analyzeToEnd(model, '402');
-    expect(Date.now() - startedAt).toBeLessThan(400); // failures skip the dwell
     const phase = model.getState().phase;
     expect(phase.kind).toBe('quotaReached');
-    if (phase.kind === 'quotaReached') expect(phase.entitlement.scanLimit).toBe(3);
+    if (phase.kind === 'quotaReached') expect(phase.entitlement?.scanLimit).toBe(3);
   });
 
-  it('a FREE_LIMIT_REACHED envelope without an entitlement falls back to a free-tier default', async () => {
+  it('a FREE_LIMIT_REACHED envelope without an entitlement reaches quota with no entitlement (no invented limit)', async () => {
     const api = {
       analyzeFood: async () =>
         Promise.reject({ name: 'ScanApiError', kind: 'envelope', status: 402, code: 'FREE_LIMIT_REACHED', isQuotaReached: true, isBarcodeNotFound: false, isSchemaError: false }),
@@ -103,7 +122,7 @@ describe('ScanModel transitions', () => {
     await analyzeToEnd(model, '402');
     const phase = model.getState().phase;
     expect(phase.kind).toBe('quotaReached');
-    if (phase.kind === 'quotaReached') expect(phase.entitlement).toMatchObject({ tier: 'free', scanLimit: 3 });
+    if (phase.kind === 'quotaReached') expect(phase.entitlement).toBeNull();
   });
 
   it('only a FREE_LIMIT_REACHED envelope routes to quota: a flagged non-envelope error and other envelopes fail', async () => {
@@ -244,6 +263,50 @@ describe('ScanModel transitions', () => {
     expect(mealKcalOf(model.getState())).toBe(464 + 172);
   });
 
+  it('removeItem drops the item and the total follows from the items that remain', () => {
+    const model = makeModel();
+    model.receive(twoItemResponse());
+    expect(model.mealKcal()).toBe(550);
+    model.removeItem(1);
+    expect(model.getState().result?.items.map((entry) => entry.id)).toEqual([0]);
+    expect(model.mealKcal()).toBe(464);
+    model.removeItem(42); // an unknown id changes nothing
+    expect(model.getState().result?.items).toHaveLength(1);
+  });
+
+  it('removing the unresolved item re-enables Save and the count of unresolved items follows', () => {
+    const model = makeModel({ persistence: fakePersistence() });
+    const response = twoItemResponse();
+    response.items[1] = { ...response.items[1], unresolved: true };
+    model.receive(response);
+    expect(model.unresolvedCount()).toBe(1);
+    expect(model.isSaveEnabled()).toBe(false);
+    model.removeItem(1);
+    expect(model.unresolvedCount()).toBe(0);
+    expect(model.isSaveEnabled()).toBe(true);
+  });
+
+  it('removing every item leaves nothing to save', () => {
+    const model = makeModel({ persistence: fakePersistence() });
+    model.receive(twoItemResponse());
+    model.removeItem(0);
+    model.removeItem(1);
+    expect(model.isSaveEnabled()).toBe(false);
+  });
+
+  it('after removeItem the saved batch holds the remaining items and the first one carries the meal title', async () => {
+    const persistence = fakePersistence();
+    const model = makeModel({ persistence, api: new GateApi(), timing: FAST });
+    model.receive(twoItemResponse());
+    model.setMealTitle('Lunch bowl');
+    model.removeItem(0);
+    await model.save();
+    const upserts = persistence.save.mock.calls[0][0] as EntryDetailUpsert[];
+    expect(upserts).toHaveLength(1);
+    expect(upserts[0]?.detail?.title).toBe('Lunch bowl');
+    expect(upserts[0]?.detail?.grams).toBe(20);
+  });
+
   it('captureCorrection records the note and clears the unresolved flag', () => {
     const model = makeModel();
     model.receive({ ...twoItemResponse(), items: twoItemResponse().items.map((entry, index) => (index === 0 ? { ...entry, unresolved: true } : entry)) });
@@ -340,6 +403,35 @@ describe('ScanModel transitions', () => {
     expect(notify).toHaveBeenCalledTimes(2);
     expect(model.getState()).toMatchObject({ phase: { kind: 'review' }, savedEntryIds: [], savedKcal: null });
     expect(model.isSaveEnabled()).toBe(true);
+  });
+
+  it('a second undo while one is running tombstones each entry once', async () => {
+    const persistence = fakePersistence();
+    const model = makeModel({ persistence, notify: jest.fn() });
+    model.receive(twoItemResponse());
+    await model.save();
+    await Promise.all([model.undo(), model.undo()]);
+    expect(persistence.tombstone).toHaveBeenCalledTimes(2);
+    expect(persistence.deleteDetail).toHaveBeenCalledTimes(2);
+    await model.undo();
+    expect(persistence.tombstone).toHaveBeenCalledTimes(2);
+  });
+
+  it('mealMacros sums the macros of the current grams in whole grams', () => {
+    const model = makeModel();
+    model.receive(twoItemResponse());
+    expect(model.mealMacros()).toEqual({ proteinG: 34, carbsG: 68, fatG: 17 });
+    model.setGrams(350, 0);
+    expect(model.mealMacros()).toEqual({ proteinG: 37, carbsG: 74, fatG: 19 });
+    model.removeItem(1);
+    expect(model.mealMacros()).toEqual({ proteinG: 35, carbsG: 70, fatG: 18 });
+  });
+
+  it('captureCorrection stores the reason and the note only, with no photo field', () => {
+    const model = makeModel();
+    model.receive(twoItemResponse());
+    model.captureCorrection('nutritionOff', 'too low', 0);
+    expect(model.getState().result?.items[0]?.correction).toEqual({ kind: 'nutritionOff', note: 'too low' });
   });
 
   it('undo without persistence does nothing', async () => {

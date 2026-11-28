@@ -35,6 +35,8 @@ const HIDDEN_CHIPS = [
   'calories,',
   'kilojoule',
   'About 300 cal',
+  'About 500 kilocalories',
+  'kilocalorie',
 ];
 const SHOWN_CHIPS = [
   'Changes saved',
@@ -166,5 +168,54 @@ describe('FoodRow', () => {
     expect(foodRowVisibleChip('640 kcal', true)).toBeUndefined();
     expect(foodRowVisibleChip('', false)).toBeUndefined();
     expect(foodRowVisibleChip(undefined, true)).toBeUndefined();
+  });
+});
+
+describe('FoodRow chevron and unit (U-71g, meal rows of Today)', () => {
+  it('draws the chevron and the unit by default', async () => {
+    await render(<FoodRow title="Chicken Rice" kcal={624} />);
+    expect(screen.getByTestId('food-row-chevron:Chicken Rice', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByTestId('food-row-kcal:Chicken Rice', { includeHiddenElements: true })).toHaveTextContent('624 kcal');
+    expect(screen.getByTestId('food-row-kcal:Chicken Rice', { includeHiddenElements: true }).props.accessibilityLabel).toBeUndefined();
+  });
+
+  it('draws no chevron with chevron={false} and keeps the rest of the row', async () => {
+    await render(<FoodRow title="Chicken Rice" meta="Lunch" kcal={624} chevron={false} />);
+    expect(screen.queryByTestId('food-row-chevron:Chicken Rice', { includeHiddenElements: true })).toBeNull();
+    expect(screen.getByText('624 kcal', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByText('Lunch', { includeHiddenElements: true })).toBeOnTheScreen();
+  });
+
+  it('draws the number alone with unitHidden and says the unit in the accessibility label', async () => {
+    await render(<FoodRow title="Chicken Rice" kcal={624} unitHidden />);
+    const number = screen.getByTestId('food-row-kcal:Chicken Rice', { includeHiddenElements: true });
+    expect(number).toHaveTextContent('624');
+    expect(number).not.toHaveTextContent('kcal');
+    expect(number).toHaveProp('accessibilityLabel', '624 kcal');
+    expect(screen.queryByText(/kcal/, { includeHiddenElements: true })).toBeNull();
+  });
+
+  it('works with both props together: number alone, no chevron', async () => {
+    await render(<FoodRow title="Chicken Rice" kcal={624} chevron={false} unitHidden />);
+    expect(screen.queryByTestId('food-row-chevron:Chicken Rice', { includeHiddenElements: true })).toBeNull();
+    expect(screen.getByTestId('food-row-kcal:Chicken Rice', { includeHiddenElements: true })).toHaveTextContent('624');
+  });
+
+  it('keeps a hidden number hidden under ED-safe, with either prop', async () => {
+    await render(<FoodRow title="Chicken Rice" kcal={624} chevron={false} unitHidden />);
+    await act(async () => {
+      setEdSafeMode(true);
+    });
+    expect(screen.queryByTestId('food-row-kcal:Chicken Rice', { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByText('624', { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByLabelText('624 kcal', { includeHiddenElements: true })).toBeNull();
+  });
+
+  it('still draws the chevron under ED-safe by default, as before', async () => {
+    await render(<FoodRow title="Chicken Rice" kcal={624} />);
+    await act(async () => {
+      setEdSafeMode(true);
+    });
+    expect(screen.getByTestId('food-row-chevron:Chicken Rice', { includeHiddenElements: true })).toBeOnTheScreen();
   });
 });

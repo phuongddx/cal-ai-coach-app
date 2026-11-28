@@ -10,6 +10,20 @@ import { dayKey } from '@coachcal/core';
 export const KG_RANGE = { min: 40, max: 250 } as const;
 
 /**
+ * The range segment's windows (frame 11: Week / Month / 3M / Year, Month
+ * selected). The values are the testIDs after `progress.range.`.
+ */
+export type ProgressRange = 'week' | 'month' | '3m' | 'year';
+
+/** The trailing window in local days each range reads. */
+export const RANGE_WINDOW_DAYS: Record<ProgressRange, number> = {
+  week: 7,
+  month: 30,
+  '3m': 90,
+  year: 365,
+};
+
+/**
  * ProgressModel.clampKg — untrusted numeric input clamps (and snaps to one
  * decimal) at the model boundary (T-P06-02).
  */

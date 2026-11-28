@@ -1,15 +1,27 @@
 /**
- * CaptureViewfinderView.swift (+ CameraPermissionCard, ScanErrorCard) — near-black full-bleed viewfinder:
- * mode pills, a 200pt alignment frame with lime corner bars, coach mark, zoom caption and the
- * 44/72/44 controls row. The fixture service paints the bundled photo as the feed; the device service
- * mounts the live `CameraView` (and its barcode reticle in barcode mode).
+ * Capture viewfinder (Ember frame 01, + CameraPermissionCard and ScanErrorCard): near-black full-bleed camera,
+ * a close glass button, 312 pt corner brackets in the accent, two guidance lines, the four mode chips
+ * (Food / Barcode / Label / Describe) and the library / shutter / flip row. The fixture service paints the
+ * bundled photo as the feed; the device service mounts the live `CameraView` (and its barcode reticle in
+ * barcode mode). No flash button (the capture seam has no torch), no zoom readout, no free-scan chip.
  */
 import { useEffect, useRef, useState } from 'react';
 import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CameraView } from 'expo-camera';
-import { SymbolView } from 'expo-symbols';
 
-import { ChipOption, radius, SecondaryButton, size, space, typography, useTokens, withAlpha } from '../../design';
+import {
+  darkColors,
+  GlassIconButton,
+  Icon,
+  radius,
+  Segment,
+  SecondaryButton,
+  size,
+  space,
+  typography,
+  useTokens,
+  withAlpha,
+} from '../../design';
 import { FIXTURE_MEAL_IMAGE, type CameraFacing, type ScanCaptureService } from './scanCapture';
 import type { ScanModel } from './scanModel';
 import type { ScanFailure, ScanMode } from './scanTypes';
@@ -22,20 +34,30 @@ export type CaptureViewfinderViewProps = {
   /** "Search manually": the route opens the food search; its save closes the flow. */
   onSearchManually?: () => void;
   onLoggedElsewhere: () => void;
+  /** The close glass button: leaves the scan flow. Without it the button is not drawn. */
+  onClose?: () => void;
   capture: ScanCaptureService;
   isCameraAccessDenied?: boolean;
   onOpenSettings?: () => void;
 };
 
-const MODE_TITLE: Record<'photo' | 'barcode' | 'label', string> = { photo: 'Scan Food', barcode: 'Barcode', label: 'Label' };
-const PILL_MODES = ['photo', 'barcode', 'label'] as const;
-const FRAME = 200;
+const MODE_OPTIONS: ReadonlyArray<{ value: ScanMode; label: string }> = [
+  { value: 'photo', label: 'Food' },
+  { value: 'barcode', label: 'Barcode' },
+  { value: 'label', label: 'Label' },
+  { value: 'text', label: 'Describe' },
+];
+const FRAME = 312;
+const BRACKET = 44;
+const BRACKET_STROKE = 5;
+const LIBRARY = 52;
 
 export function CaptureViewfinderView({
   model,
   mode,
   onModeChange,
   onSearchManually,
+  onClose,
   capture,
   isCameraAccessDenied = false,
   onOpenSettings = () => void Linking.openSettings(),
@@ -94,20 +116,14 @@ export function CaptureViewfinderView({
   const shutterDisabled = isCapturing || state.isAnalyzing || denied;
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: darkColors.bg }]}>
       <View style={styles.column}>
-        <View style={styles.pills}>
-          {PILL_MODES.map((pillMode) => (
-            <View key={pillMode} testID={`scan.modePill.${pillMode}`}>
-              <ChipOption
-                title={MODE_TITLE[pillMode]}
-                isSelected={pillMode === mode}
-                onSelect={() => {
-                  if (pillMode !== mode) onModeChange(pillMode);
-                }}
-              />
-            </View>
-          ))}
+        <View style={styles.topBar}>
+          {onClose !== undefined ? (
+            <GlassIconButton icon="x" tone="overMedia" accessibilityLabel="Close" testID="scan.close" onPress={onClose} />
+          ) : (
+            <View style={styles.topSlot} />
+          )}
         </View>
         <View style={styles.spacer} />
         {denied ? (
@@ -126,7 +142,7 @@ export function CaptureViewfinderView({
                     model.analyze(capture.captureBarcode(data));
                   }}
                 />
-                <FrameOutline />
+                <FrameBrackets />
               </View>
             ) : mode === 'barcode' ? (
               <Pressable
@@ -134,64 +150,74 @@ export function CaptureViewfinderView({
                 accessibilityLabel="Choose from library"
                 testID="scan.barcodePicker"
                 onPress={() => void pickPhoto()}
-                style={[styles.frame, styles.barcodeCanvas, { borderColor: withAlpha(colors.accentLime, 0.4) }]}
+                style={[styles.frame, styles.barcodeCanvas, { borderColor: withAlpha(colors.accent, 0.4) }]}
               >
-                <SymbolView name="barcode.viewfinder" size={28} tintColor={colors.accentLime} />
-                <Text style={styles.canvasText}>Pick a barcode photo</Text>
+                <Icon name="barcode" size={28} color={colors.accent} />
+                <Text style={[typography.caption, { color: colors.emberText2 }]}>Pick a barcode photo</Text>
               </Pressable>
             ) : (
               <AlignmentFrame capture={capture} facing={facing} />
             )}
             {mode !== 'barcode' && (
-              <View testID="scan.coachMark" style={styles.coachMark}>
-                <Text style={styles.coachText}>Center your food in the frame</Text>
+              <View testID="scan.coachMark" style={styles.guidance}>
+                <Text style={[styles.guidanceTitle, { color: colors.emberText }]}>Fit the whole plate in the frame</Text>
+                {mode === 'label' ? (
+                  <Text style={[styles.guidanceBody, { color: colors.emberText2 }]}>
+                    Point at the nutrition label — the photo is analyzed to read it
+                  </Text>
+                ) : (
+                  <Text style={[styles.guidanceBody, { color: colors.emberText2 }]}>Good light helps the estimate</Text>
+                )}
               </View>
-            )}
-            {mode === 'label' ? (
-              <Text style={styles.labelHint}>Point at the nutrition label — the photo is analyzed to read it</Text>
-            ) : (
-              <Text testID="scan.zoom" style={styles.zoom}>
-                1.0×
-              </Text>
             )}
           </View>
         )}
         <View style={styles.spacer} />
+        <Segment
+          variant="chips"
+          options={MODE_OPTIONS}
+          value={mode}
+          onChange={(next) => {
+            if (next !== mode) onModeChange(next);
+          }}
+          accessibilityLabel="Scan mode"
+          testID="scan.modePill"
+        />
         <View style={styles.controls}>
           {usesLiveReticle ? (
-            <View style={styles.circleButton} />
+            <View style={{ width: LIBRARY, height: LIBRARY }} />
           ) : (
-            <Pressable
-              accessibilityRole="button"
+            <GlassIconButton
+              icon="image"
+              tone="overMedia"
+              diameter={LIBRARY}
               accessibilityLabel="Choose from library"
               testID="scan.library"
               onPress={() => void pickPhoto()}
-              style={styles.circleButton}
-            >
-              <SymbolView name="photo.on.rectangle" size={20} tintColor="#FFFFFF" />
-            </Pressable>
+            />
           )}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Capture photo, button"
+            accessibilityLabel="Take photo"
             accessibilityState={{ disabled: shutterDisabled }}
             testID="scan.shutter"
             disabled={shutterDisabled}
             onPress={() => void takePhoto()}
-            style={[styles.shutter, { backgroundColor: colors.accentLime }]}
+            style={[styles.shutter, { borderColor: colors.emberText, opacity: shutterDisabled ? 0.5 : 1 }]}
           >
-            {mode === 'barcode' && !usesLiveReticle && <SymbolView name="barcode.viewfinder" size={26} weight="semibold" tintColor="#000000" />}
+            <View style={[styles.shutterCore, { backgroundColor: colors.accent }]}>
+              {mode === 'barcode' && !usesLiveReticle && <Icon name="barcode" size={26} color={colors.onAccent} />}
+            </View>
           </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Flip camera"
-            accessibilityValue={{ text: facing === 'back' ? 'Back camera' : 'Front camera' }}
+          <GlassIconButton
+            icon="flip"
+            tone="overMedia"
+            diameter={LIBRARY}
+            accessibilityLabel="Switch camera"
+            accessibilityValueText={facing === 'back' ? 'Back camera' : 'Front camera'}
             testID="scan.flip"
             onPress={flipCamera}
-            style={styles.circleButton}
-          >
-            <SymbolView name="arrow.triangle.2.circlepath.camera" size={18} tintColor="#FFFFFF" />
-          </Pressable>
+          />
         </View>
       </View>
       {state.phase.kind === 'failed' && (
@@ -203,26 +229,16 @@ export function CaptureViewfinderView({
   );
 }
 
-/** The 2pt lime @40% border and the four 3pt corner bars. */
-function FrameOutline() {
+/** The four rounded corner brackets of the frame: accent, 5 pt stroke. */
+function FrameBrackets() {
   const { colors } = useTokens();
-  const inset = 14;
+  const corner = { position: 'absolute', width: BRACKET, height: BRACKET, borderColor: colors.accent } as const;
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <View style={[StyleSheet.absoluteFill, styles.outline, { borderColor: withAlpha(colors.accentLime, 0.4) }]} />
-      {[0, 1, 2, 3].map((corner) => {
-        const horizontal = corner % 2 === 0;
-        const w = horizontal ? 28 : 3;
-        const h = horizontal ? 3 : 28;
-        const x = corner === 0 || corner === 3 ? inset : FRAME - inset;
-        const y = corner < 2 ? inset : FRAME - inset;
-        return (
-          <View
-            key={corner}
-            style={{ position: 'absolute', left: x - w / 2, top: y - h / 2, width: w, height: h, borderRadius: 2, backgroundColor: colors.accentLime }}
-          />
-        );
-      })}
+      <View style={[corner, { top: 0, left: 0, borderTopWidth: BRACKET_STROKE, borderLeftWidth: BRACKET_STROKE, borderTopLeftRadius: radius.lg }]} />
+      <View style={[corner, { top: 0, right: 0, borderTopWidth: BRACKET_STROKE, borderRightWidth: BRACKET_STROKE, borderTopRightRadius: radius.lg }]} />
+      <View style={[corner, { bottom: 0, left: 0, borderBottomWidth: BRACKET_STROKE, borderLeftWidth: BRACKET_STROKE, borderBottomLeftRadius: radius.lg }]} />
+      <View style={[corner, { bottom: 0, right: 0, borderBottomWidth: BRACKET_STROKE, borderRightWidth: BRACKET_STROKE, borderBottomRightRadius: radius.lg }]} />
     </View>
   );
 }
@@ -235,7 +251,7 @@ function AlignmentFrame({ capture, facing }: { capture: ScanCaptureService; faci
       ) : (
         <Image testID="scan.fixtureFeed" source={FIXTURE_MEAL_IMAGE} resizeMode="cover" style={StyleSheet.absoluteFill} />
       )}
-      <FrameOutline />
+      <FrameBrackets />
     </View>
   );
 }
@@ -246,10 +262,10 @@ export function CameraPermissionCard({ onOpenSettings }: { onOpenSettings: () =>
   return (
     <View testID="scan.cameraDenied" style={[styles.card, { backgroundColor: colors.card }]}>
       <View style={styles.cardHeading}>
-        <SymbolView name="video.slash" size={16} weight="semibold" tintColor={colors.textPrimary} />
-        <Text style={[typography.headline, { color: colors.textPrimary }]}>Camera access is off</Text>
+        <Icon name="camera" size={18} color={colors.text} />
+        <Text style={[typography.headline, { color: colors.text }]}>Camera access is off</Text>
       </View>
-      <Text style={[typography.subhead, { color: colors.textSecondary }]}>
+      <Text style={[typography.subhead, { color: colors.text2 }]}>
         CoachCal needs the camera to scan your meals. Turn it on in Settings, or pick a photo from your library instead.
       </Text>
       <SecondaryButton title="Open Settings" bordered action={onOpenSettings} testID="scan.openSettings" />
@@ -281,10 +297,10 @@ export function ScanErrorCard({
       style={[styles.card, { backgroundColor: colors.card, borderWidth: 1, borderColor: withAlpha(colors.error, 0.3) }]}
     >
       <View style={styles.cardHeading}>
-        <SymbolView name="exclamationmark.triangle" size={16} weight="semibold" tintColor={colors.errorInk} />
-        <Text style={[typography.headline, { color: colors.textPrimary }]}>{copy.heading}</Text>
+        <Icon name="alert" size={18} color={colors.errorInk} />
+        <Text style={[typography.headline, { color: colors.text }]}>{copy.heading}</Text>
       </View>
-      <Text style={[typography.subhead, { color: colors.textSecondary }]}>{copy.message}</Text>
+      <Text style={[typography.subhead, { color: colors.text2 }]}>{copy.message}</Text>
       <View style={styles.cardButtons}>
         <SecondaryButton title="Try again" action={onRetry} testID="scan.tryAgain" />
         <SecondaryButton title="Search manually" bordered action={onSearchManually} testID="scan.searchManually" />
@@ -294,37 +310,27 @@ export function ScanErrorCard({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#000000' },
-  column: { flex: 1, alignItems: 'center', paddingBottom: space.xl2 },
-  pills: { flexDirection: 'row', gap: space.sm, paddingTop: space.xl4 + space.xl2 },
+  root: { flex: 1 },
+  column: { flex: 1, alignItems: 'center', paddingBottom: space.xl3 },
+  topBar: { alignSelf: 'stretch', flexDirection: 'row', paddingHorizontal: space.lg, paddingTop: space.xl5 + space.md },
+  topSlot: { width: size.tap, height: size.tap },
   spacer: { flex: 1 },
-  core: { alignItems: 'center', gap: space.md },
-  frame: { width: FRAME, height: FRAME, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.04)' },
-  outline: { borderWidth: 2, borderRadius: radius.lg },
+  core: { alignItems: 'center', gap: space.lg },
+  frame: { width: FRAME, height: FRAME, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: withAlpha(darkColors.text, 0.04) },
   barcodeCanvas: { borderWidth: 2, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: space.xs },
-  canvasText: { ...typography.caption, color: 'rgba(255,255,255,0.7)' },
-  coachMark: { backgroundColor: 'rgba(0,0,0,0.8)', borderRadius: 999, paddingVertical: space.sm, paddingHorizontal: space.lg },
-  coachText: { ...typography.footnote, color: '#FFFFFF' },
-  labelHint: { ...typography.footnote, color: 'rgba(255,255,255,0.7)', textAlign: 'center', paddingHorizontal: space.xl2 },
-  zoom: { ...typography.caption, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' },
-  controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch', paddingHorizontal: space.xl2 },
-  circleButton: {
-    width: size.tapTarget,
-    height: size.tapTarget,
-    borderRadius: size.tapTarget / 2,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+  guidance: { alignItems: 'center', gap: space.xs, paddingHorizontal: space.xl2 },
+  guidanceTitle: { fontSize: 15, fontWeight: '600', textAlign: 'center' },
+  guidanceBody: { fontSize: 13, fontWeight: '400', textAlign: 'center' },
+  controls: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    alignSelf: 'stretch',
+    paddingHorizontal: space.xl2,
+    paddingTop: space.lg,
   },
-  shutter: {
-    width: size.shutter,
-    height: size.shutter,
-    borderRadius: size.shutter / 2,
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  shutter: { width: size.shutter, height: size.shutter, borderRadius: size.shutter / 2, borderWidth: 4, alignItems: 'center', justifyContent: 'center' },
+  shutterCore: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
   errorOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   card: { alignSelf: 'stretch', marginHorizontal: space.lg, padding: space.lg, borderRadius: radius.lg, gap: space.md },
   cardHeading: { flexDirection: 'row', alignItems: 'center', gap: space.sm },

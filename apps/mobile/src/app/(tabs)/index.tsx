@@ -10,7 +10,6 @@
 import { dayKey } from '@coachcal/core';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Linking } from 'react-native';
 
 import { getSessionStore } from '../../data/auth';
 import { getDataEnvironment } from '../../data/environment';
@@ -115,7 +114,6 @@ export default function TodayRoute() {
       isOffline={isOffline}
       onStartSetup={() => router.push('/onboarding')}
       onOpenDiary={(day) => router.push({ pathname: '/diary', params: { date: dayKey(day) } })}
-      onOpenHealthSettings={() => void Linking.openSettings()}
     />
   );
 }
