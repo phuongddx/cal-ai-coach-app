@@ -102,7 +102,7 @@ email", labeled fields, one sentence after the code is sent (`auth.codeSent`), d
 | `auth.emailBack` | added: Back on the e-mail step, keeps the typed e-mail |
 | `auth.codeSent` | added: "We sent a code to <e-mail>." |
 | `auth.tile` | added: the app tile of the entry step |
-| `auth.emailField.label`, `auth.otpField.label` | added by `FillField` |
+| `auth.emailField.label`, `auth.otpField.label` | added: the labels above the two fields (plain `Text` in `EmailStep.tsx`; `FillField` is not used, it has no keyboard props) |
 | `auth.form`, `auth.signInApple`, `auth.signInGoogle`, `auth.emailField`, `auth.sendCode`, `auth.otpField`, `auth.verifyCode` | kept |
 
 Differences from the SwiftUI screen: the `auth.*` identifiers sit on wrapper views for the design buttons
