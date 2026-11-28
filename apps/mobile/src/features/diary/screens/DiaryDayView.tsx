@@ -5,7 +5,7 @@
  * food, exercise). The kcal clauses collapse through EdSafeCollapse — the
  * components own that policy (I7); the feature holds no ED-safe branch.
  */
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { ActionSheetIOS, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -62,7 +62,24 @@ type UndoToast =
 
 export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
   const { colors, radius, space, typography } = useTokens();
-  useSyncExternalStore(model.subscribe, model.getSnapshot, model.getSnapshot);
+  const snapshot = useSyncExternalStore(model.subscribe, model.getSnapshot, model.getSnapshot);
+  // The model is a mutable object, so React Compiler sees `model` as unchanged
+  // and would cache every read below for good (the day sheet kept showing the
+  // pre-save row). `snapshot` is the dependency that says "the model emitted":
+  // keep it in this list, and read the model only inside it.
+  const view = useMemo(
+    () => ({
+      heading: model.dayHeading(),
+      isToday: model.isToday(),
+      eaten: model.eatenKcal(),
+      goal: model.goalKcal() ?? 0,
+      left: model.leftKcal() ?? 0,
+      burned: model.burnedKcal(),
+      sectionKcal: new Map(snapshot.sections.map((section) => [section.slot, model.sectionKcal(section)])),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `snapshot` marks a model emit
+    [model, snapshot],
+  );
 
   const [editItem, setEditItem] = useState<DiaryDayItem | null>(null);
   const [isExerciseSheetPresented, setIsExerciseSheetPresented] = useState(false);
@@ -78,8 +95,6 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
     const timer = setTimeout(() => setUndoToast(null), UNDO_WINDOW_MS);
     return () => clearTimeout(timer);
   }, [undoToast]);
-
-  const snapshot = model.getSnapshot();
 
   const undo = (receipt: SavedReceipt) => {
     setSavedToast(null);
@@ -136,27 +151,27 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
             testID="diary.previousDay"
             onPress={() => shiftDay(model, -1)}
           />
-          <Text style={[typography.heading, { color: colors.textPrimary }]}>{model.dayHeading()}</Text>
+          <Text style={[typography.heading, { color: colors.textPrimary }]}>{view.heading}</Text>
           {/* GlassIconButton cannot express `disabled`, which the next-day
               pager needs on today: the same DS glass tokens style a feature
               Pressable that carries the state (findings, U-74 §3). */}
-          <NextDayGlassButton isToday={model.isToday()} onPress={() => shiftDay(model, 1)} />
+          <NextDayGlassButton isToday={view.isToday} onPress={() => shiftDay(model, 1)} />
         </View>
 
         <EdSafeCollapse>
           <View
             accessible
-            accessibilityLabel={`Eaten ${model.eatenKcal()} of ${model.goalKcal() ?? 0}, ${model.leftKcal() ?? 0} remaining`}
+            accessibilityLabel={`Eaten ${view.eaten} of ${view.goal}, ${view.left} remaining`}
             style={[
               styles.summaryCard,
               { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.lg },
             ]}
           >
-            <SummaryColumn title="Eaten" kcal={model.eatenKcal()} color={colors.textPrimary} />
+            <SummaryColumn title="Eaten" kcal={view.eaten} color={colors.textPrimary} />
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <SummaryColumn title="Goal" kcal={model.goalKcal() ?? 0} color={colors.textPrimary} />
+            <SummaryColumn title="Goal" kcal={view.goal} color={colors.textPrimary} />
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <SummaryColumn title="Left" kcal={model.leftKcal() ?? 0} color={colors.accentInk} />
+            <SummaryColumn title="Left" kcal={view.left} color={colors.accentInk} />
           </View>
         </EdSafeCollapse>
 
@@ -171,7 +186,7 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
               </View>
               <EdSafeCollapse>
                 <Text style={[typography.subhead, { color: colors.textSecondary }]}>
-                  {`${model.sectionKcal(section)} kcal`}
+                  {`${view.sectionKcal.get(section.slot) ?? 0} kcal`}
                 </Text>
               </EdSafeCollapse>
             </View>
@@ -198,9 +213,9 @@ export function DiaryDayView({ model, deps, onCapture }: DiaryDayViewProps) {
             Exercise
           </Text>
           <EdSafeCollapse>
-            {model.burnedKcal() !== null && (
+            {view.burned !== null && (
               <Text style={[typography.subhead, { color: colors.textSecondary }]}>
-                {`\u2212${model.burnedKcal()} kcal`}
+                {`\u2212${view.burned} kcal`}
               </Text>
             )}
           </EdSafeCollapse>

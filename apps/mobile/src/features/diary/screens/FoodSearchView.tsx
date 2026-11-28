@@ -93,14 +93,24 @@ export function FoodSearchView({
   const [manualRow, setManualRow] = useState<FoodSearchRow | null>(null);
   const [isCustomSheetPresented, setIsCustomSheetPresented] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [, setVersion] = useState(0);
-  useEffect(() => model.subscribe(() => setVersion((version) => version + 1)), [model]);
+  const [version, setVersion] = useState(0);
+  useEffect(() => model.subscribe(() => setVersion((current) => current + 1)), [model]);
 
-  const query = model.getQuery();
+  // The model is a mutable object, so React Compiler sees `model` as unchanged
+  // and would cache these reads for good: the field stayed empty and the
+  // results never moved on the Simulator (stage B, U-74e). `version` is the
+  // dependency that says "the model emitted"; keep it here.
+  const { query, results, recents, saved } = useMemo(
+    () => ({
+      query: model.getQuery(),
+      results: model.getResults(),
+      recents: model.getRecents(),
+      saved: model.getSaved(),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `version` marks a model emit
+    [model, version],
+  );
   const trimmed = query.trim();
-  const results = model.getResults();
-  const recents = model.getRecents();
-  const saved = model.getSaved();
 
   /** Typing is a search: the segment follows the query out of Recent. */
   const onQueryChange = (text: string) => {
